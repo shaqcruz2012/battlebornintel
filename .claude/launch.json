@@ -1,0 +1,17 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "vite-dev",
+      "runtimeExecutable": "C:/Users/shaqc/AppData/Roaming/nvm/v20.18.1/node.exe",
+      "runtimeArgs": ["node_modules/vite/bin/vite.js", "--port", "5173", "--strictPort"],
+      "port": 5173
+    },
+    {
+      "name": "vite-preview",
+      "runtimeExecutable": "C:/Users/shaqc/AppData/Roaming/nvm/v20.18.1/node.exe",
+      "runtimeArgs": ["node_modules/vite/bin/vite.js", "preview"],
+      "port": 4173
+    }
+  ]
+}
