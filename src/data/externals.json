@@ -1,0 +1,836 @@
+[
+  {
+    "id": "x_stellantis",
+    "name": "Stellantis",
+    "etype": "Corporation",
+    "note": "Lyten strategic investor"
+  },
+  {
+    "id": "x_fedex",
+    "name": "FedEx",
+    "etype": "Corporation",
+    "note": "Lyten strategic investor"
+  },
+  {
+    "id": "x_honeywell",
+    "name": "Honeywell",
+    "etype": "Corporation",
+    "note": "Lyten strategic investor"
+  },
+  {
+    "id": "x_okapi",
+    "name": "Okapi VC",
+    "etype": "VC Firm",
+    "note": "MagicDoor seed co-lead"
+  },
+  {
+    "id": "x_shadow",
+    "name": "Shadow Ventures",
+    "etype": "VC Firm",
+    "note": "MagicDoor seed co-lead"
+  },
+  {
+    "id": "x_stripes",
+    "name": "Stripes",
+    "etype": "VC Firm",
+    "note": "Katalyst Series A lead"
+  },
+  {
+    "id": "x_doe",
+    "name": "US Dept of Energy",
+    "etype": "Government",
+    "note": "$2B Redwood loan; $996M Ioneer loan; $350M Ormat loan; Aqua Metals grant. Loan Programs Office."
+  },
+  {
+    "id": "x_nasa",
+    "name": "NASA",
+    "etype": "Government",
+    "note": "SNC Dream Chaser contract"
+  },
+  {
+    "id": "x_fda",
+    "name": "FDA",
+    "etype": "Government",
+    "note": "Katalyst; Filament Health"
+  },
+  {
+    "id": "x_snwa",
+    "name": "SNWA",
+    "etype": "Government",
+    "note": "WaterStart backer"
+  },
+  {
+    "id": "x_digitalbridge",
+    "name": "DigitalBridge",
+    "etype": "PE Firm",
+    "note": "Took Switch Inc private 2022 for $11B. $80B+ digital infrastructure AUM."
+  },
+  {
+    "id": "x_life360",
+    "name": "Life360/Tile",
+    "etype": "Corporation",
+    "note": "Hubble 90M+ device partner"
+  },
+  {
+    "id": "x_mgm",
+    "name": "MGM Resorts",
+    "etype": "Corporation",
+    "note": "PlayStudios rewards partner + ~10% equity stake via PIPE. Exclusive social gaming rights."
+  },
+  {
+    "id": "x_marriott",
+    "name": "Marriott",
+    "etype": "Corporation",
+    "note": "PlayStudios rewards"
+  },
+  {
+    "id": "x_muonspace",
+    "name": "Muon Space",
+    "etype": "Corporation",
+    "note": "Hubble satellite bus contract"
+  },
+  {
+    "id": "x_unr",
+    "name": "UNR",
+    "etype": "University",
+    "note": "Research partnerships"
+  },
+  {
+    "id": "x_ssbci",
+    "name": "NV SSBCI",
+    "etype": "Government",
+    "note": "Fund matching program"
+  },
+  {
+    "id": "x_caesars",
+    "name": "Caesars Entertainment",
+    "etype": "Corporation",
+    "note": "Co-founded Black Fire Innovation with UNLV 2020. Zero Labs advisor. World's most diversified casino-entertainment provider."
+  },
+  {
+    "id": "x_panasonic",
+    "name": "Panasonic",
+    "etype": "Corporation",
+    "note": "Black Fire tech partner. Equipment and technology deployment."
+  },
+  {
+    "id": "x_boyd",
+    "name": "Boyd Gaming",
+    "etype": "Corporation",
+    "note": "LV-based casino operator. Boyd Innovation Lab at Black Fire Innovation (2023). Keith Smith CEO."
+  },
+  {
+    "id": "x_intel",
+    "name": "Intel",
+    "etype": "Corporation",
+    "note": "Key computing partner at Black Fire Innovation. IoT, visual analytics, edge computing for hospitality."
+  },
+  {
+    "id": "x_shift",
+    "name": "Shift Studio",
+    "etype": "Corporation",
+    "note": "Innovation/product studio. $300K strategic partnership with Zero Labs. Design + engineering for cohort startups."
+  },
+  {
+    "id": "x_usaf",
+    "name": "US Air Force",
+    "etype": "Government",
+    "note": "AFWERX parent organization"
+  },
+  {
+    "id": "x_accel",
+    "name": "Accel",
+    "etype": "VC Firm",
+    "note": "Led Socure Series D/E. $450M round."
+  },
+  {
+    "id": "x_trowe",
+    "name": "T. Rowe Price",
+    "etype": "VC Firm",
+    "note": "Co-led Socure Series E $450M"
+  },
+  {
+    "id": "x_tiger",
+    "name": "Tiger Global",
+    "etype": "VC Firm",
+    "note": "Socure Series E investor"
+  },
+  {
+    "id": "x_wellington",
+    "name": "Wellington Mgmt",
+    "etype": "VC Firm",
+    "note": "Led Abnormal AI Series D $250M at $5.1B"
+  },
+  {
+    "id": "x_greylock",
+    "name": "Greylock",
+    "etype": "VC Firm",
+    "note": "Abnormal AI investor since inception"
+  },
+  {
+    "id": "x_insight",
+    "name": "Insight Partners",
+    "etype": "VC Firm",
+    "note": "Abnormal AI Series C/D"
+  },
+  {
+    "id": "x_crowdstrike",
+    "name": "CrowdStrike",
+    "etype": "Corporation",
+    "note": "CrowdStrike Falcon Fund → Abnormal AI"
+  },
+  {
+    "id": "x_amd",
+    "name": "AMD Ventures",
+    "etype": "Corporation",
+    "note": "Co-led TensorWave Series A. Strategic GPU partner."
+  },
+  {
+    "id": "x_magnetar",
+    "name": "Magnetar",
+    "etype": "VC Firm",
+    "note": "Co-led TensorWave $100M Series A"
+  },
+  {
+    "id": "x_nexusvp",
+    "name": "Nexus Venture Partners",
+    "etype": "VC Firm",
+    "note": "Led TensorWave $43M SAFE round"
+  },
+  {
+    "id": "x_blackrock",
+    "name": "BlackRock",
+    "etype": "VC Firm",
+    "note": "Co-led MNTN Series D $119M"
+  },
+  {
+    "id": "x_fidelity",
+    "name": "Fidelity",
+    "etype": "VC Firm",
+    "note": "Co-led MNTN Series D $119M"
+  },
+  {
+    "id": "x_greycroft",
+    "name": "Greycroft",
+    "etype": "VC Firm",
+    "note": "Early MNTN investor"
+  },
+  {
+    "id": "x_thor",
+    "name": "THOR Industries",
+    "etype": "Corporation",
+    "note": "Strategic investor in Dragonfly Energy. Largest RV OEM."
+  },
+  {
+    "id": "x_eip",
+    "name": "Energy Impact Partners",
+    "etype": "VC Firm",
+    "note": "Led $75M term loan for Dragonfly SPAC"
+  },
+  {
+    "id": "x_draper",
+    "name": "Draper Associates",
+    "etype": "VC Firm",
+    "note": "Tim Draper. Boxabl investor."
+  },
+  {
+    "id": "x_bain_cv",
+    "name": "Bain Capital Ventures",
+    "etype": "VC Firm",
+    "note": "Socure Series E. $10B AUM."
+  },
+  {
+    "id": "x_commerce_v",
+    "name": "Commerce Ventures",
+    "etype": "VC Firm",
+    "note": "Socure investor Series B onward."
+  },
+  {
+    "id": "x_sorenson",
+    "name": "Sorenson Capital",
+    "etype": "VC Firm",
+    "note": "Socure investor since Series C."
+  },
+  {
+    "id": "x_twosigma",
+    "name": "Two Sigma Ventures",
+    "etype": "VC Firm",
+    "note": "Socure Series A investor."
+  },
+  {
+    "id": "x_citi_v",
+    "name": "Citi Ventures",
+    "etype": "Corporation",
+    "note": "Strategic investor in Socure."
+  },
+  {
+    "id": "x_cap1_v",
+    "name": "Capital One Ventures",
+    "etype": "Corporation",
+    "note": "Strategic investor in Socure."
+  },
+  {
+    "id": "x_menlo",
+    "name": "Menlo Ventures",
+    "etype": "VC Firm",
+    "note": "Abnormal AI Series B/C/D."
+  },
+  {
+    "id": "x_evolution",
+    "name": "Evolution Equity",
+    "etype": "VC Firm",
+    "note": "Led Protect AI Series A+B."
+  },
+  {
+    "id": "x_salesforce_v",
+    "name": "Salesforce Ventures",
+    "etype": "Corporation",
+    "note": "Protect AI Series A/B."
+  },
+  {
+    "id": "x_pelion",
+    "name": "Pelion Ventures",
+    "etype": "VC Firm",
+    "note": "Protect AI seed→B."
+  },
+  {
+    "id": "x_boldstart",
+    "name": "Boldstart Ventures",
+    "etype": "VC Firm",
+    "note": "Protect AI seed→B."
+  },
+  {
+    "id": "x_samsung",
+    "name": "Samsung",
+    "etype": "Corporation",
+    "note": "Protect AI Series B."
+  },
+  {
+    "id": "x_paloalto",
+    "name": "Palo Alto Networks",
+    "etype": "Corporation",
+    "note": "Acquired Protect AI Apr 2025."
+  },
+  {
+    "id": "x_prosperity7",
+    "name": "Prosperity7",
+    "etype": "VC Firm",
+    "note": "Aramco Ventures. TensorWave Series A."
+  },
+  {
+    "id": "x_maverick",
+    "name": "Maverick Silicon",
+    "etype": "VC Firm",
+    "note": "TensorWave SAFE+A."
+  },
+  {
+    "id": "x_translink",
+    "name": "TransLink Capital",
+    "etype": "VC Firm",
+    "note": "TensorWave SAFE."
+  },
+  {
+    "id": "x_mercato",
+    "name": "Mercato Partners",
+    "etype": "VC Firm",
+    "note": "MNTN early investor."
+  },
+  {
+    "id": "x_qualcomm_v",
+    "name": "Qualcomm Ventures",
+    "etype": "Corporation",
+    "note": "MNTN early investor."
+  },
+  {
+    "id": "x_rincon",
+    "name": "Rincon Venture Partners",
+    "etype": "VC Firm",
+    "note": "MNTN early investor."
+  },
+  {
+    "id": "x_baroda",
+    "name": "Baroda Ventures",
+    "etype": "VC Firm",
+    "note": "MNTN early investor."
+  },
+  {
+    "id": "x_buildtech",
+    "name": "BuildTech VC",
+    "etype": "VC Firm",
+    "note": "Boxabl investor."
+  },
+  {
+    "id": "x_elevation",
+    "name": "Elevation Capital",
+    "etype": "VC Firm",
+    "note": "Boxabl investor."
+  },
+  {
+    "id": "x_chardan",
+    "name": "Chardan Capital",
+    "etype": "VC Firm",
+    "note": "Dragonfly SPAC sponsor."
+  },
+  {
+    "id": "x_warburg",
+    "name": "Warburg Pincus",
+    "etype": "PE Firm",
+    "note": "Led Duetto Series D $80M."
+  },
+  {
+    "id": "x_battery",
+    "name": "Battery Ventures",
+    "etype": "VC Firm",
+    "note": "Led Duetto Series A $10M."
+  },
+  {
+    "id": "x_growthcurve",
+    "name": "GrowthCurve Capital",
+    "etype": "PE Firm",
+    "note": "Acquired Duetto Jun 2024."
+  },
+  {
+    "id": "x_blackstone",
+    "name": "Blackstone",
+    "etype": "PE Firm",
+    "note": "Led Carbon Health Series D $350M."
+  },
+  {
+    "id": "x_cvs",
+    "name": "CVS Health Ventures",
+    "etype": "Corporation",
+    "note": "Led Carbon Health Series D2 $100M."
+  },
+  {
+    "id": "x_dragoneer",
+    "name": "Dragoneer Investment Group",
+    "etype": "VC Firm",
+    "note": "Led Carbon Health Series C $100M."
+  },
+  {
+    "id": "x_lightspeed",
+    "name": "Lightspeed Venture Partners",
+    "etype": "VC Firm",
+    "note": "Led 1047 Games Series B $100M."
+  },
+  {
+    "id": "x_galaxy",
+    "name": "Galaxy Interactive",
+    "etype": "VC Firm",
+    "note": "Led 1047 Games seed $6.5M."
+  },
+  {
+    "id": "x_apollo",
+    "name": "Apollo Global Management",
+    "etype": "PE Firm",
+    "note": "$671B AUM. Acquired Everi+IGT Gaming Jul 2025, $6.3B combined. Owns Venetian/Palazzo."
+  },
+  {
+    "id": "x_segasammy",
+    "name": "SEGA SAMMY Holdings",
+    "etype": "Corporation",
+    "note": "Acquired GAN Limited May 2025, $1.97/share (121% premium)."
+  },
+  {
+    "id": "x_orix",
+    "name": "ORIX Corp",
+    "etype": "Corporation",
+    "note": "Japanese financial services. Ormat Industries (subsidiary) owns 44.76% of Ormat Technologies."
+  },
+  {
+    "id": "x_acuren",
+    "name": "Acuren",
+    "etype": "Corporation",
+    "note": "Acquired NV5 Global Aug 2025. ~$23/share ($10 cash + $13 stock). Engineering inspection/testing."
+  },
+  {
+    "id": "x_canaan",
+    "name": "Canaan Partners",
+    "etype": "VC Firm",
+    "note": "Led Ollie Series A $12.6M Aug 2017. Early-stage VC."
+  },
+  {
+    "id": "x_lererhippeau",
+    "name": "Lerer Hippeau",
+    "etype": "VC Firm",
+    "note": "Ollie seed co-lead. NYC early-stage VC."
+  },
+  {
+    "id": "x_twobear",
+    "name": "Two Bear Capital",
+    "etype": "VC Firm",
+    "note": "Led CIQ Series A $26M May 2022. Whitefish, MT based."
+  },
+  {
+    "id": "x_iag",
+    "name": "IAG Capital Partners",
+    "etype": "VC Firm",
+    "note": "CIQ bridge round 2021. Early-stage tech."
+  },
+  {
+    "id": "x_tuatara",
+    "name": "Tuatara Capital",
+    "etype": "VC Firm",
+    "note": "Cannabis-focused SPAC. Springbig SPAC sponsor (TCAC→SBIG Jun 2022)."
+  },
+  {
+    "id": "x_tvc",
+    "name": "TVC Capital",
+    "etype": "VC Firm",
+    "note": "Springbig PIPE investor. B2B SaaS focused."
+  },
+  {
+    "id": "x_agrolimen",
+    "name": "Agrolimen",
+    "etype": "Corporation",
+    "note": "Spanish conglomerate. Acquired Ollie 2025."
+  },
+  {
+    "id": "x_google",
+    "name": "Google",
+    "etype": "Corporation",
+    "note": "Rocky Linux CIQ partner. 150MW geothermal PPA with Ormat via NV Energy. Data center ops NV."
+  },
+  {
+    "id": "x_ballistic",
+    "name": "Ballistic Ventures",
+    "etype": "VC Firm",
+    "note": "Cybersecurity-dedicated VC. Nudge Security seed $7M Apr 2022."
+  },
+  {
+    "id": "x_cerberus_v",
+    "name": "Cerberus Ventures",
+    "etype": "VC Firm",
+    "note": "Led Nudge Security Series A $22.5M Nov 2025."
+  },
+  {
+    "id": "x_forgepoint",
+    "name": "Forgepoint Capital",
+    "etype": "VC Firm",
+    "note": "Cybersecurity VC. Nudge Security seed + Series A."
+  },
+  {
+    "id": "x_squadra",
+    "name": "Squadra Ventures",
+    "etype": "VC Firm",
+    "note": "Early-stage cyber & national security. Nudge Security investor."
+  },
+  {
+    "id": "x_efung",
+    "name": "EFung Capital",
+    "etype": "VC Firm",
+    "note": "Biomedical VC. Elicio Therapeutics Series B investor."
+  },
+  {
+    "id": "x_clal_bio",
+    "name": "Clal Biotechnology",
+    "etype": "Investment Co",
+    "note": "Israeli life sciences. TASE:CBI. Elicio Series B."
+  },
+  {
+    "id": "x_eif",
+    "name": "Ecosystem Integrity Fund",
+    "etype": "VC Firm",
+    "note": "Climate/impact VC. Led Vibrant Planet seed+Series A."
+  },
+  {
+    "id": "x_msft_climate",
+    "name": "Microsoft Climate Fund",
+    "etype": "Corporation",
+    "note": "Microsoft Climate Innovation Fund. Vibrant Planet Series A."
+  },
+  {
+    "id": "x_dayonev",
+    "name": "Day One Ventures",
+    "etype": "VC Firm",
+    "note": "Early-stage VC. Vibrant Planet Series A."
+  },
+  {
+    "id": "x_grantham",
+    "name": "Grantham Foundation",
+    "etype": "Foundation",
+    "note": "Jeremy & Hannelore Grantham Environmental Trust. Vibrant Planet seed."
+  },
+  {
+    "id": "x_owl",
+    "name": "Owl Ventures",
+    "etype": "VC Firm",
+    "note": "$2.2B+ AUM EdTech-focused VC. Amira Learning investor."
+  },
+  {
+    "id": "x_authentic",
+    "name": "Authentic Ventures",
+    "etype": "VC Firm",
+    "note": "Led Amira Learning Series A $11M."
+  },
+  {
+    "id": "x_amazon_af",
+    "name": "Amazon Alexa Fund",
+    "etype": "Corporation",
+    "note": "Amira Learning investor. Voice/AI-focused corporate VC."
+  },
+  {
+    "id": "x_edf",
+    "name": "EDF Renewables",
+    "etype": "Corporation",
+    "note": "Corporate investor in Nuvve. V2G JV partner (DREEV)."
+  },
+  {
+    "id": "x_toyota_tsusho",
+    "name": "Toyota Tsusho",
+    "etype": "Corporation",
+    "note": "Nuvve Series A investor Dec 2017. Toyota Group trading arm."
+  },
+  {
+    "id": "x_newborn",
+    "name": "Newborn Acquisition",
+    "etype": "SPAC",
+    "note": "Shanghai-based SPAC. Merged with Nuvve Mar 2021. Nasdaq:NBAC→NVVE."
+  },
+  {
+    "id": "x_thirdprime",
+    "name": "Third Prime",
+    "etype": "VC Firm",
+    "note": "Co-led Climb Credit Series A $9.8M."
+  },
+  {
+    "id": "x_newmarkets",
+    "name": "New Markets VP",
+    "etype": "VC Firm",
+    "note": "Co-led Climb Credit Series A. EdTech/workforce focused."
+  },
+  {
+    "id": "x_newfund",
+    "name": "Newfund Capital",
+    "etype": "VC Firm",
+    "note": "Early Climb Credit investor. Franco-American VC."
+  },
+  {
+    "id": "x_goldman",
+    "name": "Goldman Sachs AM",
+    "etype": "PE Firm",
+    "note": "Co-led Redwood Materials Series D $1B. Global investment bank."
+  },
+  {
+    "id": "x_capricorn",
+    "name": "Capricorn Technology Impact",
+    "etype": "VC Firm",
+    "note": "Co-led Redwood Series D. Climate/energy deep tech."
+  },
+  {
+    "id": "x_eclipse_v",
+    "name": "Eclipse Ventures",
+    "etype": "VC Firm",
+    "note": "Led Redwood Materials Series E $350M Oct 2025."
+  },
+  {
+    "id": "x_nventures",
+    "name": "NVentures (Nvidia)",
+    "etype": "Corporation",
+    "note": "Nvidia VC arm. Redwood Materials Series E Oct 2025."
+  },
+  {
+    "id": "x_fidelity",
+    "name": "Fidelity Investments",
+    "etype": "Investment Co",
+    "note": "Redwood Materials Series C investor. $4.5T+ AUM."
+  },
+  {
+    "id": "x_cpp",
+    "name": "CPP Investments",
+    "etype": "PE Firm",
+    "note": "Canada Pension Plan. Redwood Materials Series C. C$570B+ AUM."
+  },
+  {
+    "id": "x_breakthrough",
+    "name": "Breakthrough Energy",
+    "etype": "VC Firm",
+    "note": "Bill Gates-led climate fund. Redwood Materials Series B."
+  },
+  {
+    "id": "x_amazon_cpf",
+    "name": "Amazon Climate Pledge",
+    "etype": "Corporation",
+    "note": "Amazon corporate VC for sustainability. Redwood Materials investor."
+  },
+  {
+    "id": "x_omers",
+    "name": "OMERS",
+    "etype": "PE Firm",
+    "note": "Ontario pension. Redwood Materials Series D. C$130B+ AUM."
+  },
+  {
+    "id": "x_ford",
+    "name": "Ford Motor Company",
+    "etype": "Corporation",
+    "note": "Redwood Materials strategic investor. EV battery supply chain partner."
+  },
+  {
+    "id": "x_caterpillar_v",
+    "name": "Caterpillar Ventures",
+    "etype": "Corporation",
+    "note": "Caterpillar corporate VC. Redwood Materials Series D."
+  },
+  {
+    "id": "x_ozmen",
+    "name": "Ozmen Ventures",
+    "etype": "VC Firm",
+    "note": "Eren & Fatih Ozmen family office. Seed/early-stage NV tech. SNC owners."
+  },
+  {
+    "id": "x_blueorigin",
+    "name": "Blue Origin",
+    "etype": "Corporation",
+    "note": "Jeff Bezos space company. Orbital Reef partner with Sierra Space."
+  },
+  {
+    "id": "x_swagar",
+    "name": "Swagar Capital",
+    "etype": "VC Firm",
+    "note": "Led Hubble Network Series B $70M. Ryan Swagar, former Life360 Series A lead."
+  },
+  {
+    "id": "x_rpm",
+    "name": "RPM Ventures",
+    "etype": "VC Firm",
+    "note": "Marc Weiser (former NASA board). Hubble Network Series B."
+  },
+  {
+    "id": "x_yc",
+    "name": "Y Combinator",
+    "etype": "VC Firm",
+    "note": "Premiere startup accelerator. Hubble Network Series B investor."
+  },
+  {
+    "id": "x_seraph",
+    "name": "Seraph Group",
+    "etype": "VC Firm",
+    "note": "Tuff Yen. Hubble Network Series B. Deep-tech angels."
+  },
+  {
+    "id": "x_blackrock",
+    "name": "BlackRock",
+    "etype": "PE Firm",
+    "note": "World's largest asset manager $10T+ AUM. PlayStudios PIPE investor."
+  },
+  {
+    "id": "x_neuberger",
+    "name": "Neuberger Berman",
+    "etype": "PE Firm",
+    "note": "PlayStudios PIPE investor. $500B+ AUM."
+  },
+  {
+    "id": "x_clearbridge",
+    "name": "ClearBridge Investments",
+    "etype": "PE Firm",
+    "note": "PlayStudios PIPE investor. Franklin Templeton subsidiary."
+  },
+  {
+    "id": "x_acies",
+    "name": "Acies Acquisition Corp",
+    "etype": "SPAC",
+    "note": "Jim Murren (ex-MGM CEO) chaired SPAC. Merged with PlayStudios Jun 2021. Nasdaq:MYPS."
+  },
+  {
+    "id": "x_chardan",
+    "name": "Chardan NexTech",
+    "etype": "SPAC",
+    "note": "SPAC merged with Dragonfly Energy Oct 2022. Nasdaq:DFLI. Jonas Grossman CEO."
+  },
+  {
+    "id": "x_thor",
+    "name": "Thor Industries",
+    "etype": "Corporation",
+    "note": "World's largest RV manufacturer. $15M strategic investment in Dragonfly Energy."
+  },
+  {
+    "id": "x_eip",
+    "name": "Energy Impact Partners",
+    "etype": "VC Firm",
+    "note": "Led $75M term loan for Dragonfly SPAC. Climate/energy infra VC."
+  },
+  {
+    "id": "x_stryten",
+    "name": "Stryten Energy",
+    "etype": "Corporation",
+    "note": "$30M licensing deal for Battle Born Batteries brand. US battery manufacturer."
+  },
+  {
+    "id": "x_6kenergy",
+    "name": "6K Energy",
+    "etype": "Corporation",
+    "note": "Multi-year supply agreement with Aqua Metals. Cathode mfg."
+  },
+  {
+    "id": "x_goed",
+    "name": "NV GOED",
+    "etype": "Government",
+    "note": "Nevada Governor's Office of Economic Development. Tax abatements, Knowledge Fund, SSBCI, Battle Born Growth accelerators."
+  },
+  {
+    "id": "x_sibanye",
+    "name": "Sibanye-Stillwater",
+    "etype": "Corporation",
+    "note": "SA precious metals miner. Had $490M JV with Ioneer, withdrew Feb 2025. Holds 6% equity."
+  },
+  {
+    "id": "x_fimi",
+    "name": "FIMI Opportunity Funds",
+    "etype": "PE Firm",
+    "note": "Israeli PE. Ormat's largest shareholder ~14.8%. FIMI fund."
+  },
+  {
+    "id": "x_nvenergy",
+    "name": "NV Energy",
+    "etype": "Corporation",
+    "note": "Nevada utility (Berkshire Hathaway Energy). PPA partner for Ormat, Switch, etc."
+  },
+  {
+    "id": "x_goff",
+    "name": "Goff Capital Partners",
+    "etype": "PE Firm",
+    "note": "John Goff. Acquired Canyon Ranch 2017. Fort Worth billionaire. Crescent Real Estate."
+  },
+  {
+    "id": "x_vici",
+    "name": "VICI Properties",
+    "etype": "PE Firm",
+    "note": "$500M partnership with Canyon Ranch. Owns Caesars Palace, MGM Grand real estate."
+  },
+  {
+    "id": "x_atw",
+    "name": "ATW Partners",
+    "etype": "VC Firm",
+    "note": "Kaptyn Series A/B investor. NY-based technology VC."
+  },
+  {
+    "id": "x_kibble",
+    "name": "Kibble Holdings",
+    "etype": "VC Firm",
+    "note": "Kaptyn early investor. Seed + Series A."
+  },
+  {
+    "id": "x_linico",
+    "name": "LiNiCo Corp",
+    "etype": "Corporation",
+    "note": "Lithium-ion battery recycler. 64% owned by Comstock. TRI facility near Tesla Gigafactory."
+  },
+  {
+    "id": "x_marathon",
+    "name": "Marathon Petroleum",
+    "etype": "Corporation",
+    "note": "Series A strategic investor in Comstock Fuels. Major US oil refiner."
+  },
+  {
+    "id": "x_rwe",
+    "name": "RWE Clean Energy",
+    "etype": "Corporation",
+    "note": "Master services agreement with Comstock Metals. Solar decommissioning/recycling partner."
+  },
+  {
+    "id": "x_igt",
+    "name": "IGT Gaming",
+    "etype": "Corporation",
+    "note": "Combined with Everi under Apollo ownership Jul 2025. Global gaming/fintech/digital leader."
+  }
+]

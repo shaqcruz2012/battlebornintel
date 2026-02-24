@@ -1,0 +1,42 @@
+[
+  {
+    "id": "e_goed",
+    "name": "NV GOED",
+    "etype": "Government",
+    "city": "Carson City",
+    "region": "reno",
+    "note": "Governor's Office of Economic Development. Manages SSBCI, Knowledge Fund (university IP→market), Battle Born Growth accelerators. Funds gener8tor, StartUpNV, Zero Labs."
+  },
+  {
+    "id": "e_edawn",
+    "name": "EDAWN",
+    "etype": "Economic Development",
+    "city": "Reno",
+    "region": "reno",
+    "note": "Economic Development Authority of Western Nevada."
+  },
+  {
+    "id": "e_lvgea",
+    "name": "LVGEA",
+    "etype": "Economic Development",
+    "city": "Las Vegas",
+    "region": "las_vegas",
+    "note": "Las Vegas Global Economic Alliance."
+  },
+  {
+    "id": "e_innevation",
+    "name": "UNR Innevation Center",
+    "etype": "University Hub",
+    "city": "Reno",
+    "region": "reno",
+    "note": "UNR coworking/incubator. Hosts InNEVator + gener8tor Reno."
+  },
+  {
+    "id": "e_unlvtech",
+    "name": "UNLV Tech Park",
+    "etype": "University Hub",
+    "city": "Las Vegas",
+    "region": "las_vegas",
+    "note": "Harry Reid Research & Technology Park. 122 acres."
+  }
+]
