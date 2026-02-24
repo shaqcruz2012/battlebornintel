@@ -1,0 +1,1934 @@
+[
+  {
+    "source": "x_stellantis",
+    "target": "c_29",
+    "rel": "invested_in",
+    "note": "$425M+ strategic round",
+    "y": 2023
+  },
+  {
+    "source": "x_fedex",
+    "target": "c_29",
+    "rel": "invested_in",
+    "note": "$425M+ strategic round",
+    "y": 2023
+  },
+  {
+    "source": "x_honeywell",
+    "target": "c_29",
+    "rel": "invested_in",
+    "note": "$425M+ strategic round",
+    "y": 2023
+  },
+  {
+    "source": "x_okapi",
+    "target": "c_14",
+    "rel": "invested_in",
+    "note": "Seed co-lead",
+    "y": 2023
+  },
+  {
+    "source": "x_shadow",
+    "target": "c_14",
+    "rel": "invested_in",
+    "note": "Seed co-lead",
+    "y": 2023
+  },
+  {
+    "source": "x_stripes",
+    "target": "c_10",
+    "rel": "invested_in",
+    "note": "Series A lead",
+    "y": 2023
+  },
+  {
+    "source": "x_digitalbridge",
+    "target": "c_58",
+    "rel": "acquired",
+    "note": "DigitalBridge took Switch private 2022. $11B deal. Data center infrastructure.",
+    "y": 2022
+  },
+  {
+    "source": "x_ssbci",
+    "target": "f_bbv",
+    "rel": "funds",
+    "note": "SSBCI capital allocation",
+    "y": 2023
+  },
+  {
+    "source": "x_ssbci",
+    "target": "f_fundnv",
+    "rel": "funds",
+    "note": "1:1 investment match",
+    "y": 2023
+  },
+  {
+    "source": "x_ssbci",
+    "target": "f_1864",
+    "rel": "funds",
+    "note": "SSBCI capital allocation",
+    "y": 2023
+  },
+  {
+    "source": "e_goed",
+    "target": "a_gener8tor_lv",
+    "rel": "funds",
+    "note": "Battle Born Growth accelerator funding",
+    "y": 2022
+  },
+  {
+    "source": "e_goed",
+    "target": "a_gener8tor_reno",
+    "rel": "funds",
+    "note": "Battle Born Growth accelerator funding",
+    "y": 2022
+  },
+  {
+    "source": "e_goed",
+    "target": "a_startupnv",
+    "rel": "funds",
+    "note": "SSBCI co-investment via FundNV",
+    "y": 2022
+  },
+  {
+    "source": "c_6",
+    "target": "x_life360",
+    "rel": "partners_with",
+    "note": "90M+ device BLE-to-satellite",
+    "y": 2024
+  },
+  {
+    "source": "c_6",
+    "target": "x_muonspace",
+    "rel": "partners_with",
+    "note": "MuSat XL satellite buses",
+    "y": 2024
+  },
+  {
+    "source": "c_27",
+    "target": "x_mgm",
+    "rel": "partners_with",
+    "note": "Rewards program",
+    "y": 2018
+  },
+  {
+    "source": "c_27",
+    "target": "x_marriott",
+    "rel": "partners_with",
+    "note": "Rewards program",
+    "y": 2019
+  },
+  {
+    "source": "c_56",
+    "target": "x_snwa",
+    "rel": "partners_with",
+    "note": "Water tech deployment",
+    "y": 2023
+  },
+  {
+    "source": "c_29",
+    "target": "x_unr",
+    "rel": "partners_with",
+    "note": "Workforce development",
+    "y": 2023
+  },
+  {
+    "source": "c_63",
+    "target": "a_startupnv",
+    "rel": "accelerated_by",
+    "note": "AccelerateNV + FundNV2 $200K",
+    "y": 2023
+  },
+  {
+    "source": "c_41",
+    "target": "a_startupnv",
+    "rel": "accelerated_by",
+    "note": "Portfolio company, Shark Tank 2024",
+    "y": 2024
+  },
+  {
+    "source": "c_47",
+    "target": "a_startupnv",
+    "rel": "accelerated_by",
+    "note": "Pitch Day company",
+    "y": 2023
+  },
+  {
+    "source": "c_36",
+    "target": "a_startupnv",
+    "rel": "accelerated_by",
+    "note": "Pitch Day company",
+    "y": 2023
+  },
+  {
+    "source": "c_36",
+    "target": "a_angelnv",
+    "rel": "won_pitch",
+    "note": "2024 winner $200K+",
+    "y": 2024
+  },
+  {
+    "source": "c_63",
+    "target": "a_angelnv",
+    "rel": "won_pitch",
+    "note": "2025 winner",
+    "y": 2025
+  },
+  {
+    "source": "c_32",
+    "target": "a_adamshub",
+    "rel": "accelerated_by",
+    "note": "Adams Hub graduate",
+    "y": 2023
+  },
+  {
+    "source": "c_57",
+    "target": "a_adamshub",
+    "rel": "accelerated_by",
+    "note": "Adams Hub company",
+    "y": 2023
+  },
+  {
+    "source": "c_59",
+    "target": "a_adamshub",
+    "rel": "accelerated_by",
+    "note": "Adams Hub company",
+    "y": 2023
+  },
+  {
+    "source": "a_startupnv",
+    "target": "f_fundnv",
+    "rel": "program_of",
+    "note": "FundNV is StartUpNV's pre-seed fund",
+    "y": 2023
+  },
+  {
+    "source": "a_startupnv",
+    "target": "f_1864",
+    "rel": "program_of",
+    "note": "1864 Fund is StartUpNV's seed fund",
+    "y": 2023
+  },
+  {
+    "source": "a_angelnv",
+    "target": "a_startupnv",
+    "rel": "program_of",
+    "note": "AngelNV is a StartUpNV program",
+    "y": 2022
+  },
+  {
+    "source": "a_gener8tor_lv",
+    "target": "a_gener8tor_reno",
+    "rel": "collaborated_with",
+    "note": "Both SSBCI-funded",
+    "y": 2023
+  },
+  {
+    "source": "a_gbeta_nv",
+    "target": "a_gener8tor_lv",
+    "rel": "program_of",
+    "note": "gBETA Electrify Nevada is gener8tor's free 7-week pre-accelerator. Pipeline feeder for full 12-week program.",
+    "y": 2024
+  },
+  {
+    "source": "e_goed",
+    "target": "a_gbeta_nv",
+    "rel": "funds",
+    "note": "gBETA funded via GOED SSBCI pipeline as part of gener8tor Battle Born Growth ecosystem.",
+    "y": 2024
+  },
+  {
+    "source": "a_blackfire",
+    "target": "a_gener8tor_lv",
+    "rel": "collaborated_with",
+    "note": "Both GOED-supported LV innovation hubs. Black Fire living lab + gener8tor accelerator create startup pipeline.",
+    "y": 2023
+  },
+  {
+    "source": "a_innevator",
+    "target": "e_innevation",
+    "rel": "housed_at",
+    "note": "Hosted at UNR Innevation Center",
+    "y": 2023
+  },
+  {
+    "source": "c_8",
+    "target": "a_innevator",
+    "rel": "collaborated_with",
+    "note": "Blockchains LLC lead collaborator 2020",
+    "y": 2020
+  },
+  {
+    "source": "a_blackfire",
+    "target": "e_unlvtech",
+    "rel": "housed_at",
+    "note": "Flagship tenant, Harry Reid Tech Park",
+    "y": 2020
+  },
+  {
+    "source": "x_caesars",
+    "target": "a_blackfire",
+    "rel": "collaborated_with",
+    "note": "Co-founded Black Fire with UNLV 2020",
+    "y": 2020
+  },
+  {
+    "source": "x_panasonic",
+    "target": "a_blackfire",
+    "rel": "partners_with",
+    "note": "Technology deployment partner",
+    "y": 2020
+  },
+  {
+    "source": "a_zerolabs",
+    "target": "a_blackfire",
+    "rel": "collaborated_with",
+    "note": "Zero Labs HQ'd at Black Fire Innovation. Runs 3-day launchpad cohorts in Black Fire facility. 76+ startups since 2024.",
+    "y": 2023
+  },
+  {
+    "source": "e_goed",
+    "target": "a_zerolabs",
+    "rel": "funds",
+    "note": "GOED Knowledge Fund supports Zero Labs via UNLV Applied Research Collaboration (ARC). Karsten Heise (GOED) cited as key enabler.",
+    "y": 2023
+  },
+  {
+    "source": "e_goed",
+    "target": "a_blackfire",
+    "rel": "funds",
+    "note": "GOED Knowledge Fund supports Black Fire via UNLV ARC program. University IP → market commercialization.",
+    "y": 2020
+  },
+  {
+    "source": "x_boyd",
+    "target": "a_blackfire",
+    "rel": "partners_with",
+    "note": "Boyd Gaming Innovation Lab established at Black Fire (Sep 2023). Internships, R&D, prototyping. Keith Smith CEO.",
+    "y": 2023
+  },
+  {
+    "source": "x_intel",
+    "target": "a_blackfire",
+    "rel": "partners_with",
+    "note": "Intel key computing partner. IoT, visual analytics, edge computing for hospitality innovation. Student internships.",
+    "y": 2020
+  },
+  {
+    "source": "x_caesars",
+    "target": "a_zerolabs",
+    "rel": "partners_with",
+    "note": "Caesars is Zero Labs advisor. Singleton has assisted Caesars on startup/innovation strategy.",
+    "y": 2023
+  },
+  {
+    "source": "x_mgm",
+    "target": "a_zerolabs",
+    "rel": "partners_with",
+    "note": "MGM Resorts advisor to Zero Labs. Singleton assisted MGM on innovation and product launches.",
+    "y": 2023
+  },
+  {
+    "source": "x_shift",
+    "target": "a_zerolabs",
+    "rel": "partners_with",
+    "note": "Shift Studio $300K strategic partnership. Product design + engineering for Zero Labs cohort startups.",
+    "y": 2025
+  },
+  {
+    "source": "e_lvgea",
+    "target": "a_zerolabs",
+    "rel": "supports",
+    "note": "LVGEA supports Zero Labs as part of Southern Nevada startup ecosystem development.",
+    "y": 2024
+  },
+  {
+    "source": "e_lvgea",
+    "target": "a_blackfire",
+    "rel": "supports",
+    "note": "LVGEA supports Black Fire Innovation as LV tech/innovation hub. Economic diversification.",
+    "y": 2020
+  },
+  {
+    "source": "a_zerolabs",
+    "target": "a_gener8tor_lv",
+    "rel": "collaborated_with",
+    "note": "Both LV-based GOED-supported accelerators. Zero Labs gaming/hospitality focus, gener8tor sector-agnostic. Complementary programs.",
+    "y": 2024
+  },
+  {
+    "source": "x_usaf",
+    "target": "a_afwerx",
+    "rel": "program_of",
+    "note": "Air Force innovation program",
+    "y": 2022
+  },
+  {
+    "source": "c_72",
+    "target": "a_afwerx",
+    "rel": "accelerated_by",
+    "note": "Defense drone / NTTR connection",
+    "y": 2023
+  },
+  {
+    "source": "e_goed",
+    "target": "x_ssbci",
+    "rel": "manages",
+    "note": "GOED administers NV SSBCI program",
+    "y": 2022
+  },
+  {
+    "source": "e_edawn",
+    "target": "a_gener8tor_reno",
+    "rel": "supports",
+    "note": "Co-host, entrepreneurial development",
+    "y": 2023
+  },
+  {
+    "source": "e_edawn",
+    "target": "e_innevation",
+    "rel": "supports",
+    "note": "Ecosystem partner",
+    "y": 2023
+  },
+  {
+    "source": "e_lvgea",
+    "target": "a_startupnv",
+    "rel": "supports",
+    "note": "Dealroom ecosystem partner",
+    "y": 2023
+  },
+  {
+    "source": "e_lvgea",
+    "target": "a_gener8tor_lv",
+    "rel": "supports",
+    "note": "Las Vegas ecosystem support",
+    "y": 2023
+  },
+  {
+    "source": "e_innevation",
+    "target": "a_gener8tor_reno",
+    "rel": "housed_at",
+    "note": "gener8tor Reno operates from Innevation Center",
+    "y": 2023
+  },
+  {
+    "source": "p_saling",
+    "target": "f_fundnv",
+    "rel": "manages",
+    "note": "Co-founder, Ruby Partners GP",
+    "y": 2023
+  },
+  {
+    "source": "p_saling",
+    "target": "a_startupnv",
+    "rel": "manages",
+    "note": "Executive Director",
+    "y": 2023
+  },
+  {
+    "source": "c_10",
+    "target": "x_fda",
+    "rel": "approved_by",
+    "note": "FDA-approved EMS device",
+    "y": 2023
+  },
+  {
+    "source": "c_34",
+    "target": "x_fda",
+    "rel": "filed_with",
+    "note": "Drug master file",
+    "y": 2023
+  },
+  {
+    "source": "a_dtp",
+    "target": "e_lvgea",
+    "rel": "collaborated_with",
+    "note": "Downtown LV economic development",
+    "y": 2023
+  },
+  {
+    "source": "x_accel",
+    "target": "c_2",
+    "rel": "invested_in",
+    "note": "Led Series D ($100M) + co-led Series E ($450M)",
+    "y": 2021
+  },
+  {
+    "source": "x_trowe",
+    "target": "c_2",
+    "rel": "invested_in",
+    "note": "Co-led Series E at $4.5B valuation",
+    "y": 2021
+  },
+  {
+    "source": "x_tiger",
+    "target": "c_2",
+    "rel": "invested_in",
+    "note": "Series E new investor",
+    "y": 2021
+  },
+  {
+    "source": "x_wellington",
+    "target": "c_3",
+    "rel": "invested_in",
+    "note": "Led Series D $250M at $5.1B valuation",
+    "y": 2024
+  },
+  {
+    "source": "x_greylock",
+    "target": "c_3",
+    "rel": "invested_in",
+    "note": "Investor since inception through Series D",
+    "y": 2020
+  },
+  {
+    "source": "x_insight",
+    "target": "c_3",
+    "rel": "invested_in",
+    "note": "Series C/D participant",
+    "y": 2023
+  },
+  {
+    "source": "x_crowdstrike",
+    "target": "c_3",
+    "rel": "invested_in",
+    "note": "CrowdStrike Falcon Fund, Series D",
+    "y": 2024
+  },
+  {
+    "source": "x_amd",
+    "target": "c_4",
+    "rel": "invested_in",
+    "note": "Co-led Series A $100M. Strategic GPU partner.",
+    "y": 2024
+  },
+  {
+    "source": "x_magnetar",
+    "target": "c_4",
+    "rel": "invested_in",
+    "note": "Co-led Series A $100M",
+    "y": 2024
+  },
+  {
+    "source": "x_nexusvp",
+    "target": "c_4",
+    "rel": "invested_in",
+    "note": "Led $43M SAFE round (Oct 2024)",
+    "y": 2024
+  },
+  {
+    "source": "c_4",
+    "target": "a_startupnv",
+    "rel": "accelerated_by",
+    "note": "StartUpNV investor in SAFE round",
+    "y": 2024
+  },
+  {
+    "source": "f_bbv",
+    "target": "c_4",
+    "rel": "invested_in",
+    "note": "Battle Born Venture co-investor (PitchBook)",
+    "y": 2024
+  },
+  {
+    "source": "x_blackrock",
+    "target": "c_9",
+    "rel": "invested_in",
+    "note": "Co-led Series D $119M",
+    "y": 2021
+  },
+  {
+    "source": "x_fidelity",
+    "target": "c_9",
+    "rel": "invested_in",
+    "note": "Co-led Series D $119M",
+    "y": 2021
+  },
+  {
+    "source": "x_greycroft",
+    "target": "c_9",
+    "rel": "invested_in",
+    "note": "Early investor, pre-Series D",
+    "y": 2019
+  },
+  {
+    "source": "x_draper",
+    "target": "c_7",
+    "rel": "invested_in",
+    "note": "Draper Associates investor",
+    "y": 2022
+  },
+  {
+    "source": "c_73",
+    "target": "c_50",
+    "rel": "partners_with",
+    "note": "LOI for lithium hydroxide supply",
+    "y": 2023
+  },
+  {
+    "source": "x_bain_cv",
+    "target": "c_2",
+    "rel": "invested_in",
+    "note": "Series E investor ($450M round Nov 2021)",
+    "y": 2021
+  },
+  {
+    "source": "x_commerce_v",
+    "target": "c_2",
+    "rel": "invested_in",
+    "note": "Series B+ investor, fintech-focused",
+    "y": 2019
+  },
+  {
+    "source": "x_sorenson",
+    "target": "c_2",
+    "rel": "invested_in",
+    "note": "Existing investor Series C+",
+    "y": 2020
+  },
+  {
+    "source": "x_twosigma",
+    "target": "c_2",
+    "rel": "invested_in",
+    "note": "Series A investor (2014)",
+    "y": 2014
+  },
+  {
+    "source": "x_citi_v",
+    "target": "c_2",
+    "rel": "invested_in",
+    "note": "Strategic investor",
+    "y": 2020
+  },
+  {
+    "source": "x_cap1_v",
+    "target": "c_2",
+    "rel": "invested_in",
+    "note": "Strategic investor",
+    "y": 2020
+  },
+  {
+    "source": "x_menlo",
+    "target": "c_3",
+    "rel": "invested_in",
+    "note": "Series B/C/D participant",
+    "y": 2022
+  },
+  {
+    "source": "x_evolution",
+    "target": "c_13",
+    "rel": "invested_in",
+    "note": "Led Series A+B ($95M total)",
+    "y": 2023
+  },
+  {
+    "source": "x_salesforce_v",
+    "target": "c_13",
+    "rel": "invested_in",
+    "note": "Series A + B participant",
+    "y": 2022
+  },
+  {
+    "source": "x_pelion",
+    "target": "c_13",
+    "rel": "invested_in",
+    "note": "Seed + Series A + B",
+    "y": 2022
+  },
+  {
+    "source": "x_boldstart",
+    "target": "c_13",
+    "rel": "invested_in",
+    "note": "Seed through Series B",
+    "y": 2022
+  },
+  {
+    "source": "x_samsung",
+    "target": "c_13",
+    "rel": "invested_in",
+    "note": "Series B investor (strategic)",
+    "y": 2023
+  },
+  {
+    "source": "x_paloalto",
+    "target": "c_13",
+    "rel": "acquired",
+    "note": "Acquired Protect AI Apr 2025",
+    "y": 2025
+  },
+  {
+    "source": "x_prosperity7",
+    "target": "c_4",
+    "rel": "invested_in",
+    "note": "Series A (Aramco Ventures)",
+    "y": 2024
+  },
+  {
+    "source": "x_maverick",
+    "target": "c_4",
+    "rel": "invested_in",
+    "note": "SAFE + Series A",
+    "y": 2024
+  },
+  {
+    "source": "x_translink",
+    "target": "c_4",
+    "rel": "invested_in",
+    "note": "SAFE round (Japan-linked)",
+    "y": 2024
+  },
+  {
+    "source": "x_mercato",
+    "target": "c_9",
+    "rel": "invested_in",
+    "note": "Early investor",
+    "y": 2017
+  },
+  {
+    "source": "x_qualcomm_v",
+    "target": "c_9",
+    "rel": "invested_in",
+    "note": "Early strategic investor",
+    "y": 2018
+  },
+  {
+    "source": "x_rincon",
+    "target": "c_9",
+    "rel": "invested_in",
+    "note": "Early investor",
+    "y": 2017
+  },
+  {
+    "source": "x_baroda",
+    "target": "c_9",
+    "rel": "invested_in",
+    "note": "Early investor",
+    "y": 2017
+  },
+  {
+    "source": "x_buildtech",
+    "target": "c_7",
+    "rel": "invested_in",
+    "note": "Construction tech VC",
+    "y": 2022
+  },
+  {
+    "source": "x_elevation",
+    "target": "c_7",
+    "rel": "invested_in",
+    "note": "Canada-based VC",
+    "y": 2022
+  },
+  {
+    "source": "x_accel",
+    "target": "c_53",
+    "rel": "invested_in",
+    "note": "Led Duetto Series B $21M. Multi-position: also Socure",
+    "y": 2019
+  },
+  {
+    "source": "x_warburg",
+    "target": "c_53",
+    "rel": "invested_in",
+    "note": "Led Duetto Series D $80M",
+    "y": 2023
+  },
+  {
+    "source": "x_battery",
+    "target": "c_53",
+    "rel": "invested_in",
+    "note": "Led Duetto Series A $10M",
+    "y": 2023
+  },
+  {
+    "source": "x_growthcurve",
+    "target": "c_53",
+    "rel": "acquired",
+    "note": "Acquired Duetto Jun 2024",
+    "y": 2024
+  },
+  {
+    "source": "x_blackstone",
+    "target": "c_22",
+    "rel": "invested_in",
+    "note": "Led Series D $350M at $3.3B valuation",
+    "y": 2023
+  },
+  {
+    "source": "x_cvs",
+    "target": "c_22",
+    "rel": "invested_in",
+    "note": "Led Series D2 $100M, strategic healthcare",
+    "y": 2023
+  },
+  {
+    "source": "x_dragoneer",
+    "target": "c_22",
+    "rel": "invested_in",
+    "note": "Led Series C $100M",
+    "y": 2023
+  },
+  {
+    "source": "x_blackrock",
+    "target": "c_22",
+    "rel": "invested_in",
+    "note": "Series D. Multi-position: also MNTN",
+    "y": 2023
+  },
+  {
+    "source": "x_twosigma",
+    "target": "c_22",
+    "rel": "invested_in",
+    "note": "Series A. Multi-position: also Socure",
+    "y": 2023
+  },
+  {
+    "source": "x_lightspeed",
+    "target": "c_5",
+    "rel": "invested_in",
+    "note": "Led Series B $100M at $1.5B valuation",
+    "y": 2023
+  },
+  {
+    "source": "x_insight",
+    "target": "c_5",
+    "rel": "invested_in",
+    "note": "Series B co-investor. Multi-position: also Abnormal AI",
+    "y": 2023
+  },
+  {
+    "source": "x_galaxy",
+    "target": "c_5",
+    "rel": "invested_in",
+    "note": "Led seed $6.5M. Gaming VC.",
+    "y": 2023
+  },
+  {
+    "source": "x_apollo",
+    "target": "c_28",
+    "rel": "acquired",
+    "note": "Apollo acquired Everi + IGT Gaming Jul 2025 for $6.3B combined. $14.25/share cash. Delisted NYSE. HQ Las Vegas.",
+    "y": 2025
+  },
+  {
+    "source": "x_segasammy",
+    "target": "c_54",
+    "rel": "acquired",
+    "note": "SEGA SAMMY Creation acquired GAN May 2025. $1.97/share, 121% premium.",
+    "y": 2025
+  },
+  {
+    "source": "x_orix",
+    "target": "c_74",
+    "rel": "invested_in",
+    "note": "Ormat Industries (ORIX subsidiary) owns 44.76% of Ormat Technologies.",
+    "y": 2005
+  },
+  {
+    "source": "x_acuren",
+    "target": "c_75",
+    "rel": "acquired",
+    "note": "Acuren acquired NV5 Global Aug 2025. ~$23/share ($10 cash + $13 Acuren stock). Delisted Nasdaq.",
+    "y": 2025
+  },
+  {
+    "source": "x_canaan",
+    "target": "c_20",
+    "rel": "invested_in",
+    "note": "Led Ollie Series A $12.6M Aug 2017.",
+    "y": 2017
+  },
+  {
+    "source": "x_lererhippeau",
+    "target": "c_20",
+    "rel": "invested_in",
+    "note": "Ollie seed co-lead + Series A participant.",
+    "y": 2023
+  },
+  {
+    "source": "x_agrolimen",
+    "target": "c_20",
+    "rel": "acquired",
+    "note": "Spanish conglomerate acquired Ollie 2025.",
+    "y": 2025
+  },
+  {
+    "source": "x_twobear",
+    "target": "c_11",
+    "rel": "invested_in",
+    "note": "Led CIQ Series A $26M May 2022. $150M valuation.",
+    "y": 2022
+  },
+  {
+    "source": "x_iag",
+    "target": "c_11",
+    "rel": "invested_in",
+    "note": "CIQ bridge round 2021.",
+    "y": 2021
+  },
+  {
+    "source": "x_google",
+    "target": "c_11",
+    "rel": "partners_with",
+    "note": "Rocky Linux tier 1 Google Cloud-supported offering.",
+    "y": 2023
+  },
+  {
+    "source": "x_tuatara",
+    "target": "c_12",
+    "rel": "invested_in",
+    "note": "SPAC sponsor (TCAC→SBIG Jun 2022). $13M PIPE.",
+    "y": 2022
+  },
+  {
+    "source": "x_tvc",
+    "target": "c_12",
+    "rel": "invested_in",
+    "note": "Springbig PIPE investor. B2B SaaS focused.",
+    "y": 2023
+  },
+  {
+    "source": "x_cerberus_v",
+    "target": "c_21",
+    "rel": "invested_in",
+    "note": "Led Nudge Security Series A $22.5M Nov 2025.",
+    "y": 2025
+  },
+  {
+    "source": "x_ballistic",
+    "target": "c_21",
+    "rel": "invested_in",
+    "note": "Nudge Security seed $7M Apr 2022. Cybersecurity-dedicated VC.",
+    "y": 2022
+  },
+  {
+    "source": "x_forgepoint",
+    "target": "c_21",
+    "rel": "invested_in",
+    "note": "Nudge Security seed + Series A. Co-led seed extension.",
+    "y": 2023
+  },
+  {
+    "source": "x_squadra",
+    "target": "c_21",
+    "rel": "invested_in",
+    "note": "Nudge Security seed extension + Series A.",
+    "y": 2023
+  },
+  {
+    "source": "x_efung",
+    "target": "c_60",
+    "rel": "invested_in",
+    "note": "Elicio Therapeutics Series B $33M Oct 2019.",
+    "y": 2019
+  },
+  {
+    "source": "x_clal_bio",
+    "target": "c_60",
+    "rel": "invested_in",
+    "note": "Elicio Series B. Israeli life sciences investment co.",
+    "y": 2023
+  },
+  {
+    "source": "c_39",
+    "target": "c_67",
+    "rel": "competes_with",
+    "note": "Both LV-based cannabis/gaming-adjacent entertainment companies.",
+    "y": 2023
+  },
+  {
+    "source": "x_mgm",
+    "target": "c_67",
+    "rel": "partners_with",
+    "note": "Planet 13 SuperStore adjacent to Las Vegas Strip casino corridor.",
+    "y": 2023
+  },
+  {
+    "source": "x_caesars",
+    "target": "c_39",
+    "rel": "partners_with",
+    "note": "Wynn Interactive competes in NV online sports betting market.",
+    "y": 2022
+  },
+  {
+    "source": "x_goldman",
+    "target": "c_1",
+    "rel": "invested_in",
+    "note": "Co-led Redwood Series D $1B+ Aug 2023. $5B valuation.",
+    "y": 2022
+  },
+  {
+    "source": "x_capricorn",
+    "target": "c_1",
+    "rel": "invested_in",
+    "note": "Co-led Redwood Series D. Early backer since Series B 2020.",
+    "y": 2021
+  },
+  {
+    "source": "x_trowe",
+    "target": "c_1",
+    "rel": "invested_in",
+    "note": "Co-led Redwood Series C $700M + Series D. T. Rowe Price Growth Stock Fund.",
+    "y": 2023
+  },
+  {
+    "source": "x_eclipse_v",
+    "target": "c_1",
+    "rel": "invested_in",
+    "note": "Led Redwood Series E $350M Oct 2025. $6B valuation.",
+    "y": 2025
+  },
+  {
+    "source": "x_nventures",
+    "target": "c_1",
+    "rel": "invested_in",
+    "note": "Nvidia NVentures. Redwood Series E Oct 2025.",
+    "y": 2025
+  },
+  {
+    "source": "x_fidelity",
+    "target": "c_1",
+    "rel": "invested_in",
+    "note": "Fidelity. Redwood Series C 2021.",
+    "y": 2023
+  },
+  {
+    "source": "x_cpp",
+    "target": "c_1",
+    "rel": "invested_in",
+    "note": "Canada Pension Plan. Redwood Series C.",
+    "y": 2023
+  },
+  {
+    "source": "x_breakthrough",
+    "target": "c_1",
+    "rel": "invested_in",
+    "note": "Breakthrough Energy Ventures (Gates). Redwood Series B 2020.",
+    "y": 2021
+  },
+  {
+    "source": "x_amazon_cpf",
+    "target": "c_1",
+    "rel": "invested_in",
+    "note": "Amazon Climate Pledge Fund. Redwood investor.",
+    "y": 2023
+  },
+  {
+    "source": "x_omers",
+    "target": "c_1",
+    "rel": "invested_in",
+    "note": "Ontario pension fund. Redwood Series D new investor.",
+    "y": 2023
+  },
+  {
+    "source": "x_ford",
+    "target": "c_1",
+    "rel": "partners_with",
+    "note": "Ford strategic partner + investor. EV battery materials supply chain.",
+    "y": 2022
+  },
+  {
+    "source": "x_caterpillar_v",
+    "target": "c_1",
+    "rel": "invested_in",
+    "note": "Caterpillar Ventures. Redwood Series D.",
+    "y": 2023
+  },
+  {
+    "source": "x_doe",
+    "target": "c_1",
+    "rel": "loaned_to",
+    "note": "DOE $2B loan commitment for Carson City battery recycling expansion.",
+    "y": 2024
+  },
+  {
+    "source": "x_ozmen",
+    "target": "c_51",
+    "rel": "invested_in",
+    "note": "Eren & Fatih Ozmen 100% owners since 1994 management buyout. Billionaire family.",
+    "y": 2023
+  },
+  {
+    "source": "x_nasa",
+    "target": "c_51",
+    "rel": "contracts_with",
+    "note": "Dream Chaser spaceplane ISS cargo contract. CRS-2 program.",
+    "y": 2022
+  },
+  {
+    "source": "x_usaf",
+    "target": "c_51",
+    "rel": "contracts_with",
+    "note": "Multi-billion defense & national security contractor. Electronic warfare, ISR systems.",
+    "y": 2023
+  },
+  {
+    "source": "x_blueorigin",
+    "target": "c_51",
+    "rel": "partners_with",
+    "note": "Sierra Space + Blue Origin = Orbital Reef commercial space station partnership.",
+    "y": 2023
+  },
+  {
+    "source": "c_51",
+    "target": "x_unr",
+    "rel": "collaborated_with",
+    "note": "Ozmens donated $5M for Ozmen Center for Entrepreneurship at UNR alma mater.",
+    "y": 2023
+  },
+  {
+    "source": "x_swagar",
+    "target": "c_6",
+    "rel": "invested_in",
+    "note": "Led Hubble Series B $70M Sep 2025. Ryan Swagar, former Life360 Series A lead.",
+    "y": 2024
+  },
+  {
+    "source": "x_rpm",
+    "target": "c_6",
+    "rel": "invested_in",
+    "note": "RPM Ventures. Marc Weiser (former NASA board). Hubble Series B.",
+    "y": 2024
+  },
+  {
+    "source": "x_yc",
+    "target": "c_6",
+    "rel": "invested_in",
+    "note": "Y Combinator. Hubble Network Series B investor.",
+    "y": 2022
+  },
+  {
+    "source": "x_seraph",
+    "target": "c_6",
+    "rel": "invested_in",
+    "note": "Seraph Group (Tuff Yen). Hubble Series B.",
+    "y": 2023
+  },
+  {
+    "source": "x_acies",
+    "target": "c_27",
+    "rel": "invested_in",
+    "note": "Acies SPAC merged with PlayStudios Jun 2021. Jim Murren (ex-MGM CEO) chaired. $1.1B valuation.",
+    "y": 2021
+  },
+  {
+    "source": "x_blackrock",
+    "target": "c_27",
+    "rel": "invested_in",
+    "note": "BlackRock led $250M PIPE for PlayStudios SPAC merger 2021.",
+    "y": 2021
+  },
+  {
+    "source": "x_neuberger",
+    "target": "c_27",
+    "rel": "invested_in",
+    "note": "Neuberger Berman participated in PlayStudios $250M PIPE.",
+    "y": 2021
+  },
+  {
+    "source": "x_clearbridge",
+    "target": "c_27",
+    "rel": "invested_in",
+    "note": "ClearBridge Investments. PlayStudios $250M PIPE participant.",
+    "y": 2021
+  },
+  {
+    "source": "x_mgm",
+    "target": "c_27",
+    "rel": "invested_in",
+    "note": "MGM Resorts ~10% stake post-SPAC. Strategic partner + PIPE investor. Exclusive social gaming rights.",
+    "y": 2021
+  },
+  {
+    "source": "x_doe",
+    "target": "c_49",
+    "rel": "loaned_to",
+    "note": "DOE $996M loan guarantee Jan 2025. ATVM program. Rhyolite Ridge lithium project, Esmeralda County.",
+    "y": 2025
+  },
+  {
+    "source": "x_sibanye",
+    "target": "c_49",
+    "rel": "invested_in",
+    "note": "Sibanye-Stillwater held 6% equity ($70M placement 2021). $490M JV withdrawn Feb 2025 due to lithium price crash.",
+    "y": 2021
+  },
+  {
+    "source": "x_doe",
+    "target": "c_73",
+    "rel": "grants_to",
+    "note": "DOE $4.99M ACME-REVIVE grant consortium with Penn State. Critical minerals from coal.",
+    "y": 2024
+  },
+  {
+    "source": "x_goed",
+    "target": "c_73",
+    "rel": "grants_to",
+    "note": "NV GOED $2.2M tax abatement for Sierra ARC campus. $392M projected economic impact.",
+    "y": 2024
+  },
+  {
+    "source": "x_6kenergy",
+    "target": "c_73",
+    "rel": "partners_with",
+    "note": "Multi-year supply agreement. Aqua Metals provides 30% recycled content for 6K cathode facility.",
+    "y": 2024
+  },
+  {
+    "source": "x_chardan",
+    "target": "c_50",
+    "rel": "invested_in",
+    "note": "Chardan NexTech SPAC merged with Dragonfly Oct 2022. $500M EV. Nasdaq:DFLI.",
+    "y": 2022
+  },
+  {
+    "source": "x_thor",
+    "target": "c_50",
+    "rel": "invested_in",
+    "note": "Thor Industries $15M strategic investment Jul 2022. World's largest RV manufacturer. Keystone RV is subsidiary.",
+    "y": 2022
+  },
+  {
+    "source": "x_eip",
+    "target": "c_50",
+    "rel": "invested_in",
+    "note": "Energy Impact Partners led $75M senior secured term loan for Dragonfly SPAC.",
+    "y": 2023
+  },
+  {
+    "source": "x_stryten",
+    "target": "c_50",
+    "rel": "partners_with",
+    "note": "Stryten Energy $30M licensing deal for Battle Born Batteries brand. Military/marine/auto markets.",
+    "y": 2024
+  },
+  {
+    "source": "x_goed",
+    "target": "c_8",
+    "rel": "partners_with",
+    "note": "Blockchains sought Innovation Zone legislation. $300M+ self-funded by CEO Jeffrey Berns. 67,000 acres Storey County.",
+    "y": 2021
+  },
+  {
+    "source": "x_doe",
+    "target": "c_74",
+    "rel": "loaned_to",
+    "note": "DOE $350M partial loan guarantee 2011. Three geothermal plants across northern Nevada.",
+    "y": 2011
+  },
+  {
+    "source": "x_fimi",
+    "target": "c_74",
+    "rel": "invested_in",
+    "note": "FIMI Opportunity Funds ~14.8% largest shareholder. Israeli PE.",
+    "y": 2016
+  },
+  {
+    "source": "x_nvenergy",
+    "target": "c_74",
+    "rel": "partners_with",
+    "note": "Long-term PPAs for Stillwater, Salt Wells geothermal. Clean Transition Tariff partner.",
+    "y": 2023
+  },
+  {
+    "source": "x_google",
+    "target": "c_74",
+    "rel": "partners_with",
+    "note": "Google 150MW geothermal PPA via NV Energy Feb 2026. Data center clean energy. Projects 2028-2030.",
+    "y": 2026
+  },
+  {
+    "source": "c_74",
+    "target": "c_58",
+    "rel": "partners_with",
+    "note": "Ormat 20-year PPA with Switch for 13MW geothermal power.",
+    "y": 2026
+  },
+  {
+    "source": "x_goff",
+    "target": "c_61",
+    "rel": "acquired",
+    "note": "John Goff/Goff Capital acquired Canyon Ranch 2017 from founders. Moved HQ to Fort Worth.",
+    "y": 2017
+  },
+  {
+    "source": "x_vici",
+    "target": "c_61",
+    "rel": "invested_in",
+    "note": "VICI Properties $500M growth partnership. $150M preferred equity + $150M mortgage + $200M Austin development.",
+    "y": 2023
+  },
+  {
+    "source": "c_33",
+    "target": "x_linico",
+    "rel": "invested_in",
+    "note": "Comstock 64% stake in LiNiCo battery recycler. $10.75M deal Feb 2021. TRI facility.",
+    "y": 2021
+  },
+  {
+    "source": "c_73",
+    "target": "x_linico",
+    "rel": "invested_in",
+    "note": "Aqua Metals 10% stake in LiNiCo. $2M. Sold battery recycling facility to LiNiCo.",
+    "y": 2023
+  },
+  {
+    "source": "c_33",
+    "target": "c_73",
+    "rel": "partners_with",
+    "note": "Connected via LiNiCo. Aqua Metals sold battery recycling facility, Comstock took majority stake.",
+    "y": 2022
+  },
+  {
+    "source": "x_marathon",
+    "target": "c_33",
+    "rel": "invested_in",
+    "note": "Marathon Petroleum Series A strategic investment in Comstock Fuels segment. Major oil refiner.",
+    "y": 2024
+  },
+  {
+    "source": "x_rwe",
+    "target": "c_33",
+    "rel": "partners_with",
+    "note": "RWE Clean Energy MSA for solar decommissioning/recycling. Preferred strategic partner.",
+    "y": 2025
+  },
+  {
+    "source": "c_33",
+    "target": "x_unr",
+    "rel": "partners_with",
+    "note": "Comstock CEO presented at UNR on future of mining and critical materials in Nevada.",
+    "y": 2024
+  },
+  {
+    "source": "x_atw",
+    "target": "c_18",
+    "rel": "invested_in",
+    "note": "ATW Partners. Kaptyn Series A + Series B $10M Nov 2022. $30M+ total raised.",
+    "y": 2022
+  },
+  {
+    "source": "x_kibble",
+    "target": "c_18",
+    "rel": "invested_in",
+    "note": "Kibble Holdings. Kaptyn early seed investor.",
+    "y": 2023
+  },
+  {
+    "source": "x_mgm",
+    "target": "c_18",
+    "rel": "partners_with",
+    "note": "MGM Resorts exclusive transportation partner in Las Vegas. EV fleet.",
+    "y": 2024
+  },
+  {
+    "source": "x_nvenergy",
+    "target": "c_58",
+    "rel": "partners_with",
+    "note": "NV Energy provides power to Switch data centers. Clean energy PPAs.",
+    "y": 2023
+  },
+  {
+    "source": "x_goed",
+    "target": "c_49",
+    "rel": "partners_with",
+    "note": "GOED supports Ioneer Rhyolite Ridge. Part of NV Lithium Loop economic development.",
+    "y": 2024
+  },
+  {
+    "source": "x_goed",
+    "target": "c_1",
+    "rel": "partners_with",
+    "note": "GOED incentives for Redwood Materials Carson City battery recycling campus.",
+    "y": 2023
+  },
+  {
+    "source": "x_igt",
+    "target": "c_28",
+    "rel": "partners_with",
+    "note": "IGT Gaming merged with Everi under Apollo. Combined: Gaming, Digital, FinTech. HQ Las Vegas.",
+    "y": 2025
+  },
+  {
+    "source": "x_eif",
+    "target": "c_17",
+    "rel": "invested_in",
+    "note": "Led Vibrant Planet seed $17M + Series A $15M. Total $34M+.",
+    "y": 2023
+  },
+  {
+    "source": "x_msft_climate",
+    "target": "c_17",
+    "rel": "invested_in",
+    "note": "Microsoft Climate Innovation Fund. Vibrant Planet Series A.",
+    "y": 2023
+  },
+  {
+    "source": "x_citi_v",
+    "target": "c_17",
+    "rel": "invested_in",
+    "note": "Citi Ventures participated in Vibrant Planet Series A.",
+    "y": 2023
+  },
+  {
+    "source": "x_dayonev",
+    "target": "c_17",
+    "rel": "invested_in",
+    "note": "Day One Ventures. Vibrant Planet Series A.",
+    "y": 2023
+  },
+  {
+    "source": "x_grantham",
+    "target": "c_17",
+    "rel": "invested_in",
+    "note": "Grantham Environmental Trust. Co-led Vibrant Planet seed $17M.",
+    "y": 2023
+  },
+  {
+    "source": "x_owl",
+    "target": "c_38",
+    "rel": "invested_in",
+    "note": "Owl Ventures. Amira Learning Series A/B. $2.2B+ EdTech VC.",
+    "y": 2023
+  },
+  {
+    "source": "x_authentic",
+    "target": "c_38",
+    "rel": "invested_in",
+    "note": "Led Amira Learning Series A $11M Apr 2021.",
+    "y": 2021
+  },
+  {
+    "source": "x_amazon_af",
+    "target": "c_38",
+    "rel": "invested_in",
+    "note": "Amazon Alexa Fund invested in Amira Learning.",
+    "y": 2023
+  },
+  {
+    "source": "x_edf",
+    "target": "c_64",
+    "rel": "invested_in",
+    "note": "EDF Renewables. Nuvve Series A Dec 2017. V2G JV (DREEV).",
+    "y": 2017
+  },
+  {
+    "source": "x_toyota_tsusho",
+    "target": "c_64",
+    "rel": "invested_in",
+    "note": "Toyota Tsusho. Nuvve Series A Dec 2017.",
+    "y": 2017
+  },
+  {
+    "source": "x_newborn",
+    "target": "c_64",
+    "rel": "acquired",
+    "note": "SPAC merger Mar 2021. $70M+ to balance sheet. Nasdaq:NVVE.",
+    "y": 2021
+  },
+  {
+    "source": "x_thirdprime",
+    "target": "c_19",
+    "rel": "invested_in",
+    "note": "Co-led Climb Credit Series A $9.8M Jun 2019.",
+    "y": 2019
+  },
+  {
+    "source": "x_newmarkets",
+    "target": "c_19",
+    "rel": "invested_in",
+    "note": "Co-led Climb Credit Series A. EdTech/workforce VC.",
+    "y": 2023
+  },
+  {
+    "source": "x_newfund",
+    "target": "c_19",
+    "rel": "invested_in",
+    "note": "Early Climb Credit investor.",
+    "y": 2023
+  },
+  {
+    "source": "f_fundnv",
+    "target": "c_4",
+    "rel": "invested_in",
+    "note": "FundNV investment in TensorWave.",
+    "y": 2023
+  },
+  {
+    "source": "f_fundnv",
+    "target": "c_14",
+    "rel": "invested_in",
+    "note": "FundNV investment in MagicDoor.",
+    "y": 2023
+  },
+  {
+    "source": "f_1864",
+    "target": "c_14",
+    "rel": "invested_in",
+    "note": "1864 Fund investment in MagicDoor.",
+    "y": 2023
+  },
+  {
+    "source": "f_fundnv",
+    "target": "c_23",
+    "rel": "invested_in",
+    "note": "FundNV investment in Titan Seal.",
+    "y": 2023
+  },
+  {
+    "source": "f_fundnv",
+    "target": "c_24",
+    "rel": "invested_in",
+    "note": "FundNV investment in Fund Duel.",
+    "y": 2023
+  },
+  {
+    "source": "f_fundnv",
+    "target": "c_25",
+    "rel": "invested_in",
+    "note": "FundNV $240K investment in Cognizer AI.",
+    "y": 2023
+  },
+  {
+    "source": "f_fundnv",
+    "target": "c_26",
+    "rel": "invested_in",
+    "note": "FundNV investment in SEE ID.",
+    "y": 2023
+  },
+  {
+    "source": "f_1864",
+    "target": "c_26",
+    "rel": "invested_in",
+    "note": "1864 Fund investment in SEE ID.",
+    "y": 2023
+  },
+  {
+    "source": "f_fundnv",
+    "target": "c_30",
+    "rel": "invested_in",
+    "note": "FundNV investment in Cranel.",
+    "y": 2023
+  },
+  {
+    "source": "f_1864",
+    "target": "c_30",
+    "rel": "invested_in",
+    "note": "1864 Fund investment in Cranel.",
+    "y": 2023
+  },
+  {
+    "source": "f_fundnv",
+    "target": "c_31",
+    "rel": "invested_in",
+    "note": "FundNV investment in fibrX.",
+    "y": 2023
+  },
+  {
+    "source": "f_fundnv",
+    "target": "c_32",
+    "rel": "invested_in",
+    "note": "FundNV investment in Base Venture.",
+    "y": 2023
+  },
+  {
+    "source": "f_1864",
+    "target": "c_32",
+    "rel": "invested_in",
+    "note": "1864 Fund investment in Base Venture.",
+    "y": 2023
+  },
+  {
+    "source": "f_fundnv",
+    "target": "c_36",
+    "rel": "invested_in",
+    "note": "FundNV investment in Tilt.",
+    "y": 2023
+  },
+  {
+    "source": "f_1864",
+    "target": "c_36",
+    "rel": "invested_in",
+    "note": "1864 Fund investment in Tilt.",
+    "y": 2023
+  },
+  {
+    "source": "f_fundnv",
+    "target": "c_37",
+    "rel": "invested_in",
+    "note": "FundNV investment in Nommi.",
+    "y": 2023
+  },
+  {
+    "source": "f_1864",
+    "target": "c_37",
+    "rel": "invested_in",
+    "note": "1864 Fund investment in Nommi.",
+    "y": 2023
+  },
+  {
+    "source": "f_1864",
+    "target": "c_40",
+    "rel": "invested_in",
+    "note": "1864 Fund investment in betJACK.",
+    "y": 2023
+  },
+  {
+    "source": "f_fundnv",
+    "target": "c_40",
+    "rel": "invested_in",
+    "note": "FundNV investment in betJACK.",
+    "y": 2023
+  },
+  {
+    "source": "f_fundnv",
+    "target": "c_41",
+    "rel": "invested_in",
+    "note": "FundNV investment in Hibear.",
+    "y": 2023
+  },
+  {
+    "source": "f_1864",
+    "target": "c_43",
+    "rel": "invested_in",
+    "note": "1864 Fund investment in Sapien.",
+    "y": 2023
+  },
+  {
+    "source": "f_fundnv",
+    "target": "c_45",
+    "rel": "invested_in",
+    "note": "FundNV investment in Lucihub.",
+    "y": 2023
+  },
+  {
+    "source": "f_1864",
+    "target": "c_45",
+    "rel": "invested_in",
+    "note": "1864 Fund investment in Lucihub.",
+    "y": 2023
+  },
+  {
+    "source": "f_fundnv",
+    "target": "c_47",
+    "rel": "invested_in",
+    "note": "FundNV investment in Cloudforce Networks.",
+    "y": 2023
+  },
+  {
+    "source": "f_1864",
+    "target": "c_47",
+    "rel": "invested_in",
+    "note": "1864 Fund investment in Cloudforce Networks.",
+    "y": 2023
+  },
+  {
+    "source": "f_fundnv",
+    "target": "c_57",
+    "rel": "invested_in",
+    "note": "FundNV investment in Now Ads.",
+    "y": 2023
+  },
+  {
+    "source": "f_fundnv",
+    "target": "c_59",
+    "rel": "invested_in",
+    "note": "FundNV investment in Talentel.",
+    "y": 2023
+  },
+  {
+    "source": "f_fundnv",
+    "target": "c_62",
+    "rel": "invested_in",
+    "note": "FundNV investment in MiOrganics.",
+    "y": 2023
+  },
+  {
+    "source": "f_1864",
+    "target": "c_62",
+    "rel": "invested_in",
+    "note": "1864 Fund investment in MiOrganics.",
+    "y": 2023
+  },
+  {
+    "source": "f_fundnv",
+    "target": "c_63",
+    "rel": "invested_in",
+    "note": "FundNV investment in BuildQ.",
+    "y": 2023
+  },
+  {
+    "source": "f_1864",
+    "target": "c_63",
+    "rel": "invested_in",
+    "note": "1864 Fund investment in BuildQ.",
+    "y": 2023
+  },
+  {
+    "source": "f_1864",
+    "target": "c_15",
+    "rel": "invested_in",
+    "note": "1864 Fund investment in Stable.",
+    "y": 2023
+  },
+  {
+    "source": "a_startupnv",
+    "target": "c_14",
+    "rel": "accelerated_by",
+    "note": "StartUpNV portfolio company.",
+    "y": 2023
+  },
+  {
+    "source": "a_startupnv",
+    "target": "c_23",
+    "rel": "accelerated_by",
+    "note": "StartUpNV portfolio company.",
+    "y": 2023
+  },
+  {
+    "source": "a_startupnv",
+    "target": "c_24",
+    "rel": "accelerated_by",
+    "note": "StartUpNV portfolio company.",
+    "y": 2023
+  },
+  {
+    "source": "a_startupnv",
+    "target": "c_25",
+    "rel": "accelerated_by",
+    "note": "StartUpNV portfolio company.",
+    "y": 2023
+  },
+  {
+    "source": "a_startupnv",
+    "target": "c_26",
+    "rel": "accelerated_by",
+    "note": "StartUpNV portfolio company.",
+    "y": 2023
+  },
+  {
+    "source": "a_startupnv",
+    "target": "c_30",
+    "rel": "accelerated_by",
+    "note": "StartUpNV portfolio company.",
+    "y": 2023
+  },
+  {
+    "source": "a_startupnv",
+    "target": "c_31",
+    "rel": "accelerated_by",
+    "note": "StartUpNV portfolio company.",
+    "y": 2023
+  },
+  {
+    "source": "a_startupnv",
+    "target": "c_37",
+    "rel": "accelerated_by",
+    "note": "StartUpNV portfolio company.",
+    "y": 2023
+  },
+  {
+    "source": "a_startupnv",
+    "target": "c_40",
+    "rel": "accelerated_by",
+    "note": "StartUpNV portfolio company.",
+    "y": 2023
+  },
+  {
+    "source": "a_startupnv",
+    "target": "c_43",
+    "rel": "accelerated_by",
+    "note": "StartUpNV portfolio company.",
+    "y": 2023
+  },
+  {
+    "source": "a_startupnv",
+    "target": "c_45",
+    "rel": "accelerated_by",
+    "note": "StartUpNV portfolio company.",
+    "y": 2023
+  },
+  {
+    "source": "a_startupnv",
+    "target": "c_62",
+    "rel": "accelerated_by",
+    "note": "StartUpNV portfolio company.",
+    "y": 2023
+  },
+  {
+    "source": "a_startupnv",
+    "target": "c_63",
+    "rel": "accelerated_by",
+    "note": "StartUpNV portfolio company.",
+    "y": 2023
+  },
+  {
+    "source": "c_66",
+    "target": "c_67",
+    "rel": "competes_with",
+    "note": "Both major NV cannabis operators. Curaleaf (TSX:CURA) and Planet 13.",
+    "y": 2023
+  },
+  {
+    "source": "c_33",
+    "target": "c_74",
+    "rel": "competes_with",
+    "note": "Both NV-based cleantech/energy companies. Comstock solar recycling vs Ormat geothermal.",
+    "y": 2023
+  },
+  {
+    "source": "c_70",
+    "target": "c_33",
+    "rel": "partners_with",
+    "note": "Both NV cleantech operators. Bombard solar installs, Comstock recycles panels.",
+    "y": 2023
+  },
+  {
+    "source": "c_18",
+    "target": "c_10",
+    "rel": "competes_with",
+    "note": "Both LV tech-forward consumer transport. Kaptyn EV fleet vs Katalyst fitness tech.",
+    "y": 2023
+  },
+  {
+    "source": "c_69",
+    "target": "c_28",
+    "rel": "partners_with",
+    "note": "Acres casino tech integrates with gaming operators like Everi.",
+    "y": 2023
+  },
+  {
+    "source": "c_52",
+    "target": "c_31",
+    "rel": "partners_with",
+    "note": "Both NV deep-tech hardware startups. Nevada Nano MEMS sensors, fibrX fiber tech.",
+    "y": 2023
+  },
+  {
+    "source": "c_68",
+    "target": "c_15",
+    "rel": "partners_with",
+    "note": "Both NV fintech companies. GBank digital banking, Stable blockchain payments.",
+    "y": 2023
+  },
+  {
+    "source": "c_55",
+    "target": "c_60",
+    "rel": "competes_with",
+    "note": "Both NV biotech/life sciences. NEXGEL hydrogel vs Elicio therapeutics.",
+    "y": 2023
+  },
+  {
+    "source": "c_61",
+    "target": "c_10",
+    "rel": "partners_with",
+    "note": "Both premium NV wellness brands. Canyon Ranch hospitality + Katalyst fitness.",
+    "y": 2023
+  },
+  {
+    "source": "c_35",
+    "target": "c_70",
+    "rel": "partners_with",
+    "note": "Both NV manufacturing/cleantech. Amerityre green tires, Bombard solar.",
+    "y": 2023
+  },
+  {
+    "source": "c_65",
+    "target": "c_11",
+    "rel": "competes_with",
+    "note": "Both NV enterprise IT companies. SilverSun IT consulting vs CIQ Linux infra.",
+    "y": 2023
+  },
+  {
+    "source": "c_71",
+    "target": "c_69",
+    "rel": "competes_with",
+    "note": "Both casino/gaming tech companies. Jackpot Digital tables vs Acres loyalty.",
+    "y": 2023
+  },
+  {
+    "source": "c_44",
+    "target": "c_42",
+    "rel": "competes_with",
+    "note": "Both NV AdTech/media. SITO Mobile location-based vs nFusz interactive video.",
+    "y": 2023
+  },
+  {
+    "source": "c_46",
+    "target": "c_15",
+    "rel": "competes_with",
+    "note": "Both NV blockchain/crypto companies. Tokens.com NFT/metaverse vs Stable payments.",
+    "y": 2023
+  },
+  {
+    "source": "c_48",
+    "target": "c_52",
+    "rel": "partners_with",
+    "note": "Both NV deep-tech materials/sensor companies.",
+    "y": 2023
+  },
+  {
+    "source": "c_16",
+    "target": "c_8",
+    "rel": "competes_with",
+    "note": "Both NV healthcare companies. ThirdWaveRx pharmacy AI vs Carbon Health clinics.",
+    "y": 2023
+  },
+  {
+    "source": "c_75",
+    "target": "x_nvenergy",
+    "rel": "partners_with",
+    "note": "NV5 provides utility infrastructure engineering, grid hardening, and geospatial services for NV Energy.",
+    "y": 2023
+  },
+  {
+    "source": "c_54",
+    "target": "c_27",
+    "rel": "competes_with",
+    "note": "Both LV-based gaming tech. GAN real-money iGaming SaaS vs PlayStudios social casino/loyalty.",
+    "y": 2024
+  },
+  {
+    "source": "x_goed",
+    "target": "c_66",
+    "rel": "partners_with",
+    "note": "NV cannabis operator. GOED tracks economic impact of cannabis industry in Nevada.",
+    "y": 2023
+  },
+  {
+    "source": "c_56",
+    "target": "x_unr",
+    "rel": "partners_with",
+    "note": "WaterStart partners with UNR on water technology research and innovation programs.",
+    "y": 2022
+  },
+  {
+    "source": "x_goed",
+    "target": "c_56",
+    "rel": "partners_with",
+    "note": "GOED supports WaterStart as NV water technology accelerator. Statewide water innovation hub.",
+    "y": 2022
+  },
+  {
+    "source": "c_70",
+    "target": "x_nvenergy",
+    "rel": "partners_with",
+    "note": "Bombard Renewable Energy installs commercial and utility-scale solar for NV Energy service territory.",
+    "y": 2023
+  },
+  {
+    "source": "c_69",
+    "target": "c_27",
+    "rel": "partners_with",
+    "note": "Acres casino loyalty platform integrates with gaming operators. PlayStudios also in casino rewards space.",
+    "y": 2023
+  },
+  {
+    "source": "c_72",
+    "target": "x_usaf",
+    "rel": "contracts_with",
+    "note": "Skydio autonomous drones used by US military. NTTR (Nevada Test & Training Range) connection.",
+    "y": 2024
+  }
+]

@@ -1,0 +1,110 @@
+[
+  {
+    "id": "a_startupnv",
+    "name": "StartUpNV",
+    "atype": "Accelerator/Incubator",
+    "city": "Las Vegas",
+    "region": "las_vegas",
+    "founded": 2017,
+    "note": "NV statewide accelerator. Non-cohort. Min $100K via FundNV."
+  },
+  {
+    "id": "a_angelnv",
+    "name": "AngelNV",
+    "atype": "Angel Program",
+    "city": "Las Vegas",
+    "region": "las_vegas",
+    "founded": 2019,
+    "note": "Annual angel investor bootcamp + pitch competition. $200K+ investments."
+  },
+  {
+    "id": "a_adamshub",
+    "name": "Adams Hub",
+    "atype": "Accelerator",
+    "city": "Carson City",
+    "region": "reno",
+    "founded": 2020,
+    "note": "Carson City accelerator."
+  },
+  {
+    "id": "a_gener8tor_lv",
+    "name": "gener8tor Las Vegas",
+    "atype": "Accelerator",
+    "city": "Las Vegas",
+    "region": "las_vegas",
+    "founded": 2022,
+    "note": "SSBCI-funded Battle Born Growth accelerator. 12-week, $100K/company. Sector-agnostic. GOED + LVGEA supported."
+  },
+  {
+    "id": "a_gener8tor_reno",
+    "name": "gener8tor Reno-Tahoe",
+    "atype": "Accelerator",
+    "city": "Reno",
+    "region": "reno",
+    "founded": 2022,
+    "note": "SSBCI-funded at UNR Innevation Center."
+  },
+  {
+    "id": "a_gbeta_nv",
+    "name": "gBETA Electrify Nevada",
+    "atype": "Pre-Accelerator",
+    "city": "Las Vegas",
+    "region": "las_vegas",
+    "founded": 2024,
+    "note": "Free 7-week pre-accelerator by gener8tor."
+  },
+  {
+    "id": "a_innevator",
+    "name": "InNEVator",
+    "atype": "Pre-Accelerator",
+    "city": "Reno",
+    "region": "reno",
+    "founded": 2017,
+    "note": "8-week bootcamp at UNR Innevation Center."
+  },
+  {
+    "id": "a_blackfire",
+    "name": "Black Fire Innovation",
+    "atype": "Incubator/Lab",
+    "city": "Las Vegas",
+    "region": "las_vegas",
+    "founded": 2020,
+    "note": "UNLV + Caesars 43K sq ft gaming/hospitality living lab. Harry Reid Tech Park flagship. Mock casino floor, hotel rooms, sportsbook, esports arena, VR. Intel computing partner. Boyd Gaming Innovation Lab (2023). Zero Labs accelerator HQ'd here."
+  },
+  {
+    "id": "a_dtp",
+    "name": "Downtown Project (DTP)",
+    "atype": "Incubator/Fund",
+    "city": "Las Vegas",
+    "region": "las_vegas",
+    "founded": 2012,
+    "note": "Tony Hsieh initiative."
+  },
+  {
+    "id": "a_afwerx",
+    "name": "AFWERX",
+    "atype": "Military Accelerator",
+    "city": "Las Vegas",
+    "region": "las_vegas",
+    "founded": 2017,
+    "note": "US Air Force innovation hub. Nellis AFB."
+  },
+  {
+    "id": "a_audacity",
+    "name": "Audacity Institute",
+    "atype": "Accelerator",
+    "city": "Reno",
+    "region": "reno",
+    "founded": 2020,
+    "note": "Inclusive economy focus. TEQSpring program."
+  },
+  {
+    "id": "a_zerolabs",
+    "name": "Zero Labs",
+    "atype": "Accelerator",
+    "city": "Las Vegas",
+    "region": "las_vegas",
+    "founded": 2020,
+    "note": "LV's first dedicated gaming/hospitality/sports accelerator. Founded by Quinton Singleton (ex-Bet Works/Bally's Interactive). HQ'd at Black Fire Innovation. 76+ startups supported since 2024. GOED Knowledge Fund supported. 3-day launchpad cohorts."
+  }
+]

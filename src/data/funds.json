@@ -1,0 +1,82 @@
+[
+  {
+    "id": "bbv",
+    "name": "Battle Born Venture",
+    "type": "SSBCI",
+    "allocated": 36,
+    "deployed": 14.8,
+    "leverage": 3.2,
+    "companies": 12,
+    "thesis": "Co-invest alongside private lead investors in NV tech startups via SSBCI match"
+  },
+  {
+    "id": "fundnv",
+    "name": "FundNV",
+    "type": "SSBCI",
+    "allocated": 3,
+    "deployed": 2.4,
+    "leverage": 2.8,
+    "companies": 18,
+    "thesis": "Pre-seed fund writing $50K checks to StartUpNV accelerator graduates. SSBCI 1:1 match"
+  },
+  {
+    "id": "1864",
+    "name": "1864 Fund",
+    "type": "SSBCI",
+    "allocated": 10,
+    "deployed": 1.2,
+    "leverage": 4.1,
+    "companies": 5,
+    "thesis": "Seed capital for the forgotten middle of America — intermountain states to Mississippi"
+  },
+  {
+    "id": "angelnv",
+    "name": "AngelNV",
+    "type": "Angel",
+    "allocated": null,
+    "deployed": 5.5,
+    "leverage": null,
+    "companies": 22,
+    "thesis": "Southern Nevada angel investor bootcamp. 40 accredited investors per cohort, $200K team investments"
+  },
+  {
+    "id": "sierra",
+    "name": "Sierra Angels",
+    "type": "Angel",
+    "allocated": null,
+    "deployed": 3.2,
+    "leverage": null,
+    "companies": 15,
+    "thesis": "Northern Nevada angel investing community. Individual angel investments in Reno/Tahoe startups"
+  },
+  {
+    "id": "dcvc",
+    "name": "DCVC",
+    "type": "Deep Tech VC",
+    "allocated": null,
+    "deployed": 8.2,
+    "leverage": null,
+    "companies": 4,
+    "thesis": "Deep tech VC — active in NV climate, energy, and materials science"
+  },
+  {
+    "id": "stripes",
+    "name": "Stripes",
+    "type": "Growth VC",
+    "allocated": null,
+    "deployed": 26,
+    "leverage": null,
+    "companies": 1,
+    "thesis": "NYC-based growth equity firm. Led Katalyst Series A. Consumer tech focus"
+  },
+  {
+    "id": "startupnv",
+    "name": "StartUpNV",
+    "type": "Accelerator",
+    "allocated": null,
+    "deployed": 29.7,
+    "leverage": null,
+    "companies": 22,
+    "thesis": "NV statewide nonprofit accelerator. 30 investment transactions since 2021 across affiliated funds"
+  }
+]

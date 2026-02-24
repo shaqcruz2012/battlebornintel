@@ -1,0 +1,32 @@
+[
+  {
+    "id": "bbv",
+    "name": "Battle Born Venture",
+    "type": "SSBCI"
+  },
+  {
+    "id": "fundnv",
+    "name": "FundNV",
+    "type": "SSBCI"
+  },
+  {
+    "id": "1864",
+    "name": "1864 Fund",
+    "type": "SSBCI"
+  },
+  {
+    "id": "sbir",
+    "name": "SBIR/STTR",
+    "type": "Federal"
+  },
+  {
+    "id": "angelnv",
+    "name": "AngelNV",
+    "type": "Angel"
+  },
+  {
+    "id": "sierra",
+    "name": "Sierra Angels",
+    "type": "Angel"
+  }
+]

@@ -1,0 +1,44 @@
+[
+  {
+    "id": "p_straubel",
+    "name": "JB Straubel",
+    "role": "Founder/CEO",
+    "companyId": 1,
+    "note": "Tesla co-founder"
+  },
+  {
+    "id": "p_reynolds",
+    "name": "Ryan Reynolds",
+    "role": "CCO",
+    "companyId": 9,
+    "note": "Chief Creative Officer"
+  },
+  {
+    "id": "p_kurtzer",
+    "name": "Gregory Kurtzer",
+    "role": "Founder",
+    "companyId": 11,
+    "note": "CentOS/Rocky Linux creator"
+  },
+  {
+    "id": "p_barron",
+    "name": "Maryssa Barron",
+    "role": "Founder/CEO",
+    "companyId": 63,
+    "note": "AngelNV 2025 winner"
+  },
+  {
+    "id": "p_tomasik",
+    "name": "Piotr Tomasik",
+    "role": "Founder",
+    "companyId": 4,
+    "note": "AMD GPU cloud pioneer"
+  },
+  {
+    "id": "p_saling",
+    "name": "Jeff Saling",
+    "role": "Exec Director",
+    "companyId": null,
+    "note": "StartUpNV co-founder, FundNV GP"
+  }
+]
