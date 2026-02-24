@@ -1,0 +1,28 @@
+# Web framework
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+python-multipart==0.0.18
+
+# Database
+asyncpg==0.30.0
+alembic==1.14.1
+psycopg2-binary==2.9.10
+
+# AI / LLM
+anthropic==0.42.0
+
+# HTTP clients
+httpx==0.28.1
+aiohttp==3.11.11
+
+# Data processing
+pydantic==2.10.4
+pydantic-settings==2.7.1
+python-dotenv==1.0.1
+
+# Search
+beautifulsoup4==4.12.3
+
+# Utilities
+orjson==3.10.13
+thefuzz[speedup]==0.22.1
