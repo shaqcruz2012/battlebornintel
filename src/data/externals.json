@@ -832,5 +832,167 @@
     "name": "IGT Gaming",
     "etype": "Corporation",
     "note": "Combined with Everi under Apollo ownership Jul 2025. Global gaming/fintech/digital leader."
+  },
+  {
+    "id": "x_primemovers",
+    "name": "Prime Movers Lab",
+    "etype": "VC Firm",
+    "note": "Breakthrough science VC, $1.2B AUM. Led Lyten Series B $200M Sep 2023."
+  },
+  {
+    "id": "x_drhorton",
+    "name": "D.R. Horton",
+    "etype": "Corporation",
+    "note": "Largest US homebuilder NYSE:DHI. Boxabl strategic investor + 100-unit order Oct 2022."
+  },
+  {
+    "id": "x_svangel",
+    "name": "SV Angel",
+    "etype": "VC Firm",
+    "note": "Ron Conway's micro VC. MNTN original/seed investor pre-2011."
+  },
+  {
+    "id": "x_staleycap",
+    "name": "Staley Capital Management",
+    "etype": "PE Firm",
+    "note": "Growth equity. MNTN Series C investor 2015."
+  },
+  {
+    "id": "x_humancap",
+    "name": "Human Capital",
+    "etype": "VC Firm",
+    "note": "Led 1047 Games Series A $20M Jul 2021. Deal closed in a weekend."
+  },
+  {
+    "id": "x_vgames",
+    "name": "VGames",
+    "etype": "VC Firm",
+    "note": "Gaming-focused VC. 1047 Games seed $6.5M + Series B $100M."
+  },
+  {
+    "id": "x_lakestar",
+    "name": "Lakestar",
+    "etype": "VC Firm",
+    "note": "European VC. 1047 Games seed + Series B."
+  },
+  {
+    "id": "x_anthos",
+    "name": "Anthos Capital",
+    "etype": "VC Firm",
+    "note": "1047 Games Series B $100M participant."
+  },
+  {
+    "id": "x_draperdragon",
+    "name": "DraperDragon",
+    "etype": "VC Firm",
+    "note": "Early-stage VC. 1047 Games pre-seed + Series B."
+  },
+  {
+    "id": "x_1upventures",
+    "name": "1Up Ventures",
+    "etype": "VC Firm",
+    "note": "Gaming-focused VC. 1047 Games seed round."
+  },
+  {
+    "id": "x_octopus",
+    "name": "Octopus Ventures",
+    "etype": "VC Firm",
+    "note": "London-based VC. Led Katalyst $5.6M round 2019."
+  },
+  {
+    "id": "x_fjlabs",
+    "name": "FJ Labs",
+    "etype": "VC Firm",
+    "note": "VC firm. Katalyst 2019 round investor."
+  },
+  {
+    "id": "x_incisive",
+    "name": "Incisive Ventures",
+    "etype": "VC Firm",
+    "note": "Katalyst investor in 2019 round + Series A 2022."
+  },
+  {
+    "id": "x_unlock",
+    "name": "Unlock Venture Partners",
+    "etype": "VC Firm",
+    "note": "Katalyst Series A $26M investor 2022."
+  },
+  {
+    "id": "x_greenacre",
+    "name": "Green Acre Capital",
+    "etype": "VC Firm",
+    "note": "Cannabis-focused VC. Springbig co-lead 2017 + Series A."
+  },
+  {
+    "id": "x_altitude_ip",
+    "name": "Altitude Investment Partners",
+    "etype": "VC Firm",
+    "note": "Cannabis VC. Led Springbig Series A $5M Dec 2018."
+  },
+  {
+    "id": "x_keyinvest",
+    "name": "KEY Investment Partners",
+    "etype": "VC Firm",
+    "note": "Denver cannabis VC. Springbig Series B $11.5M lead + PIPE."
+  },
+  {
+    "id": "x_halley",
+    "name": "HALLEY Venture Partners",
+    "etype": "VC Firm",
+    "note": "Springbig investor from 2017 equity round through Series B."
+  },
+  {
+    "id": "x_brookfield",
+    "name": "Brookfield Technology Partners",
+    "etype": "PE Firm",
+    "note": "Brookfield growth equity. Led Carbon Health Series B $30M 2019. Returned in Series C+D."
+  },
+  {
+    "id": "x_dcvc",
+    "name": "DCVC",
+    "etype": "VC Firm",
+    "note": "Data Collective. Carbon Health Series B 2019, sole $28M B-ext 2020, Series C."
+  },
+  {
+    "id": "x_builders_vc",
+    "name": "Builders VC",
+    "etype": "VC Firm",
+    "note": "SF-based VC. Carbon Health investor Series A 2017 through Series C."
+  },
+  {
+    "id": "x_silverlake_w",
+    "name": "Silver Lake Waterman",
+    "etype": "PE Firm",
+    "note": "Silver Lake growth arm. Carbon Health Series D $350M Jul 2021."
+  },
+  {
+    "id": "x_hudsonbay",
+    "name": "Hudson Bay Capital",
+    "etype": "PE Firm",
+    "note": "NY hedge fund. Carbon Health Series D $350M Jul 2021."
+  },
+  {
+    "id": "x_lux",
+    "name": "Lux Capital",
+    "etype": "VC Firm",
+    "note": "Deep tech VC. Carbon Health Series D $350M Jul 2021."
+  },
+  {
+    "id": "x_fifthwall",
+    "name": "Fifth Wall",
+    "etype": "VC Firm",
+    "note": "Real estate tech VC. Carbon Health Series D $350M Jul 2021."
+  },
+  {
+    "id": "x_primary_vp",
+    "name": "Primary Venture Partners",
+    "etype": "VC Firm",
+    "note": "NYC VC. Ollie seed co-lead 2016 + Series A."
+  },
+  {
+    "id": "x_riverpark",
+    "name": "RiverPark Ventures",
+    "etype": "VC Firm",
+    "note": "Ollie Series A 2017 + Series B 2020 investor."
   }
 ]

@@ -1930,5 +1930,194 @@
     "rel": "contracts_with",
     "note": "Skydio autonomous drones used by US military. NTTR (Nevada Test & Training Range) connection.",
     "y": 2024
+  },
+  {
+    "source": "x_primemovers",
+    "target": "c_29",
+    "rel": "invested_in",
+    "note": "Led Lyten Series B $200M Sep 2023. Breakthrough science VC.",
+    "y": 2023
+  },
+  {
+    "source": "x_drhorton",
+    "target": "c_7",
+    "rel": "invested_in",
+    "note": "D.R. Horton strategic investment (preferred shares) + 100-unit Casita order Oct 2022.",
+    "y": 2022
+  },
+  {
+    "source": "x_svangel",
+    "target": "c_9",
+    "rel": "invested_in",
+    "note": "Ron Conway / SV Angel original investor. Pre-Series B seed stage.",
+    "y": 2010
+  },
+  {
+    "source": "x_staleycap",
+    "target": "c_9",
+    "rel": "invested_in",
+    "note": "Staley Capital. MNTN (SteelHouse) Series C investor 2015.",
+    "y": 2015
+  },
+  {
+    "source": "x_humancap",
+    "target": "c_5",
+    "rel": "invested_in",
+    "note": "Led 1047 Games Series A $20M Jul 2021. Deal closed over a weekend.",
+    "y": 2021
+  },
+  {
+    "source": "x_vgames",
+    "target": "c_5",
+    "rel": "invested_in",
+    "note": "VGames seed $6.5M + Series B $100M participant. Gaming VC.",
+    "y": 2021
+  },
+  {
+    "source": "x_lakestar",
+    "target": "c_5",
+    "rel": "invested_in",
+    "note": "Lakestar (European VC). 1047 Games seed + Series B participant.",
+    "y": 2021
+  },
+  {
+    "source": "x_anthos",
+    "target": "c_5",
+    "rel": "invested_in",
+    "note": "Anthos Capital. 1047 Games Series B $100M at $1.5B valuation.",
+    "y": 2021
+  },
+  {
+    "source": "x_draperdragon",
+    "target": "c_5",
+    "rel": "invested_in",
+    "note": "DraperDragon. Early 1047 Games investor pre-seed + Series B.",
+    "y": 2021
+  },
+  {
+    "source": "x_1upventures",
+    "target": "c_5",
+    "rel": "invested_in",
+    "note": "1Up Ventures. Gaming VC. 1047 Games seed round May 2021.",
+    "y": 2021
+  },
+  {
+    "source": "x_octopus",
+    "target": "c_10",
+    "rel": "invested_in",
+    "note": "Led Katalyst $5.6M round Nov 2019. London-based VC.",
+    "y": 2019
+  },
+  {
+    "source": "x_fjlabs",
+    "target": "c_10",
+    "rel": "invested_in",
+    "note": "FJ Labs. Katalyst $5.6M round participant 2019.",
+    "y": 2019
+  },
+  {
+    "source": "x_incisive",
+    "target": "c_10",
+    "rel": "invested_in",
+    "note": "Incisive Ventures. Katalyst 2019 round + Series A 2022.",
+    "y": 2019
+  },
+  {
+    "source": "x_unlock",
+    "target": "c_10",
+    "rel": "invested_in",
+    "note": "Unlock Venture Partners. Katalyst Series A $26M 2022.",
+    "y": 2022
+  },
+  {
+    "source": "x_greenacre",
+    "target": "c_12",
+    "rel": "invested_in",
+    "note": "Green Acre Capital co-led $3.2M equity round Dec 2017 + Series A.",
+    "y": 2017
+  },
+  {
+    "source": "x_altitude_ip",
+    "target": "c_12",
+    "rel": "invested_in",
+    "note": "Led Springbig Series A $5M Dec 2018. Cannabis VC.",
+    "y": 2018
+  },
+  {
+    "source": "x_keyinvest",
+    "target": "c_12",
+    "rel": "invested_in",
+    "note": "KEY Investment Partners. Springbig Series B $11.5M Aug 2020 + PIPE.",
+    "y": 2020
+  },
+  {
+    "source": "x_halley",
+    "target": "c_12",
+    "rel": "invested_in",
+    "note": "HALLEY Venture Partners. Springbig investor from 2017 through Series B.",
+    "y": 2017
+  },
+  {
+    "source": "x_brookfield",
+    "target": "c_22",
+    "rel": "invested_in",
+    "note": "Led Carbon Health Series B $30M Jun 2019. Returned in Series C+D.",
+    "y": 2019
+  },
+  {
+    "source": "x_dcvc",
+    "target": "c_22",
+    "rel": "invested_in",
+    "note": "DCVC. Carbon Health Series B 2019, sole $28M B-ext May 2020, Series C.",
+    "y": 2019
+  },
+  {
+    "source": "x_builders_vc",
+    "target": "c_22",
+    "rel": "invested_in",
+    "note": "Builders VC. Carbon Health Series A 2017 through Series C 2020.",
+    "y": 2017
+  },
+  {
+    "source": "x_silverlake_w",
+    "target": "c_22",
+    "rel": "invested_in",
+    "note": "Silver Lake Waterman. Carbon Health Series D $350M Jul 2021.",
+    "y": 2021
+  },
+  {
+    "source": "x_hudsonbay",
+    "target": "c_22",
+    "rel": "invested_in",
+    "note": "Hudson Bay Capital. Carbon Health Series D $350M Jul 2021.",
+    "y": 2021
+  },
+  {
+    "source": "x_lux",
+    "target": "c_22",
+    "rel": "invested_in",
+    "note": "Lux Capital. Carbon Health Series D $350M Jul 2021.",
+    "y": 2021
+  },
+  {
+    "source": "x_fifthwall",
+    "target": "c_22",
+    "rel": "invested_in",
+    "note": "Fifth Wall. Carbon Health Series D $350M Jul 2021.",
+    "y": 2021
+  },
+  {
+    "source": "x_primary_vp",
+    "target": "c_20",
+    "rel": "invested_in",
+    "note": "Primary Venture Partners. Ollie seed co-lead 2016 + Series A 2017.",
+    "y": 2016
+  },
+  {
+    "source": "x_riverpark",
+    "target": "c_20",
+    "rel": "invested_in",
+    "note": "RiverPark Ventures. Ollie Series A 2017 + Series B 2020.",
+    "y": 2017
   }
 ]
