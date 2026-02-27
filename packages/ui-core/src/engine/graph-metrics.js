@@ -18,20 +18,30 @@ export function computeGraphMetrics(nodes, edges) {
     }
   });
 
-  // -- PageRank (power iteration, damping=0.85, 40 iterations) --
+  // -- PageRank (power iteration, damping=0.85, early convergence) --
   const d = 0.85;
+  const PR_MAX_ITER = N > 500 ? 25 : 40;
+  const PR_EPSILON = 0.0005;
   let pr = new Float64Array(N).fill(1/N);
-  for(let iter=0; iter<40; iter++){
+  for(let iter=0; iter<PR_MAX_ITER; iter++){
     const next = new Float64Array(N).fill((1-d)/N);
     for(let i=0;i<N;i++){
       if(adj[i].length>0){
         const share = pr[i]/adj[i].length;
         for(const j of adj[i]) next[j] += d*share;
       } else { // dangling node: distribute evenly
-        for(let j=0;j<N;j++) next[j] += d*pr[i]/N;
+        const dShare = d*pr[i]/N;
+        for(let j=0;j<N;j++) next[j] += dShare;
       }
     }
+    // Check convergence: max absolute change < epsilon
+    let maxDelta = 0;
+    for(let i=0;i<N;i++) {
+      const delta = Math.abs(next[i] - pr[i]);
+      if(delta > maxDelta) maxDelta = delta;
+    }
     pr = next;
+    if(maxDelta < PR_EPSILON) break; // converged early (typically 8-15 iters)
   }
   // Normalize to 0-100
   const prMax = Math.max(...pr), prMin = Math.min(...pr);

@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { GP, NODE_CFG, REL_CFG, GSTAGE_C } from '../../styles/graph-tokens.js';
 import { buildGraph } from '../../engine/graph-builder.js';
 import { computeLayout } from '../../engine/graph-layout.js';
@@ -104,6 +104,71 @@ export default function OntologyGraphView({onSelectCompany}) {
   const handleMouseUp = useCallback(() => { setDragging(false); setDragStart(null); }, []);
   const resetView = () => { setZoom(1); setPan({x:0,y:0}); };
 
+  // -- Canvas edge rendering for large graphs (>300 nodes) --
+  const canvasRef = useRef(null);
+  const useCanvas = layout.nodes.length > 300;
+  const containerRef = useRef(null);
+
+  useEffect(() => {
+    if (!useCanvas || !canvasRef.current) return;
+    const canvas = canvasRef.current;
+    const container = canvas.parentElement;
+    if (!container) return;
+    const rect = container.getBoundingClientRect();
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = rect.width * dpr;
+    canvas.height = rect.height * dpr;
+    canvas.style.width = rect.width + 'px';
+    canvas.style.height = rect.height + 'px';
+    const ctx = canvas.getContext('2d');
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, rect.width, rect.height);
+
+    // Transform: map viewBox coords to canvas pixel coords
+    const scaleX = rect.width / vbW;
+    const scaleY = rect.height / vbH;
+    const scale = Math.min(scaleX, scaleY);
+    const offsetX = -vbX * scale;
+    const offsetY = -vbY * scale;
+
+    layout.edges.forEach((e, i) => {
+      const sx = typeof e.source === "object" ? e.source.x : 0;
+      const sy = typeof e.source === "object" ? e.source.y : 0;
+      const tx = typeof e.target === "object" ? e.target.x : 0;
+      const ty = typeof e.target === "object" ? e.target.y : 0;
+      const sid = typeof e.source === "object" ? e.source.id : e.source;
+      const tid = typeof e.target === "object" ? e.target.id : e.target;
+      const cfg = REL_CFG[e.rel] || { color: GP.dim };
+      const isH = hoverId && (sid === hoverId || tid === hoverId);
+      const isSel = selected && (sid === selected.id || tid === selected.id);
+      const isDim = hoverId && !isH;
+      const w = edgeWeight(e.rel);
+
+      // Map to canvas coords
+      const csx = sx * scale + offsetX;
+      const csy = sy * scale + offsetY;
+      const ctx2 = tx * scale + offsetX;
+      const cty = ty * scale + offsetY;
+
+      // Bezier control point
+      const dx = ctx2 - csx, dy = cty - csy, dist = Math.sqrt(dx * dx + dy * dy);
+      const curve = Math.min(dist * 0.15, 30) * scale;
+      const mx = (csx + ctx2) / 2, my = (csy + cty) / 2;
+      const nx = dist > 0 ? -dy / dist : 0, ny = dist > 0 ? dx / dist : 0;
+      const off = ((i % 3) - 1) * curve * 0.5;
+      const cpx = mx + nx * off, cpy = my + ny * off;
+
+      ctx.beginPath();
+      ctx.moveTo(csx, csy);
+      ctx.quadraticCurveTo(cpx, cpy, ctx2, cty);
+      ctx.strokeStyle = cfg.color;
+      ctx.lineWidth = isH ? w * 2.5 * scale : isSel ? w * 1.5 * scale : w * 0.5 * scale;
+      ctx.globalAlpha = isDim ? 0.03 : isH ? 0.9 : isSel ? 0.5 : 0.12;
+      ctx.stroke();
+    });
+    ctx.globalAlpha = 1;
+  }, [useCanvas, layout.edges, hoverId, selected, zoom, pan, vbX, vbY, vbW, vbH]);
+
   const showSidebar = !mob || gPanel === "filters";
   const showDetail = !mob || gPanel === "detail";
   const showGraph = !mob || gPanel === "graph";
@@ -187,10 +252,12 @@ export default function OntologyGraphView({onSelectCompany}) {
         )}
         {/* CENTER: SVG Canvas */}
         {showGraph && (
-          <div style={{flex:1,position:"relative",overflow:"hidden",cursor:dragging?"grabbing":"grab"}}
+          <div ref={containerRef} style={{flex:1,position:"relative",overflow:"hidden",cursor:dragging?"grabbing":"grab"}}
             onMouseDown={handleMouseDown} onMouseMove={handleMouseMove} onMouseUp={handleMouseUp} onMouseLeave={handleMouseUp}
             onWheel={handleWheel}>
-            <svg viewBox={`${vbX} ${vbY} ${vbW} ${vbH}`} style={{width:"100%",height:"100%",display:"block",background:"#050508"}}>
+            {/* Canvas layer for edges (large graphs only — eliminates thousands of DOM elements) */}
+            {useCanvas && <canvas ref={canvasRef} style={{position:"absolute",inset:0,width:"100%",height:"100%",pointerEvents:"none",zIndex:1}}/>}
+            <svg viewBox={`${vbX} ${vbY} ${vbW} ${vbH}`} style={{width:"100%",height:"100%",display:"block",background:"#050508",position:useCanvas?"relative":"static",zIndex:useCanvas?2:0}}>
               {/* SVG Defs: glow filters, arrow markers, grid */}
               <defs>
                 <filter id="glow-edge" x="-50%" y="-50%" width="200%" height="200%">
@@ -233,8 +300,8 @@ export default function OntologyGraphView({onSelectCompany}) {
               {/* Background grid */}
               <rect x={vbX-50} y={vbY-50} width={vbW+100} height={vbH+100} fill="url(#grid)"/>
 
-              {/* Edges: curved bezier with glow */}
-              {layout.edges.map((e,i) => {
+              {/* Edges: SVG for small graphs, canvas handles large ones */}
+              {!useCanvas && layout.edges.map((e,i) => {
                 const sx=typeof e.source==="object"?e.source.x:0,sy=typeof e.source==="object"?e.source.y:0;
                 const tx=typeof e.target==="object"?e.target.x:0,ty=typeof e.target==="object"?e.target.y:0;
                 const sid=typeof e.source==="object"?e.source.id:e.source,tid=typeof e.target==="object"?e.target.id:e.target;
@@ -267,6 +334,7 @@ export default function OntologyGraphView({onSelectCompany}) {
                 const inHop2=connectedSet?.all?.has(n.id)&&!inHop1;
                 const isDim=connectedSet&&!connectedSet.all.has(n.id);
                 const showLabel=isH||isSel||r>13||["fund","accelerator","ecosystem","region","exchange"].includes(n.type)||(inHop1&&hoverId);
+                const showFundingTip = isH && n.type==="company" && n.funding>0;
                 const opacity=isDim?0.06:inHop2?0.35:1;
                 return (
                   <g key={n.id} style={{cursor:"pointer",opacity,transition:"opacity 0.2s"}}
@@ -281,18 +349,18 @@ export default function OntologyGraphView({onSelectCompany}) {
                       <circle cx={n.x} cy={n.y} r={r+5} fill="none" stroke={GP.gold} strokeWidth={1.5} strokeDasharray="3,3" className="breathe"/>
                     </>}
 
-                    {/* Hover: glow halo */}
-                    {isH && <circle cx={n.x} cy={n.y} r={r+8} fill={col} fillOpacity={0.08} filter="url(#glow-node)"/>}
+                    {/* Hover: glow halo (skip filter for large graphs) */}
+                    {isH && <circle cx={n.x} cy={n.y} r={r+8} fill={col} fillOpacity={0.08} filter={useCanvas?"":"url(#glow-node)"}/>}
 
                     {/* Node shape */}
                     {n.type==="accelerator" ? (
                       <polygon points={`${n.x},${n.y-r} ${n.x-r*0.87},${n.y+r*0.5} ${n.x+r*0.87},${n.y+r*0.5}`}
                         fill={col+(isH||isSel?"40":"15")} stroke={col} strokeWidth={isH?2:isSel?1.5:0.8}
-                        filter={isH?"url(#glow-node)":""}/>
+                        filter={isH&&!useCanvas?"url(#glow-node)":""}/>
                     ) : (
                       <circle cx={n.x} cy={n.y} r={r}
                         fill={col+(isH||isSel?"40":"12")} stroke={col} strokeWidth={isH?2:isSel?1.5:0.8}
-                        filter={isH?"url(#glow-node)":""}/>
+                        filter={isH&&!useCanvas?"url(#glow-node)":""}/>
                     )}
 
                     {/* Inner icon for ecosystem */}
