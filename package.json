@@ -1,0 +1,17 @@
+{
+  "name": "battlebornintel",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev:goed": "pnpm --filter goed dev",
+    "dev:template": "pnpm --filter template dev",
+    "build:goed": "pnpm --filter goed build",
+    "build:template": "pnpm --filter template build",
+    "dev": "pnpm --filter goed dev",
+    "validate:goed": "node scripts/validate-data.js apps/goed",
+    "validate:template": "node scripts/validate-data.js apps/template",
+    "dev:esint": "pnpm --filter esint dev",
+    "build:esint": "pnpm --filter esint build",
+    "validate:esint": "node scripts/validate-data.js apps/esint"
+  }
+}

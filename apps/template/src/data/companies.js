@@ -1,0 +1,55 @@
+// ============================================================
+// Company Data Template
+// Each company must match the schema defined in @bbi/ui-core/src/data/schema.js
+// ============================================================
+
+export const COMPANIES = [
+  {
+    id: 1,
+    name: "Example Company A",
+    stage: "series_a",
+    sector: ["Sub-sector A", "Sub-sector B"],
+    city: "Las Vegas",
+    region: "region_1",
+    funding: 15,
+    momentum: 78,
+    employees: 50,
+    founded: 2020,
+    description: "Description of what this company does. Replace with real data.",
+    eligible: ["fund_1"],
+    lat: 36.17,
+    lng: -115.14,
+  },
+  {
+    id: 2,
+    name: "Example Company B",
+    stage: "seed",
+    sector: ["Sub-sector B", "Sub-sector C"],
+    city: "Reno",
+    region: "region_2",
+    funding: 3,
+    momentum: 65,
+    employees: 12,
+    founded: 2022,
+    description: "Another example company. Replace with real data.",
+    eligible: ["fund_1", "fund_2"],
+    lat: 39.53,
+    lng: -119.81,
+  },
+  {
+    id: 3,
+    name: "Example Company C",
+    stage: "growth",
+    sector: ["Sub-sector A", "Sub-sector D"],
+    city: "Henderson",
+    region: "region_1",
+    funding: 200,
+    momentum: 85,
+    employees: 500,
+    founded: 2015,
+    description: "A larger company example. Replace with real data.",
+    eligible: [],
+    lat: 36.04,
+    lng: -115.04,
+  },
+];

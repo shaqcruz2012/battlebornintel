@@ -1,0 +1,17 @@
+{
+  "name": "@bbi/data-pipeline",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Automated data collection for BBI enterprise verticals",
+  "scripts": {
+    "scrape:pucn": "node src/index.js --source pucn",
+    "scrape:blm": "node src/index.js --source blm",
+    "scrape:oasis": "node src/index.js --source oasis",
+    "scrape:all": "node src/index.js --source all"
+  },
+  "dependencies": {
+    "cheerio": "^1.0.0",
+    "node-fetch": "^3.3.2"
+  }
+}

@@ -1,0 +1,39 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node -e \":*)",
+      "Bash(node --version)",
+      "Bash(nvm list)",
+      "Bash(nvm use 20.18.1)",
+      "Bash(export PATH=\"/c/Users/shaqc/AppData/Roaming/nvm/v20.18.1:$PATH\")",
+      "Bash(pnpm --version)",
+      "Bash(npx pnpm@8 --version)",
+      "Bash(npx pnpm@8 install)",
+      "Bash(npx pnpm@8 --filter goed build)",
+      "Bash(npx pnpm@8 --filter template build)",
+      "mcp__mcp-registry__search_mcp_registry",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:lobehub.com)",
+      "WebFetch(domain:glama.ai)",
+      "Bash(winget install Python.Python.3.12 --accept-source-agreements --accept-package-agreements)",
+      "Bash(\"/c/Users/shaqc/AppData/Local/Programs/Python/Python312/python.exe\" -m pip install axoniq)",
+      "Bash(\"/c/Users/shaqc/AppData/Local/Programs/Python/Python312/Scripts/axon.exe\" analyze \"/c/Users/shaqc/programming/battlebornintel/.claude/worktrees/amazing-engelbart\")",
+      "Bash(/c/Users/shaqc/AppData/Local/Programs/Python/Python312/Scripts/axon.exe --help)",
+      "Bash(/c/Users/shaqc/AppData/Local/Programs/Python/Python312/Scripts/axon.exe setup --claude)",
+      "Bash(where axon)",
+      "WebFetch(domain:brave.com)",
+      "WebFetch(domain:docs.firecrawl.dev)",
+      "Bash(node scripts/validate-data.js apps/goed)",
+      "Bash(node scripts/validate-data.js apps/template)",
+      "Bash(node scripts/validate-data.js apps/esint)",
+      "Bash(npx pnpm@8 --filter esint build)",
+      "mcp__Claude_Preview__preview_start",
+      "Bash(node apps/esint/node_modules/vite/bin/vite.js --help)",
+      "Bash(grep -r \"express\\\\|fastify\\\\|hapi\\\\|koa\\\\|http\\\\.createServer\" /c/Users/shaqc/programming/battlebornintel/.claude/worktrees/amazing-engelbart/package*.json)",
+      "Bash(curl -s http://127.0.0.1:5174)",
+      "Bash(git status -u)",
+      "Bash(git add .claude/launch.json .gitignore CLAUDE.md package.json pnpm-lock.yaml pnpm-workspace.yaml scripts/ services/ packages/ apps/)",
+      "Bash(git add .claude/settings.local.json)"
+    ]
+  }
+}

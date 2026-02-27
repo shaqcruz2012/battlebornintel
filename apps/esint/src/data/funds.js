@@ -1,0 +1,9 @@
+export const FUNDS = [
+  { id:"nve_ppa", name:"NV Energy PPAs", type:"Utility PPA", allocated:null, deployed:3500, leverage:null, companies:12, thesis:"Long-term power purchase agreements for renewable energy and storage. 25-year energy + 20-year storage terms. Approved via PUCN IRP process." },
+  { id:"blm_row", name:"BLM Right-of-Way Program", type:"Federal Land", allocated:null, deployed:0, leverage:null, companies:8, thesis:"Bureau of Land Management public land leases for solar, wind, storage, and transmission. Includes Solar Energy Zones (SEZ) and Designated Leasing Areas." },
+  { id:"doe_lpo", name:"DOE Loan Programs Office", type:"Federal Loan", allocated:400000, deployed:3500, leverage:10, companies:3, thesis:"Title XVII and ATVM loan guarantees. $2B Redwood Materials, $996M Ioneer conditional, $350M Ormat. Catalyst for large-scale projects." },
+  { id:"itc", name:"Investment Tax Credit (ITC)", type:"Federal Tax", allocated:null, deployed:5000, leverage:null, companies:15, thesis:"30% ITC for solar and storage under Inflation Reduction Act. Bonus credits for domestic content, energy communities, and prevailing wage." },
+  { id:"ptc", name:"Production Tax Credit (PTC)", type:"Federal Tax", allocated:null, deployed:1000, leverage:null, companies:4, thesis:"Per-MWh production credit for wind and geothermal. ~$28/MWh for first 10 years of operation." },
+  { id:"pucn_irp", name:"PUCN 2024 IRP (Dkt 24-05041)", type:"Regulatory", allocated:null, deployed:0, leverage:null, companies:20, thesis:"NV Energy Integrated Resource Plan approved Dec 2024. Authorizes 1GW+ solar, 1GW+ storage, 400MW gas peakers, Greenlink transmission through 2043." },
+  { id:"nv_incentive", name:"Nevada State Incentives", type:"State", allocated:139, deployed:12, leverage:3, companies:5, thesis:"GOED data center abatements (10/20-year property tax + sales tax). Renewable energy manufacturing incentives. ~$139M/year in data center subsidies." },
+];

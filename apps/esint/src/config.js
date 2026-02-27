@@ -1,0 +1,142 @@
+export default {
+  id: "esint",
+  name: "ESINT",
+  shortName: "ESINT",
+  version: "1.0",
+  subtitle: "Energy Storage & Interconnection in Nevada",
+
+  branding: {
+    primaryColor: "#22C55E",
+    fontFamily: "'Libre Franklin','DM Sans',system-ui,sans-serif",
+    googleFontsUrl: "https://fonts.googleapis.com/css2?family=Libre+Franklin:wght@300;400;500;600;700;800&display=swap",
+  },
+
+  stages: {
+    list: ["proposed", "queue", "nepa_review", "approved", "under_construction", "operational", "retired"],
+    labels: {
+      proposed: "Proposed", queue: "In Queue", nepa_review: "NEPA Review",
+      approved: "Approved", under_construction: "Under Construction",
+      operational: "Operational", retired: "Retired",
+    },
+    colors: {
+      proposed: "#706C64", queue: "#5088A8", nepa_review: "#D4864A",
+      approved: "#4E9B60", under_construction: "#C49A38",
+      operational: "#22C55E", retired: "#6B6A72",
+    },
+    graphColors: {
+      proposed: "#3D3D48", queue: "#5B8DEF", nepa_review: "#E8945A",
+      approved: "#4ECDC4", under_construction: "#C8A55A",
+      operational: "#4ECDC4", retired: "#3D3D48",
+    },
+    fundingNorms: {
+      proposed: 50, queue: 100, nepa_review: 200, approved: 300,
+      under_construction: 500, operational: 800, retired: 100,
+    },
+  },
+
+  labels: {
+    entitySingular: "Project",
+    entityPlural: "Projects",
+    entityShort: "proj",
+    fundingLabel: "Total Investment",
+    fundingMetric: "PROJECT COST",
+    fundingSub: "Est. project costs",
+    momentumLabel: "Avg Reg. Progress",
+    momentumSub: "RPS 0-100",
+    employeesLabel: "Total Jobs",
+    employeesSub: "Construction + operations",
+    stageLabel: "Status",
+    eligibleLabel: "CONNECTED PROGRAMS",
+    scoreLabel: "RPS",
+    scoreLong: "REGULATORY PROGRESS",
+    ssbciLabel: null,
+    mapTitle: "Nevada Energy Project Map",
+    searchPlaceholder: "Search projects, energy types...",
+  },
+
+  tooltips: {
+    entityCount: "Active energy generation, storage, and transmission projects tracked across Nevada. Grade A = highest regulatory progress.",
+    funding: "Combined estimated project costs including construction, equipment, and land development across all tracked projects.",
+    momentum: "Regulatory Progress Score (0-100). Weighted composite of permitting status, PPA execution, BLM approvals, interconnection queue position, and federal incentive eligibility.",
+    employees: "Estimated construction and long-term operational jobs across all tracked energy projects.",
+    watchlist: "Projects you're monitoring. Add any project to your watchlist from its detail panel.",
+    sectorHeat: "Market activity score (0-100) reflecting policy momentum, capital flow, and active project pipeline for each energy type.",
+  },
+
+  scoring: {
+    engine: "rps",
+  },
+
+  eventTypes: ["filing", "approval", "construction", "operational", "rfp", "docket", "blm", "partnership", "funding"],
+
+  views: [
+    { id: "dashboard", label: "Home", icon: "◆" },
+    { id: "radar", label: "Radar", icon: "📡" },
+    { id: "companies", label: "Projects", icon: "⬡" },
+    { id: "investors", label: "Capital", icon: "◈" },
+    { id: "sectors", label: "Energy Types", icon: "◉" },
+    { id: "watchlist", label: "Watchlist", icon: "☆" },
+    { id: "compare", label: "Compare", icon: "⟺" },
+    { id: "graph", label: "Graph", icon: "🕸" },
+    { id: "timeline", label: "Activity", icon: "⏱" },
+    { id: "map", label: "Map", icon: "⊕" },
+    { id: "dockets", label: "Dockets", icon: "⚖" },
+    { id: "forecast", label: "Forecast", icon: "📊" },
+    { id: "queue", label: "Queue", icon: "🔌" },
+    { id: "ppa", label: "PPAs", icon: "📄" },
+    { id: "alerts", label: "Alerts", icon: "🔔" },
+    { id: "intel", label: "Intel Briefs", icon: "📋" },
+    { id: "horizon", label: "Horizon", icon: "🔭" },
+    { id: "feed", label: "NV Feed", icon: "📰" },
+  ],
+
+  sectorHeat: {
+    BESS: 95, "Solar+BESS": 92, Data_Center: 90, Transmission: 88,
+    Geothermal: 85, Solar: 80, Wind: 65, "Pumped Hydro": 60,
+    Hydrogen: 55, Gas_Peaker: 45,
+  },
+
+  sectorTooltips: {
+    BESS: "Battery Energy Storage Systems. Standalone grid-scale batteries (typically lithium-ion) providing peak shaving, frequency regulation, and renewable firming. Critical for managing NV Energy's evening ramp.",
+    "Solar+BESS": "Co-located solar photovoltaic generation paired with battery storage. Dominates NV Energy's IRP procurement. Enables dispatchable renewable generation with 4-8hr storage duration.",
+    Data_Center: "Hyperscale computing facilities driving Nevada's largest new electrical load. TRIC corridor (Switch, Google, Microsoft) creating 500MW+ of new demand, accelerating generation and transmission buildout.",
+    Transmission: "High-voltage transmission lines (345kV/525kV) connecting generation zones to load centers. Greenlink West and North are the backbone enabling renewable delivery across the state.",
+    Geothermal: "Baseload renewable generation from underground heat. Nevada has the most geothermal capacity outside of California. Includes conventional hydrothermal (Ormat) and next-gen enhanced systems (Fervo).",
+    Solar: "Utility-scale photovoltaic generation without co-located storage. Typically on BLM land in southern Nevada. Lower cost per MWh but limited to daytime generation hours.",
+    Wind: "Utility-scale wind generation. Limited pipeline in Nevada due to lower wind resources compared to neighboring states. Potential sites in northern Nevada mountain passes.",
+    "Pumped Hydro": "Long-duration storage using water reservoirs at different elevations. 8-12hr+ discharge duration. Limited Nevada sites but growing interest as alternative to lithium-ion for long-duration needs.",
+    Hydrogen: "Green hydrogen production via electrolysis powered by renewable energy. Early-stage in Nevada. Potential applications in heavy transport, industrial heat, and long-duration energy storage.",
+    Gas_Peaker: "Natural gas combustion turbines for peak demand periods. NV Energy's 2024 IRP includes 400MW of new gas peakers as reliability backstop during the clean energy transition.",
+  },
+
+  regions: [
+    { id: "clark", label: "Clark County" },
+    { id: "nye", label: "Nye County" },
+    { id: "washoe", label: "Washoe County" },
+    { id: "churchill", label: "Churchill County" },
+    { id: "storey", label: "Storey County (TRIC)" },
+    { id: "esmeralda", label: "Esmeralda County" },
+    { id: "lincoln", label: "Lincoln County" },
+    { id: "pershing", label: "Pershing County" },
+    { id: "lyon", label: "Lyon County" },
+    { id: "lander", label: "Lander County" },
+    { id: "multi_county", label: "Multi-County" },
+  ],
+
+  features: {
+    ssbci: false,
+    ontologyGraph: true,
+    irsScoring: false,
+    rpsScoring: true,
+    watchlist: true,
+    compare: true,
+    dockets: true,
+    forecast: true,
+    queue: true,
+    ppa: true,
+    alerts: true,
+    intel: true,
+    horizon: true,
+    feed: true,
+  },
+};

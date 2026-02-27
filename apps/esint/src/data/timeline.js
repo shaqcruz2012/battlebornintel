@@ -1,0 +1,18 @@
+export const TIMELINE_EVENTS = [
+  { date:"2025-12-20", type:"approval", company:"PUCN", detail:"PUCN approves NV Energy 2024 IRP: 1GW+ solar, 1GW+ storage, 400MW gas peakers, Greenlink transmission (Docket 24-05041)", icon:"📋" },
+  { date:"2025-09-01", type:"operational", company:"Gemini Solar + Storage", detail:"Full 690MW/380MW Gemini facility reaches commercial operation — largest solar+storage in US", icon:"⚡" },
+  { date:"2025-07-15", type:"construction", company:"Greenlink West", detail:"MasTec begins construction on 472-mile $2.4B Greenlink West 525kV transmission line", icon:"🏗" },
+  { date:"2025-06-01", type:"rfp", company:"NV Energy", detail:"2024 All-Source RFP bid results: 3.2GW of new generation and storage resources selected for evaluation", icon:"📢" },
+  { date:"2025-04-15", type:"operational", company:"Reid Gardner BESS", detail:"220MW/440MWh Reid Gardner BESS fully operational at former coal plant site in Moapa", icon:"⚡" },
+  { date:"2025-03-10", type:"blm", company:"Esmeralda Seven Solar", detail:"BLM publishes Draft Programmatic EIS for 6.2GW Esmeralda Seven solar complex — 118,000 acres", icon:"🏜" },
+  { date:"2025-02-14", type:"rfp", company:"NV Energy", detail:"2024 All-Source RFP bid deadline: seeking 20MW+ renewable, conventional, and storage projects", icon:"📢" },
+  { date:"2025-01-15", type:"approval", company:"Rough Hat Clark", detail:"BLM issues Record of Decision approving 400MW/700MW Rough Hat Clark solar+storage in Pahrump Valley", icon:"📋" },
+  { date:"2024-12-15", type:"docket", company:"PUCN", detail:"PUCN opens Clean Transition Tariff proceeding — Google first applicant for dedicated clean energy at premium rates", icon:"⚖" },
+  { date:"2024-11-01", type:"blm", company:"Libra Solar", detail:"BLM publishes Final EIS for 700MW/2,800MWh Libra Solar project in Lyon County", icon:"🏜" },
+  { date:"2024-10-15", type:"partnership", company:"Google TRIC Data Center", detail:"Google signs 150MW geothermal PPA with Ormat Technologies for 24/7 clean energy by 2030", icon:"🤝" },
+  { date:"2024-09-25", type:"docket", company:"NV Energy", detail:"PUCN approves $4/month rate increase for Greenlink West cost recovery in southern Nevada", icon:"⚖" },
+  { date:"2024-08-20", type:"construction", company:"Sierra Solar + BESS", detail:"NV Energy breaks ground on $1.5B Sierra Solar+BESS: 400MW solar + 400MW/1,600MWh storage", icon:"🏗" },
+  { date:"2024-05-31", type:"filing", company:"NV Energy", detail:"NV Energy files 2024 Integrated Resource Plan — proposes 2,400+ MW of new resources including 1GW storage", icon:"📋" },
+  { date:"2024-04-01", type:"partnership", company:"Fervo Corsac Station", detail:"Fervo Energy begins drilling at Corsac Station — 115MW next-gen geothermal for Google Clean Transition Tariff", icon:"🤝" },
+  { date:"2024-02-01", type:"blm", company:"Amargosa Desert BESS", detail:"BLM announces competitive solar lease offering for 23,675 acres in Amargosa Valley SEZ — 15 applicants", icon:"🏜" },
+];
