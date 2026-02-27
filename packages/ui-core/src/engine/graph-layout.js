@@ -17,7 +17,7 @@ export function computeLayout(graphData, w, h) {
     .force("center", d3.forceCenter(w/2, h/2))
     .force("collision", d3.forceCollide().radius(d => d.type==="fund"||d.type==="accelerator" ? 28 : d.type==="company" ? 10+Math.sqrt(Math.max(0,d.funding||0))*0.2 : 18))
     .force("x", d3.forceX(w/2).strength(0.04)).force("y", d3.forceY(h/2).strength(0.04)).stop();
-  const ticks = Math.min(300, Math.max(120, ns.length * 2));
+  const ticks = Math.min(200, Math.max(80, ns.length));
   for (let i = 0; i < ticks; i++) sim.tick();
   const pad = 25;
   ns.forEach(n => { if (isNaN(n.x)) n.x=w/2; if (isNaN(n.y)) n.y=h/2; n.x=Math.max(pad,Math.min(w-pad,n.x)); n.y=Math.max(pad,Math.min(h-pad,n.y)); });

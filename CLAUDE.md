@@ -2,15 +2,16 @@
 
 ## Project Structure
 
-pnpm monorepo with shared UI core and per-vertical apps:
+pnpm monorepo with shared UI core, per-vertical apps, and API backend:
 
 ```
-packages/ui-core/     # @bbi/ui-core — shared components, engine, styles
-apps/goed/            # BBI-GOED — Nevada startup ecosystem (75 companies)
-apps/esint/           # BBI-ESINT — Energy Storage & Interconnection in Nevada (18 projects)
-apps/template/        # Starter template for new verticals
-scripts/              # CLI tools (validate-data.js)
+packages/ui-core/       # @bbi/ui-core — shared components, engine, styles, hooks
+apps/goed/              # BBI-GOED — Nevada startup ecosystem (75 companies)
+apps/esint/             # BBI-ESINT — Energy Storage & Interconnection in Nevada (18 projects)
+apps/template/          # Starter template for new verticals
+services/api/           # @bbi/api — Express + SQLite REST API (port 3001)
 services/data-pipeline/ # Enterprise data collection scaffold
+scripts/                # CLI tools (validate-data.js)
 ```
 
 ## Key Commands
@@ -22,20 +23,112 @@ export PATH="/c/Users/shaqc/AppData/Roaming/nvm/v20.18.1:$PATH"
 # Install
 npx pnpm@8 install
 
-# Dev servers
-npx pnpm@8 --filter goed dev
-npx pnpm@8 --filter esint dev
+# Dev servers (frontend)
+npx pnpm@8 --filter goed dev        # localhost:5173
+npx pnpm@8 --filter esint dev       # localhost:5174
 npx pnpm@8 --filter template dev
+
+# API server
+node services/api/src/index.js       # localhost:3001
 
 # Build
 npx pnpm@8 --filter goed build
 npx pnpm@8 --filter esint build
+
+# Database migrations (JSON → SQLite)
+node services/api/src/migrate.js --vertical goed --path apps/goed
+node services/api/src/migrate.js --vertical esint --path apps/esint
 
 # Validate data
 node scripts/validate-data.js apps/goed
 node scripts/validate-data.js apps/esint
 node scripts/validate-data.js apps/template
 ```
+
+## API Server (services/api)
+
+SQLite-backed REST API using better-sqlite3 + Express. Multi-tenant via `vertical_id` on every table.
+
+### Architecture
+
+- **Database**: SQLite with WAL mode, FTS5 search, stored at `services/api/bbi.db`
+- **Schema**: `services/api/schema.sql` — 15 tables + FTS5 virtual table + indexes
+- **Port**: 3001 (configurable via `PORT` env)
+- **CORS**: Allows localhost:5173-5175 (Vite dev ports)
+- **Frontend integration**: `useData(verticalId)` hook fetches from API, falls back to static imports
+
+### API Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/api/health` | Health check, lists verticals |
+| GET | `/api/:v/data` | Full DataPackage (all entity types) |
+| GET | `/api/:v/data/config` | Vertical config object |
+| GET/POST/PUT/DELETE | `/api/:v/companies[/:id]` | Company CRUD + filtering |
+| GET/POST/DELETE | `/api/:v/funds[/:id]` | Fund CRUD |
+| GET/POST/DELETE | `/api/:v/timeline[/:id]` | Timeline event CRUD |
+| GET/POST/DELETE | `/api/:v/graph/people[/:id]` | Person CRUD |
+| GET/POST/DELETE | `/api/:v/graph/externals[/:id]` | External CRUD |
+| GET/POST/DELETE | `/api/:v/graph/accelerators[/:id]` | Accelerator CRUD |
+| GET/POST/DELETE | `/api/:v/graph/ecosystemOrgs[/:id]` | EcosystemOrg CRUD |
+| GET/POST/DELETE | `/api/:v/graph/funds[/:id]` | GraphFund CRUD |
+| GET/POST/DELETE | `/api/:v/graph/edges[/:id]` | Edge CRUD |
+| POST | `/api/:v/graph/edges/bulk` | Bulk edge create |
+| GET/POST/PUT/DELETE | `/api/:v/enterprise/dockets[/:id]` | Docket CRUD |
+| GET/POST/DELETE | `/api/:v/enterprise/ppas[/:id]` | PPA CRUD |
+| GET/POST/DELETE | `/api/:v/enterprise/queue[/:id]` | Queue entry CRUD |
+| GET/PUT | `/api/:v/enterprise/benchmarks` | Benchmarks get/set |
+| GET | `/api/:v/search?q=term` | FTS5 full-text search |
+| GET | `/api/:v/graph/metrics` | Graph metrics (cached) |
+
+### Company Filtering
+
+`GET /api/:v/companies` supports query params:
+- `?stage=seed` — filter by stage
+- `?region=Southern+Nevada` — filter by region
+- `?search=lithium` — LIKE search on name/description
+- `?sort=momentum` / `?sort=funding` / `?sort=name` — sort order
+- `?limit=20&offset=0` — pagination
+
+### Database Schema (key tables)
+
+- `verticals` — id, name, config_json
+- `companies` — all Company fields, snake_case columns, JSON for arrays (sector, eligible)
+- `funds` — all Fund fields
+- `timeline_events` — date-ordered events
+- `graph_funds`, `people`, `externals`, `accelerators`, `ecosystem_orgs` — graph nodes
+- `edges` — source, target, rel, note, year
+- `listings` — company_id, exchange, ticker
+- `dockets`, `ppas`, `queue_entries`, `benchmarks` — enterprise data
+- `companies_fts` — FTS5 virtual table (name, description, city, sector) with auto-sync triggers
+- `graph_metrics_cache` — cached PageRank/betweenness/communities per filter hash
+
+### Migration
+
+The migration script imports static JS data files into SQLite:
+
+```bash
+node services/api/src/migrate.js --vertical goed --path apps/goed
+# Output: Migrated goed: 75 companies, 8 funds, 529 edges, 84 people, ...
+```
+
+- Clears existing data for the vertical before inserting (idempotent)
+- Maps camelCase JS → snake_case SQL columns
+- JSON.stringify for array fields (sector, eligible, filings, etc.)
+- Uses `INSERT OR REPLACE` for graph entities (handles duplicates)
+- Transaction-wrapped for atomicity
+
+### Frontend Data Flow
+
+```
+App.jsx → useData('goed') → fetch /api/goed/data → PlatformContext → views
+                           ↓ (on error)
+                    static imports fallback
+```
+
+Vite dev servers proxy `/api` to `localhost:3001` — no CORS issues in development.
+
+---
 
 ## Data Schema Contract
 
@@ -111,7 +204,8 @@ Enterprise fields on Company (all optional): `capacityMW`, `storageMWh`, `acreag
 2. Edit `src/config.js` — set branding, views, sectorHeat, regions, features
 3. Populate `src/data/` files following schema shapes
 4. Run `node scripts/validate-data.js apps/{vertical}`
-5. Add workspace scripts to root `package.json`
+5. Run `node services/api/src/migrate.js --vertical {vertical} --path apps/{vertical}`
+6. Add workspace scripts to root `package.json`
 
 ## Research Agent Workflow
 

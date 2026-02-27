@@ -12,6 +12,9 @@
     "validate:template": "node scripts/validate-data.js apps/template",
     "dev:esint": "pnpm --filter esint dev",
     "build:esint": "pnpm --filter esint build",
-    "validate:esint": "node scripts/validate-data.js apps/esint"
+    "validate:esint": "node scripts/validate-data.js apps/esint",
+    "dev:api": "node services/api/src/index.js",
+    "migrate:goed": "node services/api/src/migrate.js --vertical goed --path apps/goed",
+    "migrate:esint": "node services/api/src/migrate.js --vertical esint --path apps/esint"
   }
 }

@@ -26,8 +26,8 @@ export default function OntologyGraphView({onSelectCompany}) {
   const W = 900, H = 620;
   const graphData = useMemo(() => buildGraph(filters, relFilters, yearFilter, data), [filters, relFilters, yearFilter, data]);
   const layout = useMemo(() => computeLayout(graphData, W, H), [graphData, layoutKey]);
-  // -- Compute graph intelligence metrics --
-  const metrics = useMemo(() => computeGraphMetrics(layout.nodes, layout.edges), [layout]);
+  // -- Compute graph intelligence metrics (keyed on graphData, NOT layout — avoids recomputing on shuffle) --
+  const metrics = useMemo(() => computeGraphMetrics(layout.nodes, layout.edges), [graphData]);
   const toggleF = k => { setFilters(f => ({...f,[k]:!f[k]})); setLayoutKey(n=>n+1); };
   const toggleR = k => { setRelFilters(r => ({...r,[k]:!r[k]})); setLayoutKey(n=>n+1); };
   const searchMatches = useMemo(() => { if (!gSearch || gSearch.length < 2) return []; const q=gSearch.toLowerCase(); return layout.nodes.filter(n => n.label.toLowerCase().includes(q)).slice(0,8); }, [gSearch, layout.nodes]);

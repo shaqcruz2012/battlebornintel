@@ -39,9 +39,33 @@ export function computeGraphMetrics(nodes, edges) {
   const pagerank = {};
   ids.forEach((id,i) => pagerank[id] = Math.round(((pr[i]-prMin)/prRange)*100));
 
-  // -- Betweenness Centrality (Brandes' algorithm) --
+  // -- Betweenness Centrality (Brandes' algorithm, sampled for large graphs) --
   const bc = new Float64Array(N).fill(0);
-  for(let s=0;s<N;s++){
+  // For large graphs (N>150), sample source nodes to avoid O(N²) blocking the UI thread
+  const SAMPLE_THRESHOLD = 150;
+  const MAX_SAMPLES = 50;
+  let sources;
+  if (N <= SAMPLE_THRESHOLD) {
+    sources = Array.from({length:N}, (_,i) => i);
+  } else {
+    // Sample high-degree nodes preferentially (they contribute more to betweenness)
+    const degrees = adj.map(a => a.length);
+    const indexed = degrees.map((d,i) => ({i, d})).sort((a,b) => b.d - a.d);
+    // Take top 25 by degree + 25 random
+    const topN = Math.min(25, N);
+    const randomN = Math.min(MAX_SAMPLES - topN, N - topN);
+    const topSet = new Set(indexed.slice(0, topN).map(x => x.i));
+    const remaining = indexed.slice(topN).map(x => x.i);
+    // Fisher-Yates partial shuffle for random selection
+    for (let i = 0; i < Math.min(randomN, remaining.length); i++) {
+      const j = i + Math.floor(Math.random() * (remaining.length - i));
+      [remaining[i], remaining[j]] = [remaining[j], remaining[i]];
+    }
+    remaining.slice(0, randomN).forEach(i => topSet.add(i));
+    sources = [...topSet];
+  }
+  const scaleFactor = N / sources.length; // compensate for sampling
+  for(const s of sources){
     const stack=[], pred=Array.from({length:N},()=>[]);
     const sigma=new Float64Array(N).fill(0); sigma[s]=1;
     const dist=new Int32Array(N).fill(-1); dist[s]=0;
@@ -58,7 +82,7 @@ export function computeGraphMetrics(nodes, edges) {
     while(stack.length){
       const w=stack.pop();
       for(const v of pred[w]) delta[v]+=(sigma[v]/sigma[w])*(1+delta[w]);
-      if(w!==s) bc[w]+=delta[w];
+      if(w!==s) bc[w]+=delta[w] * (N > SAMPLE_THRESHOLD ? scaleFactor : 1);
     }
   }
   // Normalize

@@ -6,6 +6,7 @@ export { PlatformContext, usePlatform } from './hooks/usePlatform.js';
 
 // Hooks
 export { useW } from './hooks/useWindowWidth.js';
+export { useData } from './hooks/useData.js';
 
 // Engine
 export { computeIRS, TRIGGER_CFG, GRADE_COLORS, STAGE_NORMS } from './engine/irs.js';
