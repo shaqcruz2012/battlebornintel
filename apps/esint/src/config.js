@@ -93,7 +93,7 @@ export default {
   sectorHeat: {
     BESS: 95, "Solar+BESS": 92, Data_Center: 90, Transmission: 88,
     Geothermal: 85, Solar: 80, Wind: 65, "Pumped Hydro": 60,
-    Hydrogen: 55, Gas_Peaker: 45,
+    Hydrogen: 55, Gas_Peaker: 45, NatGas: 50, Pumped_Hydro: 60, "Solar+Geothermal": 82,
   },
 
   sectorTooltips: {
@@ -120,6 +120,10 @@ export default {
     { id: "pershing", label: "Pershing County" },
     { id: "lyon", label: "Lyon County" },
     { id: "lander", label: "Lander County" },
+    { id: "mineral", label: "Mineral County" },
+    { id: "white_pine", label: "White Pine County" },
+    { id: "humboldt", label: "Humboldt County" },
+    { id: "elko", label: "Elko County" },
     { id: "multi_county", label: "Multi-County" },
   ],
 

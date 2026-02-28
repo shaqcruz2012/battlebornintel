@@ -48,6 +48,8 @@ export default {
     Cannabis: 45, Analytics: 75, Satellite: 82, Identity: 80, AdTech: 65,
     Education: 62, Healthcare: 70, Consumer: 55, Fitness: 60, Mobile: 58,
     Banking: 55, Retail: 52, "HR Tech": 62, Enterprise: 65,
+    SaaS: 68, PropTech: 55, Autonomous: 78, Mobility: 72, EdTech: 62,
+    Esports: 58, EV: 75, Communications: 60, AgTech: 65,
   },
 
   regions: [

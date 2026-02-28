@@ -208,4 +208,299 @@ export const COMPANIES = [
       { date:"2025-07-15", event:"Scoping comment period deadline", status:"pending" },
     ],
     riskFactors:[], permittingScore:10 },
+
+  // === NEW PROJECTS (IDs 19-48) ===
+
+  // --- APPROVED ---
+  { id:19, name:"Bonanza Solar", stage:"approved", sector:["Solar"], city:"Primm", region:"clark", funding:450, momentum:72, employees:300, founded:2021, description:"300MW utility-scale solar project on BLM land in Clark County near Primm. NextEra Energy Resources is the developer, leveraging its position as the world's largest wind and solar company. BLM issued the Record of Decision in 2024, clearing the project for construction.\n\nBonanza Solar benefits from proximity to the existing Gemini Solar interconnection infrastructure and southern Nevada transmission network. NV Energy holds a long-term PPA approved through the 2024 IRP cycle. The project qualifies for the 30% ITC with domestic content bonus potential.", eligible:["nve_ppa","itc","blm_row"], lat:35.63, lng:-115.42,
+    capacityMW:300, storageMWh:null, acreage:2400, developer:"NextEra Energy Resources", epc:null, estimatedCOD:"2027-Q1",
+    docketIds:["BLM-NV-2023-0052","24-05041"], queueIds:["NVE-GEN-2022-017"], ppaIds:["ppa_bonanza"],
+    keyMilestones:[
+      { date:"2021-09-01", event:"BLM ROW application filed", status:"complete" },
+      { date:"2023-06-01", event:"BLM Draft EIS published", status:"complete" },
+      { date:"2024-04-15", event:"BLM Record of Decision issued", status:"complete" },
+      { date:"2024-09-01", event:"NV Energy PPA executed", status:"complete" },
+      { date:"2027-03-01", event:"Target commercial operation", status:"pending" },
+    ],
+    riskFactors:[], permittingScore:88 },
+
+  { id:22, name:"Copper Rays Solar + Storage", stage:"approved", sector:["Solar+BESS"], city:"Searchlight", region:"clark", funding:750, momentum:68, employees:350, founded:2022, description:"500MW solar + 500MW/2,000MWh battery storage project in Clark County near Searchlight. Developed by IP Athenea, a Spanish renewable energy company expanding into the US market. BLM ROD was issued in late 2024.\n\nCopper Rays represents one of the largest solar+storage projects in NV Energy's southern Nevada portfolio. The 4-hour storage duration aligns with evening peak demand management, and the project's Clark County location provides direct access to the southern load center without Greenlink transmission dependency.", eligible:["nve_ppa","itc","blm_row"], lat:35.47, lng:-114.92,
+    capacityMW:500, storageMWh:2000, acreage:5200, developer:"IP Athenea", epc:null, estimatedCOD:"2027-Q3",
+    docketIds:["BLM-NV-2023-0061","24-05041"], queueIds:["NVE-GEN-2022-021"], ppaIds:["ppa_copper_rays"],
+    keyMilestones:[
+      { date:"2022-03-01", event:"BLM ROW application filed", status:"complete" },
+      { date:"2023-11-01", event:"BLM Draft EIS published", status:"complete" },
+      { date:"2024-10-01", event:"BLM Record of Decision issued", status:"complete" },
+      { date:"2024-12-01", event:"NV Energy PPA executed", status:"complete" },
+      { date:"2027-09-01", event:"Target commercial operation", status:"pending" },
+    ],
+    riskFactors:["international_developer"], permittingScore:82 },
+
+  { id:42, name:"Yellowpine Solar + Storage", stage:"approved", sector:["Solar+BESS"], city:"Pahrump", region:"nye", funding:700, momentum:70, employees:400, founded:2019, description:"500MW solar + 500MW/2,000MWh battery storage in Nye County, developed by 8minute Solar Energy (now EDF subsidiary). BLM issued the Record of Decision approving the project. NV Energy PPA executed under the 2024 IRP procurement cycle.\n\nYellowpine's scale and storage ratio make it a significant capacity resource for southern Nevada. Located in the Pahrump Valley near other large-scale solar developments, it benefits from established transmission access and proximity to the southern load center.", eligible:["nve_ppa","itc","blm_row"], lat:36.15, lng:-115.90,
+    capacityMW:500, storageMWh:2000, acreage:5000, developer:"8minute Solar Energy (EDF)", epc:null, estimatedCOD:"2027-Q4",
+    docketIds:["BLM-NV-2022-0031","24-05041"], queueIds:["NVE-GEN-2021-014"], ppaIds:["ppa_yellowpine"],
+    keyMilestones:[
+      { date:"2019-11-01", event:"BLM ROW application filed", status:"complete" },
+      { date:"2022-06-01", event:"BLM Final EIS published", status:"complete" },
+      { date:"2023-01-15", event:"BLM Record of Decision issued", status:"complete" },
+      { date:"2024-09-01", event:"NV Energy PPA executed", status:"complete" },
+      { date:"2027-12-01", event:"Target commercial operation", status:"pending" },
+    ],
+    riskFactors:[], permittingScore:85 },
+
+  // --- UNDER CONSTRUCTION ---
+  { id:20, name:"Mosey Solar", stage:"under_construction", sector:["Solar"], city:"Tonopah", region:"nye", funding:375, momentum:78, employees:400, founded:2021, description:"250MW utility-scale solar project in Nye County near Tonopah. Developed by 8minute Solar Energy, now an EDF Renewables subsidiary. Construction began in late 2024 following BLM ROD and NV Energy PPA execution.\n\nMosey Solar is one of the first large-scale projects to break ground in central Nevada's renewable energy corridor. Its completion will test the region's construction workforce capacity and logistics infrastructure. Delivery to southern Nevada load centers depends on Greenlink West transmission.", eligible:["nve_ppa","itc","blm_row"], lat:38.07, lng:-117.23,
+    capacityMW:250, storageMWh:null, acreage:2000, developer:"8minute Solar Energy (EDF)", epc:"Signal Energy", estimatedCOD:"2026-Q4",
+    docketIds:["BLM-NV-2022-0028","24-05041"], queueIds:["NVE-GEN-2022-005"], ppaIds:["ppa_mosey"],
+    keyMilestones:[
+      { date:"2021-06-01", event:"BLM ROW application filed", status:"complete" },
+      { date:"2023-03-01", event:"BLM Record of Decision issued", status:"complete" },
+      { date:"2024-01-15", event:"NV Energy PPA executed", status:"complete" },
+      { date:"2024-10-01", event:"Construction begins", status:"complete" },
+      { date:"2026-12-01", event:"Target commercial operation", status:"in_progress" },
+    ],
+    riskFactors:["transmission_dependent"], permittingScore:90 },
+
+  // --- OPERATIONAL ---
+  { id:27, name:"Don Campbell Geothermal", stage:"operational", sector:["Geothermal"], city:"Hawthorne", region:"mineral", funding:120, momentum:65, employees:25, founded:2013, description:"38MW geothermal power plant in Mineral County operated by Ormat Technologies. The facility has been producing baseload renewable energy since 2013, demonstrating the long-term reliability of Nevada's conventional hydrothermal resources.\n\nDon Campbell contributes to Ormat's broader Nevada geothermal portfolio and qualifies for the federal Production Tax Credit. The project operates under an NV Energy PPA and provides 24/7 carbon-free generation.", eligible:["ptc","nve_ppa"], lat:38.53, lng:-118.63,
+    capacityMW:38, storageMWh:null, acreage:null, developer:"Ormat Technologies", epc:"Ormat Technologies", estimatedCOD:null,
+    docketIds:[], queueIds:[], ppaIds:["ppa_don_campbell"],
+    keyMilestones:[
+      { date:"2013-09-01", event:"Phase 1 (16MW) operational", status:"complete" },
+      { date:"2015-04-01", event:"Phase 2 (22MW) operational", status:"complete" },
+    ],
+    riskFactors:[], permittingScore:100 },
+
+  { id:28, name:"Tungsten Mountain Geothermal", stage:"operational", sector:["Geothermal"], city:"Fallon", region:"churchill", funding:90, momentum:62, employees:20, founded:2017, description:"30MW geothermal facility in Churchill County operated by Ormat Technologies. Part of Ormat's extensive Nevada geothermal portfolio, the project leverages conventional hydrothermal resources near the Stillwater geothermal area.\n\nTungsten Mountain provides baseload generation with capacity factors exceeding 90%, complementing the variable solar and storage resources being added to Nevada's grid.", eligible:["ptc","nve_ppa"], lat:39.55, lng:-118.52,
+    capacityMW:30, storageMWh:null, acreage:null, developer:"Ormat Technologies", epc:"Ormat Technologies", estimatedCOD:null,
+    docketIds:[], queueIds:[], ppaIds:["ppa_tungsten"],
+    keyMilestones:[
+      { date:"2017-10-01", event:"Plant operational (30MW)", status:"complete" },
+    ],
+    riskFactors:[], permittingScore:100 },
+
+  { id:29, name:"Steamboat Complex Expansion", stage:"operational", sector:["Geothermal"], city:"Reno", region:"washoe", funding:80, momentum:60, employees:30, founded:2005, description:"25MW expansion of the Steamboat Springs geothermal complex south of Reno, operated by Ormat Technologies. The Steamboat complex is one of Nevada's oldest geothermal facilities, with operations dating to the 1980s. The expansion brownfield project added capacity using modern binary cycle technology.\n\nSteamboat's proximity to the Reno-Sparks metropolitan area makes it valuable for local baseload generation, reducing transmission needs. The project demonstrates the potential for brownfield geothermal redevelopment at existing resource sites.", eligible:["ptc"], lat:39.38, lng:-119.75,
+    capacityMW:25, storageMWh:null, acreage:null, developer:"Ormat Technologies", epc:"Ormat Technologies", estimatedCOD:null,
+    docketIds:[], queueIds:[], ppaIds:[],
+    keyMilestones:[
+      { date:"2005-06-01", event:"Expansion operational (25MW additional)", status:"complete" },
+      { date:"2020-01-01", event:"Equipment modernization complete", status:"complete" },
+    ],
+    riskFactors:[], permittingScore:100 },
+
+  { id:30, name:"Jersey Valley Geothermal", stage:"operational", sector:["Geothermal"], city:"Oreana", region:"lander", funding:50, momentum:55, employees:15, founded:2011, description:"15MW geothermal plant in Lander County operated by Ormat Technologies. Located in the same general region as McGinness Hills, Jersey Valley adds to the concentration of geothermal resources in central Nevada.\n\nThe facility provides reliable baseload power under a long-term NV Energy PPA. Jersey Valley's modest scale is typical of conventional hydrothermal projects, where resource size determines plant capacity.", eligible:["ptc","nve_ppa"], lat:40.17, lng:-117.45,
+    capacityMW:15, storageMWh:null, acreage:null, developer:"Ormat Technologies", epc:"Ormat Technologies", estimatedCOD:null,
+    docketIds:[], queueIds:[], ppaIds:["ppa_jersey_valley"],
+    keyMilestones:[
+      { date:"2011-01-01", event:"Plant operational (15MW)", status:"complete" },
+    ],
+    riskFactors:[], permittingScore:100 },
+
+  { id:31, name:"Spring Valley Wind", stage:"operational", sector:["Wind"], city:"Ely", region:"white_pine", funding:450, momentum:58, employees:25, founded:2012, description:"150MW wind farm in Spring Valley, White Pine County, developed and operated by Pattern Energy. Spring Valley Wind is Nevada's largest operating wind farm and one of the few utility-scale wind projects in the state.\n\nOperational since 2012, the project delivers power to NV Energy under a long-term PPA. Spring Valley demonstrates that Nevada has viable wind resources in certain mountain pass locations, though the state's solar resource dominates new development.", eligible:["ptc","nve_ppa"], lat:38.80, lng:-114.45,
+    capacityMW:150, storageMWh:null, acreage:null, developer:"Pattern Energy", epc:null, estimatedCOD:null,
+    docketIds:[], queueIds:[], ppaIds:["ppa_spring_valley"],
+    keyMilestones:[
+      { date:"2012-09-01", event:"Wind farm fully operational (150MW, 66 turbines)", status:"complete" },
+    ],
+    riskFactors:[], permittingScore:100 },
+
+  { id:39, name:"Stillwater Hybrid", stage:"operational", sector:["Solar+Geothermal"], city:"Fallon", region:"churchill", funding:150, momentum:60, employees:30, founded:2009, description:"33MW solar + 26MW geothermal hybrid facility in Churchill County, operated by Enel Green Power. Stillwater was one of the world's first utility-scale hybrid renewable energy plants, combining geothermal baseload generation with solar PV.\n\nThe hybrid approach demonstrates complementary generation profiles: geothermal provides 24/7 baseload while solar adds daytime peak capacity. Enel operates the facility under an NV Energy PPA.", eligible:["ptc","nve_ppa"], lat:39.53, lng:-118.55,
+    capacityMW:59, storageMWh:null, acreage:null, developer:"Enel Green Power", epc:null, estimatedCOD:null,
+    docketIds:[], queueIds:[], ppaIds:["ppa_stillwater"],
+    keyMilestones:[
+      { date:"2009-01-01", event:"Geothermal plant operational (26MW)", status:"complete" },
+      { date:"2012-06-01", event:"Solar PV addition operational (33MW)", status:"complete" },
+    ],
+    riskFactors:[], permittingScore:100 },
+
+  // --- NEPA REVIEW ---
+  { id:21, name:"Rock Valley Solar + Storage", stage:"nepa_review", sector:["Solar+BESS"], city:"Pahrump", region:"nye", funding:300, momentum:55, employees:100, founded:2023, description:"200MW solar + 200MW/800MWh battery storage on BLM land in Nye County. Developed by Pine Gate Renewables. The BLM is currently conducting environmental review under the National Environmental Policy Act.\n\nRock Valley is positioned in the Pahrump Valley solar development corridor alongside Rough Hat Clark and other large-scale projects. The 4-hour storage component aligns with NV Energy's preferred procurement profile for evening peak capacity.", eligible:["nve_ppa","itc","blm_row"], lat:36.25, lng:-116.05,
+    capacityMW:200, storageMWh:800, acreage:2200, developer:"Pine Gate Renewables", epc:null, estimatedCOD:"2028-Q1",
+    docketIds:["BLM-NV-2024-0022"], queueIds:["NVE-GEN-2023-016"], ppaIds:[],
+    keyMilestones:[
+      { date:"2023-05-01", event:"BLM ROW application filed", status:"complete" },
+      { date:"2024-03-01", event:"Interconnection application filed", status:"complete" },
+      { date:"2025-01-15", event:"BLM Draft EIS published", status:"complete" },
+      { date:"2025-09-01", event:"ROD expected", status:"pending" },
+    ],
+    riskFactors:["transmission_dependent"], permittingScore:55 },
+
+  { id:34, name:"Greenlink North Transmission", stage:"nepa_review", sector:["Transmission"], city:"Reno", region:"multi_county", funding:1800, momentum:65, employees:1000, founded:2020, description:"235-mile, 525kV high-voltage transmission line connecting Yerington to Reno, completing the Greenlink loop. NV Energy development with PUCN approval in 2024. MasTec designated as general contractor.\n\nGreenlink North is the twin corridor to Greenlink West, together forming a transmission superhighway enabling bidirectional power flow across Nevada. Critical for serving TRIC data center load growth. BLM EIS was remanded for additional review in early 2025, introducing schedule uncertainty.", eligible:["doe_lpo","blm_row"], lat:39.20, lng:-118.50,
+    capacityMW:null, storageMWh:null, acreage:null, developer:"NV Energy", epc:"MasTec T&D Power", estimatedCOD:"2028-Q4",
+    docketIds:["BLM-NV-2023-0067"], queueIds:[], ppaIds:[],
+    keyMilestones:[
+      { date:"2023-01-15", event:"BLM ROW application filed", status:"complete" },
+      { date:"2024-09-01", event:"BLM Draft EIS published", status:"complete" },
+      { date:"2024-11-15", event:"PUCN approves project", status:"complete" },
+      { date:"2025-02-01", event:"EIS remanded for additional review", status:"in_progress" },
+      { date:"2028-12-01", event:"Target completion (delayed)", status:"pending" },
+    ],
+    riskFactors:["blm_eis_remand","interstate_transmission","endangered_species"], permittingScore:50 },
+
+  // --- IN QUEUE ---
+  { id:23, name:"Chill Sun Solar", stage:"queue", sector:["Solar"], city:"Caliente", region:"lincoln", funding:200, momentum:42, employees:50, founded:2024, description:"150MW community-scale solar project in Lincoln County. Targeting underserved rural Nevada communities with locally-sourced clean energy. Currently in NV Energy's interconnection queue.\n\nChill Sun represents the emerging community solar segment in Nevada, distinct from the utility-scale projects that dominate the state's pipeline. Lincoln County's sparse population and limited transmission infrastructure present both opportunities and challenges for project development.", eligible:["nve_ppa","itc"], lat:37.62, lng:-114.52,
+    capacityMW:150, storageMWh:null, acreage:1200, developer:null, epc:null, estimatedCOD:"2028-Q2",
+    docketIds:[], queueIds:["NVE-GEN-2024-015"], ppaIds:[],
+    keyMilestones:[
+      { date:"2024-06-01", event:"Interconnection application filed", status:"complete" },
+      { date:"2025-03-01", event:"System impact study in progress", status:"in_progress" },
+    ],
+    riskFactors:["rural_transmission","community_solar"], permittingScore:30 },
+
+  { id:24, name:"Rigel Solar + Storage", stage:"queue", sector:["Solar+BESS"], city:"Las Vegas", region:"clark", funding:350, momentum:50, employees:100, founded:2024, description:"250MW solar + 250MW/1,000MWh battery storage project included in NV Energy's 2024 IRP resource plan. Currently in the interconnection queue with system impact study underway.\n\nRigel is part of the wave of solar+storage projects NV Energy is procuring to meet surging demand from data center growth and electrification. The 4-hour storage duration provides evening peak capacity.", eligible:["nve_ppa","itc","pucn_irp"], lat:36.05, lng:-115.20,
+    capacityMW:250, storageMWh:1000, acreage:2000, developer:null, epc:null, estimatedCOD:"2028-Q1",
+    docketIds:["24-05041"], queueIds:["NVE-GEN-2024-019"], ppaIds:[],
+    keyMilestones:[
+      { date:"2024-07-01", event:"Interconnection application filed", status:"complete" },
+      { date:"2024-12-01", event:"Included in 2024 IRP filing", status:"complete" },
+      { date:"2025-06-01", event:"System impact study in progress", status:"in_progress" },
+    ],
+    riskFactors:[], permittingScore:35 },
+
+  { id:26, name:"McGinness Hills Phase 4", stage:"queue", sector:["Geothermal"], city:"Austin", region:"lander", funding:100, momentum:65, employees:30, founded:2024, description:"30MW geothermal expansion at the existing McGinness Hills complex in Lander County. Ormat Technologies is developing the expansion to increase total complex capacity beyond 190MW.\n\nPhase 4 benefits from existing infrastructure, established resource characterization, and proven reservoir performance from the prior three phases. Environmental review is streamlined due to the brownfield nature of the expansion.", eligible:["ptc","nve_ppa"], lat:39.61, lng:-117.08,
+    capacityMW:30, storageMWh:null, acreage:null, developer:"Ormat Technologies", epc:"Ormat Technologies", estimatedCOD:"2027-Q2",
+    docketIds:[], queueIds:["NVE-GEN-2024-009"], ppaIds:[],
+    keyMilestones:[
+      { date:"2024-04-01", event:"Interconnection application filed", status:"complete" },
+      { date:"2024-09-01", event:"Environmental assessment initiated", status:"complete" },
+      { date:"2025-06-01", event:"System impact study in progress", status:"in_progress" },
+    ],
+    riskFactors:[], permittingScore:60 },
+
+  // --- PROPOSED ---
+  { id:25, name:"Moapa Southern Paiute Solar II", stage:"proposed", sector:["Solar"], city:"Moapa", region:"clark", funding:350, momentum:48, employees:0, founded:2025, description:"250MW expansion of the Moapa Southern Paiute Solar facility on tribal land. Developed through a partnership between First Solar and the Moapa Band of Paiutes. The expansion would make this one of the largest tribal-land energy projects in the western US.\n\nMoapa Solar II leverages existing interconnection infrastructure from the original 250MW facility and the adjacent Reid Gardner substation. The project demonstrates the growing role of tribal nations as clean energy developers and landowners.", eligible:["nve_ppa","itc"], lat:36.67, lng:-114.65,
+    capacityMW:250, storageMWh:null, acreage:2000, developer:"First Solar / Moapa Band of Paiutes", epc:null, estimatedCOD:null,
+    docketIds:[], queueIds:[], ppaIds:[],
+    keyMilestones:[
+      { date:"2025-01-15", event:"Tribal council approves expansion feasibility study", status:"complete" },
+      { date:"2025-06-01", event:"Interconnection pre-application filed", status:"in_progress" },
+    ],
+    riskFactors:["tribal_land","interconnection_queue"], permittingScore:25 },
+
+  { id:32, name:"Stagecoach Wind", stage:"proposed", sector:["Wind"], city:"Stagecoach", region:"lyon", funding:300, momentum:30, employees:0, founded:2025, description:"125MW proposed wind energy project in Lyon County near the community of Stagecoach. The project would capitalize on wind resources in the valley corridors east of the Sierra Nevada.\n\nNevada has limited wind development compared to solar, making Stagecoach a notable proposal. The project faces challenges including wind resource intermittency, community acceptance in a semi-rural area, and competition from lower-cost solar+storage alternatives.", eligible:["ptc","blm_row"], lat:39.38, lng:-119.32,
+    capacityMW:125, storageMWh:null, acreage:8000, developer:null, epc:null, estimatedCOD:null,
+    docketIds:[], queueIds:[], ppaIds:[],
+    keyMilestones:[
+      { date:"2025-02-01", event:"Wind resource assessment initiated", status:"in_progress" },
+    ],
+    riskFactors:["wind_resource","community_opposition","economics"], permittingScore:10 },
+
+  { id:33, name:"White Pine Pumped Storage", stage:"proposed", sector:["Pumped_Hydro"], city:"Ely", region:"white_pine", funding:2500, momentum:45, employees:0, founded:2020, description:"1,000MW pumped hydroelectric storage project in White Pine County, developed by rPlus Hydro (now Obsidian Renewables). The project received a FERC preliminary permit for studies. Pumped storage provides long-duration energy storage (8-12 hours) far exceeding lithium-ion battery capacity.\n\nWhite Pine would be a transformational grid asset, providing massive storage capacity for renewable integration, frequency regulation, and black start capability. However, the project faces significant challenges including high capital costs ($2.5B+), long development timelines, water rights in an arid region, and environmental review for dam construction.", eligible:["doe_lpo","pucn_irp"], lat:39.10, lng:-114.85,
+    capacityMW:1000, storageMWh:null, acreage:3000, developer:"rPlus Hydro / Obsidian Renewables", epc:null, estimatedCOD:null,
+    docketIds:[], queueIds:[], ppaIds:[],
+    keyMilestones:[
+      { date:"2020-08-01", event:"FERC preliminary permit issued", status:"complete" },
+      { date:"2023-06-01", event:"Feasibility study completed", status:"complete" },
+      { date:"2025-01-01", event:"FERC license application preparation", status:"in_progress" },
+    ],
+    riskFactors:["long_duration_storage","water_rights","high_capex","dam_construction","environmental"], permittingScore:15 },
+
+  { id:35, name:"North Valmy Conversion", stage:"proposed", sector:["Solar"], city:"Valmy", region:"humboldt", funding:400, momentum:50, employees:0, founded:2024, description:"200MW coal-to-solar conversion at the former North Valmy coal plant site in Humboldt County. NV Energy plans to repurpose the retired coal facility with utility-scale solar generation, following the successful Reid Gardner BESS model.\n\nNorth Valmy's existing transmission interconnection and substation infrastructure significantly reduce development costs and timelines. The conversion supports NV Energy's coal-to-clean transition mandate under SB 448. The site's location in northern Nevada provides generation diversity.", eligible:["nve_ppa","itc","pucn_irp"], lat:40.85, lng:-117.13,
+    capacityMW:200, storageMWh:null, acreage:1500, developer:"NV Energy", epc:null, estimatedCOD:null,
+    docketIds:["24-05041"], queueIds:[], ppaIds:[],
+    keyMilestones:[
+      { date:"2024-06-01", event:"Valmy Unit 1 retirement completed", status:"complete" },
+      { date:"2025-01-01", event:"Solar conversion feasibility study initiated", status:"in_progress" },
+      { date:"2025-12-01", event:"Valmy Unit 2 retirement scheduled", status:"pending" },
+    ],
+    riskFactors:["brownfield_development","coal_ash_remediation"], permittingScore:40 },
+
+  { id:36, name:"Hot Pot Geothermal", stage:"proposed", sector:["Geothermal"], city:"Orovada", region:"humboldt", funding:80, momentum:40, employees:0, founded:2023, description:"30MW geothermal project in Humboldt County. Originally explored by Cyrq Energy, the resource area near Orovada has demonstrated promising subsurface temperatures.\n\nHot Pot targets conventional hydrothermal resources in northern Nevada's geothermal belt. The project is in early exploration with well testing underway to confirm commercial viability.", eligible:["ptc"], lat:41.05, lng:-117.55,
+    capacityMW:30, storageMWh:null, acreage:null, developer:"Cyrq Energy", epc:null, estimatedCOD:null,
+    docketIds:[], queueIds:[], ppaIds:[],
+    keyMilestones:[
+      { date:"2023-09-01", event:"Exploration drilling initiated", status:"complete" },
+      { date:"2025-03-01", event:"Well flow testing underway", status:"in_progress" },
+    ],
+    riskFactors:["exploration_risk","resource_confirmation"], permittingScore:15 },
+
+  { id:37, name:"Patua Geothermal", stage:"proposed", sector:["Geothermal"], city:"Fernley", region:"churchill", funding:90, momentum:42, employees:0, founded:2022, description:"30MW geothermal project in Churchill County near Fernley, developed by Cyrq Energy. The Patua resource has been characterized through exploration wells and shows potential for commercial development.\n\nPatua is located in the productive geothermal corridor of western Nevada, near the Steamboat and Stillwater complexes. Cyrq Energy's focus on mid-scale geothermal development complements Ormat's larger portfolio projects.", eligible:["ptc","nve_ppa"], lat:39.60, lng:-119.10,
+    capacityMW:30, storageMWh:null, acreage:null, developer:"Cyrq Energy", epc:null, estimatedCOD:null,
+    docketIds:[], queueIds:[], ppaIds:[],
+    keyMilestones:[
+      { date:"2022-06-01", event:"Exploration wells drilled", status:"complete" },
+      { date:"2024-12-01", event:"Resource confirmation testing", status:"in_progress" },
+    ],
+    riskFactors:["exploration_risk","resource_confirmation"], permittingScore:20 },
+
+  { id:38, name:"Battle Mountain Solar", stage:"proposed", sector:["Solar"], city:"Battle Mountain", region:"lander", funding:300, momentum:35, employees:0, founded:2025, description:"200MW utility-scale solar project proposed in Lander County near Battle Mountain. The project would serve the growing load in the I-80 corridor and potentially integrate with the existing geothermal generation in the region.\n\nBattle Mountain Solar is in the earliest stages of development, with site evaluation and preliminary resource assessment underway. The project would benefit from Greenlink North transmission for delivery to load centers.", eligible:["blm_row","itc"], lat:40.64, lng:-116.93,
+    capacityMW:200, storageMWh:null, acreage:2000, developer:null, epc:null, estimatedCOD:null,
+    docketIds:[], queueIds:[], ppaIds:[],
+    keyMilestones:[
+      { date:"2025-02-01", event:"Site evaluation initiated", status:"in_progress" },
+    ],
+    riskFactors:["transmission_dependent","early_stage"], permittingScore:10 },
+
+  { id:40, name:"Desert Sunlight NV", stage:"proposed", sector:["Solar"], city:"Primm", region:"clark", funding:500, momentum:40, employees:0, founded:2025, description:"300MW solar project proposed on BLM land in Clark County. Part of the continued buildout of the southern Nevada solar corridor along the I-15 corridor near Primm and Jean.\n\nDesert Sunlight NV joins a cluster of proposed and existing solar developments in the Ivanpah Valley region. Developer selection and BLM ROW application are pending.", eligible:["blm_row","itc","nve_ppa"], lat:35.55, lng:-115.35,
+    capacityMW:300, storageMWh:null, acreage:2500, developer:null, epc:null, estimatedCOD:null,
+    docketIds:[], queueIds:[], ppaIds:[],
+    keyMilestones:[
+      { date:"2025-03-01", event:"Site feasibility assessment initiated", status:"in_progress" },
+    ],
+    riskFactors:["early_stage","blm_permitting"], permittingScore:10 },
+
+  { id:41, name:"Jean Solar + Storage", stage:"proposed", sector:["Solar+BESS"], city:"Jean", region:"clark", funding:250, momentum:45, employees:0, founded:2024, description:"150MW solar + 100MWh battery storage proposed near Jean in Clark County. Included in NV Energy's 2024 IRP resource plan as a future procurement target.\n\nJean Solar benefits from the southern Nevada solar resource and proximity to existing transmission. The modest storage component provides limited evening peak shifting. The project is awaiting the next NV Energy All-Source RFP cycle.", eligible:["nve_ppa","itc","pucn_irp"], lat:35.78, lng:-115.32,
+    capacityMW:150, storageMWh:100, acreage:1200, developer:null, epc:null, estimatedCOD:null,
+    docketIds:["24-05041"], queueIds:[], ppaIds:[],
+    keyMilestones:[
+      { date:"2024-12-01", event:"Included in 2024 IRP resource plan", status:"complete" },
+      { date:"2025-06-01", event:"Next All-Source RFP cycle targeting", status:"pending" },
+    ],
+    riskFactors:["early_stage"], permittingScore:15 },
+
+  { id:43, name:"Arrow Canyon Solar", stage:"proposed", sector:["Solar"], city:"Moapa", region:"clark", funding:300, momentum:38, employees:0, founded:2025, description:"200MW solar project proposed by NextEra Energy Resources in Clark County near the Arrow Canyon Range. The project is in early development with site assessment and BLM pre-application activities underway.\n\nArrow Canyon benefits from proximity to the Moapa/Reid Gardner transmission complex and existing solar development infrastructure in the area.", eligible:["blm_row","itc","nve_ppa"], lat:36.72, lng:-114.88,
+    capacityMW:200, storageMWh:null, acreage:1800, developer:"NextEra Energy Resources", epc:null, estimatedCOD:null,
+    docketIds:[], queueIds:[], ppaIds:[],
+    keyMilestones:[
+      { date:"2025-01-15", event:"Site assessment initiated", status:"in_progress" },
+    ],
+    riskFactors:["early_stage","blm_permitting"], permittingScore:12 },
+
+  { id:48, name:"Ivanpah Repowering", stage:"proposed", sector:["Solar"], city:"Primm", region:"clark", funding:600, momentum:35, employees:0, founded:2025, description:"400MW solar PV repowering proposed on BLM land in the Ivanpah Valley area of Clark County. The project would install modern PV technology on existing or adjacent disturbed land, replacing aging concentrated solar power infrastructure.\n\nRepowering projects benefit from existing transmission interconnection, environmental clearances, and disturbed land status, potentially streamlining permitting. The shift from CSP to PV reflects the dramatic cost decline of photovoltaic technology.", eligible:["blm_row","itc"], lat:35.55, lng:-115.45,
+    capacityMW:400, storageMWh:null, acreage:3500, developer:null, epc:null, estimatedCOD:null,
+    docketIds:[], queueIds:[], ppaIds:[],
+    keyMilestones:[
+      { date:"2025-02-01", event:"Repowering feasibility study initiated", status:"in_progress" },
+    ],
+    riskFactors:["brownfield_repower","blm_permitting","early_stage"], permittingScore:15 },
+
+  // --- DATA CENTER / LOAD PROJECTS ---
+  { id:44, name:"Meta TRIC Data Center", stage:"under_construction", sector:["Data_Center"], city:"Sparks", region:"storey", funding:4500, momentum:92, employees:500, founded:2023, description:"600MW hyperscale data center campus at the Tahoe-Reno Industrial Center in Storey County. Meta Platforms is constructing a massive AI-focused data center that will become one of the largest single electricity loads in Nevada.\n\nThe Meta facility drives significant demand for new renewable generation and transmission capacity. The project received GOED tax abatements and represents the accelerating trend of hyperscale data center investment in northern Nevada, attracted by the region's fiber connectivity, relatively low power costs, and available land.", eligible:["nv_incentive"], lat:39.54, lng:-119.52,
+    capacityMW:null, storageMWh:null, acreage:800, developer:"Meta Platforms", epc:null, estimatedCOD:"2026-Q3",
+    docketIds:["24-11045"], queueIds:[], ppaIds:[],
+    keyMilestones:[
+      { date:"2023-06-01", event:"TRIC site acquired", status:"complete" },
+      { date:"2023-11-01", event:"GOED tax abatement approved", status:"complete" },
+      { date:"2024-04-01", event:"Construction begins", status:"complete" },
+      { date:"2026-09-01", event:"Phase 1 operational target", status:"in_progress" },
+    ],
+    riskFactors:["power_supply","transmission_capacity"], permittingScore:null },
+
+  { id:45, name:"Applied Digital NV Data Center", stage:"proposed", sector:["Data_Center"], city:"Reno", region:"washoe", funding:1500, momentum:55, employees:0, founded:2024, description:"300MW AI and high-performance computing data center planned for northern Nevada. Applied Digital is evaluating multiple sites in the Reno-Sparks metro area and TRIC corridor.\n\nThe project represents the emerging demand from AI/HPC workloads that require significantly higher power density than traditional cloud data centers. Power procurement and grid capacity are the primary development constraints.", eligible:["nv_incentive"], lat:39.52, lng:-119.50,
+    capacityMW:null, storageMWh:null, acreage:null, developer:"Applied Digital", epc:null, estimatedCOD:null,
+    docketIds:[], queueIds:[], ppaIds:[],
+    keyMilestones:[
+      { date:"2024-09-01", event:"Site evaluation initiated", status:"complete" },
+      { date:"2025-03-01", event:"NV Energy power capacity assessment", status:"in_progress" },
+    ],
+    riskFactors:["power_supply","early_stage","ai_demand"], permittingScore:null },
+
+  // --- INFRASTRUCTURE ---
+  { id:46, name:"Pinyon Pipeline", stage:"proposed", sector:["NatGas"], city:"Las Vegas", region:"multi_county", funding:800, momentum:40, employees:0, founded:2024, description:"36-inch natural gas pipeline from Clark County to Nye County, proposed by Southwest Gas. The pipeline would increase natural gas capacity to support growing load in southern Nevada, including potential gas peaker plants and industrial development.\n\nWhile Nevada's clean energy transition prioritizes renewables, natural gas infrastructure remains relevant for grid reliability during the transition. The pipeline faces potential opposition from clean energy advocates who argue it locks in fossil fuel infrastructure.", eligible:[], lat:36.30, lng:-115.80,
+    capacityMW:null, storageMWh:null, acreage:null, developer:"Southwest Gas", epc:null, estimatedCOD:null,
+    docketIds:[], queueIds:[], ppaIds:[],
+    keyMilestones:[
+      { date:"2024-10-01", event:"Feasibility study initiated", status:"complete" },
+      { date:"2025-06-01", event:"PUCN certificate of public need evaluation", status:"pending" },
+    ],
+    riskFactors:["fossil_fuel","community_opposition","regulatory"], permittingScore:20 },
+
+  { id:47, name:"Air Liquide Green H2 Hub", stage:"proposed", sector:["Hydrogen"], city:"Las Vegas", region:"clark", funding:500, momentum:52, employees:0, founded:2024, description:"Green hydrogen production hub in Clark County, developed by Air Liquide as part of the DOE Regional Clean Hydrogen Hub program. The project would produce green hydrogen using renewable electricity and water electrolysis.\n\nNevada's abundant solar resources and growing renewable generation make it an attractive location for green hydrogen production. The project targets industrial hydrogen demand, potential fuel cell transportation, and long-duration energy storage applications.", eligible:["doe_lpo"], lat:36.10, lng:-115.15,
+    capacityMW:null, storageMWh:null, acreage:null, developer:"Air Liquide", epc:null, estimatedCOD:null,
+    docketIds:[], queueIds:[], ppaIds:[],
+    keyMilestones:[
+      { date:"2024-06-01", event:"DOE H2Hub regional application submitted", status:"complete" },
+      { date:"2025-01-15", event:"Site selection underway", status:"in_progress" },
+    ],
+    riskFactors:["hydrogen_market","early_stage","technology","water_supply"], permittingScore:15 },
 ];
