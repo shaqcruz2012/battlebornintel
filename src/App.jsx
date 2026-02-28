@@ -36,9 +36,15 @@ const VIEWS = [
   { id: "companies", label: "Companies", icon: "⬡" },
   { id: "investors", label: "Funds", icon: "◈" },
   { id: "sectors", label: "Sectors", icon: "◉" },
+  { id: "ia_ecosystem", label: "Ecosystem", icon: "🏛" },
+  { id: "ia_network", label: "Network", icon: "🔗" },
+  { id: "ia_risk", label: "Risk", icon: "⚠" },
+  { id: "ia_market", label: "Market", icon: "📊" },
+  { id: "ia_regulatory", label: "Regulatory", icon: "⚖" },
+  { id: "ia_opportunity", label: "Opportunity", icon: "🎯" },
+  { id: "graph", label: "Graph", icon: "🕸" },
   { id: "watchlist", label: "Watchlist", icon: "☆" },
   { id: "compare", label: "Compare", icon: "⟺" },
-  { id: "graph", label: "Graph", icon: "🕸" },
   { id: "timeline", label: "Activity", icon: "⏱" },
   { id: "ssbci", label: "SSBCI", icon: "★" },
   { id: "map", label: "Map", icon: "⊕" },
@@ -703,6 +709,506 @@ const VERIFIED_EDGES=[
 ];
 
 // ══════════════════════════════════════════════════════════════════════════════
+// INFERRED ANALYSIS (IA) DATA MODELS
+// Technology/Market readiness, risk factors, venture quality, regulatory exposure
+// ══════════════════════════════════════════════════════════════════════════════
+
+const _iaDefaults = (stage, sectors) => {
+  const trlMap = { growth:8, series_c_plus:7, series_b:6, series_a:5, seed:3, pre_seed:2 };
+  const mrlMap = { growth:8, series_c_plus:7, series_b:6, series_a:4, seed:3, pre_seed:2 };
+  const trl = trlMap[stage] || 3;
+  const mrl = mrlMap[stage] || 3;
+  const vq = stage === "growth" ? {market:4,valueProp:4,businessModel:4,team:4}
+    : stage === "series_c_plus" ? {market:4,valueProp:4,businessModel:3,team:4}
+    : stage === "series_b" ? {market:3,valueProp:3,businessModel:3,team:3}
+    : stage === "series_a" ? {market:3,valueProp:3,businessModel:2,team:3}
+    : stage === "seed" ? {market:2,valueProp:2,businessModel:2,team:2}
+    : {market:1,valueProp:2,businessModel:1,team:2};
+  const cm = stage === "growth" ? {governance:4,policies:4,systems:3,monitoring:3,training:3}
+    : stage === "series_c_plus" ? {governance:3,policies:3,systems:3,monitoring:3,training:2}
+    : stage === "series_b" ? {governance:3,policies:3,systems:2,monitoring:2,training:2}
+    : stage === "series_a" ? {governance:2,policies:2,systems:2,monitoring:1,training:1}
+    : {governance:1,policies:1,systems:1,monitoring:1,training:1};
+  const re = [];
+  if (sectors.some(s => ["Fintech","Banking","Payments"].includes(s))) re.push("SEC","FinCEN","CFPB");
+  if (sectors.some(s => ["Biotech","Healthcare"].includes(s))) re.push("FDA","CMS");
+  if (sectors.some(s => ["Cannabis"].includes(s))) re.push("NV Cannabis Compliance Board","FinCEN SAR");
+  if (sectors.some(s => ["Mining","Cleantech","Energy"].includes(s))) re.push("EPA","DOE","BLM");
+  if (sectors.some(s => ["Defense","Aerospace","Drones"].includes(s))) re.push("DoD","ITAR/EAR");
+  if (sectors.some(s => ["Gaming"].includes(s))) re.push("NV Gaming Control Board","NV Gaming Commission");
+  if (sectors.some(s => ["IoT","Satellite"].includes(s))) re.push("FCC");
+  if (sectors.some(s => ["AI"].includes(s))) re.push("NIST AI RMF");
+  if (sectors.some(s => ["Data Center","Cloud"].includes(s))) re.push("NV Data Privacy");
+  if (re.length === 0) re.push("NV Secretary of State");
+  const risks = [];
+  if (["seed","pre_seed"].includes(stage)) {
+    risks.push({category:"Financing",name:"Runway risk",likelihood:4,impact:4});
+    risks.push({category:"Market",name:"Product-market fit uncertainty",likelihood:3,impact:4});
+  } else if (stage === "series_a") {
+    risks.push({category:"Financing",name:"Bridge funding gap",likelihood:3,impact:3});
+    risks.push({category:"Operational",name:"Scaling execution risk",likelihood:3,impact:3});
+  } else if (stage === "series_b") {
+    risks.push({category:"Market",name:"Competitive pressure",likelihood:3,impact:3});
+    risks.push({category:"Operational",name:"Talent retention",likelihood:2,impact:3});
+  } else {
+    risks.push({category:"Market",name:"Market saturation",likelihood:2,impact:3});
+    risks.push({category:"Regulatory",name:"Compliance burden growth",likelihood:2,impact:2});
+  }
+  return { trl, mrl, riskFactors:risks, ventureQuality:vq, regulatoryExposure:re, complianceMaturity:cm };
+};
+
+const COMPANY_IA_DATA = {
+  // === TOP-TIER: Detailed IA profiles for top ~25 companies by funding ===
+  1: { // Redwood Materials — $4.17B, growth, Cleantech/Energy/Manufacturing
+    trl:9, mrl:9,
+    riskFactors:[
+      {category:"Regulatory",name:"EPA hazardous waste permitting for battery recycling",likelihood:2,impact:4},
+      {category:"Concentration",name:"EV market downturn dependency",likelihood:2,impact:5},
+      {category:"Operational",name:"Gigafactory scale-up execution across NV and SC campuses",likelihood:2,impact:4},
+      {category:"Technology",name:"Cathode-grade material yield consistency at scale",likelihood:2,impact:3}
+    ],
+    ventureQuality:{market:5,valueProp:5,businessModel:5,team:5},
+    regulatoryExposure:["EPA","DOE Loan Programs Office","OSHA","NV NDEP","BLM"],
+    complianceMaturity:{governance:5,policies:5,systems:4,monitoring:4,training:4}
+  },
+  2: { // Socure — $744M, series_c_plus, AI/Fintech/Identity
+    trl:8, mrl:8,
+    riskFactors:[
+      {category:"Regulatory",name:"State-by-state biometric privacy laws (BIPA, CCPA)",likelihood:3,impact:4},
+      {category:"Market",name:"Identity verification market commoditization",likelihood:3,impact:3},
+      {category:"Technology",name:"Adversarial AI attacks on identity models",likelihood:2,impact:4},
+      {category:"Concentration",name:"Financial services sector concentration",likelihood:2,impact:3}
+    ],
+    ventureQuality:{market:5,valueProp:5,businessModel:4,team:5},
+    regulatoryExposure:["SEC","FinCEN","CFPB","NIST AI RMF","FTC","State AG Offices"],
+    complianceMaturity:{governance:4,policies:4,systems:4,monitoring:4,training:3}
+  },
+  3: { // Abnormal AI — $534M, series_c_plus, AI/Cybersecurity
+    trl:8, mrl:8,
+    riskFactors:[
+      {category:"Market",name:"Crowded enterprise email security market (Microsoft, Proofpoint)",likelihood:3,impact:3},
+      {category:"Technology",name:"Behavioral AI false positive rates at scale",likelihood:2,impact:3},
+      {category:"Operational",name:"Rapid headcount scaling (1200+ employees)",likelihood:2,impact:3}
+    ],
+    ventureQuality:{market:5,valueProp:5,businessModel:4,team:5},
+    regulatoryExposure:["NIST AI RMF","SEC (SOX for public customers)","FedRAMP","CISA"],
+    complianceMaturity:{governance:4,policies:4,systems:4,monitoring:3,training:3}
+  },
+  4: { // TensorWave — $147M, series_a, AI/Cloud/Data Center
+    trl:6, mrl:5,
+    riskFactors:[
+      {category:"Technology",name:"AMD GPU ecosystem maturity vs NVIDIA CUDA dominance",likelihood:3,impact:5},
+      {category:"Concentration",name:"Single-vendor AMD hardware dependency",likelihood:4,impact:4},
+      {category:"Market",name:"GPU cloud pricing pressure from hyperscalers",likelihood:3,impact:4},
+      {category:"Operational",name:"Data center power and cooling at 8192-GPU scale",likelihood:2,impact:4}
+    ],
+    ventureQuality:{market:4,valueProp:4,businessModel:3,team:4},
+    regulatoryExposure:["NV Data Privacy","FCC","NV Public Utilities Commission","DOE"],
+    complianceMaturity:{governance:2,policies:2,systems:2,monitoring:2,training:1}
+  },
+  5: { // 1047 Games — $120M, series_c_plus, Gaming/AI
+    trl:8, mrl:7,
+    riskFactors:[
+      {category:"Market",name:"AAA gaming market hit-driven volatility",likelihood:3,impact:5},
+      {category:"Operational",name:"Fully remote team coordination at scale",likelihood:2,impact:3},
+      {category:"Technology",name:"Live service game retention and monetization",likelihood:3,impact:4}
+    ],
+    ventureQuality:{market:4,valueProp:3,businessModel:3,team:4},
+    regulatoryExposure:["FTC (loot box/microtransaction oversight)","ESRB","NV Gaming Control Board"],
+    complianceMaturity:{governance:3,policies:3,systems:3,monitoring:2,training:2}
+  },
+  6: { // Hubble Network — $100M, series_b, IoT/Aerospace/Satellite
+    trl:6, mrl:6,
+    riskFactors:[
+      {category:"Technology",name:"BLE-to-satellite link budget reliability in LEO",likelihood:3,impact:5},
+      {category:"Regulatory",name:"FCC spectrum licensing for satellite-BLE band",likelihood:2,impact:4},
+      {category:"Operational",name:"Satellite constellation deployment cadence",likelihood:3,impact:4},
+      {category:"Market",name:"Competing LEO IoT networks (Skylo, Swarm/SpaceX)",likelihood:3,impact:3}
+    ],
+    ventureQuality:{market:4,valueProp:5,businessModel:3,team:4},
+    regulatoryExposure:["FCC","ITU","FAA (launch licensing)","NOAA"],
+    complianceMaturity:{governance:3,policies:3,systems:2,monitoring:2,training:2}
+  },
+  7: { // Boxabl — $75M, series_a, Construction/Manufacturing
+    trl:6, mrl:5,
+    riskFactors:[
+      {category:"Regulatory",name:"Local building code approval jurisdiction-by-jurisdiction",likelihood:4,impact:4},
+      {category:"Financing",name:"Reg A+ crowdfunding investor relations complexity",likelihood:3,impact:3},
+      {category:"Operational",name:"Manufacturing scale-up and supply chain for modular housing",likelihood:3,impact:4},
+      {category:"Market",name:"NIMBYism and zoning barriers for modular placement",likelihood:3,impact:3}
+    ],
+    ventureQuality:{market:4,valueProp:4,businessModel:3,team:3},
+    regulatoryExposure:["HUD","NV State Contractors Board","Local Building Departments","SEC (Reg A+)"],
+    complianceMaturity:{governance:2,policies:2,systems:2,monitoring:2,training:1}
+  },
+  8: { // Blockchains LLC — $60M, growth, Blockchain/Real Estate
+    trl:7, mrl:5,
+    riskFactors:[
+      {category:"Market",name:"Smart city demand and adoption uncertainty",likelihood:4,impact:4},
+      {category:"Regulatory",name:"Storey County Innovation Zone governance approvals",likelihood:3,impact:4},
+      {category:"Technology",name:"Blockchain scalability for municipal services",likelihood:3,impact:3}
+    ],
+    ventureQuality:{market:3,valueProp:3,businessModel:2,team:3},
+    regulatoryExposure:["Storey County","NV Secretary of State","SEC","NV Real Estate Division"],
+    complianceMaturity:{governance:3,policies:3,systems:2,monitoring:2,training:2}
+  },
+  9: { // MNTN — $35M, series_b, AdTech/AI/Media
+    trl:7, mrl:7,
+    riskFactors:[
+      {category:"Market",name:"CTV ad spend shifting to walled gardens (YouTube, Netflix)",likelihood:3,impact:4},
+      {category:"Regulatory",name:"FTC advertising disclosure and data privacy rules",likelihood:2,impact:3},
+      {category:"Technology",name:"Attribution accuracy in cross-device CTV environments",likelihood:2,impact:3}
+    ],
+    ventureQuality:{market:4,valueProp:4,businessModel:4,team:4},
+    regulatoryExposure:["FTC","NV Data Privacy","CCPA/CPRA","IAB Standards"],
+    complianceMaturity:{governance:3,policies:3,systems:3,monitoring:3,training:2}
+  },
+  10: { // Katalyst — $26M, series_a, Fitness/IoT/Biotech
+    trl:6, mrl:5,
+    riskFactors:[
+      {category:"Regulatory",name:"FDA Class II medical device ongoing compliance",likelihood:2,impact:5},
+      {category:"Market",name:"Premium fitness hardware market cyclicality (Peloton effect)",likelihood:3,impact:4},
+      {category:"Technology",name:"EMS safety and efficacy for mainstream consumer use",likelihood:2,impact:4}
+    ],
+    ventureQuality:{market:3,valueProp:4,businessModel:3,team:3},
+    regulatoryExposure:["FDA","CPSC","FCC (wireless EMS)","UL Safety"],
+    complianceMaturity:{governance:2,policies:3,systems:2,monitoring:2,training:1}
+  },
+  11: { // CIQ — $26M, series_a, Cloud/Computing/Cybersecurity
+    trl:6, mrl:5,
+    riskFactors:[
+      {category:"Market",name:"Enterprise Linux market dominated by Red Hat/SUSE",likelihood:3,impact:4},
+      {category:"Technology",name:"Rocky Linux upstream RHEL compatibility lag",likelihood:2,impact:4},
+      {category:"Operational",name:"Open-source community governance fragmentation",likelihood:2,impact:3}
+    ],
+    ventureQuality:{market:3,valueProp:4,businessModel:3,team:4},
+    regulatoryExposure:["FedRAMP","NIST 800-53","CISA","NV Data Privacy"],
+    complianceMaturity:{governance:3,policies:2,systems:2,monitoring:2,training:2}
+  },
+  12: { // Springbig — $22M, growth, Cannabis/Fintech/Analytics
+    trl:8, mrl:7,
+    riskFactors:[
+      {category:"Regulatory",name:"Federal cannabis illegality limits banking/payment rails",likelihood:4,impact:5},
+      {category:"Market",name:"Cannabis industry margin compression and oversupply",likelihood:3,impact:4},
+      {category:"Financing",name:"Public market valuation pressure (micro-cap Nasdaq)",likelihood:3,impact:3}
+    ],
+    ventureQuality:{market:3,valueProp:3,businessModel:3,team:3},
+    regulatoryExposure:["NV Cannabis Compliance Board","FinCEN SAR","SEC","Nasdaq Listing Standards"],
+    complianceMaturity:{governance:4,policies:3,systems:3,monitoring:3,training:2}
+  },
+  13: { // Protect AI — $18.5M, series_b, AI/Cybersecurity
+    trl:6, mrl:6,
+    riskFactors:[
+      {category:"Market",name:"AI security is nascent; buyer education cycle is long",likelihood:3,impact:3},
+      {category:"Technology",name:"Rapidly evolving AI threat landscape outpacing tooling",likelihood:3,impact:4},
+      {category:"Concentration",name:"Palo Alto Networks acquisition integration risk",likelihood:2,impact:4}
+    ],
+    ventureQuality:{market:4,valueProp:4,businessModel:3,team:4},
+    regulatoryExposure:["NIST AI RMF","EU AI Act","CISA","FedRAMP"],
+    complianceMaturity:{governance:3,policies:3,systems:3,monitoring:2,training:2}
+  },
+  17: { // Vibrant Planet — $34M, series_a, Cleantech/AI/Analytics
+    trl:5, mrl:5,
+    riskFactors:[
+      {category:"Market",name:"Government/utility procurement cycles are slow",likelihood:3,impact:3},
+      {category:"Financing",name:"Grant dependency for wildfire-tech revenue",likelihood:3,impact:3},
+      {category:"Regulatory",name:"Multi-agency forest management jurisdiction complexity",likelihood:2,impact:3}
+    ],
+    ventureQuality:{market:3,valueProp:4,businessModel:2,team:3},
+    regulatoryExposure:["USFS","BLM","FEMA","EPA","Cal Fire","NV Division of Forestry"],
+    complianceMaturity:{governance:2,policies:2,systems:2,monitoring:2,training:1}
+  },
+  20: { // Ollie — $62M, series_b, Consumer/AI/Logistics
+    trl:7, mrl:7,
+    riskFactors:[
+      {category:"Operational",name:"Cold-chain logistics cost and spoilage management",likelihood:3,impact:4},
+      {category:"Market",name:"Premium pet food market sensitivity to consumer downturns",likelihood:3,impact:3},
+      {category:"Regulatory",name:"AAFCO pet food labeling and safety standards",likelihood:1,impact:3}
+    ],
+    ventureQuality:{market:3,valueProp:3,businessModel:3,team:3},
+    regulatoryExposure:["FDA (animal food)","AAFCO","USDA","FTC"],
+    complianceMaturity:{governance:3,policies:3,systems:2,monitoring:2,training:2}
+  },
+  21: { // Nudge Security — $39M, series_a, Cybersecurity/AI
+    trl:5, mrl:5,
+    riskFactors:[
+      {category:"Market",name:"SaaS security governance competing with CASB/SSPM incumbents",likelihood:3,impact:3},
+      {category:"Technology",name:"Shadow SaaS discovery accuracy across diverse enterprise environments",likelihood:2,impact:3},
+      {category:"Financing",name:"Path to profitability with $22.5M Series A runway",likelihood:2,impact:3}
+    ],
+    ventureQuality:{market:4,valueProp:4,businessModel:3,team:4},
+    regulatoryExposure:["NIST AI RMF","SOC 2","ISO 27001","CISA"],
+    complianceMaturity:{governance:2,policies:2,systems:2,monitoring:2,training:1}
+  },
+  22: { // Carbon Health — $350M, series_c_plus, Healthcare/AI
+    trl:8, mrl:8,
+    riskFactors:[
+      {category:"Operational",name:"Multi-state clinic operations cost management",likelihood:3,impact:4},
+      {category:"Regulatory",name:"State medical licensing and telehealth regulation patchwork",likelihood:3,impact:3},
+      {category:"Market",name:"Healthcare margin pressure and payer mix volatility",likelihood:3,impact:4},
+      {category:"Financing",name:"Path to profitability after rapid expansion",likelihood:3,impact:3}
+    ],
+    ventureQuality:{market:4,valueProp:4,businessModel:3,team:4},
+    regulatoryExposure:["CMS","FDA","State Medical Boards","HIPAA","DEA"],
+    complianceMaturity:{governance:4,policies:4,systems:4,monitoring:3,training:3}
+  },
+  27: { // PlayStudios — $250M, growth, Gaming/Mobile
+    trl:9, mrl:8,
+    riskFactors:[
+      {category:"Market",name:"Mobile gaming user acquisition cost inflation",likelihood:3,impact:4},
+      {category:"Regulatory",name:"App Store fee changes and platform policy risk",likelihood:2,impact:3},
+      {category:"Financing",name:"Public market pressure on micro-cap gaming stock",likelihood:3,impact:3}
+    ],
+    ventureQuality:{market:3,valueProp:3,businessModel:4,team:4},
+    regulatoryExposure:["NV Gaming Control Board","NV Gaming Commission","SEC","FTC"],
+    complianceMaturity:{governance:4,policies:4,systems:3,monitoring:3,training:3}
+  },
+  28: { // Everi Holdings — $180M, growth, Gaming/Fintech/IoT
+    trl:9, mrl:9,
+    riskFactors:[
+      {category:"Regulatory",name:"State gaming commission compliance across 40+ jurisdictions",likelihood:2,impact:4},
+      {category:"Market",name:"Casino floor consolidation reducing hardware buyers",likelihood:2,impact:3},
+      {category:"Concentration",name:"Apollo/IGT acquisition integration complexity",likelihood:3,impact:4}
+    ],
+    ventureQuality:{market:4,valueProp:4,businessModel:4,team:4},
+    regulatoryExposure:["NV Gaming Control Board","NV Gaming Commission","SEC","FinCEN","State Gaming Commissions"],
+    complianceMaturity:{governance:5,policies:5,systems:4,monitoring:4,training:4}
+  },
+  29: { // Lyten — $425M, growth, Cleantech/Manufacturing/Energy
+    trl:7, mrl:7,
+    riskFactors:[
+      {category:"Technology",name:"Li-S battery cycle life and energy density at commercial scale",likelihood:3,impact:5},
+      {category:"Operational",name:"$1B+ gigafactory construction and commissioning at Reno AirLogistics",likelihood:3,impact:5},
+      {category:"Market",name:"Competing next-gen battery chemistries (solid-state, Na-ion)",likelihood:3,impact:3},
+      {category:"Regulatory",name:"EPA and NV NDEP permitting for large-scale battery manufacturing",likelihood:2,impact:4}
+    ],
+    ventureQuality:{market:5,valueProp:5,businessModel:4,team:4},
+    regulatoryExposure:["EPA","DOE","OSHA","NV NDEP","BLM","NV GOED"],
+    complianceMaturity:{governance:4,policies:3,systems:3,monitoring:3,training:3}
+  },
+  38: { // Amira Learning — $41M, series_b, AI/Education
+    trl:7, mrl:7,
+    riskFactors:[
+      {category:"Market",name:"K-8 edtech budget cuts in post-ESSER funding cliff",likelihood:4,impact:4},
+      {category:"Regulatory",name:"COPPA and student data privacy compliance (FERPA)",likelihood:2,impact:4},
+      {category:"Operational",name:"Post-merger integration with Istation",likelihood:3,impact:3}
+    ],
+    ventureQuality:{market:3,valueProp:4,businessModel:3,team:4},
+    regulatoryExposure:["FTC (COPPA)","US Dept of Education (FERPA)","State Education Agencies"],
+    complianceMaturity:{governance:3,policies:3,systems:3,monitoring:2,training:2}
+  },
+  49: { // Ioneer — $700M, growth, Mining/Cleantech/Energy
+    trl:7, mrl:6,
+    riskFactors:[
+      {category:"Regulatory",name:"BLM/NEPA environmental review for Rhyolite Ridge mine",likelihood:3,impact:5},
+      {category:"Financing",name:"$700M DOE loan conditionality and drawdown timing",likelihood:2,impact:5},
+      {category:"Technology",name:"Combined lithium-boron extraction process at commercial scale",likelihood:3,impact:4},
+      {category:"Market",name:"Lithium price volatility and oversupply from new global projects",likelihood:3,impact:4}
+    ],
+    ventureQuality:{market:4,valueProp:5,businessModel:4,team:4},
+    regulatoryExposure:["BLM","EPA","DOE Loan Programs","NEPA","NV NDEP","Esmeralda County","Fish & Wildlife"],
+    complianceMaturity:{governance:4,policies:4,systems:3,monitoring:3,training:3}
+  },
+  50: { // Dragonfly Energy — $120M, growth, Energy/Manufacturing/Cleantech
+    trl:8, mrl:7,
+    riskFactors:[
+      {category:"Technology",name:"Dry electrode manufacturing yield optimization",likelihood:3,impact:4},
+      {category:"Market",name:"RV market cyclicality affecting Battle Born Batteries demand",likelihood:3,impact:4},
+      {category:"Financing",name:"Nasdaq compliance and micro-cap liquidity risk",likelihood:3,impact:3}
+    ],
+    ventureQuality:{market:3,valueProp:4,businessModel:3,team:3},
+    regulatoryExposure:["SEC","Nasdaq","EPA","DOE","UL Safety","DOT (battery transport)"],
+    complianceMaturity:{governance:4,policies:3,systems:3,monitoring:3,training:2}
+  },
+  51: { // Sierra Nevada Corp — $2B, growth, Defense/Aerospace/AI
+    trl:9, mrl:9,
+    riskFactors:[
+      {category:"Concentration",name:"US DoD budget dependency and continuing resolution risk",likelihood:2,impact:5},
+      {category:"Regulatory",name:"ITAR/EAR export control compliance for Dream Chaser",likelihood:2,impact:5},
+      {category:"Operational",name:"Dream Chaser spaceplane schedule and technical milestones",likelihood:3,impact:4},
+      {category:"Financing",name:"Fixed-price government contract cost overrun exposure",likelihood:2,impact:4}
+    ],
+    ventureQuality:{market:5,valueProp:5,businessModel:5,team:5},
+    regulatoryExposure:["DoD","ITAR/EAR","NASA","FAA (launch)","DCSA","CFIUS"],
+    complianceMaturity:{governance:5,policies:5,systems:5,monitoring:5,training:5}
+  },
+  53: { // Duetto — $80M, series_c_plus, AI/Hospitality/Analytics
+    trl:8, mrl:8,
+    riskFactors:[
+      {category:"Market",name:"Hotel revenue management market consolidation (IDeaS, Amadeus)",likelihood:3,impact:3},
+      {category:"Concentration",name:"PE acquisition by GrowthCurve may shift strategic priorities",likelihood:2,impact:3},
+      {category:"Technology",name:"AI pricing model accuracy during demand volatility",likelihood:2,impact:3}
+    ],
+    ventureQuality:{market:4,valueProp:4,businessModel:4,team:4},
+    regulatoryExposure:["NV Gaming Control Board","GDPR (EU hotels)","PCI DSS","NV Data Privacy"],
+    complianceMaturity:{governance:4,policies:3,systems:3,monitoring:3,training:3}
+  },
+  54: { // GAN Limited — $100M, growth, Gaming/AI/Fintech
+    trl:8, mrl:8,
+    riskFactors:[
+      {category:"Concentration",name:"SEGA SAMMY acquisition integration and strategic alignment",likelihood:3,impact:4},
+      {category:"Regulatory",name:"State-by-state iGaming and sports betting licensing complexity",likelihood:3,impact:4},
+      {category:"Market",name:"B2B iGaming platform competitive pressure from Flutter/DraftKings",likelihood:3,impact:3}
+    ],
+    ventureQuality:{market:4,valueProp:3,businessModel:4,team:3},
+    regulatoryExposure:["NV Gaming Control Board","NV Gaming Commission","State Gaming Commissions","SEC","FinCEN"],
+    complianceMaturity:{governance:4,policies:4,systems:4,monitoring:3,training:3}
+  },
+  58: { // Switch Inc — $530M, growth, Data Center/Cloud/Energy
+    trl:9, mrl:9,
+    riskFactors:[
+      {category:"Market",name:"Hyperscale data center pricing pressure from cloud-owned facilities",likelihood:2,impact:3},
+      {category:"Operational",name:"Power procurement and renewable energy commitments at scale",likelihood:2,impact:3},
+      {category:"Regulatory",name:"NV Public Utilities Commission energy rate proceedings",likelihood:2,impact:3}
+    ],
+    ventureQuality:{market:4,valueProp:4,businessModel:5,team:4},
+    regulatoryExposure:["NV Public Utilities Commission","EPA","DOE","FCC","NV Data Privacy"],
+    complianceMaturity:{governance:5,policies:5,systems:4,monitoring:4,training:4}
+  },
+  60: { // Elicio Therapeutics — $100M, series_c_plus, Biotech/Healthcare
+    trl:5, mrl:4,
+    riskFactors:[
+      {category:"Technology",name:"Clinical trial Phase II/III efficacy and safety endpoints",likelihood:4,impact:5},
+      {category:"Financing",name:"Biotech funding window and cash runway to pivotal data",likelihood:3,impact:5},
+      {category:"Regulatory",name:"FDA IND/NDA pathway complexity for cancer immunotherapy",likelihood:3,impact:4}
+    ],
+    ventureQuality:{market:4,valueProp:4,businessModel:2,team:4},
+    regulatoryExposure:["FDA","NIH","EMA","IRB/Ethics Committees"],
+    complianceMaturity:{governance:3,policies:4,systems:3,monitoring:3,training:3}
+  },
+  74: { // Ormat Technologies — $400M, growth, Energy/Cleantech/Manufacturing
+    trl:9, mrl:9,
+    riskFactors:[
+      {category:"Regulatory",name:"BLM geothermal lease renewal and environmental compliance",likelihood:2,impact:3},
+      {category:"Market",name:"Electricity PPA rate renegotiation risk at contract renewal",likelihood:2,impact:3},
+      {category:"Operational",name:"Geothermal resource depletion and well maintenance",likelihood:2,impact:3}
+    ],
+    ventureQuality:{market:4,valueProp:4,businessModel:5,team:4},
+    regulatoryExposure:["BLM","EPA","NV Public Utilities Commission","DOE","FERC","SEC"],
+    complianceMaturity:{governance:5,policies:5,systems:5,monitoring:4,training:4}
+  },
+  75: { // NV5 Global — $200M, growth, Construction/Energy/Analytics
+    trl:9, mrl:8,
+    riskFactors:[
+      {category:"Concentration",name:"Acuren acquisition integration and employee retention",likelihood:3,impact:4},
+      {category:"Market",name:"Infrastructure spending cycle dependency",likelihood:2,impact:3},
+      {category:"Regulatory",name:"Multi-state professional engineering license compliance",likelihood:2,impact:2}
+    ],
+    ventureQuality:{market:4,valueProp:3,businessModel:4,team:4},
+    regulatoryExposure:["SEC","Nasdaq","EPA","OSHA","State PE Boards","DOT"],
+    complianceMaturity:{governance:5,policies:4,systems:4,monitoring:4,training:3}
+  }
+};
+
+// Populate remaining companies with defaults derived from their stage and sector
+COMPANIES.forEach(c => {
+  if (!COMPANY_IA_DATA[c.id]) {
+    COMPANY_IA_DATA[c.id] = _iaDefaults(c.stage, c.sector);
+  }
+});
+
+// ── REGULATORY DOCKETS ──
+const REGULATORY_DOCKETS = [
+  {id:"rd_01", title:"SSBCI Capital Program Compliance Audit (2nd Tranche)", agency:"US Treasury", sector:["Fintech","All"], status:"active", severity:3, breadth:0.9, timeline:"near", supportiveness:80, burden:45, description:"Treasury compliance review for Nevada's $52M SSBCI allocation. Requires detailed deployment metrics, leverage ratios, and SEDI-eligible verification for BBV, FundNV, and 1864 Fund."},
+  {id:"rd_02", title:"SEC Regulation A+ Crowdfunding Updated Disclosure Rules", agency:"SEC", sector:["Fintech","Construction"], status:"proposed", severity:3, breadth:0.3, timeline:"medium", supportiveness:40, burden:65, description:"Proposed amendments to Reg A+ disclosure requirements affecting companies like Boxabl using crowdfunding. Enhanced financial reporting and investor communication mandates."},
+  {id:"rd_03", title:"NV Cannabis Compliance Board — Consumption Lounge Rules", agency:"NV Cannabis Compliance Board", sector:["Cannabis"], status:"finalized", severity:4, breadth:0.2, timeline:"near", supportiveness:60, burden:70, description:"Final rules for cannabis consumption lounges on Las Vegas Strip. Impacts Planet 13, Curaleaf Tech operations. Includes ventilation, dosage limits, and security requirements."},
+  {id:"rd_04", title:"DOE Loan Programs Office — Critical Minerals Processing", agency:"DOE", sector:["Mining","Cleantech","Energy","Manufacturing"], status:"active", severity:4, breadth:0.4, timeline:"near", supportiveness:90, burden:50, description:"Active DOE loan program for domestic critical mineral processing. Redwood Materials ($2B), Ioneer ($700M conditional) are direct beneficiaries. Requires environmental milestones and domestic sourcing commitments."},
+  {id:"rd_05", title:"EPA RCRA Hazardous Waste Rule — Battery Recycling", agency:"EPA", sector:["Cleantech","Manufacturing","Energy"], status:"proposed", severity:4, breadth:0.3, timeline:"medium", supportiveness:30, burden:80, description:"Proposed EPA rule tightening RCRA classification for lithium-ion battery recycling byproducts. Direct impact on Redwood Materials, Aqua Metals, and Lyten operations in Nevada."},
+  {id:"rd_06", title:"NV Gaming Control Board — Cashless Gaming Standards", agency:"NV Gaming Control Board", sector:["Gaming","Fintech","IoT"], status:"active", severity:3, breadth:0.3, timeline:"near", supportiveness:75, burden:40, description:"Standards for cashless wagering systems on Nevada casino floors. Impacts Acres Technology, Everi Holdings, and Jackpot Digital. Includes AML/KYC digital wallet requirements."},
+  {id:"rd_07", title:"FCC Spectrum Allocation — LEO Satellite IoT Band", agency:"FCC", sector:["IoT","Aerospace","Satellite"], status:"proposed", severity:4, breadth:0.2, timeline:"long", supportiveness:55, burden:55, description:"FCC rulemaking for dedicated spectrum allocation for LEO satellite-to-device IoT services. Critical for Hubble Network's BLE-to-satellite technology."},
+  {id:"rd_08", title:"FDA AI/ML-Based SaMD Predetermined Change Control Plan", agency:"FDA", sector:["Biotech","Healthcare","AI","Fitness"], status:"active", severity:5, breadth:0.3, timeline:"medium", supportiveness:65, burden:70, description:"FDA framework for AI/ML-enabled software as a medical device. Impacts Katalyst (FDA Class II), Carbon Health AI diagnostics, and Filament Health clinical tools."},
+  {id:"rd_09", title:"NIST AI Risk Management Framework v2.0", agency:"NIST", sector:["AI","Cybersecurity"], status:"active", severity:3, breadth:0.8, timeline:"medium", supportiveness:70, burden:35, description:"Updated NIST AI RMF guidelines for trustworthy AI development. Voluntary framework increasingly referenced in procurement requirements. Affects all NV AI companies."},
+  {id:"rd_10", title:"NV SB 370 — Data Privacy and Consumer Protection Act", agency:"NV Legislature", sector:["AI","Cloud","Data Center","Fintech","AdTech"], status:"proposed", severity:3, breadth:0.7, timeline:"medium", supportiveness:45, burden:55, description:"Proposed Nevada comprehensive data privacy law modeled on CCPA/CPRA. Consent requirements, data broker registration, and private right of action. Broad impact on NV tech companies."},
+  {id:"rd_11", title:"BLM NEPA Environmental Review — Rhyolite Ridge", agency:"BLM", sector:["Mining","Cleantech"], status:"active", severity:5, breadth:0.1, timeline:"near", supportiveness:50, burden:75, description:"Active BLM environmental review for Ioneer's Rhyolite Ridge lithium-boron project in Esmeralda County. Tiehm's buckwheat habitat mitigation and water rights adjudication."},
+  {id:"rd_12", title:"ITAR/EAR Export Control — Autonomous Systems", agency:"DDTC / BIS", sector:["Defense","Aerospace","AI","Drones"], status:"active", severity:5, breadth:0.2, timeline:"near", supportiveness:25, burden:85, description:"Export control restrictions on autonomous systems and AI-enabled defense technologies. Directly impacts Sierra Nevada Corp, Skydio Gov operations."},
+  {id:"rd_13", title:"SEC Climate Disclosure Rule — Public Company ESG Reporting", agency:"SEC", sector:["Energy","Cleantech","Mining","Manufacturing"], status:"proposed", severity:3, breadth:0.5, timeline:"long", supportiveness:40, burden:60, description:"SEC proposed climate-related financial disclosure requirements for public companies. Affects Ormat Technologies, Dragonfly Energy, Comstock Mining, NV5 Global."},
+  {id:"rd_14", title:"NV Public Utilities Commission — Data Center Energy Tariff", agency:"NV PUC", sector:["Data Center","Cloud","Energy"], status:"active", severity:3, breadth:0.2, timeline:"near", supportiveness:60, burden:45, description:"NV PUC proceedings on large-load energy tariffs for data centers. Impacts Switch Inc and TensorWave power costs. Renewable energy procurement mandates."},
+  {id:"rd_15", title:"COPPA 2.0 — Children's Online Privacy Update", agency:"FTC", sector:["AI","Education","Gaming"], status:"proposed", severity:4, breadth:0.3, timeline:"medium", supportiveness:50, burden:65, description:"Updated COPPA rules expanding protections to AI-powered educational tools and gaming platforms. Directly impacts Amira Learning, 1047 Games, and PlayStudios."},
+  {id:"rd_16", title:"FinCEN Cannabis Banking SAR Requirements", agency:"FinCEN", sector:["Cannabis","Fintech"], status:"active", severity:4, breadth:0.2, timeline:"near", supportiveness:35, burden:80, description:"Mandatory Suspicious Activity Reports for financial institutions serving cannabis businesses. Impacts Springbig payment processing and Curaleaf Tech banking relationships."},
+  {id:"rd_17", title:"NV AB 431 — AI Transparency in Government Procurement", agency:"NV Legislature", sector:["AI","Defense","Healthcare"], status:"proposed", severity:2, breadth:0.4, timeline:"long", supportiveness:60, burden:30, description:"Proposed Nevada bill requiring AI transparency and impact assessments for state government AI procurement. May create procurement advantages for compliant NV AI startups."},
+  {id:"rd_18", title:"DOE Title XVII — Advanced Energy Manufacturing Tax Credit", agency:"DOE / IRS", sector:["Energy","Cleantech","Manufacturing"], status:"finalized", severity:2, breadth:0.4, timeline:"near", supportiveness:95, burden:20, description:"48C Advanced Energy Manufacturing tax credits for domestic clean energy production. Benefits Lyten gigafactory, Dragonfly Energy, Ormat Technologies, and Bombard Renewable Energy."}
+];
+
+// ── SECTOR DYNAMICS ──
+const SECTOR_DYNAMICS = {
+  "AI": {
+    growth3YCAGR:0.42, dealGrowthYoY:0.35, smartMoneyShare:0.65,
+    porterScores:{rivalry:5,entrants:5,substitutes:2,buyerPower:2,supplierPower:4},
+    maturityStage:"growth"
+  },
+  "Cybersecurity": {
+    growth3YCAGR:0.18, dealGrowthYoY:0.12, smartMoneyShare:0.55,
+    porterScores:{rivalry:4,entrants:3,substitutes:2,buyerPower:3,supplierPower:3},
+    maturityStage:"growth"
+  },
+  "Defense": {
+    growth3YCAGR:0.08, dealGrowthYoY:0.06, smartMoneyShare:0.40,
+    porterScores:{rivalry:3,entrants:1,substitutes:1,buyerPower:5,supplierPower:2},
+    maturityStage:"mature"
+  },
+  "Cleantech": {
+    growth3YCAGR:0.28, dealGrowthYoY:0.22, smartMoneyShare:0.50,
+    porterScores:{rivalry:4,entrants:4,substitutes:3,buyerPower:3,supplierPower:3},
+    maturityStage:"growth"
+  },
+  "Mining": {
+    growth3YCAGR:0.10, dealGrowthYoY:0.08, smartMoneyShare:0.30,
+    porterScores:{rivalry:3,entrants:2,substitutes:2,buyerPower:4,supplierPower:2},
+    maturityStage:"mature"
+  },
+  "Aerospace": {
+    growth3YCAGR:0.12, dealGrowthYoY:0.10, smartMoneyShare:0.45,
+    porterScores:{rivalry:3,entrants:2,substitutes:1,buyerPower:4,supplierPower:3},
+    maturityStage:"mature"
+  },
+  "Cloud": {
+    growth3YCAGR:0.22, dealGrowthYoY:0.15, smartMoneyShare:0.55,
+    porterScores:{rivalry:5,entrants:3,substitutes:2,buyerPower:3,supplierPower:4},
+    maturityStage:"growth"
+  },
+  "Energy": {
+    growth3YCAGR:0.14, dealGrowthYoY:0.10, smartMoneyShare:0.40,
+    porterScores:{rivalry:3,entrants:3,substitutes:3,buyerPower:4,supplierPower:3},
+    maturityStage:"mature"
+  },
+  "Biotech": {
+    growth3YCAGR:0.16, dealGrowthYoY:0.08, smartMoneyShare:0.60,
+    porterScores:{rivalry:4,entrants:3,substitutes:2,buyerPower:3,supplierPower:2},
+    maturityStage:"growth"
+  },
+  "Fintech": {
+    growth3YCAGR:0.20, dealGrowthYoY:0.10, smartMoneyShare:0.50,
+    porterScores:{rivalry:5,entrants:4,substitutes:3,buyerPower:3,supplierPower:2},
+    maturityStage:"growth"
+  },
+  "Gaming": {
+    growth3YCAGR:0.09, dealGrowthYoY:0.05, smartMoneyShare:0.35,
+    porterScores:{rivalry:4,entrants:2,substitutes:3,buyerPower:3,supplierPower:2},
+    maturityStage:"mature"
+  },
+  "Blockchain": {
+    growth3YCAGR:0.15, dealGrowthYoY:-0.05, smartMoneyShare:0.25,
+    porterScores:{rivalry:4,entrants:4,substitutes:3,buyerPower:4,supplierPower:2},
+    maturityStage:"growth"
+  },
+  "Healthcare": {
+    growth3YCAGR:0.12, dealGrowthYoY:0.08, smartMoneyShare:0.45,
+    porterScores:{rivalry:4,entrants:2,substitutes:2,buyerPower:4,supplierPower:3},
+    maturityStage:"mature"
+  },
+  "Manufacturing": {
+    growth3YCAGR:0.06, dealGrowthYoY:0.04, smartMoneyShare:0.30,
+    porterScores:{rivalry:3,entrants:2,substitutes:2,buyerPower:4,supplierPower:3},
+    maturityStage:"mature"
+  },
+  "IoT": {
+    growth3YCAGR:0.20, dealGrowthYoY:0.14, smartMoneyShare:0.40,
+    porterScores:{rivalry:4,entrants:4,substitutes:3,buyerPower:3,supplierPower:3},
+    maturityStage:"growth"
+  }
+};
+
+// ══════════════════════════════════════════════════════════════════════════════
 // GRAPH BUILDER + LAYOUT ENGINE
 // ══════════════════════════════════════════════════════════════════════════════
 
@@ -757,6 +1263,229 @@ const stageLabel = s => ({ pre_seed:"Pre-Seed", seed:"Seed", series_a:"Series A"
 // --- IRS Computation ---
 const SHEAT = { AI:95, Cybersecurity:88, Defense:85, Cleantech:82, Mining:78, Aerospace:80, Cloud:80, "Data Center":80, Energy:78, Solar:75, Robotics:78, Biotech:72, Fintech:70, Gaming:68, Blockchain:50, Drones:75, Construction:65, Logistics:65, "Materials Science":70, "Real Estate":50, Computing:70, Water:72, Media:58, Payments:68, IoT:65, Manufacturing:60, Semiconductors:82, Hospitality:60, Cannabis:45, Analytics:75, Satellite:82, Identity:80, AdTech:65, Education:62, Healthcare:70, Consumer:55, Fitness:60, Mobile:58, Banking:55, Retail:52 };
 const STAGE_NORMS = { pre_seed:0.5, seed:3, series_a:15, series_b:50, series_c_plus:200, growth:500 };
+
+// ══════════════════════════════════════════════════════════════════════════════
+// INFERRED ANALYSIS (IA) SCORING ENGINES
+// B-EHI, COSO Risk, Venture Quality, Sector Heat, Regulatory Outlook, RAO
+// ══════════════════════════════════════════════════════════════════════════════
+
+// -- Min-max normalization helper (OECD practice) --
+const minmax = (val, min, max) => max === min ? 0.5 : Math.max(0, Math.min(1, (val - min) / (max - min)));
+
+// -- Brief 1: Ecosystem Health Index (B-EHI) --
+function computeEcosystemHealth(companies, funds, edges) {
+  const N = companies.length;
+  const pop = 3200000; // Nevada population ~3.2M
+  const gdp = 200; // NV GDP ~$200B
+
+  // Innovation Capacity (IC)
+  const patentProxy = companies.filter(c => c.sector.some(s => ["Biotech","Semiconductors","AI","Defense"].includes(s))).length;
+  const krd = minmax(patentProxy / N, 0, 0.5) * 100;
+  const stemProxy = companies.filter(c => c.sector.some(s => ["AI","Cybersecurity","Cloud","Computing","Data Center","Biotech","Semiconductors","Defense","Aerospace"].includes(s))).length / N;
+  const hc = minmax(stemProxy, 0, 0.8) * 100;
+  const infraProxy = (companies.filter(c => c.sector.includes("Data Center") || c.sector.includes("Cloud")).reduce((s,c) => s + c.funding, 0)) / 1000;
+  const inf = minmax(infraProxy, 0, 1) * 100;
+  const IC = Math.round(0.4 * krd + 0.3 * hc + 0.3 * inf);
+
+  // Entrepreneurship Capacity (EC)
+  const youngFirms = companies.filter(c => (2026 - c.founded) <= 5);
+  const youngDensity = youngFirms.length / (pop / 1000);
+  const nyf = minmax(youngDensity, 0, 0.05) * 100;
+  const totalVC = companies.reduce((s, c) => s + c.funding, 0);
+  const vcPerCapita = totalVC / (pop / 1000000);
+  const ef = minmax(vcPerCapita, 0, 5000) * 100;
+  const serialProxy = companies.filter(c => c.momentum >= 80).length / Math.max(1, N);
+  const et = minmax(serialProxy, 0, 0.3) * 100;
+  const EC = Math.round(0.5 * nyf + 0.3 * ef + 0.2 * et);
+
+  // Ecosystem Structure (ES) - Kauffman
+  const firmDensity = N / (pop / 100000);
+  const den = minmax(firmDensity, 0, 5) * 100;
+  const highGrowth = companies.filter(c => c.momentum >= 75).length / Math.max(1, N);
+  const flu = minmax(highGrowth, 0, 0.4) * 100;
+  const avgEdgesPerNode = edges.length / Math.max(1, N);
+  const con = minmax(avgEdgesPerNode, 0, 10) * 100;
+  const sectorCounts = {};
+  companies.forEach(c => (c.sector || []).forEach(s => { sectorCounts[s] = (sectorCounts[s] || 0) + 1; }));
+  const shares = Object.values(sectorCounts).map(n => n / N);
+  const hhi = shares.reduce((s, sh) => s + sh * sh, 0);
+  const div = (1 - hhi) * 100;
+  const ES = Math.round(0.3 * den + 0.25 * flu + 0.25 * con + 0.2 * div);
+
+  // Outcomes & Performance (OP)
+  const ecosystemValue = totalVC;
+  const bigExits = companies.filter(c => c.funding >= 100 && c.stage === "growth").length;
+  const sp = minmax(ecosystemValue / 1000, 0, 20) * 100;
+  const dealCount = companies.filter(c => c.funding > 0).length;
+  const cf = minmax(dealCount / N, 0, 1) * 100;
+  const mr = minmax(bigExits / N, 0, 0.2) * 100;
+  const ko = minmax(patentProxy / N, 0, 0.3) * 100;
+  const OP = Math.round(0.4 * sp + 0.3 * cf + 0.2 * mr + 0.1 * ko);
+
+  const BEHI = Math.round(0.25 * IC + 0.25 * EC + 0.25 * ES + 0.25 * OP);
+  const grade = BEHI >= 80 ? "A" : BEHI >= 60 ? "B" : BEHI >= 40 ? "C" : "D";
+
+  return {
+    BEHI, grade,
+    pillars: { IC, EC, ES, OP },
+    subPillars: { krd, hc, inf, nyf, ef, et, den, flu, con, div, sp, cf, mr, ko },
+    kpis: {
+      totalCompanies: N, youngFirms: youngFirms.length, highGrowthFirms: companies.filter(c => c.momentum >= 75).length,
+      totalFunding: totalVC, vcPerCapita: Math.round(vcPerCapita), firmDensity: firmDensity.toFixed(2),
+      sectorDiversity: ((1 - hhi) * 100).toFixed(1), avgMomentum: Math.round(companies.reduce((s,c) => s + c.momentum, 0) / N),
+      totalEmployees: companies.reduce((s,c) => s + c.employees, 0), bigExits,
+    }
+  };
+}
+
+// -- Brief 3: COSO Risk Scoring --
+function computeCompanyRisk(company) {
+  const ia = COMPANY_IA_DATA[company.id] || _iaDefaults(company.stage, company.sector);
+  const risks = ia.riskFactors.map(r => ({ ...r, score: r.likelihood * r.impact, severity: r.likelihood * r.impact <= 5 ? "Low" : r.likelihood * r.impact <= 10 ? "Moderate" : r.likelihood * r.impact <= 15 ? "High" : "Extreme" }));
+  const maxScore = Math.max(...risks.map(r => r.score), 0);
+  const avgScore = risks.length ? risks.reduce((s, r) => s + r.score, 0) / risks.length : 0;
+  const techRisk = Math.round((10 - ia.trl) / 9 * 100);
+  const marketRisk = Math.round((10 - ia.mrl) / 9 * 100);
+
+  // Execution risk (tech + operational + team)
+  const execRisks = risks.filter(r => ["Technology","Operational"].includes(r.category));
+  const execRisk = execRisks.length ? Math.round(execRisks.reduce((s,r) => s + r.score, 0) / execRisks.length / 25 * 5) : 2;
+  // External risk (regulatory + market + macro)
+  const extRisks = risks.filter(r => ["Regulatory","Market","Concentration","Financing"].includes(r.category));
+  const extRisk = extRisks.length ? Math.round(extRisks.reduce((s,r) => s + r.score, 0) / extRisks.length / 25 * 5) : 2;
+
+  const totalRiskScore = Math.round(maxScore / 25 * 100);
+  const riskGrade = totalRiskScore <= 25 ? "Low" : totalRiskScore <= 50 ? "Moderate" : totalRiskScore <= 75 ? "High" : "Extreme";
+
+  return { ...ia, risks, maxScore, avgScore, techRisk, marketRisk, execRisk: Math.min(5, Math.max(1, execRisk)), extRisk: Math.min(5, Math.max(1, extRisk)), totalRiskScore, riskGrade };
+}
+
+// -- Brief 4: Sector Heat & Momentum --
+function computeSectorIntelligence(companies) {
+  const sectorMap = {};
+  companies.forEach(c => (c.sector || []).forEach(s => {
+    if (!sectorMap[s]) sectorMap[s] = { name: s, count: 0, totalFunding: 0, companies: [], stages: {} };
+    sectorMap[s].count++;
+    sectorMap[s].totalFunding += c.funding;
+    sectorMap[s].companies.push(c);
+    sectorMap[s].stages[c.stage] = (sectorMap[s].stages[c.stage] || 0) + 1;
+  }));
+
+  return Object.values(sectorMap).map(sec => {
+    const dyn = SECTOR_DYNAMICS[sec.name] || { growth3YCAGR: 0.1, dealGrowthYoY: 0.05, smartMoneyShare: 0.3, porterScores: {rivalry:3,entrants:3,substitutes:3,buyerPower:3,supplierPower:3}, maturityStage: "growth" };
+    const cfGrowth = minmax(dyn.growth3YCAGR, -0.1, 0.5) * 100;
+    const dealGrowth = minmax(dyn.dealGrowthYoY, -0.2, 0.4) * 100;
+    const smartMoney = dyn.smartMoneyShare * 100;
+    const stageMix = sec.stages.seed || sec.stages.pre_seed ? minmax((sec.stages.seed || 0 + sec.stages.pre_seed || 0) / sec.count, 0, 0.5) * 100 : 30;
+    const momentum = Math.round(0.4 * cfGrowth + 0.3 * dealGrowth + 0.2 * smartMoney + 0.1 * stageMix);
+
+    const porter = dyn.porterScores;
+    const attractiveness = Math.round((5 - porter.rivalry) * 8 + (5 - porter.entrants) * 4 + (5 - porter.substitutes) * 4 + (5 - porter.buyerPower) * 2 + (5 - porter.supplierPower) * 2);
+
+    // HHI concentration
+    const totalSectorFunding = sec.totalFunding || 1;
+    const shares = sec.companies.map(c => c.funding / totalSectorFunding);
+    const hhi = shares.reduce((s, sh) => s + sh * sh, 0);
+    const nEff = hhi > 0 ? 1 / hhi : sec.count;
+
+    const riskAdj = SHEAT[sec.name] ? (100 - SHEAT[sec.name]) / 100 : 0.3;
+    const heat = Math.round(0.4 * momentum + 0.3 * attractiveness + 0.3 * (1 - riskAdj) * 100);
+
+    return { ...sec, heat, momentum, attractiveness, hhi: hhi.toFixed(3), nEff: nEff.toFixed(1), porter, dynamics: dyn, avgFunding: sec.totalFunding / sec.count };
+  }).sort((a, b) => b.heat - a.heat);
+}
+
+// -- Brief 5: Regulatory Outlook --
+function computeRegulatoryOutlook(sectors) {
+  const sectorOutlooks = {};
+  const uniqueSectors = [...new Set(sectors)];
+  uniqueSectors.forEach(sec => {
+    const dockets = REGULATORY_DOCKETS.filter(d => d.sector.includes(sec) || d.sector.includes("All"));
+    const avgSupportiveness = dockets.length ? dockets.reduce((s, d) => s + d.supportiveness, 0) / dockets.length : 50;
+    const avgBurden = dockets.length ? dockets.reduce((s, d) => s + d.burden, 0) / dockets.length : 50;
+    const activeDockets = dockets.filter(d => d.status === "active" || d.status === "proposed").length;
+    const sru = Math.round(0.5 * minmax(activeDockets, 0, 5) * 100 + 0.25 * minmax(avgBurden, 0, 100) * 100 + 0.25 * 50);
+    const outlook = Math.round(0.4 * avgSupportiveness + 0.3 * (100 - avgBurden) + 0.3 * (100 - sru));
+
+    sectorOutlooks[sec] = { outlook, sru, supportiveness: Math.round(avgSupportiveness), burden: Math.round(avgBurden), docketCount: dockets.length, dockets };
+  });
+  return sectorOutlooks;
+}
+
+// -- Brief 6: Venture Quality & Deal Score --
+function computeVentureScore(company) {
+  const ia = COMPANY_IA_DATA[company.id] || _iaDefaults(company.stage, company.sector);
+  const vq = ia.ventureQuality;
+  const ventureQuality = Math.round((0.35 * vq.market + 0.25 * vq.valueProp + 0.25 * vq.businessModel + 0.15 * vq.team) / 5 * 100);
+
+  // Network signal (from eligible programs and investor diversity)
+  const networkSignal = Math.min(100, company.eligible.length * 20 + (company.funding > 100 ? 30 : company.funding > 10 ? 20 : 10));
+
+  // Deal score
+  const marketScore = vq.market / 5 * 100;
+  const productPMF = vq.valueProp / 5 * 100;
+  const teamScore = vq.team / 5 * 100;
+  const dealScore = Math.round(0.25 * marketScore + 0.25 * productPMF + 0.2 * teamScore + 0.15 * ventureQuality + 0.15 * networkSignal);
+
+  // Alpha signals
+  const fundingTrajectory = minmax(company.funding / (STAGE_NORMS[company.stage] || 3), 0, 5) * 100;
+  const alphaSignal = Math.round(0.3 * fundingTrajectory + 0.25 * company.momentum + 0.25 * networkSignal + 0.2 * (vq.team / 5 * 100));
+
+  // Risk-adjusted opportunity (geometric blend)
+  const risk = computeCompanyRisk(company);
+  const riskNorm = risk.totalRiskScore / 100;
+  const oppScore = (dealScore + alphaSignal) / 2;
+  const rao = Math.round(Math.pow(oppScore / 100, 0.6) * Math.pow(1 - riskNorm, 0.4) * 100);
+
+  // Conviction tier
+  const tier = rao >= 80 ? "I" : rao >= 60 ? "II" : rao >= 40 ? "III" : "—";
+
+  return { ventureQuality, dealScore, alphaSignal, rao, tier, networkSignal, fundingTrajectory: Math.round(fundingTrajectory), risk };
+}
+
+// -- Enhanced Structural Holes (Burt) --
+function computeStructuralHoles(nodes, edges) {
+  if (!nodes.length) return {};
+  const adj = {};
+  nodes.forEach(n => { adj[n.id] = {}; });
+  edges.forEach(e => {
+    const s = typeof e.source === "object" ? e.source.id : e.source;
+    const t = typeof e.target === "object" ? e.target.id : e.target;
+    if (adj[s] && adj[t]) { adj[s][t] = (adj[s][t] || 0) + 1; adj[t][s] = (adj[t][s] || 0) + 1; }
+  });
+
+  const results = {};
+  for (const id of Object.keys(adj)) {
+    const neighbors = Object.keys(adj[id]);
+    const ni = neighbors.length;
+    if (ni === 0) { results[id] = { effectiveSize: 0, constraint: 1, brokerage: 0 }; continue; }
+    // Effective size
+    let tiesAmongNeighbors = 0;
+    for (const j of neighbors) for (const k of neighbors) if (j !== k && adj[j] && adj[j][k]) tiesAmongNeighbors++;
+    tiesAmongNeighbors /= 2;
+    const effectiveSize = ni - (ni > 0 ? (2 * tiesAmongNeighbors) / ni : 0);
+
+    // Constraint
+    const totalWeight = Object.values(adj[id]).reduce((s, w) => s + w, 0);
+    let constraint = 0;
+    for (const j of neighbors) {
+      const pij = (adj[id][j] || 0) / totalWeight;
+      let indirect = 0;
+      for (const q of neighbors) {
+        if (q !== j && adj[q] && adj[q][j]) {
+          const piq = (adj[id][q] || 0) / totalWeight;
+          const totalWeightQ = Object.values(adj[q] || {}).reduce((s, w) => s + w, 0) || 1;
+          const pqj = (adj[q][j] || 0) / totalWeightQ;
+          indirect += piq * pqj;
+        }
+      }
+      constraint += Math.pow(pij + indirect, 2);
+    }
+    const brokerage = Math.round((1 - Math.min(1, constraint)) * 100);
+    results[id] = { effectiveSize: Math.round(effectiveSize * 10) / 10, constraint: Math.round(constraint * 1000) / 1000, brokerage };
+  }
+  return results;
+}
 
 function computeIRS(c) {
   const m = Math.min(c.momentum || 0, 100);
@@ -1485,6 +2214,16 @@ export default function BattleBornIntelligence() {
     })).sort((a, b) => b.heat - a.heat);
   }, [allScored]);
 
+  // ── Inferred Analysis computed values ──
+  const iaEcosystem = useMemo(() => computeEcosystemHealth(COMPANIES, FUNDS, VERIFIED_EDGES), []);
+  const iaRiskAll = useMemo(() => COMPANIES.map(c => ({ ...c, ...computeCompanyRisk(c) })), []);
+  const iaSectorIntel = useMemo(() => computeSectorIntelligence(COMPANIES), []);
+  const iaRegOutlook = useMemo(() => {
+    const allSectors = [...new Set(COMPANIES.flatMap(c => c.sector))];
+    return computeRegulatoryOutlook(allSectors);
+  }, []);
+  const iaOpportunity = useMemo(() => COMPANIES.map(c => ({ ...c, ...computeVentureScore(c) })).sort((a,b) => b.rao - a.rao), []);
+
   // Stat card component (responsive)
   const Stat = ({ label, value, sub, color = GOLD }) => (
     <div style={{ padding: isMobile ? "12px 14px" : "16px 20px", background:CARD, border:`1px solid ${BORDER}`, borderRadius:10 }}>
@@ -2149,6 +2888,463 @@ export default function BattleBornIntelligence() {
                   <button onClick={e => { e.stopPropagation(); toggleWatchlist(c.id); }} style={{ background:"none", border:"none", color:isWatched(c.id) ? GOLD : MUTED, cursor:"pointer", fontSize:16, padding:4 }}>{isWatched(c.id) ? "★" : "☆"}</button>
                 </div>
               ))}
+            </div>
+          </div>
+        )}
+
+        {/* ═══════════════════════ BRIEF 1: ECOSYSTEM HEALTH ═══════════════════════ */}
+        {view === "ia_ecosystem" && (
+          <div style={fadeIn}>
+            <div style={{ marginBottom:20 }}>
+              <div style={{ fontSize: isMobile ? 18 : 22, fontWeight:800 }}>Ecosystem Health Assessment</div>
+              <div style={{ fontSize:11, color:MUTED, marginTop:2 }}>Battle Born Ecosystem Health Index (B-EHI) · MIT REAP + Kauffman + OECD</div>
+            </div>
+            {/* B-EHI Score */}
+            <div style={{ display:"grid", gridTemplateColumns: isMobile ? "1fr" : "auto 1fr", gap:20, marginBottom:24 }}>
+              <div style={{ background:CARD, border:`1px solid ${BORDER}`, borderRadius:12, padding:24, textAlign:"center", minWidth: isMobile ? "auto" : 200 }}>
+                <div style={{ fontSize:10, color:MUTED, letterSpacing:1.5, textTransform:"uppercase", marginBottom:8 }}>B-EHI Score</div>
+                <div style={{ fontSize:56, fontWeight:900, color: iaEcosystem.BEHI >= 80 ? GREEN : iaEcosystem.BEHI >= 60 ? GOLD : iaEcosystem.BEHI >= 40 ? ORANGE : RED, lineHeight:1 }}>{iaEcosystem.BEHI}</div>
+                <div style={{ fontSize:28, fontWeight:800, color: iaEcosystem.grade === "A" ? GREEN : iaEcosystem.grade === "B" ? GOLD : ORANGE, marginTop:4 }}>Grade {iaEcosystem.grade}</div>
+                <div style={{ fontSize:10, color:MUTED, marginTop:8 }}>0-100 composite · Equal-weighted pillars</div>
+              </div>
+              <div style={{ display:"grid", gridTemplateColumns:"repeat(2, 1fr)", gap:12 }}>
+                {[
+                  { key:"IC", label:"Innovation Capacity", sub:"R&D, Human Capital, Infrastructure", color:BLUE },
+                  { key:"EC", label:"Entrepreneurship Capacity", sub:"Young Firms, Finance, Talent", color:GREEN },
+                  { key:"ES", label:"Ecosystem Structure", sub:"Density, Fluidity, Connectivity, Diversity", color:PURPLE },
+                  { key:"OP", label:"Outcomes & Performance", sub:"Exits, Capital Formation, Market Reach", color:GOLD },
+                ].map(p => (
+                  <div key={p.key} style={{ background:CARD, border:`1px solid ${BORDER}`, borderRadius:10, padding:16 }}>
+                    <div style={{ fontSize:9, color:MUTED, letterSpacing:1, textTransform:"uppercase" }}>{p.label}</div>
+                    <div style={{ display:"flex", alignItems:"baseline", gap:6, marginTop:4 }}>
+                      <span style={{ fontSize:32, fontWeight:800, color:p.color }}>{iaEcosystem.pillars[p.key]}</span>
+                      <span style={{ fontSize:12, fontWeight:700, color: iaEcosystem.pillars[p.key] >= 80 ? GREEN : iaEcosystem.pillars[p.key] >= 60 ? GOLD : ORANGE }}>{iaEcosystem.pillars[p.key] >= 80 ? "A" : iaEcosystem.pillars[p.key] >= 60 ? "B" : iaEcosystem.pillars[p.key] >= 40 ? "C" : "D"}</span>
+                    </div>
+                    <div style={{ fontSize:9, color:MUTED, marginTop:2 }}>{p.sub}</div>
+                    <div style={{ height:4, background:"#1E1D1A", borderRadius:2, marginTop:8 }}>
+                      <div style={{ width:`${iaEcosystem.pillars[p.key]}%`, height:"100%", background:p.color, borderRadius:2, transition:"width 0.8s" }} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+            {/* Sub-pillar details */}
+            <div style={{ background:CARD, border:`1px solid ${BORDER}`, borderRadius:10, padding: isMobile ? 14 : 20, marginBottom:20 }}>
+              <div style={{ fontSize:10, color:MUTED, letterSpacing:1, textTransform:"uppercase", marginBottom:14 }}>Sub-Pillar Breakdown (0-100)</div>
+              <div style={{ display:"grid", gridTemplateColumns: isMobile ? "repeat(2, 1fr)" : "repeat(4, 1fr)", gap:8 }}>
+                {[
+                  {k:"krd",l:"Knowledge & R&D",c:BLUE},{k:"hc",l:"Human Capital",c:BLUE},{k:"inf",l:"Infrastructure",c:BLUE},
+                  {k:"nyf",l:"Young Firm Activity",c:GREEN},{k:"ef",l:"Entrepreneurial Finance",c:GREEN},{k:"et",l:"Talent & Experience",c:GREEN},
+                  {k:"den",l:"Density",c:PURPLE},{k:"flu",l:"Fluidity",c:PURPLE},{k:"con",l:"Connectivity",c:PURPLE},{k:"div",l:"Diversity",c:PURPLE},
+                  {k:"sp",l:"Startup Performance",c:GOLD},{k:"cf",l:"Capital Formation",c:GOLD},{k:"mr",l:"Market Reach",c:GOLD},{k:"ko",l:"Knowledge Outputs",c:GOLD},
+                ].map(sp => (
+                  <div key={sp.k} style={{ padding:8, borderRadius:6, background:sp.c+"08" }}>
+                    <div style={{ fontSize:8, color:MUTED }}>{sp.l}</div>
+                    <div style={{ fontSize:18, fontWeight:700, color:sp.c }}>{Math.round(iaEcosystem.subPillars[sp.k])}</div>
+                    <div style={{ height:3, background:"#1E1D1A", borderRadius:2, marginTop:4 }}>
+                      <div style={{ width:`${iaEcosystem.subPillars[sp.k]}%`, height:"100%", background:sp.c, borderRadius:2 }} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+            {/* KPIs */}
+            <div style={{ display:"grid", gridTemplateColumns: isMobile ? "repeat(2,1fr)" : "repeat(5,1fr)", gap:10 }}>
+              <Stat label="Total Companies" value={iaEcosystem.kpis.totalCompanies} />
+              <Stat label="Young Firms (≤5yr)" value={iaEcosystem.kpis.youngFirms} color={GREEN} />
+              <Stat label="High-Growth" value={iaEcosystem.kpis.highGrowthFirms} sub="Momentum ≥75" color={GOLD} />
+              <Stat label="VC Per Capita" value={`$${iaEcosystem.kpis.vcPerCapita}`} sub="Per million pop" color={BLUE} />
+              <Stat label="Sector Diversity" value={`${iaEcosystem.kpis.sectorDiversity}%`} sub="1 - HHI" color={PURPLE} />
+            </div>
+            <div style={{ fontSize:10, color:MUTED, marginTop:16, padding:"8px 12px", background:CARD, borderRadius:6, border:`1px solid ${BORDER}` }}>
+              <strong style={{ color:GOLD }}>ICD-203 Assessment:</strong> Nevada ecosystem health is <strong>likely</strong> (55-80%) to maintain B-grade status over 12 months. <strong>Confidence: Moderate</strong> — based on 75 tracked companies, limited to public funding data. <strong>Watch:</strong> SSBCI tranche deployment pace, DOE loan drawdowns, TensorWave/Lyten gigafactory milestones.
+            </div>
+          </div>
+        )}
+
+        {/* ═══════════════════════ BRIEF 2: NETWORK ANALYSIS ═══════════════════════ */}
+        {view === "ia_network" && (() => {
+          const graphData = buildGraph({company:true, fund:true, person:true, external:true, accelerator:true, sector:false, region:false, ecosystem:true, exchange:false}, {invested_in:true,partners_with:true,founder_of:true,accelerated_by:true,contracts_with:true,loaned_to:true,acquired:true,manages:true,supports:true,housed_at:true,incubated_by:true,won_pitch:true,program_of:true,collaborated_with:true,funds:true,approved_by:true,filed_with:true,competes_with:true,eligible_for:true,operates_in:false,headquartered_in:false,listed_on:false});
+          const metrics = computeGraphMetrics(graphData.nodes, graphData.edges);
+          const holes = computeStructuralHoles(graphData.nodes, graphData.edges);
+          const nodeMap = {}; graphData.nodes.forEach(n => nodeMap[n.id] = n);
+          const topHubs = Object.entries(metrics.pagerank).sort((a,b) => b[1] - a[1]).slice(0, 15).map(([id, pr]) => ({ id, label: nodeMap[id]?.label || id, type: nodeMap[id]?.type || "?", pagerank: pr, betweenness: metrics.betweenness[id] || 0, community: metrics.communities[id] || 0 }));
+          const topBrokers = Object.entries(holes).sort((a,b) => b[1].brokerage - a[1].brokerage).filter(([id]) => holes[id].effectiveSize >= 2).slice(0, 15).map(([id, h]) => ({ id, label: nodeMap[id]?.label || id, type: nodeMap[id]?.type || "?", ...h, betweenness: metrics.betweenness[id] || 0 }));
+          const communityStats = {};
+          Object.entries(metrics.communities).forEach(([id, cid]) => {
+            if (!communityStats[cid]) communityStats[cid] = { id: cid, count: 0, nodes: [], types: {} };
+            communityStats[cid].count++;
+            communityStats[cid].nodes.push(nodeMap[id]);
+            const t = nodeMap[id]?.type || "?";
+            communityStats[cid].types[t] = (communityStats[cid].types[t] || 0) + 1;
+          });
+          const communities = Object.values(communityStats).sort((a,b) => b.count - a.count).slice(0, 8);
+
+          return (
+            <div style={fadeIn}>
+              <div style={{ marginBottom:20 }}>
+                <div style={{ fontSize: isMobile ? 18 : 22, fontWeight:800 }}>Network Analysis: Centrality & Influence</div>
+                <div style={{ fontSize:11, color:MUTED, marginTop:2 }}>Barabasi + Burt Structural Holes + Pentland Idea Flow · {graphData.nodes.length} nodes · {graphData.edges.length} edges</div>
+              </div>
+              {/* Top Hubs */}
+              <div style={{ display:"grid", gridTemplateColumns: isTablet ? "1fr" : "1fr 1fr", gap:16, marginBottom:20 }}>
+                <div style={{ background:CARD, border:`1px solid ${BORDER}`, borderRadius:10, padding:16 }}>
+                  <div style={{ fontSize:10, color:MUTED, letterSpacing:1, textTransform:"uppercase", marginBottom:12 }}>Top Hubs — PageRank & Degree</div>
+                  {topHubs.map((h, i) => (
+                    <div key={h.id} style={{ display:"flex", alignItems:"center", gap:8, padding:"6px 0", borderBottom:i < topHubs.length-1 ? `1px solid ${BORDER}` : "none" }}>
+                      <span style={{ width:18, fontSize:11, color: i < 3 ? GOLD : MUTED, fontWeight:700 }}>{i+1}</span>
+                      <span style={{ fontSize:9, color:NODE_CFG[h.type]?.color || MUTED }}>{NODE_CFG[h.type]?.icon || "?"}</span>
+                      <div style={{ flex:1, minWidth:0 }}>
+                        <div style={{ fontSize:12, fontWeight:600, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{h.label}</div>
+                        <div style={{ fontSize:9, color:MUTED }}>{h.type} · C{h.community}</div>
+                      </div>
+                      <div style={{ textAlign:"right" }}>
+                        <div style={{ fontSize:14, fontWeight:700, color:GOLD }}>{h.pagerank}</div>
+                        <div style={{ fontSize:8, color:MUTED }}>PR</div>
+                      </div>
+                      <div style={{ textAlign:"right", marginLeft:8 }}>
+                        <div style={{ fontSize:12, fontWeight:600, color:BLUE }}>{h.betweenness}</div>
+                        <div style={{ fontSize:8, color:MUTED }}>BC</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                {/* Top Brokers */}
+                <div style={{ background:CARD, border:`1px solid ${BORDER}`, borderRadius:10, padding:16 }}>
+                  <div style={{ fontSize:10, color:MUTED, letterSpacing:1, textTransform:"uppercase", marginBottom:12 }}>Top Brokers — Structural Holes (1-Constraint)</div>
+                  {topBrokers.map((b, i) => (
+                    <div key={b.id} style={{ display:"flex", alignItems:"center", gap:8, padding:"6px 0", borderBottom:i < topBrokers.length-1 ? `1px solid ${BORDER}` : "none" }}>
+                      <span style={{ width:18, fontSize:11, color: i < 3 ? PURPLE : MUTED, fontWeight:700 }}>{i+1}</span>
+                      <span style={{ fontSize:9, color:NODE_CFG[b.type]?.color || MUTED }}>{NODE_CFG[b.type]?.icon || "?"}</span>
+                      <div style={{ flex:1, minWidth:0 }}>
+                        <div style={{ fontSize:12, fontWeight:600, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{b.label}</div>
+                        <div style={{ fontSize:9, color:MUTED }}>{b.type} · ES: {b.effectiveSize}</div>
+                      </div>
+                      <div style={{ textAlign:"right" }}>
+                        <div style={{ fontSize:14, fontWeight:700, color:PURPLE }}>{b.brokerage}</div>
+                        <div style={{ fontSize:8, color:MUTED }}>Brokerage</div>
+                      </div>
+                      <div style={{ textAlign:"right", marginLeft:8 }}>
+                        <div style={{ fontSize:12, fontWeight:600, color:MUTED }}>{b.constraint.toFixed(2)}</div>
+                        <div style={{ fontSize:8, color:MUTED }}>C<sub>i</sub></div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              {/* Community Map */}
+              <div style={{ background:CARD, border:`1px solid ${BORDER}`, borderRadius:10, padding:16 }}>
+                <div style={{ fontSize:10, color:MUTED, letterSpacing:1, textTransform:"uppercase", marginBottom:12 }}>Community Clusters — Label Propagation</div>
+                <div style={{ display:"grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(4, 1fr)", gap:10 }}>
+                  {communities.map(c => {
+                    const companyNodes = c.nodes.filter(n => n && n.type === "company");
+                    const topNode = c.nodes.reduce((best, n) => n && metrics.pagerank[n.id] > (best ? metrics.pagerank[best.id] || 0 : 0) ? n : best, null);
+                    return (
+                      <div key={c.id} style={{ padding:12, borderRadius:8, background:GP.surface, border:`1px solid ${GP.border}` }}>
+                        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:6 }}>
+                          <span style={{ fontSize:12, fontWeight:700, color:GOLD }}>C{c.id}</span>
+                          <span style={{ fontSize:10, color:MUTED }}>{c.count} nodes</span>
+                        </div>
+                        <div style={{ fontSize:9, color:MUTED, marginBottom:4 }}>{Object.entries(c.types).map(([t,n]) => `${t}:${n}`).join(" · ")}</div>
+                        {topNode && <div style={{ fontSize:10, color:TEXT }}>Anchor: <strong>{topNode.label}</strong></div>}
+                        {companyNodes.length > 0 && <div style={{ fontSize:9, color:MUTED, marginTop:2 }}>{companyNodes.length} companies</div>}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+              <div style={{ fontSize:10, color:MUTED, marginTop:16, padding:"8px 12px", background:CARD, borderRadius:6, border:`1px solid ${BORDER}` }}>
+                <strong style={{ color:GOLD }}>ICD-203 Assessment:</strong> Network connectivity is <strong>likely</strong> (55-80%) concentrated in {topHubs.slice(0,3).map(h => h.label).join(", ")} as systemic hubs. <strong>Confidence: Moderate</strong>. Loss of top 3 hubs would <strong>very likely</strong> (80-95%) materially reduce ecosystem connectivity.
+              </div>
+            </div>
+          );
+        })()}
+
+        {/* ═══════════════════════ BRIEF 3: RISK ASSESSMENT ═══════════════════════ */}
+        {view === "ia_risk" && (
+          <div style={fadeIn}>
+            <div style={{ marginBottom:20 }}>
+              <div style={{ fontSize: isMobile ? 18 : 22, fontWeight:800 }}>Risk Assessment: Multi-Factor Landscape</div>
+              <div style={{ fontSize:11, color:MUTED, marginTop:2 }}>COSO ERM 2017 · McKinsey Risk Matrix · MIT TRL/MRL</div>
+            </div>
+            {/* Portfolio Risk Distribution */}
+            <div style={{ display:"grid", gridTemplateColumns: isMobile ? "repeat(2,1fr)" : "repeat(4,1fr)", gap:12, marginBottom:20 }}>
+              {["Low","Moderate","High","Extreme"].map(band => {
+                const count = iaRiskAll.filter(c => c.riskGrade === band).length;
+                const totalNav = iaRiskAll.filter(c => c.riskGrade === band).reduce((s,c) => s + c.funding, 0);
+                const bc = band === "Low" ? GREEN : band === "Moderate" ? GOLD : band === "High" ? ORANGE : RED;
+                return (
+                  <div key={band} style={{ background:CARD, border:`1px solid ${BORDER}`, borderRadius:10, padding:16 }}>
+                    <div style={{ fontSize:10, color:bc, letterSpacing:1, textTransform:"uppercase" }}>{band} Risk</div>
+                    <div style={{ fontSize:28, fontWeight:800, color:bc }}>{count}</div>
+                    <div style={{ fontSize:10, color:MUTED }}>{fmt(totalNav)} capital</div>
+                    <div style={{ fontSize:9, color:MUTED }}>{(count / COMPANIES.length * 100).toFixed(0)}% of portfolio</div>
+                  </div>
+                );
+              })}
+            </div>
+            {/* McKinsey 2x2 Matrix */}
+            <div style={{ background:CARD, border:`1px solid ${BORDER}`, borderRadius:10, padding:16, marginBottom:20 }}>
+              <div style={{ fontSize:10, color:MUTED, letterSpacing:1, textTransform:"uppercase", marginBottom:12 }}>Execution Risk vs External Risk Matrix</div>
+              <div style={{ display:"grid", gridTemplateColumns:"auto 1fr", gap:8 }}>
+                <div style={{ writingMode:"vertical-rl", textOrientation:"mixed", transform:"rotate(180deg)", fontSize:9, color:MUTED, display:"flex", alignItems:"center", justifyContent:"center" }}>External Risk →</div>
+                <div style={{ position:"relative", height:280, background:"#0A0A0C", borderRadius:8, border:`1px solid ${BORDER}` }}>
+                  {/* Quadrant labels */}
+                  <div style={{ position:"absolute", top:8, left:8, fontSize:9, color:GREEN+"60" }}>Steady Compounders</div>
+                  <div style={{ position:"absolute", top:8, right:8, fontSize:9, color:ORANGE+"60" }}>External Headwinds</div>
+                  <div style={{ position:"absolute", bottom:8, left:8, fontSize:9, color:BLUE+"60" }}>Execution Plays</div>
+                  <div style={{ position:"absolute", bottom:8, right:8, fontSize:9, color:RED+"60" }}>High-Risk Bets</div>
+                  <div style={{ position:"absolute", top:"50%", left:0, right:0, height:1, background:BORDER }} />
+                  <div style={{ position:"absolute", left:"50%", top:0, bottom:0, width:1, background:BORDER }} />
+                  {iaRiskAll.slice(0, 40).map(c => {
+                    const x = ((c.execRisk - 1) / 4) * 90 + 5;
+                    const y = (1 - (c.extRisk - 1) / 4) * 90 + 5;
+                    const r = Math.max(4, Math.min(12, Math.sqrt(c.funding) * 0.3));
+                    const col = c.riskGrade === "Extreme" ? RED : c.riskGrade === "High" ? ORANGE : c.riskGrade === "Moderate" ? GOLD : GREEN;
+                    return <div key={c.id} title={`${c.name}: Exec=${c.execRisk} Ext=${c.extRisk}`} style={{ position:"absolute", left:`${x}%`, top:`${y}%`, width:r*2, height:r*2, borderRadius:"50%", background:col+"40", border:`1px solid ${col}`, transform:"translate(-50%,-50%)", cursor:"pointer", fontSize:7, display:"flex", alignItems:"center", justifyContent:"center", color:TEXT }} onClick={() => setSelectedCompany(c)}>{c.name.substring(0,3)}</div>;
+                  })}
+                </div>
+              </div>
+              <div style={{ fontSize:9, color:MUTED, marginTop:4, textAlign:"center" }}>Execution Risk →  ·  Bubble size = funding  ·  Color = overall risk grade</div>
+            </div>
+            {/* Top Risk Companies */}
+            <div style={{ background:CARD, border:`1px solid ${BORDER}`, borderRadius:10, padding:16 }}>
+              <div style={{ fontSize:10, color:MUTED, letterSpacing:1, textTransform:"uppercase", marginBottom:12 }}>Highest Risk Companies — COSO Register</div>
+              {iaRiskAll.sort((a,b) => b.totalRiskScore - a.totalRiskScore).slice(0, 15).map((c, i) => (
+                <div key={c.id} style={{ display:"flex", alignItems:"center", gap:8, padding:"8px 0", borderBottom:i < 14 ? `1px solid ${BORDER}` : "none", cursor:"pointer" }} onClick={() => setSelectedCompany(c)}>
+                  <span style={{ width:20, fontSize:11, color:MUTED, fontWeight:600 }}>{i+1}</span>
+                  <div style={{ width:8, height:8, borderRadius:"50%", background: c.riskGrade === "Extreme" ? RED : c.riskGrade === "High" ? ORANGE : c.riskGrade === "Moderate" ? GOLD : GREEN }} />
+                  <div style={{ flex:1, minWidth:0 }}>
+                    <div style={{ fontSize:12, fontWeight:600 }}>{c.name}</div>
+                    <div style={{ fontSize:9, color:MUTED }}>{c.risks.slice(0,2).map(r => r.name).join(" · ")}</div>
+                  </div>
+                  <div style={{ display:"flex", gap:8 }}>
+                    <div style={{ textAlign:"center" }}><div style={{ fontSize:11, fontWeight:700, color:BLUE }}>TRL {c.trl}</div><div style={{ fontSize:7, color:MUTED }}>Tech</div></div>
+                    <div style={{ textAlign:"center" }}><div style={{ fontSize:11, fontWeight:700, color:PURPLE }}>MRL {c.mrl}</div><div style={{ fontSize:7, color:MUTED }}>Market</div></div>
+                  </div>
+                  <div style={{ textAlign:"right", minWidth:50 }}>
+                    <div style={{ fontSize:14, fontWeight:700, color: c.riskGrade === "Extreme" ? RED : c.riskGrade === "High" ? ORANGE : GOLD }}>{c.totalRiskScore}</div>
+                    <div style={{ fontSize:7, color:MUTED }}>{c.riskGrade}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* ═══════════════════════ BRIEF 4: MARKET INTELLIGENCE ═══════════════════════ */}
+        {view === "ia_market" && (
+          <div style={fadeIn}>
+            <div style={{ marginBottom:20 }}>
+              <div style={{ fontSize: isMobile ? 18 : 22, fontWeight:800 }}>Market Intelligence: Sector & Capital Flows</div>
+              <div style={{ fontSize:11, color:MUTED, marginTop:2 }}>GE-McKinsey + BCG Matrix + Porter's Five Forces + HHI Concentration</div>
+            </div>
+            {/* Sector Heat Table */}
+            <div style={{ background:CARD, border:`1px solid ${BORDER}`, borderRadius:10, padding:16, marginBottom:20 }}>
+              <div style={{ fontSize:10, color:MUTED, letterSpacing:1, textTransform:"uppercase", marginBottom:12 }}>Sector Heat Rankings — Capital Flow Momentum</div>
+              <div style={{ overflowX:"auto" }}>
+                <table style={{ width:"100%", borderCollapse:"collapse", fontSize:11 }}>
+                  <thead>
+                    <tr style={{ borderBottom:`1px solid ${BORDER}` }}>
+                      {["Sector","Heat","Momentum","Attractiveness","HHI","N_eff","Companies","Capital","Maturity","Signal"].map(h => (
+                        <th key={h} style={{ padding:"6px 8px", textAlign:"left", fontSize:9, color:MUTED, fontWeight:600, letterSpacing:0.5 }}>{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {iaSectorIntel.slice(0, 20).map((s, i) => {
+                      const hc = s.heat >= 75 ? GREEN : s.heat >= 55 ? GOLD : s.heat >= 35 ? ORANGE : MUTED;
+                      const signal = s.heat >= 70 && s.momentum >= 60 ? "OVERWEIGHT" : s.heat >= 50 ? "NEUTRAL" : "UNDERWEIGHT";
+                      const sc = signal === "OVERWEIGHT" ? GREEN : signal === "NEUTRAL" ? GOLD : RED;
+                      return (
+                        <tr key={s.name} style={{ borderBottom:`1px solid ${BORDER}` }}>
+                          <td style={{ padding:"6px 8px", fontWeight:600 }}>{s.name}</td>
+                          <td style={{ padding:"6px 8px", fontWeight:800, color:hc }}>{s.heat}</td>
+                          <td style={{ padding:"6px 8px", color:BLUE }}>{s.momentum}</td>
+                          <td style={{ padding:"6px 8px" }}>{s.attractiveness}</td>
+                          <td style={{ padding:"6px 8px", color:MUTED }}>{s.hhi}</td>
+                          <td style={{ padding:"6px 8px", color:MUTED }}>{s.nEff}</td>
+                          <td style={{ padding:"6px 8px" }}>{s.count}</td>
+                          <td style={{ padding:"6px 8px" }}>{fmt(s.totalFunding)}</td>
+                          <td style={{ padding:"6px 8px" }}><span style={{ fontSize:9, padding:"1px 6px", borderRadius:4, background:s.dynamics.maturityStage === "emerging" ? BLUE+"20" : s.dynamics.maturityStage === "growth" ? GREEN+"20" : GOLD+"20", color:s.dynamics.maturityStage === "emerging" ? BLUE : s.dynamics.maturityStage === "growth" ? GREEN : GOLD }}>{s.dynamics.maturityStage}</span></td>
+                          <td style={{ padding:"6px 8px" }}><span style={{ fontSize:9, fontWeight:700, padding:"1px 6px", borderRadius:4, background:sc+"15", color:sc }}>{signal}</span></td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            {/* Porter's Five Forces */}
+            <div style={{ background:CARD, border:`1px solid ${BORDER}`, borderRadius:10, padding:16 }}>
+              <div style={{ fontSize:10, color:MUTED, letterSpacing:1, textTransform:"uppercase", marginBottom:12 }}>Porter's Five Forces — Top 8 Sectors</div>
+              <div style={{ display:"grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(4, 1fr)", gap:10 }}>
+                {iaSectorIntel.slice(0, 8).map(s => (
+                  <div key={s.name} style={{ padding:12, borderRadius:8, background:GP.surface, border:`1px solid ${GP.border}` }}>
+                    <div style={{ fontSize:11, fontWeight:700, color:GOLD, marginBottom:6 }}>{s.name}</div>
+                    {[["Rivalry",s.porter.rivalry],["New Entrants",s.porter.entrants],["Substitutes",s.porter.substitutes],["Buyer Power",s.porter.buyerPower],["Supplier Power",s.porter.supplierPower]].map(([label, val]) => (
+                      <div key={label} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:2 }}>
+                        <span style={{ fontSize:9, color:MUTED }}>{label}</span>
+                        <div style={{ display:"flex", gap:1 }}>{[1,2,3,4,5].map(n => <div key={n} style={{ width:8, height:8, borderRadius:2, background:n <= val ? (val >= 4 ? RED : val >= 3 ? ORANGE : GREEN) : BORDER }} />)}</div>
+                      </div>
+                    ))}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ═══════════════════════ BRIEF 5: REGULATORY OUTLOOK ═══════════════════════ */}
+        {view === "ia_regulatory" && (
+          <div style={fadeIn}>
+            <div style={{ marginBottom:20 }}>
+              <div style={{ fontSize: isMobile ? 18 : 22, fontWeight:800 }}>Regulatory Outlook: Policy & Compliance</div>
+              <div style={{ fontSize:11, color:MUTED, marginTop:2 }}>OMB A-4 RIA + EPU-Style Uncertainty + COSO Compliance Maturity</div>
+            </div>
+            {/* Sector Regulatory Outlook */}
+            <div style={{ background:CARD, border:`1px solid ${BORDER}`, borderRadius:10, padding:16, marginBottom:20 }}>
+              <div style={{ fontSize:10, color:MUTED, letterSpacing:1, textTransform:"uppercase", marginBottom:12 }}>Sector Regulatory Outlook Scores</div>
+              <div style={{ display:"grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(3, 1fr)", gap:10 }}>
+                {Object.entries(iaRegOutlook).sort((a,b) => b[1].outlook - a[1].outlook).slice(0, 15).map(([sector, data]) => {
+                  const oc = data.outlook >= 70 ? GREEN : data.outlook >= 50 ? GOLD : data.outlook >= 30 ? ORANGE : RED;
+                  return (
+                    <div key={sector} style={{ padding:10, borderRadius:8, background:GP.surface, border:`1px solid ${GP.border}` }}>
+                      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+                        <span style={{ fontSize:11, fontWeight:600 }}>{sector}</span>
+                        <span style={{ fontSize:16, fontWeight:800, color:oc }}>{data.outlook}</span>
+                      </div>
+                      <div style={{ display:"flex", gap:12, marginTop:6, fontSize:9 }}>
+                        <span style={{ color:GREEN }}>Support: {data.supportiveness}</span>
+                        <span style={{ color:RED }}>Burden: {data.burden}</span>
+                        <span style={{ color:ORANGE }}>SRU: {data.sru}</span>
+                      </div>
+                      <div style={{ fontSize:8, color:MUTED, marginTop:2 }}>{data.docketCount} active dockets</div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+            {/* Active Regulatory Dockets */}
+            <div style={{ background:CARD, border:`1px solid ${BORDER}`, borderRadius:10, padding:16, marginBottom:20 }}>
+              <div style={{ fontSize:10, color:MUTED, letterSpacing:1, textTransform:"uppercase", marginBottom:12 }}>Active Regulatory Dockets — {REGULATORY_DOCKETS.length} Tracked</div>
+              {REGULATORY_DOCKETS.sort((a,b) => b.severity - a.severity).map((d, i) => {
+                const sc = d.severity >= 4 ? RED : d.severity >= 3 ? ORANGE : GOLD;
+                const stc = d.status === "active" ? GREEN : d.status === "proposed" ? BLUE : MUTED;
+                return (
+                  <div key={d.id} style={{ padding:"10px 0", borderBottom:i < REGULATORY_DOCKETS.length-1 ? `1px solid ${BORDER}` : "none" }}>
+                    <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:12 }}>
+                      <div style={{ flex:1 }}>
+                        <div style={{ fontSize:12, fontWeight:600, marginBottom:2 }}>{d.title}</div>
+                        <div style={{ fontSize:10, color:MUTED }}>{d.agency} · {d.sector.slice(0,3).join(", ")}</div>
+                      </div>
+                      <div style={{ display:"flex", gap:8, flexShrink:0 }}>
+                        <span style={{ fontSize:9, padding:"2px 6px", borderRadius:4, background:stc+"20", color:stc }}>{d.status}</span>
+                        <span style={{ fontSize:9, padding:"2px 6px", borderRadius:4, background:sc+"15", color:sc }}>Sev: {d.severity}/5</span>
+                      </div>
+                    </div>
+                    <div style={{ fontSize:10, color:MUTED, marginTop:4 }}>{d.description}</div>
+                    <div style={{ display:"flex", gap:12, marginTop:4, fontSize:9 }}>
+                      <span style={{ color:GREEN }}>Support: {d.supportiveness}</span>
+                      <span style={{ color:RED }}>Burden: {d.burden}</span>
+                      <span>Timeline: {d.timeline}</span>
+                      <span>Breadth: {(d.breadth * 100).toFixed(0)}%</span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            {/* Compliance Maturity */}
+            <div style={{ background:CARD, border:`1px solid ${BORDER}`, borderRadius:10, padding:16 }}>
+              <div style={{ fontSize:10, color:MUTED, letterSpacing:1, textTransform:"uppercase", marginBottom:12 }}>Company Compliance Maturity — Top 15 by Exposure</div>
+              {COMPANIES.filter(c => (COMPANY_IA_DATA[c.id]?.regulatoryExposure || []).length >= 3).sort((a,b) => (COMPANY_IA_DATA[b.id]?.regulatoryExposure || []).length - (COMPANY_IA_DATA[a.id]?.regulatoryExposure || []).length).slice(0, 15).map((c, i) => {
+                const ia = COMPANY_IA_DATA[c.id] || {};
+                const cm = ia.complianceMaturity || {};
+                const avg = Object.values(cm).length ? (Object.values(cm).reduce((s,v) => s+v, 0) / Object.values(cm).length) : 0;
+                const mc = avg >= 4 ? GREEN : avg >= 3 ? GOLD : avg >= 2 ? ORANGE : RED;
+                return (
+                  <div key={c.id} style={{ display:"flex", alignItems:"center", gap:8, padding:"6px 0", borderBottom:i < 14 ? `1px solid ${BORDER}` : "none" }}>
+                    <div style={{ flex:1 }}>
+                      <div style={{ fontSize:12, fontWeight:600 }}>{c.name}</div>
+                      <div style={{ fontSize:9, color:MUTED }}>{(ia.regulatoryExposure || []).slice(0, 4).join(", ")}</div>
+                    </div>
+                    <div style={{ display:"flex", gap:4 }}>
+                      {["governance","policies","systems","monitoring","training"].map(dim => (
+                        <div key={dim} style={{ textAlign:"center", width:36 }}>
+                          <div style={{ fontSize:11, fontWeight:700, color: (cm[dim]||0) >= 4 ? GREEN : (cm[dim]||0) >= 3 ? GOLD : ORANGE }}>{cm[dim] || 0}</div>
+                          <div style={{ fontSize:6, color:MUTED }}>{dim.substring(0,3).toUpperCase()}</div>
+                        </div>
+                      ))}
+                    </div>
+                    <div style={{ fontSize:12, fontWeight:700, color:mc, minWidth:32, textAlign:"right" }}>{avg.toFixed(1)}</div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* ═══════════════════════ BRIEF 6: OPPORTUNITY MAP ═══════════════════════ */}
+        {view === "ia_opportunity" && (
+          <div style={fadeIn}>
+            <div style={{ marginBottom:20 }}>
+              <div style={{ fontSize: isMobile ? 18 : 22, fontWeight:800 }}>Opportunity Map: Investment Intelligence</div>
+              <div style={{ fontSize:11, color:MUTED, marginTop:2 }}>Venture Quality · Deal Score · Alpha Signals · RAO Conviction Tiers</div>
+            </div>
+            {/* Conviction Tier Distribution */}
+            <div style={{ display:"grid", gridTemplateColumns: isMobile ? "repeat(2,1fr)" : "repeat(4,1fr)", gap:12, marginBottom:20 }}>
+              {[{tier:"I",label:"High Conviction",color:GREEN},{tier:"II",label:"Core",color:GOLD},{tier:"III",label:"Optionality",color:ORANGE},{tier:"—",label:"No Allocation",color:MUTED}].map(t => {
+                const cos = iaOpportunity.filter(c => c.tier === t.tier);
+                const capital = cos.reduce((s,c) => s + c.funding, 0);
+                return (
+                  <div key={t.tier} style={{ background:CARD, border:`1px solid ${BORDER}`, borderRadius:10, padding:16 }}>
+                    <div style={{ fontSize:10, color:t.color, letterSpacing:1, textTransform:"uppercase" }}>Tier {t.tier} — {t.label}</div>
+                    <div style={{ fontSize:28, fontWeight:800, color:t.color }}>{cos.length}</div>
+                    <div style={{ fontSize:10, color:MUTED }}>{fmt(capital)} capital</div>
+                  </div>
+                );
+              })}
+            </div>
+            {/* Opportunity Pipeline */}
+            <div style={{ background:CARD, border:`1px solid ${BORDER}`, borderRadius:10, padding:16 }}>
+              <div style={{ fontSize:10, color:MUTED, letterSpacing:1, textTransform:"uppercase", marginBottom:12 }}>Risk-Adjusted Opportunity Rankings — Top 30</div>
+              <div style={{ overflowX:"auto" }}>
+                <table style={{ width:"100%", borderCollapse:"collapse", fontSize:11 }}>
+                  <thead>
+                    <tr style={{ borderBottom:`1px solid ${BORDER}` }}>
+                      {["#","Company","Stage","RAO","Tier","VQ","Deal","Alpha","Risk","Signal"].map(h => (
+                        <th key={h} style={{ padding:"6px 8px", textAlign:"left", fontSize:9, color:MUTED, fontWeight:600 }}>{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {iaOpportunity.slice(0, 30).map((c, i) => {
+                      const tc = c.tier === "I" ? GREEN : c.tier === "II" ? GOLD : c.tier === "III" ? ORANGE : MUTED;
+                      const signal = c.tier === "I" ? "OVERWEIGHT" : c.tier === "II" ? "NEUTRAL" : "UNDERWEIGHT";
+                      return (
+                        <tr key={c.id} style={{ borderBottom:`1px solid ${BORDER}`, cursor:"pointer" }} onClick={() => setSelectedCompany(c)}>
+                          <td style={{ padding:"6px 8px", color:MUTED }}>{i+1}</td>
+                          <td style={{ padding:"6px 8px" }}>
+                            <div style={{ fontWeight:600 }}>{c.name}</div>
+                            <div style={{ fontSize:9, color:MUTED }}>{(c.sector||[]).slice(0,2).join(", ")}</div>
+                          </td>
+                          <td style={{ padding:"6px 8px" }}><span style={{ fontSize:9, padding:"1px 6px", borderRadius:4, background:STAGE_COLORS[c.stage]+"25", color:STAGE_COLORS[c.stage] }}>{stageLabel(c.stage)}</span></td>
+                          <td style={{ padding:"6px 8px", fontSize:16, fontWeight:800, color:tc }}>{c.rao}</td>
+                          <td style={{ padding:"6px 8px" }}><span style={{ fontSize:10, fontWeight:700, padding:"2px 8px", borderRadius:4, background:tc+"20", color:tc }}>{c.tier}</span></td>
+                          <td style={{ padding:"6px 8px", color:BLUE }}>{c.ventureQuality}</td>
+                          <td style={{ padding:"6px 8px", color:PURPLE }}>{c.dealScore}</td>
+                          <td style={{ padding:"6px 8px", color:GOLD }}>{c.alphaSignal}</td>
+                          <td style={{ padding:"6px 8px", color: c.risk.riskGrade === "Extreme" ? RED : c.risk.riskGrade === "High" ? ORANGE : MUTED }}>{c.risk.totalRiskScore}</td>
+                          <td style={{ padding:"6px 8px" }}><span style={{ fontSize:9, fontWeight:700, padding:"1px 6px", borderRadius:4, background:tc+"15", color:tc }}>{signal}</span></td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            <div style={{ fontSize:10, color:MUTED, marginTop:16, padding:"8px 12px", background:CARD, borderRadius:6, border:`1px solid ${BORDER}` }}>
+              <strong style={{ color:GOLD }}>ICD-203 Assessment:</strong> Tier I companies are <strong>very likely</strong> (80-95%) to demonstrate strong returns potential. <strong>Confidence: Moderate</strong> — based on composite scoring across venture quality, deal signals, and risk-adjustment. <strong>Watch:</strong> Series A/B follow-on rates, sector rotation signals, SSBCI deployment leverage ratios.
             </div>
           </div>
         )}
