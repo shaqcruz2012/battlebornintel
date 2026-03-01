@@ -1,0 +1,12 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "bbi-vite-dev",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["temp-scaffold/node_modules/vite/bin/vite.js", "--config", "temp-scaffold/vite.config.js"],
+      "port": 5173,
+      "autoPort": true
+    }
+  ]
+}

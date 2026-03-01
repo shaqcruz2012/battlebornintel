@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import * as d3 from "d3";
 
 // ============================================================
@@ -9,6 +9,7 @@ import * as d3 from "d3";
 const GOLD = "#C49A38", DARK = "#08080A", CARD = "#111110", BORDER = "#1E1D1A";
 const TEXT = "#E2DCD0", MUTED = "#706C64", GREEN = "#4E9B60", RED = "#C25550";
 const BLUE = "#5088A8", PURPLE = "#8868A8", ORANGE = "#D4864A";
+const HOT_RED = "#EF4444";
 
 const STAGE_COLORS = { pre_seed: "#706C64", seed: "#5088A8", series_a: "#4E9B60", series_b: ORANGE, series_c_plus: PURPLE, growth: GOLD };
 
@@ -29,6 +30,7 @@ const REL_CFG = {
   funds:{color:GP.gold,label:"Funds",dash:""},approved_by:{color:GP.teal,label:"Approved By",dash:"5,3"},filed_with:{color:GP.pink,label:"Filed With",dash:"4,4"},competes_with:{color:"#FF7043",label:"Competes With",dash:"2,4"},grants_to:{color:GP.green,label:"Grants To",dash:"4,2"},
 };
 const GSTAGE_C = { pre_seed:GP.dim,seed:GP.blue,series_a:GP.green,series_b:GP.orange,series_c_plus:GP.purple,growth:GP.gold };
+const COMM_COLORS = [GP.gold,GP.green,GP.blue,GP.purple,GP.orange,GP.red,GP.cyan,GP.pink,GP.lime,GP.teal,"#E57373","#64B5F6","#FFD54F","#AED581","#BA68C8","#4DD0E1"];
 
 const VIEWS = [
   { id: "dashboard", label: "Home", icon: "◆" },
@@ -149,6 +151,15 @@ const COMPANIES = [
   { id:73, name:"Aqua Metals",         stage:"growth",        sector:["Cleantech","Manufacturing"],           city:"Reno",           region:"reno",      funding:120,  momentum:52, employees:80,   founded:2014, description:"Clean battery recycling with AquaRefining. Non-polluting lead recycling. NYSE American: AQMS. TRIC facility.", eligible:["bbv"], lat:39.53, lng:-119.81 },
   { id:74, name:"Ormat Technologies",  stage:"growth",        sector:["Energy","Cleantech","Manufacturing"],   city:"Reno",           region:"reno",      funding:400,  momentum:62, employees:1400, founded:1965, description:"Global leader in geothermal energy and recovered energy generation. NYSE: ORA. Reno HQ. Operates geothermal plants across Nevada, California, and internationally.", eligible:[], lat:39.53, lng:-119.81 },
   { id:75, name:"NV5 Global",          stage:"growth",        sector:["Construction","Energy","Analytics"],     city:"Las Vegas",      region:"las_vegas", funding:200,  momentum:56, employees:4000, founded:2011, description:"Infrastructure services and consulting firm. Geospatial, environmental, construction QA, energy. Nasdaq: NVEE. Las Vegas HQ with offices across 100+ locations.", eligible:[], lat:36.17, lng:-115.14 },
+  // === GAP ANALYSIS ADDITIONS (v5.0 Research Agent) ===
+  { id:76, name:"Lithium Americas",    stage:"growth",        sector:["Mining","Cleantech","Energy"],          city:"Reno",           region:"reno",      funding:2900, momentum:85, employees:200,  founded:2007, description:"Developing Thacker Pass lithium mine — largest US lithium deposit. $2.3B DOE ATVM loan. GM 38% JV ($625M). Phase 1: 40k tonnes/yr lithium carbonate by 2027.", eligible:["bbv"], lat:39.53, lng:-119.81 },
+  { id:77, name:"WAVR Technologies",   stage:"seed",          sector:["Water","Cleantech","AI"],               city:"Las Vegas",      region:"las_vegas", funding:4,    momentum:78, employees:15,   founded:2024, description:"UNLV spinout. Atmospheric water harvesting using 3D-printed hydrogel membranes. $4M seed. $1M+ revenue since May 2024.", eligible:["bbv","fundnv"], lat:36.17, lng:-115.14 },
+  { id:78, name:"Adaract",             stage:"seed",          sector:["Robotics","Defense"],                   city:"Las Vegas",      region:"las_vegas", funding:1.5,  momentum:62, employees:10,   founded:2022, description:"High-performance artificial muscle actuators for robotics and defense. BBV + StartUpNV backed. SSBCI-funded.", eligible:["bbv","fundnv"], lat:36.17, lng:-115.14 },
+  { id:79, name:"Panasonic Energy NV", stage:"growth",        sector:["Manufacturing","Energy","Cleantech"],   city:"Sparks",         region:"reno",      funding:4000, momentum:80, employees:3000, founded:2016, description:"Tesla Gigafactory battery cell manufacturing. 3000+ NV employees. Major supply chain anchor.", eligible:[], lat:39.53, lng:-119.75 },
+  { id:80, name:"Vena Vitals",         stage:"seed",          sector:["Healthcare","IoT"],                     city:"Las Vegas",      region:"las_vegas", funding:1.0,  momentum:55, employees:8,    founded:2022, description:"Non-invasive vital signs monitoring device. Desert Forge Ventures portfolio. UC Irvine origin, relocated to LV.", eligible:["fundnv"], lat:36.17, lng:-115.14 },
+  { id:81, name:"Traxs",              stage:"pre_seed",      sector:["Manufacturing","IoT","AI"],             city:"Reno",           region:"reno",      funding:0.2,  momentum:50, employees:6,    founded:2023, description:"Manufacturing operations tracking. Real-time material movement. gBETA Reno inaugural cohort.", eligible:["fundnv"], lat:39.53, lng:-119.81 },
+  { id:82, name:"AIR Corp",            stage:"seed",          sector:["Robotics","AI"],                        city:"Reno",           region:"reno",      funding:0.5,  momentum:55, employees:8,    founded:2022, description:"Infrastructure inspection robotics for bridges and utilities. gener8tor Reno-Tahoe Cohort 2.", eligible:["fundnv"], lat:39.53, lng:-119.81 },
+  { id:83, name:"Decentral AI",        stage:"seed",          sector:["AI","Cloud"],                           city:"Las Vegas",      region:"las_vegas", funding:0.5,  momentum:58, employees:8,    founded:2024, description:"Unified AI platform for enterprise model deployment, routing, monitoring. Electrify Nevada Fall 2025 cohort.", eligible:["fundnv"], lat:36.17, lng:-115.14 },
 ];
 
 // --- REAL NEVADA FUNDS ---
@@ -161,6 +172,9 @@ const FUNDS = [
   { id:"dcvc",   name:"DCVC",               type:"Deep Tech VC",  allocated:null, deployed:8.2,  leverage:null,companies:4,  thesis:"Deep tech VC — active in NV climate, energy, and materials science" },
   { id:"stripes",name:"Stripes",             type:"Growth VC",     allocated:null, deployed:26,   leverage:null,companies:1,  thesis:"NYC-based growth equity firm. Led Katalyst Series A. Consumer tech focus" },
   { id:"startupnv",name:"StartUpNV",        type:"Accelerator",   allocated:null, deployed:29.7, leverage:null,companies:22, thesis:"NV statewide nonprofit accelerator. 30 investment transactions since 2021 across affiliated funds" },
+  { id:"desertforge",name:"Desert Forge Ventures", type:"Deep Tech VC", allocated:10, deployed:1.5, leverage:null, companies:2, thesis:"UNLV-affiliated deep tech VC. Founded by former UNLV President Len Jessup. Pre-seed to Series A. Co-investment with BBV/GOED up to $10M." },
+  { id:"fundnv2",name:"FundNV 2 (Ruby Partners)", type:"SSBCI", allocated:2, deployed:0.2, leverage:2.0, companies:1, thesis:"$2M pre-seed fund. $100K per company. Early revenue NV B2B/enterprise startups. Successor to FundNV 1." },
+  { id:"sbir",   name:"SBIR/STTR",             type:"Federal",       allocated:null, deployed:null, leverage:null,companies:4, thesis:"Federal Small Business Innovation Research and Small Business Technology Transfer programs. Phase I/II grants for defense, energy, and deep-tech startups." },
 ];
 
 // --- REAL TIMELINE EVENTS (based on verified press, reasonable dates) ---
@@ -205,6 +219,9 @@ const GRAPH_FUNDS=[
 {id:"bbv",name:"Battle Born Venture",type:"SSBCI"},{id:"fundnv",name:"FundNV",type:"SSBCI"},
 {id:"1864",name:"1864 Fund",type:"SSBCI"},{id:"sbir",name:"SBIR/STTR",type:"Federal"},
 {id:"angelnv",name:"AngelNV",type:"Angel"},{id:"sierra",name:"Sierra Angels",type:"Angel"},
+{id:"desertforge",name:"Desert Forge Ventures",type:"Deep Tech VC"},{id:"fundnv2",name:"FundNV 2",type:"SSBCI"},
+{id:"dcvc",name:"DCVC",type:"Deep Tech VC"},{id:"stripes",name:"Stripes",type:"Growth VC"},
+{id:"startupnv",name:"StartUpNV",type:"Accelerator"},
 ];
 const PEOPLE=[
 {id:"p_straubel",name:"JB Straubel",role:"Founder/CEO",companyId:1,note:"Tesla co-founder"},
@@ -248,11 +265,11 @@ const EXTERNALS=[
 {id:"x_amd",name:"AMD Ventures",etype:"Corporation",note:"Co-led TensorWave Series A. Strategic GPU partner."},
 {id:"x_magnetar",name:"Magnetar",etype:"VC Firm",note:"Co-led TensorWave $100M Series A"},
 {id:"x_nexusvp",name:"Nexus Venture Partners",etype:"VC Firm",note:"Led TensorWave $43M SAFE round"},
-{id:"x_blackrock",name:"BlackRock",etype:"VC Firm",note:"Co-led MNTN Series D $119M"},
-{id:"x_fidelity",name:"Fidelity",etype:"VC Firm",note:"Co-led MNTN Series D $119M"},
+{id:"x_blackrock",name:"BlackRock",etype:"PE Firm",note:"World's largest asset manager $10T+ AUM. Co-led MNTN Series D $119M. PlayStudios PIPE investor. Carbon Health Series D."},
+{id:"x_fidelity",name:"Fidelity Investments",etype:"Investment Co",note:"Co-led MNTN Series D $119M. Redwood Materials Series C investor. $4.5T+ AUM."},
 {id:"x_greycroft",name:"Greycroft",etype:"VC Firm",note:"Early MNTN investor"},
-{id:"x_thor",name:"THOR Industries",etype:"Corporation",note:"Strategic investor in Dragonfly Energy. Largest RV OEM."},
-{id:"x_eip",name:"Energy Impact Partners",etype:"VC Firm",note:"Led $75M term loan for Dragonfly SPAC"},
+{id:"x_thor",name:"Thor Industries",etype:"Corporation",note:"World's largest RV manufacturer. $15M strategic investment in Dragonfly Energy. Keystone RV is subsidiary."},
+{id:"x_eip",name:"Energy Impact Partners",etype:"VC Firm",note:"Led $75M term loan for Dragonfly SPAC. Climate/energy infra VC."},
 {id:"x_draper",name:"Draper Associates",etype:"VC Firm",note:"Tim Draper. Boxabl investor."},
 {id:"x_bain_cv",name:"Bain Capital Ventures",etype:"VC Firm",note:"Socure Series E. $10B AUM."},
 {id:"x_commerce_v",name:"Commerce Ventures",etype:"VC Firm",note:"Socure investor Series B onward."},
@@ -276,7 +293,7 @@ const EXTERNALS=[
 {id:"x_baroda",name:"Baroda Ventures",etype:"VC Firm",note:"MNTN early investor."},
 {id:"x_buildtech",name:"BuildTech VC",etype:"VC Firm",note:"Boxabl investor."},
 {id:"x_elevation",name:"Elevation Capital",etype:"VC Firm",note:"Boxabl investor."},
-{id:"x_chardan",name:"Chardan Capital",etype:"VC Firm",note:"Dragonfly SPAC sponsor."},
+{id:"x_chardan",name:"Chardan NexTech",etype:"SPAC",note:"SPAC merged with Dragonfly Energy Oct 2022. Nasdaq:DFLI. Jonas Grossman CEO. Dragonfly SPAC sponsor."},
 {id:"x_warburg",name:"Warburg Pincus",etype:"PE Firm",note:"Led Duetto Series D $80M."},
 {id:"x_battery",name:"Battery Ventures",etype:"VC Firm",note:"Led Duetto Series A $10M."},
 {id:"x_growthcurve",name:"GrowthCurve Capital",etype:"PE Firm",note:"Acquired Duetto Jun 2024."},
@@ -321,7 +338,7 @@ const EXTERNALS=[
 {id:"x_capricorn",name:"Capricorn Technology Impact",etype:"VC Firm",note:"Co-led Redwood Series D. Climate/energy deep tech."},
 {id:"x_eclipse_v",name:"Eclipse Ventures",etype:"VC Firm",note:"Led Redwood Materials Series E $350M Oct 2025."},
 {id:"x_nventures",name:"NVentures (Nvidia)",etype:"Corporation",note:"Nvidia VC arm. Redwood Materials Series E Oct 2025."},
-{id:"x_fidelity",name:"Fidelity Investments",etype:"Investment Co",note:"Redwood Materials Series C investor. $4.5T+ AUM."},
+// x_fidelity consolidated above (line 266)
 {id:"x_cpp",name:"CPP Investments",etype:"PE Firm",note:"Canada Pension Plan. Redwood Materials Series C. C$570B+ AUM."},
 {id:"x_breakthrough",name:"Breakthrough Energy",etype:"VC Firm",note:"Bill Gates-led climate fund. Redwood Materials Series B."},
 {id:"x_amazon_cpf",name:"Amazon Climate Pledge",etype:"Corporation",note:"Amazon corporate VC for sustainability. Redwood Materials investor."},
@@ -334,15 +351,11 @@ const EXTERNALS=[
 {id:"x_rpm",name:"RPM Ventures",etype:"VC Firm",note:"Marc Weiser (former NASA board). Hubble Network Series B."},
 {id:"x_yc",name:"Y Combinator",etype:"VC Firm",note:"Premiere startup accelerator. Hubble Network Series B investor."},
 {id:"x_seraph",name:"Seraph Group",etype:"VC Firm",note:"Tuff Yen. Hubble Network Series B. Deep-tech angels."},
-// PlayStudios investor entities
-{id:"x_blackrock",name:"BlackRock",etype:"PE Firm",note:"World's largest asset manager $10T+ AUM. PlayStudios PIPE investor."},
+// PlayStudios investor entities (x_blackrock consolidated above)
 {id:"x_neuberger",name:"Neuberger Berman",etype:"PE Firm",note:"PlayStudios PIPE investor. $500B+ AUM."},
 {id:"x_clearbridge",name:"ClearBridge Investments",etype:"PE Firm",note:"PlayStudios PIPE investor. Franklin Templeton subsidiary."},
 {id:"x_acies",name:"Acies Acquisition Corp",etype:"SPAC",note:"Jim Murren (ex-MGM CEO) chaired SPAC. Merged with PlayStudios Jun 2021. Nasdaq:MYPS."},
-// Dragonfly Energy entities
-{id:"x_chardan",name:"Chardan NexTech",etype:"SPAC",note:"SPAC merged with Dragonfly Energy Oct 2022. Nasdaq:DFLI. Jonas Grossman CEO."},
-{id:"x_thor",name:"Thor Industries",etype:"Corporation",note:"World's largest RV manufacturer. $15M strategic investment in Dragonfly Energy."},
-{id:"x_eip",name:"Energy Impact Partners",etype:"VC Firm",note:"Led $75M term loan for Dragonfly SPAC. Climate/energy infra VC."},
+// Dragonfly Energy entities (x_chardan, x_thor, x_eip consolidated above)
 {id:"x_stryten",name:"Stryten Energy",etype:"Corporation",note:"$30M licensing deal for Battle Born Batteries brand. US battery manufacturer."},
 // Aqua Metals entities
 {id:"x_6kenergy",name:"6K Energy",etype:"Corporation",note:"Multi-year supply agreement with Aqua Metals. Cathode mfg."},
@@ -676,7 +689,7 @@ const VERIFIED_EDGES=[
 {source:"c_66",target:"c_67",rel:"competes_with",note:"Both major NV cannabis operators. Curaleaf (TSX:CURA) and Planet 13.",y:2023},
 {source:"c_33",target:"c_74",rel:"competes_with",note:"Both NV-based cleantech/energy companies. Comstock solar recycling vs Ormat geothermal.",y:2023},
 {source:"c_70",target:"c_33",rel:"partners_with",note:"Both NV cleantech operators. Bombard solar installs, Comstock recycles panels.",y:2023},
-{source:"c_18",target:"c_10",rel:"competes_with",note:"Both LV tech-forward consumer transport. Kaptyn EV fleet vs Katalyst fitness tech.",y:2023},
+// Removed: c_18 (Kaptyn EV transport) vs c_10 (Katalyst EMS fitness) — different sectors, not actual competitors
 {source:"c_69",target:"c_28",rel:"partners_with",note:"Acres casino tech integrates with gaming operators like Everi.",y:2023},
 {source:"c_52",target:"c_31",rel:"partners_with",note:"Both NV deep-tech hardware startups. Nevada Nano MEMS sensors, fibrX fiber tech.",y:2023},
 {source:"c_68",target:"c_15",rel:"partners_with",note:"Both NV fintech companies. GBank digital banking, Stable blockchain payments.",y:2023},
@@ -688,7 +701,7 @@ const VERIFIED_EDGES=[
 {source:"c_44",target:"c_42",rel:"competes_with",note:"Both NV AdTech/media. SITO Mobile location-based vs nFusz interactive video.",y:2023},
 {source:"c_46",target:"c_15",rel:"competes_with",note:"Both NV blockchain/crypto companies. Tokens.com NFT/metaverse vs Stable payments.",y:2023},
 {source:"c_48",target:"c_52",rel:"partners_with",note:"Both NV deep-tech materials/sensor companies.",y:2023},
-{source:"c_16",target:"c_8",rel:"competes_with",note:"Both NV healthcare companies. ThirdWaveRx pharmacy AI vs Carbon Health clinics.",y:2023},
+{source:"c_16",target:"c_22",rel:"competes_with",note:"Both NV healthcare companies. ThirdWaveRx pharmacy AI vs Carbon Health clinics.",y:2023},
 // === Phase 4: Cross-ecosystem & infrastructure edges ===
 // NV5 Global → additional edges
 {source:"c_75",target:"x_nvenergy",rel:"partners_with",note:"NV5 provides utility infrastructure engineering, grid hardening, and geospatial services for NV Energy.",y:2023},
@@ -705,6 +718,22 @@ const VERIFIED_EDGES=[
 {source:"c_69",target:"c_27",rel:"partners_with",note:"Acres casino loyalty platform integrates with gaming operators. PlayStudios also in casino rewards space.",y:2023},
 // Skydio Gov → DOD
 {source:"c_72",target:"x_usaf",rel:"contracts_with",note:"Skydio autonomous drones used by US military. NTTR (Nevada Test & Training Range) connection.",y:2024},
+// === GAP ANALYSIS ADDITIONS (v5.0 Research Agent) ===
+{source:"f_bbv",target:"c_77",rel:"invested_in",note:"BBV invested in WAVR Technologies",y:2025},
+{source:"f_bbv",target:"c_78",rel:"invested_in",note:"BBV invested in Adaract",y:2024},
+{source:"f_desertforge",target:"c_77",rel:"invested_in",note:"Desert Forge Ventures invested in WAVR Technologies",y:2025},
+{source:"f_desertforge",target:"c_80",rel:"invested_in",note:"Desert Forge Ventures invested in Vena Vitals",y:2025},
+{source:"x_doe",target:"c_76",rel:"loaned_to",note:"DOE $2.3B ATVM loan for Thacker Pass lithium mine",y:2024},
+{source:"a_gener8tor_reno",target:"c_82",rel:"accelerated_by",note:"AIR Corp in gener8tor Reno-Tahoe Cohort 2",y:2024},
+{source:"c_76",target:"c_49",rel:"competes_with",note:"Both NV lithium mining. Lithium Americas Thacker Pass vs Ioneer Rhyolite Ridge.",y:2024},
+{source:"c_76",target:"c_1",rel:"partners_with",note:"Lithium Americas + Redwood Materials NV lithium supply chain collaboration.",y:2024},
+{source:"c_79",target:"c_1",rel:"partners_with",note:"Panasonic Energy NV + Redwood Materials battery materials partnership.",y:2023},
+// === Data Integrity Fixes (v5.0 Verification Agent) ===
+// Orphan company edges — c_81 (Traxs) and c_83 (Decentral AI)
+{source:"f_fundnv",target:"c_81",rel:"invested_in",note:"FundNV investment in Traxs.",y:2024},
+{source:"a_gbeta_nv",target:"c_81",rel:"accelerated_by",note:"Traxs in gBETA Reno inaugural cohort.",y:2024},
+{source:"f_fundnv",target:"c_83",rel:"invested_in",note:"FundNV investment in Decentral AI.",y:2025},
+{source:"a_gbeta_nv",target:"c_83",rel:"accelerated_by",note:"Decentral AI in Electrify Nevada Fall 2025 cohort.",y:2025},
 
 ];
 
@@ -1097,6 +1126,96 @@ const COMPANY_IA_DATA = {
     ventureQuality:{market:4,valueProp:3,businessModel:4,team:4},
     regulatoryExposure:["SEC","Nasdaq","EPA","OSHA","State PE Boards","DOT"],
     complianceMaturity:{governance:5,policies:4,systems:4,monitoring:4,training:3}
+  },
+  // === GAP ANALYSIS ADDITIONS (v5.0 Research Agent) ===
+  76: { // Lithium Americas — $2.9B, growth, Mining/Cleantech/Energy
+    trl:6, mrl:5,
+    riskFactors:[
+      {category:"Regulatory",name:"BLM NEPA permitting and tribal opposition at Thacker Pass",likelihood:3,impact:5},
+      {category:"Operational",name:"Greenfield mine construction execution risk — first US lithium mine at scale",likelihood:3,impact:5},
+      {category:"Market",name:"Lithium price volatility and EV demand cycle dependency",likelihood:3,impact:4},
+      {category:"Financing",name:"$2.3B DOE ATVM loan draw schedule and milestone compliance",likelihood:2,impact:5}
+    ],
+    ventureQuality:{market:5,valueProp:5,businessModel:4,team:4},
+    regulatoryExposure:["DOE","BLM","EPA","NEPA","NV NDEP","Army Corps of Engineers","Fish & Wildlife Service"],
+    complianceMaturity:{governance:4,policies:4,systems:3,monitoring:3,training:3}
+  },
+  77: { // WAVR Technologies — $4M, seed, Water/Cleantech/AI
+    trl:4, mrl:3,
+    riskFactors:[
+      {category:"Technology",name:"Hydrogel membrane durability and yield at scale",likelihood:3,impact:4},
+      {category:"Market",name:"Atmospheric water harvesting cost competitiveness vs desalination",likelihood:3,impact:4},
+      {category:"Financing",name:"Runway risk — seed-stage with early revenue",likelihood:3,impact:3}
+    ],
+    ventureQuality:{market:3,valueProp:4,businessModel:2,team:3},
+    regulatoryExposure:["EPA","NV NDEP","SNWA","NV Division of Water Resources"],
+    complianceMaturity:{governance:1,policies:1,systems:1,monitoring:1,training:1}
+  },
+  78: { // Adaract — $1.5M, seed, Robotics/Defense
+    trl:3, mrl:2,
+    riskFactors:[
+      {category:"Technology",name:"Artificial muscle actuator reliability and fatigue life",likelihood:3,impact:5},
+      {category:"Market",name:"Defense procurement cycle length and SBIR dependency",likelihood:3,impact:4},
+      {category:"Financing",name:"Seed runway risk — capital intensive hardware development",likelihood:4,impact:4}
+    ],
+    ventureQuality:{market:3,valueProp:3,businessModel:2,team:2},
+    regulatoryExposure:["DoD","ITAR/EAR","SBIR","NV Secretary of State"],
+    complianceMaturity:{governance:1,policies:1,systems:1,monitoring:1,training:1}
+  },
+  79: { // Panasonic Energy NV — $4B, growth, Manufacturing/Energy/Cleantech
+    trl:9, mrl:9,
+    riskFactors:[
+      {category:"Concentration",name:"Tesla single-customer revenue dependency",likelihood:2,impact:5},
+      {category:"Market",name:"EV demand slowdown impacting battery cell orders",likelihood:3,impact:4},
+      {category:"Operational",name:"Gigafactory workforce retention in competitive Reno labor market",likelihood:3,impact:3}
+    ],
+    ventureQuality:{market:5,valueProp:5,businessModel:5,team:5},
+    regulatoryExposure:["EPA","OSHA","NV NDEP","DOE","NV PUC"],
+    complianceMaturity:{governance:5,policies:5,systems:5,monitoring:5,training:5}
+  },
+  80: { // Vena Vitals — $1M, seed, Healthcare/IoT
+    trl:4, mrl:3,
+    riskFactors:[
+      {category:"Regulatory",name:"FDA 510(k) clearance pathway for vital signs monitor",likelihood:3,impact:5},
+      {category:"Technology",name:"Non-invasive measurement accuracy vs clinical-grade devices",likelihood:3,impact:4},
+      {category:"Financing",name:"Seed runway risk — pre-revenue medical device",likelihood:4,impact:4}
+    ],
+    ventureQuality:{market:3,valueProp:3,businessModel:2,team:2},
+    regulatoryExposure:["FDA","FCC","HIPAA","NV State Board of Medical Examiners"],
+    complianceMaturity:{governance:1,policies:1,systems:1,monitoring:1,training:1}
+  },
+  81: { // Traxs — $0.2M, pre_seed, Manufacturing/IoT/AI
+    trl:3, mrl:2,
+    riskFactors:[
+      {category:"Financing",name:"Pre-seed runway risk — minimal capital raised",likelihood:5,impact:4},
+      {category:"Market",name:"Manufacturing ops tracking market adoption uncertainty",likelihood:3,impact:4},
+      {category:"Technology",name:"Real-time material tracking accuracy in industrial environments",likelihood:3,impact:3}
+    ],
+    ventureQuality:{market:2,valueProp:2,businessModel:1,team:2},
+    regulatoryExposure:["OSHA","NV Secretary of State"],
+    complianceMaturity:{governance:1,policies:1,systems:1,monitoring:1,training:1}
+  },
+  82: { // AIR Corp — $0.5M, seed, Robotics/AI
+    trl:4, mrl:3,
+    riskFactors:[
+      {category:"Technology",name:"Autonomous inspection robot reliability in harsh infrastructure environments",likelihood:3,impact:4},
+      {category:"Market",name:"Government infrastructure inspection procurement cycle",likelihood:3,impact:3},
+      {category:"Financing",name:"Seed runway risk — capital intensive robotics development",likelihood:4,impact:4}
+    ],
+    ventureQuality:{market:3,valueProp:3,businessModel:2,team:2},
+    regulatoryExposure:["FAA","DOT","OSHA","NV Secretary of State"],
+    complianceMaturity:{governance:1,policies:1,systems:1,monitoring:1,training:1}
+  },
+  83: { // Decentral AI — $0.5M, seed, AI/Cloud
+    trl:4, mrl:3,
+    riskFactors:[
+      {category:"Market",name:"Crowded AI platform market — competing with major cloud providers",likelihood:4,impact:4},
+      {category:"Technology",name:"Multi-model routing and monitoring reliability at enterprise scale",likelihood:3,impact:3},
+      {category:"Financing",name:"Seed runway risk — competitive AI infrastructure space",likelihood:4,impact:4}
+    ],
+    ventureQuality:{market:2,valueProp:3,businessModel:2,team:2},
+    regulatoryExposure:["NIST AI RMF","NV Data Privacy","FTC"],
+    complianceMaturity:{governance:1,policies:1,systems:1,monitoring:1,training:1}
   }
 };
 
@@ -1126,7 +1245,10 @@ const REGULATORY_DOCKETS = [
   {id:"rd_15", title:"COPPA 2.0 — Children's Online Privacy Update", agency:"FTC", sector:["AI","Education","Gaming"], status:"proposed", severity:4, breadth:0.3, timeline:"medium", supportiveness:50, burden:65, description:"Updated COPPA rules expanding protections to AI-powered educational tools and gaming platforms. Directly impacts Amira Learning, 1047 Games, and PlayStudios."},
   {id:"rd_16", title:"FinCEN Cannabis Banking SAR Requirements", agency:"FinCEN", sector:["Cannabis","Fintech"], status:"active", severity:4, breadth:0.2, timeline:"near", supportiveness:35, burden:80, description:"Mandatory Suspicious Activity Reports for financial institutions serving cannabis businesses. Impacts Springbig payment processing and Curaleaf Tech banking relationships."},
   {id:"rd_17", title:"NV AB 431 — AI Transparency in Government Procurement", agency:"NV Legislature", sector:["AI","Defense","Healthcare"], status:"proposed", severity:2, breadth:0.4, timeline:"long", supportiveness:60, burden:30, description:"Proposed Nevada bill requiring AI transparency and impact assessments for state government AI procurement. May create procurement advantages for compliant NV AI startups."},
-  {id:"rd_18", title:"DOE Title XVII — Advanced Energy Manufacturing Tax Credit", agency:"DOE / IRS", sector:["Energy","Cleantech","Manufacturing"], status:"finalized", severity:2, breadth:0.4, timeline:"near", supportiveness:95, burden:20, description:"48C Advanced Energy Manufacturing tax credits for domestic clean energy production. Benefits Lyten gigafactory, Dragonfly Energy, Ormat Technologies, and Bombard Renewable Energy."}
+  {id:"rd_18", title:"DOE Title XVII — Advanced Energy Manufacturing Tax Credit", agency:"DOE / IRS", sector:["Energy","Cleantech","Manufacturing"], status:"finalized", severity:2, breadth:0.4, timeline:"near", supportiveness:95, burden:20, description:"48C Advanced Energy Manufacturing tax credits for domestic clean energy production. Benefits Lyten gigafactory, Dragonfly Energy, Ormat Technologies, and Bombard Renewable Energy."},
+  {id:"rd_19", title:"DOE ATVM Loan — Lithium Mining", agency:"DOE", sector:["Mining","Cleantech","Energy"], status:"active", severity:5, breadth:0.3, timeline:"near", supportiveness:90, burden:40, description:"DOE $2.3B ATVM loan for Lithium Americas Thacker Pass mine. Largest US lithium deposit. Phase 1 production by 2027. GM JV partner."},
+  {id:"rd_20", title:"BLM NEPA — Thacker Pass", agency:"BLM", sector:["Mining","Cleantech"], status:"active", severity:5, breadth:0.1, timeline:"near", supportiveness:50, burden:80, description:"BLM environmental review for Lithium Americas Thacker Pass lithium mine in Humboldt County. Tribal opposition, water rights, sage grouse habitat. Record of Decision issued Jan 2023."},
+  {id:"rd_21", title:"NV AB-75 NCI Law", agency:"NV Legislature", sector:["Fintech"], status:"finalized", severity:2, breadth:0.8, timeline:"near", supportiveness:95, burden:15, description:"Nevada AB-75 New Commerce in Insurance law enabling fintech innovation in insurance and financial services. Creates regulatory sandbox for NV-based fintech startups."}
 ];
 
 // ── SECTOR DYNAMICS ──
@@ -1205,6 +1327,21 @@ const SECTOR_DYNAMICS = {
     growth3YCAGR:0.20, dealGrowthYoY:0.14, smartMoneyShare:0.40,
     porterScores:{rivalry:4,entrants:4,substitutes:3,buyerPower:3,supplierPower:3},
     maturityStage:"growth"
+  },
+  "Water": {
+    growth3YCAGR:0.18, dealGrowthYoY:0.15, smartMoneyShare:0.35,
+    porterScores:{rivalry:2,entrants:3,substitutes:2,buyerPower:5,supplierPower:2},
+    maturityStage:"emerging"
+  },
+  "Hospitality": {
+    growth3YCAGR:0.08, dealGrowthYoY:0.05, smartMoneyShare:0.30,
+    porterScores:{rivalry:4,entrants:2,substitutes:2,buyerPower:3,supplierPower:3},
+    maturityStage:"mature"
+  },
+  "Robotics": {
+    growth3YCAGR:0.25, dealGrowthYoY:0.20, smartMoneyShare:0.50,
+    porterScores:{rivalry:3,entrants:4,substitutes:2,buyerPower:3,supplierPower:3},
+    maturityStage:"emerging"
   }
 };
 
@@ -1511,7 +1648,7 @@ function computeIRS(c) {
 }
 
 const TRIGGER_CFG = {
-  rapid_funding:  { i:"🔥", l:"Rapid Funding",  c:"#EF4444" },
+  rapid_funding:  { i:"🔥", l:"Rapid Funding",  c:HOT_RED },
   grant_validated:{ i:"🏛️", l:"Grant Validated", c:"#3B82F6" },
   hiring_surge:   { i:"📈", l:"Hiring Surge",    c:"#F59E0B" },
   hot_sector:     { i:"🌡️", l:"Hot Sector",      c:"#F97316" },
@@ -1529,6 +1666,17 @@ const css = `
 @keyframes slideUp { from { transform: translateY(100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
 `;
 
+// --- Shared Style Constants ---
+const STYLE_CARD = { background: CARD, border: `1px solid ${BORDER}`, borderRadius: 10 };
+const STYLE_CARD_PAD = { ...STYLE_CARD, padding: 16 };
+const STYLE_SECTION_LABEL = { fontSize: 10, color: MUTED, letterSpacing: 1, textTransform: "uppercase" };
+const STYLE_PROGRESS_TRACK = { height: 4, background: BORDER, borderRadius: 2, overflow: "hidden" };
+const STYLE_PROGRESS_TRACK_TALL = { height: 10, background: BORDER, borderRadius: 5, overflow: "hidden" };
+const STYLE_BTN_UNSTYLED = { background: "none", border: "none", cursor: "pointer", padding: 0 };
+const STYLE_TAG = (bgColor, textColor) => ({ fontSize: 9, padding: "1px 6px", borderRadius: 4, background: bgColor, color: textColor, fontWeight: 600 });
+const BREAKPOINT_MOBILE = 768;
+const BREAKPOINT_TABLET = 1024;
+
 // --- Small components ---
 const Spark = ({ data, color = GOLD, w = 60, h = 20 }) => {
   const min = Math.min(...data), max = Math.max(...data), range = max - min || 1;
@@ -1538,7 +1686,7 @@ const Spark = ({ data, color = GOLD, w = 60, h = 20 }) => {
 
 const MBar = ({ score, w = 80 }) => (
   <div style={{ display:"flex", alignItems:"center", gap:6 }}>
-    <div style={{ width:w, height:6, background:"#1E1D1A", borderRadius:3, overflow:"hidden" }}>
+    <div style={{ width:w, height:6, background:BORDER, borderRadius:3, overflow:"hidden" }}>
       <div style={{ width:`${score}%`, height:"100%", borderRadius:3, background: score > 75 ? GREEN : score > 50 ? GOLD : score > 30 ? ORANGE : RED, transition:"width 0.6s ease" }} />
     </div>
     <span style={{ fontSize:11, color: score > 75 ? GREEN : score > 50 ? GOLD : MUTED, fontWeight:600, minWidth:20 }}>{score}</span>
@@ -1551,7 +1699,7 @@ const Counter = ({ end, prefix="", suffix="", dur=1200 }) => {
     const s = performance.now();
     const t = now => { const p = Math.min((now - s) / dur, 1); setV(Math.round(end * (1 - Math.pow(1 - p, 3)))); if (p < 1) requestAnimationFrame(t); };
     requestAnimationFrame(t);
-  }, [end]);
+  }, [end, dur]);
   return <span>{prefix}{v.toLocaleString()}{suffix}</span>;
 };
 
@@ -1702,8 +1850,6 @@ function computeGraphMetrics(nodes, edges) {
   watchlist.sort((a,b) => b.priority - a.priority);
 
   const numCommunities = nextCid;
-  // Community palette
-  const COMM_COLORS = [GP.gold,GP.green,GP.blue,GP.purple,GP.orange,GP.red,GP.cyan,GP.pink,GP.lime,GP.teal,"#E57373","#64B5F6","#FFD54F","#AED581","#BA68C8","#4DD0E1"];
 
   return { pagerank, betweenness, communities, watchlist, numCommunities, commColors:COMM_COLORS, adj, ids, idx };
 }
@@ -1802,12 +1948,11 @@ function OntologyGraphView({onSelectCompany}) {
 
   // Zoom/pan handlers
   const handleWheel = useCallback(e => {
-    e.preventDefault();
     const dz = e.deltaY > 0 ? 0.9 : 1.1;
     setZoom(z => Math.max(0.3, Math.min(4, z * dz)));
   }, []);
-  const handleMouseDown = useCallback(e => { if(e.button===0 && e.target.tagName==="svg"){ setDragging(true); setDragStart({x:e.clientX-pan.x,y:e.clientY-pan.y}); } }, [pan]);
-  const handleMouseMove = useCallback(e => { if(dragging&&dragStart){ setPan({x:e.clientX-dragStart.x,y:e.clientY-dragStart.y}); } }, [dragging,dragStart]);
+  const handleMouseDown = useCallback(e => { if(e.button===0 && (e.target.tagName==="svg" || e.target.tagName==="rect")){ setDragging(true); setPan(prevPan => { setDragStart({x:e.clientX-prevPan.x,y:e.clientY-prevPan.y}); return prevPan; }); } }, []);
+  const handleMouseMove = useCallback(e => { if(dragging && dragStart){ setPan({x:e.clientX-dragStart.x, y:e.clientY-dragStart.y}); } }, [dragging, dragStart]);
   const handleMouseUp = useCallback(() => { setDragging(false); setDragStart(null); }, []);
   const resetView = () => { setZoom(1); setPan({x:0,y:0}); };
 
@@ -1829,7 +1974,7 @@ function OntologyGraphView({onSelectCompany}) {
         {/* ── Time Slider ── */}
         <div style={{display:"flex",alignItems:"center",gap:6,padding:"2px 8px",background:GP.bg,border:`1px solid ${GP.border}`,borderRadius:5}}>
           <span style={{fontSize:8,color:GP.muted,letterSpacing:1}}>⏱</span>
-          <input type="range" min={2011} max={2026} value={yearFilter} onChange={e=>{setYearFilter(parseInt(e.target.value));setLayoutKey(n=>n+1);}}
+          <input type="range" min={2011} max={2026} value={yearFilter} aria-label="Filter edges by year" onChange={e=>{setYearFilter(parseInt(e.target.value));setLayoutKey(n=>n+1);}}
             style={{width:mob?60:90,height:3,accentColor:GP.gold,cursor:"pointer"}}/>
           <span style={{fontSize:9,color:yearFilter<2026?GP.gold:GP.muted,fontWeight:yearFilter<2026?700:400,minWidth:28,fontVariantNumeric:"tabular-nums"}}>{yearFilter<2026?"≤"+yearFilter:"ALL"}</span>
         </div>
@@ -1840,7 +1985,7 @@ function OntologyGraphView({onSelectCompany}) {
           ))}
         </div>
         <div style={{position:"relative"}}>
-          <input value={gSearch} onChange={e=>setGSearch(e.target.value)} placeholder="Search nodes…" style={{background:GP.bg,border:`1px solid ${GP.border}`,borderRadius:4,padding:"4px 8px 4px 22px",color:GP.text,fontSize:10,width:mob?120:160,outline:"none",fontFamily:"inherit"}}/>
+          <input value={gSearch} onChange={e=>setGSearch(e.target.value)} placeholder="Search nodes…" aria-label="Search graph nodes" style={{background:GP.bg,border:`1px solid ${GP.border}`,borderRadius:4,padding:"4px 8px 4px 22px",color:GP.text,fontSize:10,width:mob?120:160,outline:"none",fontFamily:"inherit"}}/>
           <span style={{position:"absolute",left:7,top:5,fontSize:10,color:GP.dim}}>⌕</span>
           {searchMatches.length > 0 && (
             <div style={{position:"absolute",top:"100%",left:0,right:0,background:GP.surface,border:`1px solid ${GP.border}`,borderRadius:4,marginTop:2,zIndex:100,maxHeight:200,overflowY:"auto"}}>
@@ -1855,9 +2000,9 @@ function OntologyGraphView({onSelectCompany}) {
         </div>
         {/* Zoom controls */}
         <div style={{display:"flex",gap:2}}>
-          <div onClick={()=>setZoom(z=>Math.min(4,z*1.3))} style={{cursor:"pointer",padding:"3px 7px",background:GP.bg,border:`1px solid ${GP.border}`,borderRadius:"4px 0 0 4px",fontSize:10,color:GP.muted}}>+</div>
-          <div onClick={resetView} style={{cursor:"pointer",padding:"3px 7px",background:GP.bg,border:`1px solid ${GP.border}`,fontSize:9,color:GP.muted}}>{Math.round(zoom*100)}%</div>
-          <div onClick={()=>setZoom(z=>Math.max(0.3,z*0.7))} style={{cursor:"pointer",padding:"3px 7px",background:GP.bg,border:`1px solid ${GP.border}`,borderRadius:"0 4px 4px 0",fontSize:10,color:GP.muted}}>−</div>
+          <button onClick={()=>setZoom(z=>Math.min(4,z*1.3))} aria-label="Zoom in" style={{cursor:"pointer",padding:"3px 7px",background:GP.bg,border:`1px solid ${GP.border}`,borderRadius:"4px 0 0 4px",fontSize:10,color:GP.muted}}>+</button>
+          <button onClick={resetView} aria-label="Reset zoom" style={{cursor:"pointer",padding:"3px 7px",background:GP.bg,border:`1px solid ${GP.border}`,fontSize:9,color:GP.muted}}>{Math.round(zoom*100)}%</button>
+          <button onClick={()=>setZoom(z=>Math.max(0.3,z*0.7))} aria-label="Zoom out" style={{cursor:"pointer",padding:"3px 7px",background:GP.bg,border:`1px solid ${GP.border}`,borderRadius:"0 4px 4px 0",fontSize:10,color:GP.muted}}>−</button>
         </div>
         <div onClick={()=>setShowIntel(v=>!v)} title="Toggle Intelligence Panel" style={{cursor:"pointer",padding:"3px 8px",background:showIntel?GP.red+"20":GP.bg,border:`1px solid ${showIntel?GP.red+"40":GP.border}`,borderRadius:4,fontSize:9,color:showIntel?GP.red:GP.muted,fontWeight:showIntel?700:400}}>⚡</div>
         <div onClick={()=>setShowLegend(v=>!v)} title="Toggle legend" style={{cursor:"pointer",padding:"3px 8px",background:showLegend?GP.gold+"20":GP.bg,border:`1px solid ${showLegend?GP.gold+"40":GP.border}`,borderRadius:4,fontSize:9,color:showLegend?GP.gold:GP.muted}}>◐</div>
@@ -1865,7 +2010,7 @@ function OntologyGraphView({onSelectCompany}) {
       </div>
       {/* Mobile tabs */}
       {mob && (
-        <div style={{display:"flex",borderBottom:`1px solid ${GP.border}`}}>
+        <div role="tablist" aria-label="Graph view tabs" style={{display:"flex",borderBottom:`1px solid ${GP.border}`}}>
           {[["filters","⚙ Filters"],["graph","◎ Graph"],["detail","≡ Detail"],["intel","⚡ Intel"]].map(([k,l]) => (
             <div key={k} onClick={()=>setGPanel(k)} style={{flex:1,textAlign:"center",padding:"8px 0",fontSize:10,letterSpacing:1,color:gPanel===k?GP.gold:GP.muted,borderBottom:gPanel===k?`2px solid ${GP.gold}`:"2px solid transparent",cursor:"pointer"}}>{l}</div>
           ))}
@@ -1897,7 +2042,8 @@ function OntologyGraphView({onSelectCompany}) {
           <div style={{flex:1,position:"relative",overflow:"hidden",cursor:dragging?"grabbing":"grab"}}
             onMouseDown={handleMouseDown} onMouseMove={handleMouseMove} onMouseUp={handleMouseUp} onMouseLeave={handleMouseUp}
             onWheel={handleWheel}>
-            <svg viewBox={`${vbX} ${vbY} ${vbW} ${vbH}`} style={{width:"100%",height:"100%",display:"block",background:"#050508"}}>
+            <svg viewBox={`${vbX} ${vbY} ${vbW} ${vbH}`} role="img" aria-label="Ontology relationship graph" style={{width:"100%",height:"100%",display:"block",background:"#050508"}}>
+              <title>Nevada Startup Ecosystem Ontology Graph</title>
               {/* SVG Defs: glow filters, arrow markers, grid */}
               <defs>
                 <filter id="glow-edge" x="-50%" y="-50%" width="200%" height="200%">
@@ -1954,8 +2100,7 @@ function OntologyGraphView({onSelectCompany}) {
                 // Temporal brightness: edges from yearFilter year glow brighter
                 const eYear = e.y||2023;
                 const isRecent = yearFilter<2026 && eYear===yearFilter;
-                const temporalOp = isRecent ? 0.35 : 1;
-                return <g key={i}>
+                return <g key={`${sid}-${tid}-${e.rel}-${i}`}>
                   {/* Glow underlayer for active/recent edges */}
                   {(isH||isSel||isRecent) && <path d={d} fill="none" stroke={isRecent&&!isH&&!isSel?GP.gold:cfg.color} strokeWidth={isRecent&&!isH?w*2:w*3} strokeOpacity={isRecent&&!isH?0.25:0.15} filter="url(#glow-edge)"/>}
                   <path d={d} fill="none" stroke={isRecent&&!isH&&!isSel?GP.gold:cfg.color}
@@ -2092,7 +2237,7 @@ function OntologyGraphView({onSelectCompany}) {
               <div style={{height:1,background:GP.border,margin:"10px 0"}}/>
               <div style={{fontSize:9,color:GP.gold,letterSpacing:1,marginBottom:6,fontWeight:600}}>CONNECTIONS ({detailEdges.length})</div>
               {detailEdges.map((e,i) => (
-                <div key={i} onClick={()=>{if(e.other)selectNode(e.other);}} style={{padding:"5px 0",cursor:"pointer",borderBottom:`1px solid ${GP.border}30`,display:"flex",gap:5,alignItems:"flex-start"}}>
+                <div key={`${e.rel}-${e.other?.id || i}`} onClick={()=>{if(e.other)selectNode(e.other);}} style={{padding:"5px 0",cursor:"pointer",borderBottom:`1px solid ${GP.border}30`,display:"flex",gap:5,alignItems:"flex-start"}}>
                   <span style={{color:REL_CFG[e.rel]?.color||GP.dim,fontSize:9,flexShrink:0,fontWeight:600}}>{e.dir}</span>
                   <div>
                     <span style={{color:GP.text,fontWeight:500}}>{e.other?.label||"?"}</span>
@@ -2119,8 +2264,8 @@ function OntologyGraphView({onSelectCompany}) {
                       <span style={{marginLeft:"auto",fontSize:8,color:GP.dim,fontVariantNumeric:"tabular-nums"}}>{w.funding>0?(w.funding>=1000?`$${(w.funding/1000).toFixed(1)}B`:`$${w.funding}M`):""}</span>
                     </div>
                     <div style={{display:"flex",gap:3,flexWrap:"wrap"}}>
-                      {w.signals.map((s,j) => (
-                        <span key={j} style={{padding:"1px 5px",borderRadius:3,fontSize:7,background:s.type==="bridge"?GP.orange+"20":s.type==="undercovered"?GP.red+"20":s.type==="hidden_influence"?GP.purple+"20":s.type==="hub"?GP.gold+"20":GP.cyan+"20",color:s.type==="bridge"?GP.orange:s.type==="undercovered"?GP.red:s.type==="hidden_influence"?GP.purple:s.type==="hub"?GP.gold:GP.cyan,letterSpacing:0.3}}>{s.icon} {s.label}</span>
+                      {w.signals.map((s) => (
+                        <span key={s.type} style={{padding:"1px 5px",borderRadius:3,fontSize:7,background:s.type==="bridge"?GP.orange+"20":s.type==="undercovered"?GP.red+"20":s.type==="hidden_influence"?GP.purple+"20":s.type==="hub"?GP.gold+"20":GP.cyan+"20",color:s.type==="bridge"?GP.orange:s.type==="undercovered"?GP.red:s.type==="hidden_influence"?GP.purple:s.type==="hub"?GP.gold:GP.cyan,letterSpacing:0.3}}>{s.icon} {s.label}</span>
                       ))}
                     </div>
                     <div style={{display:"flex",gap:8,marginTop:3,fontSize:7,color:GP.dim}}>
@@ -2161,10 +2306,107 @@ function OntologyGraphView({onSelectCompany}) {
   );
 }
 
+// ══════════════════════════════════════════════════════════════════════════════
+// LEARNING MODE — Tooltip & Glossary
+// ══════════════════════════════════════════════════════════════════════════════
+
+const GLOSSARY = {
+  IRS: { term: "IRS", explanation: "Innovation Readiness Score — Composite 0-100 score measuring a company's overall innovation capacity based on funding velocity, team strength, and market positioning.", methodology: "Weighted blend of funding efficiency (stage-normalized), sector heat alignment, team scale, founding recency, momentum score, and trigger signal density. Each dimension scored 0-100, then combined via weighted average." },
+  BEHI: { term: "B-EHI", explanation: "Battle Born Ecosystem Health Index — A 0-100 composite indicator measuring Nevada's startup ecosystem vitality across 4 pillars: Innovation Capacity, Economic Contribution, Ecosystem Structure, and Operational Performance.", methodology: "Equal-weighted average of 4 pillars, each composed of 3-4 sub-pillars scored 0-100. Based on MIT REAP, Kauffman Foundation, and OECD ecosystem measurement frameworks." },
+  TRL: { term: "TRL", explanation: "Technology Readiness Level — MIT-derived 1-9 scale measuring how close a technology is to market deployment (1=basic research, 9=proven in production).", methodology: "Inferred from stage, sector, and company maturity. Pre-seed=2-3, Seed=3-5, Series A=5-6, Series B=6-7, Series C+=7-8, Growth=8-9. Adjusted by sector complexity." },
+  MRL: { term: "MRL", explanation: "Market Readiness Level — 1-9 scale measuring market validation (1=no market evidence, 9=dominant market position).", methodology: "Inferred from stage, funding, and market signals. Considers customer traction, revenue indicators, market size validation, and competitive positioning." },
+  RAO: { term: "RAO", explanation: "Risk-Adjusted Opportunity — Geometric blend of opportunity score and inverse risk, producing conviction tiers (I=highest, III=speculative).", methodology: "RAO = sqrt(opportunity_score * (100 - risk_score)). Opportunity combines venture quality, deal score, and alpha signals. Risk from COSO framework. Tier I: RAO >= 65, Tier II: 50-64, Tier III: 35-49." },
+  VQ: { term: "VQ", explanation: "Venture Quality — Weighted score combining team experience (30%), IP strength (25%), market timing (25%), and capital efficiency (20%).", methodology: "Team: employee count + founding year recency. IP: sector patent intensity proxy. Market timing: sector heat alignment. Capital efficiency: funding relative to stage norm." },
+  HHI: { term: "HHI", explanation: "Herfindahl-Hirschman Index — Market concentration measure. <1500=competitive, 1500-2500=moderate, >2500=concentrated.", methodology: "Sum of squared market shares (by company count within sector). Normalized to 0-10000 scale. Used in sector diversity and market intelligence views." },
+  COSO: { term: "COSO", explanation: "Committee of Sponsoring Organizations — Enterprise risk management framework using Likelihood (1-5) x Impact (1-5) scoring matrix.", methodology: "Each company scored on 4 risk dimensions: Technology (stage-derived), Market (sector heat inverse), Execution (team/funding gap), External (regulatory + macro). Total = sum of L*I across dimensions. Grade: <=25 Low, 26-50 Moderate, 51-75 High, >75 Extreme." },
+  SRU: { term: "SRU", explanation: "Sector Regulatory Uncertainty — Composite of severity, breadth, and timeline proximity for regulatory actions affecting a sector.", methodology: "SRU = avg(severity * breadth * timeline_weight) across active dockets for a sector. Higher SRU = more regulatory uncertainty. Factors in OMB A-4 RIA and EPU-style measurement." },
+  SSBCI: { term: "SSBCI", explanation: "State Small Business Credit Initiative — Federal program providing capital to states for small business lending and venture capital programs.", methodology: "Nevada received $52M in SSBCI allocation across multiple tranches. Deployed through BBV, FundNV, and 1864 Fund. Requires private capital leverage ratios and SEDI-eligible business verification." },
+  AUM: { term: "AUM", explanation: "Assets Under Management — Total market value of investments a fund manages on behalf of clients." },
+  MOIC: { term: "MOIC", explanation: "Multiple on Invested Capital — How many times an investor has multiplied their money (2.0x = doubled).", methodology: "MOIC = Total Value / Invested Capital. Includes both realized (distributed) and unrealized (current NAV) returns." },
+  DPI: { term: "DPI", explanation: "Distributions to Paid-In — Ratio of cash returned to investors vs. cash invested. >1.0 means investors have received more than they put in.", methodology: "DPI = Cumulative Distributions / Paid-In Capital. Only counts actual cash returned, not paper gains." },
+  PageRank: { term: "PageRank", explanation: "Google-derived algorithm measuring node importance based on the quality and quantity of connections — higher = more influential in the ecosystem.", methodology: "Power iteration with damping factor d=0.85, 40 iterations. Score = (1-d)/N + d * sum(PR(neighbor)/out_degree(neighbor)). Normalized to 0-100 scale." },
+  Betweenness: { term: "Betweenness", explanation: "Betweenness Centrality — Measures how often a node sits on the shortest path between others. High betweenness = key broker/connector.", methodology: "Brandes' algorithm. BC(v) = sum over all s,t pairs of (shortest paths through v / total shortest paths between s,t). Normalized to 0-100." },
+  BurtConstraint: { term: "Burt Constraint", explanation: "Burt's Structural Constraint — Measures how much a node's contacts are interconnected. Low constraint = access to diverse, non-redundant information (structural holes).", methodology: "C(i) = sum_j (p_ij + sum_q p_iq * p_qj)^2, where p_ij is proportion of i's network invested in j. Brokerage = 1 - Constraint." },
+  EffectiveSize: { term: "Effective Size", explanation: "Network Effective Size — Number of non-redundant contacts. Higher = more diverse network reach.", methodology: "ES(i) = n - (2t/n), where n = number of contacts and t = number of ties among contacts. Measures unique information channels." },
+  Momentum: { term: "Momentum", explanation: "Composite 0-100 score reflecting a company's growth trajectory based on funding velocity, hiring rate, and market signals." },
+  Grade: { term: "Grade", explanation: "Letter grade bands: A (80-100) = Exceptional, B (65-79) = Strong, C (50-64) = Average, D (35-49) = Below Average, F (<35) = Critical.", methodology: "Derived from IRS score. A: 85+, A-: 80-84, B+: 75-79, B: 70-74, B-: 65-69, C+: 60-64, C: 50-59, D: 35-49." },
+  PorterFive: { term: "Porter's Five Forces", explanation: "Michael Porter's industry analysis framework: Rivalry, New Entrants threat, Substitutes threat, Buyer Power, and Supplier Power — each scored 1-5.", methodology: "Each force estimated from sector characteristics: company count (rivalry), barriers to entry, substitute availability, buyer concentration, supplier concentration. Scored 1 (weak) to 5 (strong)." },
+  SmartMoney: { term: "Smart Money Share", explanation: "Percentage of sector investment coming from top-tier, experienced investors with strong track records." },
+  ICD203: { term: "ICD-203", explanation: "Intelligence Community Directive 203 — U.S. intelligence standard for communicating uncertainty using calibrated likelihood phrases and confidence levels.", methodology: "Likelihood: Almost No Chance (<5%), Very Unlikely (5-20%), Unlikely (20-45%), Roughly Even (45-55%), Likely (55-80%), Very Likely (80-95%), Almost Certain (>95%). Confidence: Low/Medium/High based on evidence quality and analytic method reliability." },
+  Confidence: { term: "Confidence Level", explanation: "ICD-203 confidence assessment: High = strong evidence + proven methods, Medium = reasonable evidence, Low = limited evidence or uncertain methods." },
+};
+
+const Tooltip = ({ term, children, explanation, methodology, learningMode }) => {
+  const [show, setShow] = useState(false);
+  const [expanded, setExpanded] = useState(false);
+  const [pos, setPos] = useState({ x: 0, y: 0 });
+
+  const handleMouseEnter = useCallback((e) => {
+    if (!learningMode) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    setPos({ x: rect.left + rect.width / 2, y: rect.bottom + 8 });
+    setShow(true);
+  }, [learningMode]);
+
+  const handleMouseLeave = useCallback(() => {
+    setShow(false);
+    setExpanded(false);
+  }, []);
+
+  if (!learningMode) return children;
+
+  return (
+    <span
+      style={{ borderBottom: "1.5px dotted #C49A3880", cursor: "help", position: "relative" }}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
+    >
+      {children}
+      {show && (
+        <div style={{
+          position: "fixed",
+          left: Math.min(pos.x, (typeof window !== "undefined" ? window.innerWidth : 1200) - 320),
+          top: pos.y,
+          width: 300,
+          background: "#1a1917",
+          border: "1px solid #3d3a2e",
+          borderRadius: 10,
+          padding: 14,
+          zIndex: 9999,
+          boxShadow: "0 8px 32px rgba(0,0,0,0.6)",
+          animation: "fadeIn 0.15s ease-out",
+          pointerEvents: "auto",
+        }}
+          onMouseEnter={() => setShow(true)}
+          onMouseLeave={handleMouseLeave}
+        >
+          <div style={{ fontSize: 12, fontWeight: 700, color: GOLD, marginBottom: 6, borderBottom: "1px solid #3d3a2e", paddingBottom: 6 }}>{term}</div>
+          <div style={{ fontSize: 11, color: "#E2DCD0", lineHeight: 1.5 }}>{explanation}</div>
+          {methodology && (
+            <div style={{ marginTop: 8 }}>
+              <button
+                onClick={(e) => { e.stopPropagation(); setExpanded(!expanded); }}
+                style={{ background: "none", border: "none", color: GOLD, fontSize: 10, cursor: "pointer", padding: 0, fontWeight: 600, display: "flex", alignItems: "center", gap: 4 }}
+              >
+                {expanded ? "▾" : "▸"} Learn more
+              </button>
+              {expanded && (
+                <div style={{ fontSize: 10, color: "#706C64", lineHeight: 1.5, marginTop: 6, padding: "8px 10px", background: "#12120f", borderRadius: 6, border: "1px solid #2a2820" }}>
+                  {methodology}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+    </span>
+  );
+};
+
 export default function BattleBornIntelligence() {
   const w = useW();
-  const isMobile = w < 768;
-  const isTablet = w < 1024;
+  const isMobile = w < BREAKPOINT_MOBILE;
+  const isTablet = w < BREAKPOINT_TABLET;
   const [view, setView] = useState("dashboard");
   const [search, setSearch] = useState("");
   const [stageFilter, setStageFilter] = useState("all");
@@ -2177,6 +2419,14 @@ export default function BattleBornIntelligence() {
   const [watchlist, setWatchlist] = useState([]);
   const [sectorDetail, setSectorDetail] = useState(null);
   const [fundDetail, setFundDetail] = useState(null);
+  const [learningMode, setLearningMode] = useState(false);
+
+  // Learning Mode helper — wrap any term: <Learn id="IRS">IRS</Learn>
+  const Learn = ({ id, children }) => {
+    const g = GLOSSARY[id];
+    if (!g) return children;
+    return <Tooltip term={g.term} explanation={g.explanation} methodology={g.methodology} learningMode={learningMode}>{children}</Tooltip>;
+  };
 
   const filtered = useMemo(() => COMPANIES.filter(c => {
     if (search && !c.name.toLowerCase().includes(search.toLowerCase()) && !c.sector.join(" ").toLowerCase().includes(search.toLowerCase())) return false;
@@ -2257,8 +2507,8 @@ export default function BattleBornIntelligence() {
             <div style={{ fontSize:12, color:MUTED, marginTop:2 }}>{sc.city}, NV · Est. {sc.founded} · {sc.employees} people</div>
           </div>
           <div style={{ display:"flex", gap:4 }}>
-            <button onClick={() => toggleWatchlist(sc.id)} style={{ background:isWatched(sc.id) ? GOLD+"20" : "none", border:`1px solid ${isWatched(sc.id) ? GOLD+"40" : BORDER}`, color:isWatched(sc.id) ? GOLD : MUTED, fontSize:16, cursor:"pointer", padding:"4px 8px", borderRadius:6, lineHeight:1 }}>{isWatched(sc.id) ? "★" : "☆"}</button>
-            <button onClick={() => setSelectedCompany(null)} style={{ background:"none", border:"none", color:MUTED, fontSize:22, cursor:"pointer", padding:8, lineHeight:1 }}>✕</button>
+            <button onClick={() => toggleWatchlist(sc.id)} aria-label={isWatched(sc.id) ? "Remove from watchlist" : "Add to watchlist"} style={{ background:isWatched(sc.id) ? GOLD+"20" : "none", border:`1px solid ${isWatched(sc.id) ? GOLD+"40" : BORDER}`, color:isWatched(sc.id) ? GOLD : MUTED, fontSize:16, cursor:"pointer", padding:"4px 8px", borderRadius:6, lineHeight:1 }}>{isWatched(sc.id) ? "★" : "☆"}</button>
+            <button onClick={() => setSelectedCompany(null)} aria-label="Close detail panel" style={{ background:"none", border:"none", color:MUTED, fontSize:22, cursor:"pointer", padding:8, lineHeight:1 }}>✕</button>
           </div>
         </div>
         <p style={{ fontSize:13, lineHeight:1.6, color:TEXT, margin:"0 0 20px 0" }}>{sc.description}</p>
@@ -2266,7 +2516,7 @@ export default function BattleBornIntelligence() {
         {/* IRS Scorecard */}
         <div style={{ background:DARK, borderRadius:10, padding:16, marginBottom:20, border:`1px solid ${BORDER}` }}>
           <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:14 }}>
-            <div style={{ fontSize:10, color:MUTED, letterSpacing:1.5, textTransform:"uppercase" }}>Investment Readiness Score</div>
+            <div style={{ fontSize:10, color:MUTED, letterSpacing:1.5, textTransform:"uppercase" }}><Learn id="IRS">Investment Readiness Score</Learn></div>
             <div style={{ display:"flex", alignItems:"center", gap:8 }}>
               <Grade grade={sc.grade} size="lg" />
               <div style={{ fontSize:28, fontWeight:800, color:gc }}>{sc.irs}</div>
@@ -2278,7 +2528,7 @@ export default function BattleBornIntelligence() {
                 <span style={{ color:MUTED, textTransform:"capitalize" }}>{key.replace("_"," ")}</span>
                 <span style={{ color: val >= 70 ? GREEN : val >= 45 ? GOLD : MUTED, fontWeight:600 }}>{val}</span>
               </div>
-              <div style={{ height:4, background:"#1a1a18", borderRadius:2, overflow:"hidden" }}>
+              <div style={{ height:4, background:BORDER, borderRadius:2, overflow:"hidden" }}>
                 <div style={{ width:`${val}%`, height:"100%", borderRadius:2, background: val >= 70 ? GREEN : val >= 45 ? GOLD : MUTED+"80", transition:"width 0.5s ease" }} />
               </div>
             </div>
@@ -2296,7 +2546,7 @@ export default function BattleBornIntelligence() {
             <div style={{ fontSize:20, fontWeight:700, color:GREEN }}>{fmt(sc.funding)}</div>
           </div>
           <div style={{ padding:12, background:DARK, borderRadius:8, border:`1px solid ${BORDER}` }}>
-            <div style={{ fontSize:9, color:MUTED, textTransform:"uppercase", letterSpacing:1 }}>Momentum</div>
+            <div style={{ fontSize:9, color:MUTED, textTransform:"uppercase", letterSpacing:1 }}><Learn id="Momentum">Momentum</Learn></div>
             <div style={{ fontSize:20, fontWeight:700, color:sc.momentum > 75 ? GREEN : GOLD }}>{sc.momentum}</div>
           </div>
         </div>
@@ -2316,7 +2566,7 @@ export default function BattleBornIntelligence() {
       <link href="https://fonts.googleapis.com/css2?family=Libre+Franklin:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
 
       {/* HEADER */}
-      <div style={{ borderBottom:`1px solid ${BORDER}`, padding:`10px ${px}px`, display:"flex", alignItems:"center", justifyContent:"space-between", position:"sticky", top:0, background:DARK+"F0", backdropFilter:"blur(12px)", zIndex:200 }}>
+      <header style={{ borderBottom:`1px solid ${BORDER}`, padding:`10px ${px}px`, display:"flex", alignItems:"center", justifyContent:"space-between", position:"sticky", top:0, background:DARK+"F0", backdropFilter:"blur(12px)", zIndex:200 }}>
         <div style={{ display:"flex", alignItems:"center", gap:isMobile ? 8 : 12 }}>
           <span style={{ color:GOLD, fontSize:isMobile ? 16 : 18 }}>◆</span>
           <span style={{ fontWeight:700, fontSize:isMobile ? 11 : 14, letterSpacing:isMobile ? 1 : 2, textTransform:"uppercase" }}>{isMobile ? "BBI" : "Battle Born Intelligence"}</span>
@@ -2327,32 +2577,49 @@ export default function BattleBornIntelligence() {
             <div style={{ width:7, height:7, borderRadius:"50%", background:GREEN, animation:"pulse 2s infinite" }} />
             <span style={{ fontSize:10, color:MUTED }}>LIVE</span>
           </div>
-          {isMobile && <button onClick={() => setMobileNav(!mobileNav)} style={{ background:"none", border:"none", color:GOLD, fontSize:20, cursor:"pointer", padding:4 }}>{mobileNav ? "✕" : "☰"}</button>}
+          <button
+            onClick={() => setLearningMode(!learningMode)}
+            aria-label={learningMode ? "Disable learning mode" : "Enable learning mode"}
+            title={learningMode ? "Learning Mode ON — hover terms for definitions" : "Enable Learning Mode"}
+            style={{
+              display:"flex", alignItems:"center", gap:4,
+              background: learningMode ? GOLD+"25" : "transparent",
+              border: `1px solid ${learningMode ? GOLD+"60" : BORDER}`,
+              color: learningMode ? GOLD : MUTED,
+              fontSize:10, fontWeight:600, padding:"3px 8px", borderRadius:6, cursor:"pointer",
+              transition:"all 0.2s",
+              boxShadow: learningMode ? `0 0 12px ${GOLD}30` : "none",
+            }}
+          >
+            <span style={{ fontSize:12 }}>&#128218;</span>
+            {!isMobile && <span>Learn</span>}
+          </button>
+          {isMobile && <button onClick={() => setMobileNav(!mobileNav)} aria-label={mobileNav ? "Close navigation" : "Open navigation"} style={{ background:"none", border:"none", color:GOLD, fontSize:20, cursor:"pointer", padding:4 }}>{mobileNav ? "✕" : "☰"}</button>}
         </div>
-      </div>
+      </header>
 
       {/* NAV — horizontal scroll on mobile, full width on desktop */}
       {(!isMobile || mobileNav) && (
-        <div style={{ borderBottom:`1px solid ${BORDER}`, padding:`0 ${px}px`, display:"flex", gap:0, overflowX:"auto", ...(isMobile && mobileNav ? { flexWrap:"wrap", background:CARD, ...fadeIn } : {}) }}>
+        <nav aria-label="Main navigation" style={{ borderBottom:`1px solid ${BORDER}`, padding:`0 ${px}px`, display:"flex", gap:0, overflowX:"auto", ...(isMobile && mobileNav ? { flexWrap:"wrap", background:CARD, ...fadeIn } : {}) }}>
           {VIEWS.map(v => (
             <button key={v.id} onClick={() => { setView(v.id); setMobileNav(false); }} style={{ padding: isMobile ? "10px 12px" : "10px 16px", background:"none", border:"none", borderBottom: view === v.id ? `2px solid ${GOLD}` : "2px solid transparent", color: view === v.id ? GOLD : MUTED, fontSize: isMobile ? 11 : 12, fontWeight:600, cursor:"pointer", letterSpacing:0.5, display:"flex", alignItems:"center", gap:5, whiteSpace:"nowrap", transition:"all 0.2s", minWidth: isMobile && mobileNav ? "33%" : "auto" }}>
               <span style={{ fontSize:13 }}>{v.icon}</span> {v.label}
             </button>
           ))}
-        </div>
+        </nav>
       )}
 
-      <div style={{ padding:px, maxWidth:1400, margin:"0 auto" }}>
+      <main style={{ padding:px, maxWidth:1400, margin:"0 auto" }}>
 
         {/* ═══════════════════════ DASHBOARD ═══════════════════════ */}
         {view === "dashboard" && (
           <div style={fadeIn}>
             <div style={{ display:"grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(auto-fit, minmax(180px, 1fr))", gap: isMobile ? 8 : 16, marginBottom:24 }}>
-              <Stat label="Companies" value={<Counter end={COMPANIES.length} />} sub={`${allScored.filter(c=>c.grade.startsWith("A")).length} Grade A`} />
-              <Stat label="Total Capital" value={<Counter end={totalFunding} prefix="$" suffix="M" />} sub="Private + SSBCI" color={GREEN} />
-              <Stat label="Avg Momentum" value={<Counter end={avgMomentum} />} sub="0-100 composite" color={avgMomentum > 60 ? GREEN : GOLD} />
+              <Stat label="Companies" value={<Counter end={COMPANIES.length} />} sub={<>{allScored.filter(c=>c.grade.startsWith("A")).length} <Learn id="Grade">Grade A</Learn></>} />
+              <Stat label="Total Capital" value={<Counter end={totalFunding} prefix="$" suffix="M" />} sub={<>Private + <Learn id="SSBCI">SSBCI</Learn></>} color={GREEN} />
+              <Stat label={<Learn id="Momentum">Avg Momentum</Learn>} value={<Counter end={avgMomentum} />} sub="0-100 composite" color={avgMomentum > 60 ? GREEN : GOLD} />
               <Stat label="Total Jobs" value={<Counter end={totalEmployees} />} sub="Across ecosystem" color={BLUE} />
-              {!isMobile && <Stat label="SSBCI Deployed" value={fmt(FUNDS.filter(f=>f.type==="SSBCI").reduce((s,f)=>s+f.deployed,0))} sub={`${(FUNDS.filter(f=>f.type==="SSBCI").reduce((s,f)=>s+(f.leverage||0),0)/FUNDS.filter(f=>f.type==="SSBCI"&&f.leverage).length).toFixed(1)}x leverage`} color={PURPLE} />}
+              {!isMobile && <Stat label={<Learn id="SSBCI">SSBCI Deployed</Learn>} value={fmt(FUNDS.filter(f=>f.type==="SSBCI").reduce((s,f)=>s+f.deployed,0))} sub={`${(FUNDS.filter(f=>f.type==="SSBCI").reduce((s,f)=>s+(f.leverage||0),0)/FUNDS.filter(f=>f.type==="SSBCI"&&f.leverage).length).toFixed(1)}x leverage`} color={PURPLE} />}
               {!isMobile && <Stat label="Watchlist" value={watchlist.length} sub="companies tracked" />}
             </div>
 
@@ -2361,7 +2628,7 @@ export default function BattleBornIntelligence() {
               <div style={{ fontSize:10, color:MUTED, letterSpacing:1, textTransform:"uppercase", marginBottom:10 }}>Sector Heat Map</div>
               <div style={{ display:"flex", gap:6, overflowX:"auto", paddingBottom:4 }}>
                 {sectorStats.slice(0,12).map(s => {
-                  const hc = s.heat >= 85 ? "#EF4444" : s.heat >= 70 ? ORANGE : s.heat >= 55 ? GOLD : MUTED;
+                  const hc = s.heat >= 85 ? HOT_RED : s.heat >= 70 ? ORANGE : s.heat >= 55 ? GOLD : MUTED;
                   return (
                     <div key={s.name} onClick={() => { setView("sectors"); setSectorDetail(s); }} style={{ flexShrink:0, padding:"6px 10px", borderRadius:6, background:hc+"12", border:`1px solid ${hc}30`, cursor:"pointer", textAlign:"center", minWidth:70 }}>
                       <div style={{ fontSize:14, fontWeight:800, color:hc }}>{s.heat}</div>
@@ -2375,7 +2642,7 @@ export default function BattleBornIntelligence() {
 
             <div style={{ display:"grid", gridTemplateColumns: isTablet ? "1fr" : "2fr 1fr", gap:20 }}>
               <div style={{ background:CARD, border:`1px solid ${BORDER}`, borderRadius:10, padding: isMobile ? 14 : 20 }}>
-                <div style={{ fontSize:10, color:MUTED, letterSpacing:1, textTransform:"uppercase", marginBottom:14 }}>Top Momentum — Live Rankings</div>
+                <div style={{ fontSize:10, color:MUTED, letterSpacing:1, textTransform:"uppercase", marginBottom:14 }}>Top <Learn id="Momentum">Momentum</Learn> — Live Rankings</div>
                 {[...COMPANIES].sort((a, b) => b.momentum - a.momentum).slice(0, isMobile ? 6 : 10).map((c, i) => (
                   <div key={c.id} onClick={() => { setSelectedCompany(c); }} style={{ display:"flex", alignItems:"center", padding:"8px 0", borderBottom: i < 9 ? `1px solid ${BORDER}` : "none", cursor:"pointer", gap:8 }}>
                     <span style={{ width:20, fontSize:12, color: i < 3 ? GOLD : MUTED, fontWeight:600 }}>{i + 1}</span>
@@ -2393,13 +2660,13 @@ export default function BattleBornIntelligence() {
                 <div style={{ fontSize:10, color:MUTED, letterSpacing:1, textTransform:"uppercase", marginBottom:14 }}>Sector Distribution</div>
                 {sectorStats.slice(0, isMobile ? 6 : 10).map(s => {
                   const pct = Math.round(s.count / COMPANIES.length * 100);
-                  const hc = s.heat >= 85 ? "#EF4444" : s.heat >= 70 ? ORANGE : s.heat >= 55 ? GOLD : MUTED;
+                  const hc = s.heat >= 85 ? HOT_RED : s.heat >= 70 ? ORANGE : s.heat >= 55 ? GOLD : MUTED;
                   return (
                     <div key={s.name} onClick={() => { setView("sectors"); setSectorDetail(s); }} style={{ marginBottom:10, cursor:"pointer" }}>
                       <div style={{ display:"flex", justifyContent:"space-between", fontSize:11, marginBottom:3 }}>
                         <span>{s.name}</span><span style={{ color:hc }}>🔥{s.heat} · {s.count}</span>
                       </div>
-                      <div style={{ height:4, background:"#1E1D1A", borderRadius:2, overflow:"hidden" }}>
+                      <div style={{ height:4, background:BORDER, borderRadius:2, overflow:"hidden" }}>
                         <div style={{ width:`${pct}%`, height:"100%", background:hc, borderRadius:2, transition:"width 0.8s ease" }} />
                       </div>
                     </div>
@@ -2416,8 +2683,8 @@ export default function BattleBornIntelligence() {
             <div style={{ display:"grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(4, 1fr)", gap: isMobile ? 8 : 12, marginBottom:20 }}>
               {[
                 { l:"Pipeline", v:scored.length, c:TEXT },
-                { l:"Avg IRS", v:scored.length ? Math.round(scored.reduce((s,c) => s+c.irs,0)/scored.length) : 0, c:GREEN },
-                { l:"Grade A", v:scored.filter(c=>c.grade.startsWith("A")).length, c:GREEN },
+                { l:<Learn id="IRS">Avg IRS</Learn>, v:scored.length ? Math.round(scored.reduce((s,c) => s+c.irs,0)/scored.length) : 0, c:GREEN },
+                { l:<Learn id="Grade">Grade A</Learn>, v:scored.filter(c=>c.grade.startsWith("A")).length, c:GREEN },
                 { l:"Hot Deals", v:scored.filter(c=>c.triggers.length>=4).length, c:RED },
               ].map(s => (
                 <div key={s.l} style={{ background:CARD, border:`1px solid ${BORDER}`, borderRadius:10, padding: isMobile ? 12 : 16 }}>
@@ -2429,7 +2696,7 @@ export default function BattleBornIntelligence() {
 
             {scored.filter(c=>c.triggers.length>=4).length > 0 && (
               <div style={{ background:"rgba(239,68,68,0.05)", border:"1px solid rgba(239,68,68,0.2)", borderRadius:10, padding: isMobile ? 12 : 16, marginBottom:20 }}>
-                <div style={{ fontSize:10, fontWeight:700, color:"#EF4444", textTransform:"uppercase", letterSpacing:1.5, marginBottom:10 }}>🔥 Hot Deals — 4+ triggers</div>
+                <div style={{ fontSize:10, fontWeight:700, color:HOT_RED, textTransform:"uppercase", letterSpacing:1.5, marginBottom:10 }}>🔥 Hot Deals — 4+ triggers</div>
                 <div style={{ display:"flex", gap:8, overflowX:"auto", paddingBottom:4 }}>
                   {scored.filter(c=>c.triggers.length>=4).slice(0,6).map(c => (
                     <div key={c.id} onClick={() => setSelectedCompany(c)} style={{ flexShrink:0, background:DARK, border:`1px solid ${BORDER}`, borderRadius:10, padding:12, minWidth: isMobile ? 160 : 200, cursor:"pointer" }}>
@@ -2477,20 +2744,20 @@ export default function BattleBornIntelligence() {
         {view === "companies" && (
           <div style={fadeIn}>
             <div style={{ display:"flex", gap: isMobile ? 6 : 12, marginBottom:16, flexWrap:"wrap", alignItems:"center" }}>
-              <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search companies, sectors..." style={{ flex:1, minWidth: isMobile ? "100%" : 200, padding:"10px 14px", background:CARD, border:`1px solid ${BORDER}`, borderRadius:8, color:TEXT, fontSize:13, outline:"none" }} />
+              <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search companies, sectors..." aria-label="Search companies and sectors" style={{ flex:1, minWidth: isMobile ? "100%" : 200, padding:"10px 14px", background:CARD, border:`1px solid ${BORDER}`, borderRadius:8, color:TEXT, fontSize:13, outline:"none" }} />
               <div style={{ display:"flex", gap:6, flexWrap:"wrap", width: isMobile ? "100%" : "auto" }}>
-                <select value={stageFilter} onChange={e => setStageFilter(e.target.value)} style={{ flex: isMobile ? 1 : "none", padding:"8px 10px", background:CARD, border:`1px solid ${BORDER}`, borderRadius:6, color:TEXT, fontSize:11 }}>
+                <select value={stageFilter} onChange={e => setStageFilter(e.target.value)} aria-label="Filter by stage" style={{ flex: isMobile ? 1 : "none", padding:"8px 10px", background:CARD, border:`1px solid ${BORDER}`, borderRadius:6, color:TEXT, fontSize:11 }}>
                   <option value="all">All Stages</option>
                   {Object.keys(STAGE_COLORS).map(s => <option key={s} value={s}>{stageLabel(s)}</option>)}
                 </select>
-                <select value={regionFilter} onChange={e => setRegionFilter(e.target.value)} style={{ flex: isMobile ? 1 : "none", padding:"8px 10px", background:CARD, border:`1px solid ${BORDER}`, borderRadius:6, color:TEXT, fontSize:11 }}>
+                <select value={regionFilter} onChange={e => setRegionFilter(e.target.value)} aria-label="Filter by region" style={{ flex: isMobile ? 1 : "none", padding:"8px 10px", background:CARD, border:`1px solid ${BORDER}`, borderRadius:6, color:TEXT, fontSize:11 }}>
                   <option value="all">All Regions</option>
                   <option value="las_vegas">Las Vegas</option>
                   <option value="henderson">Henderson</option>
                   <option value="reno">Reno</option>
                   <option value="rural">Rural</option>
                 </select>
-                <select value={sortBy} onChange={e => setSortBy(e.target.value)} style={{ flex: isMobile ? 1 : "none", padding:"8px 10px", background:CARD, border:`1px solid ${BORDER}`, borderRadius:6, color:TEXT, fontSize:11 }}>
+                <select value={sortBy} onChange={e => setSortBy(e.target.value)} aria-label="Sort by" style={{ flex: isMobile ? 1 : "none", padding:"8px 10px", background:CARD, border:`1px solid ${BORDER}`, borderRadius:6, color:TEXT, fontSize:11 }}>
                   <option value="momentum">Momentum</option>
                   <option value="funding">Funding</option>
                   <option value="name">Name</option>
@@ -2514,7 +2781,7 @@ export default function BattleBornIntelligence() {
                   {!isMobile && <div style={{ display:"flex", gap:3, flexShrink:0 }}>
                     {c.eligible.map(e => <span key={e} style={{ fontSize:8, padding:"1px 5px", borderRadius:3, background:GOLD+"20", color:GOLD }}>{e.toUpperCase()}</span>)}
                   </div>}
-                  <button onClick={e => { e.stopPropagation(); setCompareList(prev => prev.includes(c.id) ? prev.filter(x=>x!==c.id) : [...prev.slice(-3),c.id]); }} style={{ width:28, height:28, borderRadius:6, border:`1px solid ${compareList.includes(c.id) ? GOLD : BORDER}`, background:compareList.includes(c.id) ? GOLD+"20" : "transparent", color:compareList.includes(c.id) ? GOLD : MUTED, cursor:"pointer", fontSize:12, flexShrink:0 }}>⟺</button>
+                  <button onClick={e => { e.stopPropagation(); setCompareList(prev => prev.includes(c.id) ? prev.filter(x=>x!==c.id) : [...prev.slice(-3),c.id]); }} aria-label={compareList.includes(c.id) ? "Remove from comparison" : "Add to comparison"} style={{ width:28, height:28, borderRadius:6, border:`1px solid ${compareList.includes(c.id) ? GOLD : BORDER}`, background:compareList.includes(c.id) ? GOLD+"20" : "transparent", color:compareList.includes(c.id) ? GOLD : MUTED, cursor:"pointer", fontSize:12, flexShrink:0 }}>⟺</button>
                   <button onClick={e => { e.stopPropagation(); toggleWatchlist(c.id); }} style={{ background:"none", border:"none", color:isWatched(c.id) ? GOLD : MUTED+"60", cursor:"pointer", fontSize:14, padding:2 }}>{isWatched(c.id) ? "★" : "☆"}</button>
                 </div>
               ))}
@@ -2536,9 +2803,9 @@ export default function BattleBornIntelligence() {
                   <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:8 }}>
                     <div>
                       <div style={{ fontSize:15, fontWeight:700 }}>{f.name}</div>
-                      <div style={{ fontSize:11, color:MUTED }}>{f.type} · {f.companies} portfolio cos · Avg IRS {avgIRS}</div>
+                      <div style={{ fontSize:11, color:MUTED }}>{f.type} · {f.companies} portfolio cos · Avg <Learn id="IRS">IRS</Learn> {avgIRS}</div>
                     </div>
-                    {f.type === "SSBCI" && <span style={{ fontSize:9, padding:"3px 8px", borderRadius:4, background:PURPLE+"20", color:PURPLE, fontWeight:600 }}>SSBCI</span>}
+                    {f.type === "SSBCI" && <span style={{ fontSize:9, padding:"3px 8px", borderRadius:4, background:PURPLE+"20", color:PURPLE, fontWeight:600 }}><Learn id="SSBCI">SSBCI</Learn></span>}
                   </div>
                   {f.thesis && <div style={{ fontSize:10, color:MUTED, fontStyle:"italic", marginBottom:10 }}>"{f.thesis}"</div>}
                   <div style={{ display:"grid", gridTemplateColumns: f.allocated ? (isMobile ? "1fr 1fr" : "1fr 1fr 1fr 1fr") : "1fr 1fr", gap: isMobile ? 8 : 16 }}>
@@ -2550,7 +2817,7 @@ export default function BattleBornIntelligence() {
                       <div>
                         <div style={{ fontSize:9, color:MUTED }}>DEPLOYED</div>
                         <div style={{ fontSize:16, fontWeight:700, color:GREEN }}>{fmt(f.deployed)}</div>
-                        <div style={{ marginTop:4, height:4, background:"#1E1D1A", borderRadius:2, overflow:"hidden" }}>
+                        <div style={{ marginTop:4, height:4, background:BORDER, borderRadius:2, overflow:"hidden" }}>
                           <div style={{ width:`${(f.deployed/f.allocated)*100}%`, height:"100%", background:GREEN, borderRadius:2 }} />
                         </div>
                       </div>
@@ -2597,7 +2864,7 @@ export default function BattleBornIntelligence() {
             <button onClick={() => setFundDetail(null)} style={{ background:"none", border:"none", color:GOLD, fontSize:12, cursor:"pointer", marginBottom:12, padding:0 }}>← All Funds</button>
             <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:6 }}>
               <div style={{ fontSize: isMobile ? 20 : 26, fontWeight:800, color:TEXT }}>{fundDetail.name}</div>
-              {fundDetail.type === "SSBCI" && <span style={{ fontSize:10, padding:"3px 10px", borderRadius:20, background:PURPLE+"20", color:PURPLE, fontWeight:700 }}>SSBCI</span>}
+              {fundDetail.type === "SSBCI" && <span style={{ fontSize:10, padding:"3px 10px", borderRadius:20, background:PURPLE+"20", color:PURPLE, fontWeight:700 }}><Learn id="SSBCI">SSBCI</Learn></span>}
             </div>
             {fundDetail.thesis && <div style={{ fontSize:12, color:MUTED, fontStyle:"italic", marginBottom:16 }}>"{fundDetail.thesis}"</div>}
             <div style={{ display:"grid", gridTemplateColumns: isMobile ? "repeat(2,1fr)" : "repeat(4,1fr)", gap:10, marginBottom:20 }}>
@@ -2649,13 +2916,13 @@ export default function BattleBornIntelligence() {
                     {[
                       { l:"Stage", fn:c=>stageLabel(c.stage) },
                       { l:"Funding", fn:c=>fmt(c.funding), num:c=>c.funding },
-                      { l:"Momentum", fn:c=>c.momentum, num:c=>c.momentum },
+                      { l:<Learn id="Momentum">Momentum</Learn>, fn:c=>c.momentum, num:c=>c.momentum },
                       { l:"Employees", fn:c=>c.employees, num:c=>c.employees },
                       { l:"Founded", fn:c=>c.founded },
-                      { l:"IRS Grade", fn:c=>computeIRS(c).grade },
-                      { l:"IRS Score", fn:c=>computeIRS(c).irs, num:c=>computeIRS(c).irs },
+                      { l:<><Learn id="IRS">IRS</Learn> <Learn id="Grade">Grade</Learn></>, fn:c=>computeIRS(c).grade },
+                      { l:<Learn id="IRS">IRS Score</Learn>, fn:c=>computeIRS(c).irs, num:c=>computeIRS(c).irs },
                       { l:"Triggers", fn:c=>computeIRS(c).triggers.length, num:c=>computeIRS(c).triggers.length },
-                      { l:"SSBCI Programs", fn:c=>c.eligible.filter(e=>["bbv","fundnv","1864"].includes(e)).length, num:c=>c.eligible.filter(e=>["bbv","fundnv","1864"].includes(e)).length },
+                      { l:<Learn id="SSBCI">SSBCI Programs</Learn>, fn:c=>c.eligible.filter(e=>["bbv","fundnv","1864"].includes(e)).length, num:c=>c.eligible.filter(e=>["bbv","fundnv","1864"].includes(e)).length },
                       { l:"Sectors", fn:c=>c.sector.join(", ") },
                     ].map(row => {
                       const vals = compareList.map(id => COMPANIES.find(x=>x.id===id)).filter(Boolean);
@@ -2734,8 +3001,8 @@ export default function BattleBornIntelligence() {
           <div style={fadeIn}>
             <div style={{ fontSize:10, color:MUTED, letterSpacing:1, textTransform:"uppercase", marginBottom:16 }}>Ecosystem Activity Feed</div>
             <div style={{ borderLeft:`2px solid ${BORDER}`, marginLeft: isMobile ? 10 : 20, paddingLeft: isMobile ? 16 : 24 }}>
-              {TIMELINE_EVENTS.map((ev, i) => (
-                <div key={i} style={{ position:"relative", marginBottom:18, paddingBottom:4, ...fadeIn }}>
+              {TIMELINE_EVENTS.map((ev) => (
+                <div key={`${ev.date}-${ev.company}`} style={{ position:"relative", marginBottom:18, paddingBottom:4, ...fadeIn }}>
                   <div style={{ position:"absolute", left: isMobile ? -25 : -33, top:4, width:16, height:16, borderRadius:"50%", background:CARD, border:`2px solid ${ev.type==="funding"?GREEN:ev.type==="grant"?BLUE:ev.type==="momentum"?GOLD:ev.type==="hiring"?ORANGE:ev.type==="patent"?PURPLE:MUTED}`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:9 }}>{ev.icon}</div>
                   <div style={{ fontSize:10, color:MUTED, marginBottom:1 }}>{ev.date}</div>
                   <div style={{ fontSize:13, fontWeight:600 }}>{ev.company}</div>
@@ -2749,7 +3016,7 @@ export default function BattleBornIntelligence() {
         {/* ═══════════════════════ SSBCI ═══════════════════════ */}
         {view === "ssbci" && (
           <div style={fadeIn}>
-            <div style={{ fontSize:10, color:MUTED, letterSpacing:1, textTransform:"uppercase", marginBottom:16 }}>SSBCI Program Dashboard</div>
+            <div style={{ fontSize:10, color:MUTED, letterSpacing:1, textTransform:"uppercase", marginBottom:16 }}><Learn id="SSBCI">SSBCI</Learn> Program Dashboard</div>
             {(() => {
               const ssbci = FUNDS.filter(f=>f.type==="SSBCI");
               const totalAlloc = ssbci.reduce((s,f)=>s+(f.allocated||0),0);
@@ -2769,7 +3036,7 @@ export default function BattleBornIntelligence() {
                   <div style={{ fontSize:14, fontWeight:700 }}>{f.name}</div>
                   <span style={{ fontSize:11, color:GREEN, fontWeight:600 }}>{f.leverage ? `${f.leverage}x` : ""}</span>
                 </div>
-                <div style={{ height:10, background:"#1E1D1A", borderRadius:5, overflow:"hidden", marginBottom:8 }}>
+                <div style={{ height:10, background:BORDER, borderRadius:5, overflow:"hidden", marginBottom:8 }}>
                   <div style={{ width:`${(f.deployed/f.allocated)*100}%`, height:"100%", background:`linear-gradient(90deg, ${GREEN}, ${GOLD})`, borderRadius:5, transition:"width 1s ease" }} />
                 </div>
                 <div style={{ display:"flex", justifyContent:"space-between", fontSize:11, color:MUTED }}>
@@ -2788,7 +3055,8 @@ export default function BattleBornIntelligence() {
         {view === "map" && (
           <div style={fadeIn}>
             <div style={{ fontSize:10, color:MUTED, letterSpacing:1, textTransform:"uppercase", marginBottom:12 }}>Nevada Startup Map</div>
-            <svg viewBox="0 0 800 650" style={{ width:"100%", background:CARD, borderRadius:10, border:`1px solid ${BORDER}` }}>
+            <svg viewBox="0 0 800 650" role="img" aria-label="Nevada startup map showing company locations" style={{ width:"100%", background:CARD, borderRadius:10, border:`1px solid ${BORDER}` }}>
+              <title>Nevada Startup Map</title>
               <path d="M220,30 L560,30 L560,45 L610,580 L180,580 Z" fill={BORDER+"25"} stroke={BORDER} strokeWidth={1} />
               <text x={380} y={105} textAnchor="middle" fill={MUTED+"70"} fontSize={13} fontWeight={600}>RENO / SPARKS</text>
               <text x={420} y={430} textAnchor="middle" fill={MUTED+"70"} fontSize={13} fontWeight={600}>LAS VEGAS METRO</text>
@@ -2828,7 +3096,7 @@ export default function BattleBornIntelligence() {
             </div>
             <div style={{ display:"grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(3, 1fr)", gap:12 }}>
               {sectorStats.map(s => {
-                const heatColor = s.heat >= 85 ? "#EF4444" : s.heat >= 70 ? ORANGE : s.heat >= 55 ? GOLD : MUTED;
+                const heatColor = s.heat >= 85 ? HOT_RED : s.heat >= 70 ? ORANGE : s.heat >= 55 ? GOLD : MUTED;
                 return (
                   <div key={s.name} onClick={() => setSectorDetail(s)} style={{ background:CARD, border:`1px solid ${BORDER}`, borderRadius:10, padding:16, cursor:"pointer", transition:"all 0.2s", borderLeft:`3px solid ${heatColor}` }}
                     onMouseEnter={e => e.currentTarget.style.borderColor = heatColor} onMouseLeave={e => e.currentTarget.style.borderColor = BORDER}>
@@ -2839,14 +3107,14 @@ export default function BattleBornIntelligence() {
                     <div style={{ display:"flex", gap:16, fontSize:10, color:MUTED, marginBottom:8 }}>
                       <span>{s.count} companies</span>
                       <span>{fmt(s.totalFunding)} raised</span>
-                      <span>Avg IRS: {s.avgIRS}</span>
+                      <span>Avg <Learn id="IRS">IRS</Learn>: {s.avgIRS}</span>
                     </div>
                     <div style={{ display:"flex", gap:3, marginBottom:6 }}>
                       {Object.entries(s.stages).sort((a,b) => b[1]-a[1]).slice(0,4).map(([st,ct]) => (
                         <span key={st} style={{ fontSize:8, padding:"1px 5px", borderRadius:3, background:STAGE_COLORS[st]+"25", color:STAGE_COLORS[st] || MUTED }}>{stageLabel(st)} ({ct})</span>
                       ))}
                     </div>
-                    {s.topCompany && <div style={{ fontSize:9, color:GOLD }}>Top: {s.topCompany.name} (IRS {s.topCompany.irs})</div>}
+                    {s.topCompany && <div style={{ fontSize:9, color:GOLD }}>Top: {s.topCompany.name} (<Learn id="IRS">IRS</Learn> {s.topCompany.irs})</div>}
                   </div>
                 );
               })}
@@ -2860,12 +3128,12 @@ export default function BattleBornIntelligence() {
             <button onClick={() => setSectorDetail(null)} style={{ background:"none", border:"none", color:GOLD, fontSize:12, cursor:"pointer", marginBottom:12, padding:0 }}>← All Sectors</button>
             <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:20 }}>
               <div style={{ fontSize: isMobile ? 20 : 26, fontWeight:800, color:TEXT }}>{sectorDetail.name}</div>
-              <span style={{ fontSize:12, padding:"3px 10px", borderRadius:20, background:(sectorDetail.heat >= 85 ? "#EF4444" : sectorDetail.heat >= 70 ? ORANGE : GOLD)+"20", color:sectorDetail.heat >= 85 ? "#EF4444" : sectorDetail.heat >= 70 ? ORANGE : GOLD, fontWeight:700 }}>🔥 Heat {sectorDetail.heat}</span>
+              <span style={{ fontSize:12, padding:"3px 10px", borderRadius:20, background:(sectorDetail.heat >= 85 ? HOT_RED : sectorDetail.heat >= 70 ? ORANGE : GOLD)+"20", color:sectorDetail.heat >= 85 ? HOT_RED : sectorDetail.heat >= 70 ? ORANGE : GOLD, fontWeight:700 }}>🔥 Heat {sectorDetail.heat}</span>
             </div>
             <div style={{ display:"grid", gridTemplateColumns: isMobile ? "repeat(2,1fr)" : "repeat(4,1fr)", gap:10, marginBottom:20 }}>
               <Stat label="Companies" value={sectorDetail.count} />
               <Stat label="Total Raised" value={fmt(sectorDetail.totalFunding)} />
-              <Stat label="Avg IRS" value={sectorDetail.avgIRS} color={sectorDetail.avgIRS >= 70 ? GREEN : sectorDetail.avgIRS >= 55 ? GOLD : MUTED} />
+              <Stat label={<>Avg <Learn id="IRS">IRS</Learn></>} value={sectorDetail.avgIRS} color={sectorDetail.avgIRS >= 70 ? GREEN : sectorDetail.avgIRS >= 55 ? GOLD : MUTED} />
               <Stat label="Stages" value={Object.keys(sectorDetail.stages).length} />
             </div>
             <div style={{ fontSize:13, fontWeight:700, color:TEXT, marginBottom:10 }}>Companies in {sectorDetail.name}</div>
@@ -2883,7 +3151,7 @@ export default function BattleBornIntelligence() {
                   </div>
                   <div style={{ textAlign:"right", flexShrink:0 }}>
                     <div style={{ fontSize:16, fontWeight:700, color:GOLD }}>{c.irs}</div>
-                    <div style={{ fontSize:8, color:MUTED }}>IRS</div>
+                    <div style={{ fontSize:8, color:MUTED }}><Learn id="IRS">IRS</Learn></div>
                   </div>
                   <button onClick={e => { e.stopPropagation(); toggleWatchlist(c.id); }} style={{ background:"none", border:"none", color:isWatched(c.id) ? GOLD : MUTED, cursor:"pointer", fontSize:16, padding:4 }}>{isWatched(c.id) ? "★" : "☆"}</button>
                 </div>
@@ -2897,12 +3165,12 @@ export default function BattleBornIntelligence() {
           <div style={fadeIn}>
             <div style={{ marginBottom:20 }}>
               <div style={{ fontSize: isMobile ? 18 : 22, fontWeight:800 }}>Ecosystem Health Assessment</div>
-              <div style={{ fontSize:11, color:MUTED, marginTop:2 }}>Battle Born Ecosystem Health Index (B-EHI) · MIT REAP + Kauffman + OECD</div>
+              <div style={{ fontSize:11, color:MUTED, marginTop:2 }}><Learn id="BEHI">Battle Born Ecosystem Health Index (B-EHI)</Learn> · MIT REAP + Kauffman + OECD</div>
             </div>
             {/* B-EHI Score */}
             <div style={{ display:"grid", gridTemplateColumns: isMobile ? "1fr" : "auto 1fr", gap:20, marginBottom:24 }}>
               <div style={{ background:CARD, border:`1px solid ${BORDER}`, borderRadius:12, padding:24, textAlign:"center", minWidth: isMobile ? "auto" : 200 }}>
-                <div style={{ fontSize:10, color:MUTED, letterSpacing:1.5, textTransform:"uppercase", marginBottom:8 }}>B-EHI Score</div>
+                <div style={{ fontSize:10, color:MUTED, letterSpacing:1.5, textTransform:"uppercase", marginBottom:8 }}><Learn id="BEHI">B-EHI Score</Learn></div>
                 <div style={{ fontSize:56, fontWeight:900, color: iaEcosystem.BEHI >= 80 ? GREEN : iaEcosystem.BEHI >= 60 ? GOLD : iaEcosystem.BEHI >= 40 ? ORANGE : RED, lineHeight:1 }}>{iaEcosystem.BEHI}</div>
                 <div style={{ fontSize:28, fontWeight:800, color: iaEcosystem.grade === "A" ? GREEN : iaEcosystem.grade === "B" ? GOLD : ORANGE, marginTop:4 }}>Grade {iaEcosystem.grade}</div>
                 <div style={{ fontSize:10, color:MUTED, marginTop:8 }}>0-100 composite · Equal-weighted pillars</div>
@@ -2921,7 +3189,7 @@ export default function BattleBornIntelligence() {
                       <span style={{ fontSize:12, fontWeight:700, color: iaEcosystem.pillars[p.key] >= 80 ? GREEN : iaEcosystem.pillars[p.key] >= 60 ? GOLD : ORANGE }}>{iaEcosystem.pillars[p.key] >= 80 ? "A" : iaEcosystem.pillars[p.key] >= 60 ? "B" : iaEcosystem.pillars[p.key] >= 40 ? "C" : "D"}</span>
                     </div>
                     <div style={{ fontSize:9, color:MUTED, marginTop:2 }}>{p.sub}</div>
-                    <div style={{ height:4, background:"#1E1D1A", borderRadius:2, marginTop:8 }}>
+                    <div style={{ height:4, background:BORDER, borderRadius:2, marginTop:8 }}>
                       <div style={{ width:`${iaEcosystem.pillars[p.key]}%`, height:"100%", background:p.color, borderRadius:2, transition:"width 0.8s" }} />
                     </div>
                   </div>
@@ -2941,7 +3209,7 @@ export default function BattleBornIntelligence() {
                   <div key={sp.k} style={{ padding:8, borderRadius:6, background:sp.c+"08" }}>
                     <div style={{ fontSize:8, color:MUTED }}>{sp.l}</div>
                     <div style={{ fontSize:18, fontWeight:700, color:sp.c }}>{Math.round(iaEcosystem.subPillars[sp.k])}</div>
-                    <div style={{ height:3, background:"#1E1D1A", borderRadius:2, marginTop:4 }}>
+                    <div style={{ height:3, background:BORDER, borderRadius:2, marginTop:4 }}>
                       <div style={{ width:`${iaEcosystem.subPillars[sp.k]}%`, height:"100%", background:sp.c, borderRadius:2 }} />
                     </div>
                   </div>
@@ -2952,12 +3220,12 @@ export default function BattleBornIntelligence() {
             <div style={{ display:"grid", gridTemplateColumns: isMobile ? "repeat(2,1fr)" : "repeat(5,1fr)", gap:10 }}>
               <Stat label="Total Companies" value={iaEcosystem.kpis.totalCompanies} />
               <Stat label="Young Firms (≤5yr)" value={iaEcosystem.kpis.youngFirms} color={GREEN} />
-              <Stat label="High-Growth" value={iaEcosystem.kpis.highGrowthFirms} sub="Momentum ≥75" color={GOLD} />
+              <Stat label="High-Growth" value={iaEcosystem.kpis.highGrowthFirms} sub={<><Learn id="Momentum">Momentum</Learn> ≥75</>} color={GOLD} />
               <Stat label="VC Per Capita" value={`$${iaEcosystem.kpis.vcPerCapita}`} sub="Per million pop" color={BLUE} />
-              <Stat label="Sector Diversity" value={`${iaEcosystem.kpis.sectorDiversity}%`} sub="1 - HHI" color={PURPLE} />
+              <Stat label="Sector Diversity" value={`${iaEcosystem.kpis.sectorDiversity}%`} sub={<>1 - <Learn id="HHI">HHI</Learn></>} color={PURPLE} />
             </div>
             <div style={{ fontSize:10, color:MUTED, marginTop:16, padding:"8px 12px", background:CARD, borderRadius:6, border:`1px solid ${BORDER}` }}>
-              <strong style={{ color:GOLD }}>ICD-203 Assessment:</strong> Nevada ecosystem health is <strong>likely</strong> (55-80%) to maintain B-grade status over 12 months. <strong>Confidence: Moderate</strong> — based on 75 tracked companies, limited to public funding data. <strong>Watch:</strong> SSBCI tranche deployment pace, DOE loan drawdowns, TensorWave/Lyten gigafactory milestones.
+              <strong style={{ color:GOLD }}><Learn id="ICD203">ICD-203</Learn> Assessment:</strong> Nevada ecosystem health is <strong>likely</strong> (55-80%) to maintain B-grade status over 12 months. <strong><Learn id="Confidence">Confidence: Moderate</Learn></strong> — based on 75 tracked companies, limited to public funding data. <strong>Watch:</strong> <Learn id="SSBCI">SSBCI</Learn> tranche deployment pace, DOE loan drawdowns, TensorWave/Lyten gigafactory milestones.
             </div>
           </div>
         )}
@@ -2984,12 +3252,12 @@ export default function BattleBornIntelligence() {
             <div style={fadeIn}>
               <div style={{ marginBottom:20 }}>
                 <div style={{ fontSize: isMobile ? 18 : 22, fontWeight:800 }}>Network Analysis: Centrality & Influence</div>
-                <div style={{ fontSize:11, color:MUTED, marginTop:2 }}>Barabasi + Burt Structural Holes + Pentland Idea Flow · {graphData.nodes.length} nodes · {graphData.edges.length} edges</div>
+                <div style={{ fontSize:11, color:MUTED, marginTop:2 }}>Barabasi + <Learn id="BurtConstraint">Burt Structural Holes</Learn> + Pentland Idea Flow · {graphData.nodes.length} nodes · {graphData.edges.length} edges</div>
               </div>
               {/* Top Hubs */}
               <div style={{ display:"grid", gridTemplateColumns: isTablet ? "1fr" : "1fr 1fr", gap:16, marginBottom:20 }}>
                 <div style={{ background:CARD, border:`1px solid ${BORDER}`, borderRadius:10, padding:16 }}>
-                  <div style={{ fontSize:10, color:MUTED, letterSpacing:1, textTransform:"uppercase", marginBottom:12 }}>Top Hubs — PageRank & Degree</div>
+                  <div style={{ fontSize:10, color:MUTED, letterSpacing:1, textTransform:"uppercase", marginBottom:12 }}>Top Hubs — <Learn id="PageRank">PageRank</Learn> & Degree</div>
                   {topHubs.map((h, i) => (
                     <div key={h.id} style={{ display:"flex", alignItems:"center", gap:8, padding:"6px 0", borderBottom:i < topHubs.length-1 ? `1px solid ${BORDER}` : "none" }}>
                       <span style={{ width:18, fontSize:11, color: i < 3 ? GOLD : MUTED, fontWeight:700 }}>{i+1}</span>
@@ -3000,25 +3268,25 @@ export default function BattleBornIntelligence() {
                       </div>
                       <div style={{ textAlign:"right" }}>
                         <div style={{ fontSize:14, fontWeight:700, color:GOLD }}>{h.pagerank}</div>
-                        <div style={{ fontSize:8, color:MUTED }}>PR</div>
+                        <div style={{ fontSize:8, color:MUTED }}><Learn id="PageRank">PR</Learn></div>
                       </div>
                       <div style={{ textAlign:"right", marginLeft:8 }}>
                         <div style={{ fontSize:12, fontWeight:600, color:BLUE }}>{h.betweenness}</div>
-                        <div style={{ fontSize:8, color:MUTED }}>BC</div>
+                        <div style={{ fontSize:8, color:MUTED }}><Learn id="Betweenness">BC</Learn></div>
                       </div>
                     </div>
                   ))}
                 </div>
                 {/* Top Brokers */}
                 <div style={{ background:CARD, border:`1px solid ${BORDER}`, borderRadius:10, padding:16 }}>
-                  <div style={{ fontSize:10, color:MUTED, letterSpacing:1, textTransform:"uppercase", marginBottom:12 }}>Top Brokers — Structural Holes (1-Constraint)</div>
+                  <div style={{ fontSize:10, color:MUTED, letterSpacing:1, textTransform:"uppercase", marginBottom:12 }}>Top Brokers — <Learn id="BurtConstraint">Structural Holes</Learn> (1-Constraint)</div>
                   {topBrokers.map((b, i) => (
                     <div key={b.id} style={{ display:"flex", alignItems:"center", gap:8, padding:"6px 0", borderBottom:i < topBrokers.length-1 ? `1px solid ${BORDER}` : "none" }}>
                       <span style={{ width:18, fontSize:11, color: i < 3 ? PURPLE : MUTED, fontWeight:700 }}>{i+1}</span>
                       <span style={{ fontSize:9, color:NODE_CFG[b.type]?.color || MUTED }}>{NODE_CFG[b.type]?.icon || "?"}</span>
                       <div style={{ flex:1, minWidth:0 }}>
                         <div style={{ fontSize:12, fontWeight:600, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{b.label}</div>
-                        <div style={{ fontSize:9, color:MUTED }}>{b.type} · ES: {b.effectiveSize}</div>
+                        <div style={{ fontSize:9, color:MUTED }}>{b.type} · <Learn id="EffectiveSize">ES</Learn>: {b.effectiveSize}</div>
                       </div>
                       <div style={{ textAlign:"right" }}>
                         <div style={{ fontSize:14, fontWeight:700, color:PURPLE }}>{b.brokerage}</div>
@@ -3054,7 +3322,7 @@ export default function BattleBornIntelligence() {
                 </div>
               </div>
               <div style={{ fontSize:10, color:MUTED, marginTop:16, padding:"8px 12px", background:CARD, borderRadius:6, border:`1px solid ${BORDER}` }}>
-                <strong style={{ color:GOLD }}>ICD-203 Assessment:</strong> Network connectivity is <strong>likely</strong> (55-80%) concentrated in {topHubs.slice(0,3).map(h => h.label).join(", ")} as systemic hubs. <strong>Confidence: Moderate</strong>. Loss of top 3 hubs would <strong>very likely</strong> (80-95%) materially reduce ecosystem connectivity.
+                <strong style={{ color:GOLD }}><Learn id="ICD203">ICD-203</Learn> Assessment:</strong> Network connectivity is <strong>likely</strong> (55-80%) concentrated in {topHubs.slice(0,3).map(h => h.label).join(", ")} as systemic hubs. <strong><Learn id="Confidence">Confidence: Moderate</Learn></strong>. Loss of top 3 hubs would <strong>very likely</strong> (80-95%) materially reduce ecosystem connectivity.
               </div>
             </div>
           );
@@ -3065,7 +3333,7 @@ export default function BattleBornIntelligence() {
           <div style={fadeIn}>
             <div style={{ marginBottom:20 }}>
               <div style={{ fontSize: isMobile ? 18 : 22, fontWeight:800 }}>Risk Assessment: Multi-Factor Landscape</div>
-              <div style={{ fontSize:11, color:MUTED, marginTop:2 }}>COSO ERM 2017 · McKinsey Risk Matrix · MIT TRL/MRL</div>
+              <div style={{ fontSize:11, color:MUTED, marginTop:2 }}><Learn id="COSO">COSO</Learn> ERM 2017 · McKinsey Risk Matrix · MIT <Learn id="TRL">TRL</Learn>/<Learn id="MRL">MRL</Learn></div>
             </div>
             {/* Portfolio Risk Distribution */}
             <div style={{ display:"grid", gridTemplateColumns: isMobile ? "repeat(2,1fr)" : "repeat(4,1fr)", gap:12, marginBottom:20 }}>
@@ -3109,7 +3377,7 @@ export default function BattleBornIntelligence() {
             </div>
             {/* Top Risk Companies */}
             <div style={{ background:CARD, border:`1px solid ${BORDER}`, borderRadius:10, padding:16 }}>
-              <div style={{ fontSize:10, color:MUTED, letterSpacing:1, textTransform:"uppercase", marginBottom:12 }}>Highest Risk Companies — COSO Register</div>
+              <div style={{ fontSize:10, color:MUTED, letterSpacing:1, textTransform:"uppercase", marginBottom:12 }}>Highest Risk Companies — <Learn id="COSO">COSO</Learn> Register</div>
               {iaRiskAll.sort((a,b) => b.totalRiskScore - a.totalRiskScore).slice(0, 15).map((c, i) => (
                 <div key={c.id} style={{ display:"flex", alignItems:"center", gap:8, padding:"8px 0", borderBottom:i < 14 ? `1px solid ${BORDER}` : "none", cursor:"pointer" }} onClick={() => setSelectedCompany(c)}>
                   <span style={{ width:20, fontSize:11, color:MUTED, fontWeight:600 }}>{i+1}</span>
@@ -3119,8 +3387,8 @@ export default function BattleBornIntelligence() {
                     <div style={{ fontSize:9, color:MUTED }}>{c.risks.slice(0,2).map(r => r.name).join(" · ")}</div>
                   </div>
                   <div style={{ display:"flex", gap:8 }}>
-                    <div style={{ textAlign:"center" }}><div style={{ fontSize:11, fontWeight:700, color:BLUE }}>TRL {c.trl}</div><div style={{ fontSize:7, color:MUTED }}>Tech</div></div>
-                    <div style={{ textAlign:"center" }}><div style={{ fontSize:11, fontWeight:700, color:PURPLE }}>MRL {c.mrl}</div><div style={{ fontSize:7, color:MUTED }}>Market</div></div>
+                    <div style={{ textAlign:"center" }}><div style={{ fontSize:11, fontWeight:700, color:BLUE }}><Learn id="TRL">TRL</Learn> {c.trl}</div><div style={{ fontSize:7, color:MUTED }}>Tech</div></div>
+                    <div style={{ textAlign:"center" }}><div style={{ fontSize:11, fontWeight:700, color:PURPLE }}><Learn id="MRL">MRL</Learn> {c.mrl}</div><div style={{ fontSize:7, color:MUTED }}>Market</div></div>
                   </div>
                   <div style={{ textAlign:"right", minWidth:50 }}>
                     <div style={{ fontSize:14, fontWeight:700, color: c.riskGrade === "Extreme" ? RED : c.riskGrade === "High" ? ORANGE : GOLD }}>{c.totalRiskScore}</div>
@@ -3137,17 +3405,17 @@ export default function BattleBornIntelligence() {
           <div style={fadeIn}>
             <div style={{ marginBottom:20 }}>
               <div style={{ fontSize: isMobile ? 18 : 22, fontWeight:800 }}>Market Intelligence: Sector & Capital Flows</div>
-              <div style={{ fontSize:11, color:MUTED, marginTop:2 }}>GE-McKinsey + BCG Matrix + Porter's Five Forces + HHI Concentration</div>
+              <div style={{ fontSize:11, color:MUTED, marginTop:2 }}>GE-McKinsey + BCG Matrix + <Learn id="PorterFive">Porter's Five Forces</Learn> + <Learn id="HHI">HHI</Learn> Concentration</div>
             </div>
             {/* Sector Heat Table */}
             <div style={{ background:CARD, border:`1px solid ${BORDER}`, borderRadius:10, padding:16, marginBottom:20 }}>
-              <div style={{ fontSize:10, color:MUTED, letterSpacing:1, textTransform:"uppercase", marginBottom:12 }}>Sector Heat Rankings — Capital Flow Momentum</div>
+              <div style={{ fontSize:10, color:MUTED, letterSpacing:1, textTransform:"uppercase", marginBottom:12 }}>Sector Heat Rankings — Capital Flow <Learn id="Momentum">Momentum</Learn></div>
               <div style={{ overflowX:"auto" }}>
                 <table style={{ width:"100%", borderCollapse:"collapse", fontSize:11 }}>
                   <thead>
                     <tr style={{ borderBottom:`1px solid ${BORDER}` }}>
-                      {["Sector","Heat","Momentum","Attractiveness","HHI","N_eff","Companies","Capital","Maturity","Signal"].map(h => (
-                        <th key={h} style={{ padding:"6px 8px", textAlign:"left", fontSize:9, color:MUTED, fontWeight:600, letterSpacing:0.5 }}>{h}</th>
+                      {[{k:"Sector"},{k:"Heat"},{k:"Momentum",id:"Momentum"},{k:"Attractiveness"},{k:"HHI",id:"HHI"},{k:"N_eff"},{k:"Companies"},{k:"Capital"},{k:"Maturity"},{k:"Signal"}].map(h => (
+                        <th key={h.k} style={{ padding:"6px 8px", textAlign:"left", fontSize:9, color:MUTED, fontWeight:600, letterSpacing:0.5 }}>{h.id ? <Learn id={h.id}>{h.k}</Learn> : h.k}</th>
                       ))}
                     </tr>
                   </thead>
@@ -3177,7 +3445,7 @@ export default function BattleBornIntelligence() {
             </div>
             {/* Porter's Five Forces */}
             <div style={{ background:CARD, border:`1px solid ${BORDER}`, borderRadius:10, padding:16 }}>
-              <div style={{ fontSize:10, color:MUTED, letterSpacing:1, textTransform:"uppercase", marginBottom:12 }}>Porter's Five Forces — Top 8 Sectors</div>
+              <div style={{ fontSize:10, color:MUTED, letterSpacing:1, textTransform:"uppercase", marginBottom:12 }}><Learn id="PorterFive">Porter's Five Forces</Learn> — Top 8 Sectors</div>
               <div style={{ display:"grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(4, 1fr)", gap:10 }}>
                 {iaSectorIntel.slice(0, 8).map(s => (
                   <div key={s.name} style={{ padding:12, borderRadius:8, background:GP.surface, border:`1px solid ${GP.border}` }}>
@@ -3200,7 +3468,7 @@ export default function BattleBornIntelligence() {
           <div style={fadeIn}>
             <div style={{ marginBottom:20 }}>
               <div style={{ fontSize: isMobile ? 18 : 22, fontWeight:800 }}>Regulatory Outlook: Policy & Compliance</div>
-              <div style={{ fontSize:11, color:MUTED, marginTop:2 }}>OMB A-4 RIA + EPU-Style Uncertainty + COSO Compliance Maturity</div>
+              <div style={{ fontSize:11, color:MUTED, marginTop:2 }}>OMB A-4 RIA + EPU-Style Uncertainty + <Learn id="COSO">COSO</Learn> Compliance Maturity</div>
             </div>
             {/* Sector Regulatory Outlook */}
             <div style={{ background:CARD, border:`1px solid ${BORDER}`, borderRadius:10, padding:16, marginBottom:20 }}>
@@ -3217,7 +3485,7 @@ export default function BattleBornIntelligence() {
                       <div style={{ display:"flex", gap:12, marginTop:6, fontSize:9 }}>
                         <span style={{ color:GREEN }}>Support: {data.supportiveness}</span>
                         <span style={{ color:RED }}>Burden: {data.burden}</span>
-                        <span style={{ color:ORANGE }}>SRU: {data.sru}</span>
+                        <span style={{ color:ORANGE }}><Learn id="SRU">SRU</Learn>: {data.sru}</span>
                       </div>
                       <div style={{ fontSize:8, color:MUTED, marginTop:2 }}>{data.docketCount} active dockets</div>
                     </div>
@@ -3289,7 +3557,7 @@ export default function BattleBornIntelligence() {
           <div style={fadeIn}>
             <div style={{ marginBottom:20 }}>
               <div style={{ fontSize: isMobile ? 18 : 22, fontWeight:800 }}>Opportunity Map: Investment Intelligence</div>
-              <div style={{ fontSize:11, color:MUTED, marginTop:2 }}>Venture Quality · Deal Score · Alpha Signals · RAO Conviction Tiers</div>
+              <div style={{ fontSize:11, color:MUTED, marginTop:2 }}><Learn id="VQ">Venture Quality</Learn> · Deal Score · Alpha Signals · <Learn id="RAO">RAO</Learn> Conviction Tiers</div>
             </div>
             {/* Conviction Tier Distribution */}
             <div style={{ display:"grid", gridTemplateColumns: isMobile ? "repeat(2,1fr)" : "repeat(4,1fr)", gap:12, marginBottom:20 }}>
@@ -3307,13 +3575,13 @@ export default function BattleBornIntelligence() {
             </div>
             {/* Opportunity Pipeline */}
             <div style={{ background:CARD, border:`1px solid ${BORDER}`, borderRadius:10, padding:16 }}>
-              <div style={{ fontSize:10, color:MUTED, letterSpacing:1, textTransform:"uppercase", marginBottom:12 }}>Risk-Adjusted Opportunity Rankings — Top 30</div>
+              <div style={{ fontSize:10, color:MUTED, letterSpacing:1, textTransform:"uppercase", marginBottom:12 }}><Learn id="RAO">Risk-Adjusted Opportunity</Learn> Rankings — Top 30</div>
               <div style={{ overflowX:"auto" }}>
                 <table style={{ width:"100%", borderCollapse:"collapse", fontSize:11 }}>
                   <thead>
                     <tr style={{ borderBottom:`1px solid ${BORDER}` }}>
-                      {["#","Company","Stage","RAO","Tier","VQ","Deal","Alpha","Risk","Signal"].map(h => (
-                        <th key={h} style={{ padding:"6px 8px", textAlign:"left", fontSize:9, color:MUTED, fontWeight:600 }}>{h}</th>
+                      {[{k:"#"},{k:"Company"},{k:"Stage"},{k:"RAO",id:"RAO"},{k:"Tier"},{k:"VQ",id:"VQ"},{k:"Deal"},{k:"Alpha"},{k:"Risk"},{k:"Signal"}].map(h => (
+                        <th key={h.k} style={{ padding:"6px 8px", textAlign:"left", fontSize:9, color:MUTED, fontWeight:600 }}>{h.id ? <Learn id={h.id}>{h.k}</Learn> : h.k}</th>
                       ))}
                     </tr>
                   </thead>
@@ -3344,7 +3612,7 @@ export default function BattleBornIntelligence() {
               </div>
             </div>
             <div style={{ fontSize:10, color:MUTED, marginTop:16, padding:"8px 12px", background:CARD, borderRadius:6, border:`1px solid ${BORDER}` }}>
-              <strong style={{ color:GOLD }}>ICD-203 Assessment:</strong> Tier I companies are <strong>very likely</strong> (80-95%) to demonstrate strong returns potential. <strong>Confidence: Moderate</strong> — based on composite scoring across venture quality, deal signals, and risk-adjustment. <strong>Watch:</strong> Series A/B follow-on rates, sector rotation signals, SSBCI deployment leverage ratios.
+              <strong style={{ color:GOLD }}><Learn id="ICD203">ICD-203</Learn> Assessment:</strong> Tier I companies are <strong>very likely</strong> (80-95%) to demonstrate strong returns potential. <strong><Learn id="Confidence">Confidence: Moderate</Learn></strong> — based on composite scoring across <Learn id="VQ">venture quality</Learn>, deal signals, and risk-adjustment. <strong>Watch:</strong> Series A/B follow-on rates, sector rotation signals, <Learn id="SSBCI">SSBCI</Learn> deployment leverage ratios.
             </div>
           </div>
         )}
@@ -3355,7 +3623,7 @@ export default function BattleBornIntelligence() {
             <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:20 }}>
               <div><div style={{ fontSize: isMobile ? 18 : 22, fontWeight:800, color:TEXT }}>My Watchlist</div>
               <div style={{ fontSize:11, color:MUTED, marginTop:2 }}>{watchlist.length} companies tracked</div></div>
-              {watchlist.length > 0 && <button onClick={() => setWatchlist([])} style={{ background:"none", border:`1px solid ${RED}40`, color:RED, fontSize:10, padding:"5px 10px", borderRadius:6, cursor:"pointer" }}>Clear All</button>}
+              {watchlist.length > 0 && <button onClick={() => setWatchlist([])} aria-label="Clear all watched companies" style={{ background:"none", border:`1px solid ${RED}40`, color:RED, fontSize:10, padding:"5px 10px", borderRadius:6, cursor:"pointer" }}>Clear All</button>}
             </div>
 
             {watchlist.length === 0 ? (
@@ -3370,7 +3638,7 @@ export default function BattleBornIntelligence() {
                 {/* Portfolio Summary */}
                 <div style={{ display:"grid", gridTemplateColumns: isMobile ? "repeat(2,1fr)" : "repeat(4,1fr)", gap:10, marginBottom:20 }}>
                   <Stat label="Watched" value={watchedCompanies.length} />
-                  <Stat label="Avg IRS" value={watchedCompanies.length ? Math.round(watchedCompanies.reduce((s,c) => s+c.irs, 0) / watchedCompanies.length) : 0} color={GREEN} />
+                  <Stat label={<>Avg <Learn id="IRS">IRS</Learn></>} value={watchedCompanies.length ? Math.round(watchedCompanies.reduce((s,c) => s+c.irs, 0) / watchedCompanies.length) : 0} color={GREEN} />
                   <Stat label="Total Raised" value={fmt(watchedCompanies.reduce((s,c) => s+c.funding, 0))} />
                   <Stat label="Total Team" value={watchedCompanies.reduce((s,c) => s+c.employees, 0).toLocaleString()} />
                 </div>
@@ -3382,7 +3650,7 @@ export default function BattleBornIntelligence() {
                   const total = watchedCompanies.length || 1;
                   return (
                     <div style={{ background:CARD, border:`1px solid ${BORDER}`, borderRadius:8, padding:12, marginBottom:16 }}>
-                      <div style={{ fontSize:10, color:MUTED, marginBottom:6 }}>Grade Distribution</div>
+                      <div style={{ fontSize:10, color:MUTED, marginBottom:6 }}><Learn id="Grade">Grade</Learn> Distribution</div>
                       <div style={{ display:"flex", borderRadius:4, overflow:"hidden", height:8 }}>
                         {["A","A-","B+","B","B-","C+","C","D"].filter(g => gdist[g]).map(g => (
                           <div key={g} style={{ width:`${(gdist[g]/total)*100}%`, background:GRADE_COLORS[g] || MUTED, transition:"width 0.3s" }} title={`${g}: ${gdist[g]}`} />
@@ -3413,7 +3681,7 @@ export default function BattleBornIntelligence() {
                       </div>
                       <div style={{ textAlign:"right", flexShrink:0 }}>
                         <div style={{ fontSize:18, fontWeight:700, color:GOLD }}>{c.irs}</div>
-                        <div style={{ fontSize:8, color:MUTED }}>IRS</div>
+                        <div style={{ fontSize:8, color:MUTED }}><Learn id="IRS">IRS</Learn></div>
                       </div>
                       <button onClick={() => toggleWatchlist(c.id)} style={{ background:"none", border:"none", color:GOLD, cursor:"pointer", fontSize:18, padding:4 }} title="Remove from watchlist">★</button>
                     </div>
@@ -3423,7 +3691,7 @@ export default function BattleBornIntelligence() {
             )}
           </div>
         )}
-      </div>
+      </main>
 
       {/* DETAIL PANEL */}
       <DetailPanel />
@@ -3435,8 +3703,8 @@ export default function BattleBornIntelligence() {
           {!isMobile && <div style={{ display:"flex", gap:4 }}>
             {compareList.map(id => { const c=COMPANIES.find(x=>x.id===id); return <span key={id} style={{ fontSize:10, padding:"2px 6px", borderRadius:4, background:GOLD+"15", color:TEXT }}>{c?.name}</span>; })}
           </div>}
-          <button onClick={() => setView("compare")} style={{ padding:"6px 14px", background:GOLD, color:DARK, border:"none", borderRadius:6, fontSize:11, fontWeight:700, cursor:"pointer" }}>Compare</button>
-          <button onClick={() => setCompareList([])} style={{ background:"none", border:"none", color:MUTED, cursor:"pointer", fontSize:14, padding:4 }}>✕</button>
+          <button onClick={() => setView("compare")} aria-label="Open comparison view" style={{ padding:"6px 14px", background:GOLD, color:DARK, border:"none", borderRadius:6, fontSize:11, fontWeight:700, cursor:"pointer" }}>Compare</button>
+          <button onClick={() => setCompareList([])} aria-label="Clear comparison list" style={{ background:"none", border:"none", color:MUTED, cursor:"pointer", fontSize:14, padding:4 }}>✕</button>
         </div>
       )}
     </div>
