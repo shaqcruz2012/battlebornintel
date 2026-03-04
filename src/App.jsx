@@ -40,6 +40,7 @@ const VIEWS = [
   { id: "graph", label: "Graph", icon: "🕸" },
   { id: "timeline", label: "Activity", icon: "⏱" },
   { id: "map", label: "Map", icon: "⊕" },
+  { id: "brief", label: "Brief", icon: "📋" },
 ];
 
 const REAP_PILLARS = [
@@ -1022,7 +1023,7 @@ function computeGraphMetrics(nodes, edges) {
 // Glowing edges, curved beziers, directional arrows, animated pulses, zoom/pan
 // ══════════════════════════════════════════════════════════════════════════════
 
-function OntologyGraphView({onSelectCompany}) {
+function OntologyGraphView({onSelectCompany, reapFilter="all"}) {
   const [filters, setFilters] = useState({company:true, fund:true, accelerator:true, sector:false, region:false, person:true, external:true, ecosystem:true, exchange:false});
   const [relFilters, setRelFilters] = useState({eligible_for:true,operates_in:false,headquartered_in:false,invested_in:true,loaned_to:true,partners_with:true,contracts_with:true,acquired:true,founder_of:true,manages:true,listed_on:false,accelerated_by:true,won_pitch:true,incubated_by:true,program_of:true,supports:true,housed_at:true,collaborated_with:true,funds:true,approved_by:true,filed_with:true,competes_with:true});
   const [hoverId, setHoverId] = useState(null);
@@ -1049,6 +1050,18 @@ function OntologyGraphView({onSelectCompany}) {
   const searchMatches = useMemo(() => { if (!gSearch || gSearch.length < 2) return []; const q=gSearch.toLowerCase(); return layout.nodes.filter(n => n.label.toLowerCase().includes(q)).slice(0,8); }, [gSearch, layout.nodes]);
   const mob = typeof window !== "undefined" && window.innerWidth < 700;
   const selectNode = (n) => { setSelected(n); setGSearch(""); if(mob) setGPanel("detail"); };
+
+  const reapNodeMatch = (node) => {
+    if (reapFilter === "all") return true;
+    const entity = [...EXTERNALS, ...ECOSYSTEM_ORGS, ...ACCELERATORS].find(x => x.id === node.id);
+    if (entity) return getReapPillar(entity) === reapFilter;
+    if (node.id.startsWith("f_")) {
+      const fund = FUNDS.find(f => f.id === node.id.replace("f_",""));
+      return fund ? getReapPillar(fund) === reapFilter : false;
+    }
+    if (node.type === "company") return reapFilter === "entrepreneurs";
+    return false;
+  };
 
   // 2-hop neighborhood for Palantir-style lens effect
   const connectedSet = useMemo(() => {
@@ -1283,9 +1296,10 @@ function OntologyGraphView({onSelectCompany}) {
                 const inHop2=connectedSet?.all?.has(n.id)&&!inHop1;
                 const isDim=connectedSet&&!connectedSet.all.has(n.id);
                 const showLabel=isH||isSel||r>13||["fund","accelerator","ecosystem","region","exchange"].includes(n.type)||(inHop1&&hoverId);
-                const opacity=isDim?0.06:inHop2?0.35:1;
+                const baseOpacity=isDim?0.06:inHop2?0.35:1;
+                const opacity=reapNodeMatch(n)?baseOpacity:0.15;
                 return (
-                  <g key={n.id} style={{cursor:"pointer",opacity,transition:"opacity 0.2s"}}
+                  <g key={n.id} style={{cursor:"pointer",opacity,transition:"opacity 0.3s"}}
                     onMouseEnter={()=>setHoverId(n.id)} onMouseLeave={()=>setHoverId(null)}
                     onClick={e=>{e.stopPropagation();selectNode(n);}}
                     onTouchStart={e=>{e.preventDefault();selectNode(n);}}>
@@ -1799,6 +1813,7 @@ export default function BattleBornIntelligence() {
         {/* ═══════════════════════ COMPANIES ═══════════════════════ */}
         {view === "companies" && (
           <div style={fadeIn}>
+            <ReapChipBar />
             <div style={{ display:"flex", gap: isMobile ? 6 : 12, marginBottom:16, flexWrap:"wrap", alignItems:"center" }}>
               <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search companies, sectors..." style={{ flex:1, minWidth: isMobile ? "100%" : 200, padding:"10px 14px", background:CARD, border:`1px solid ${BORDER}`, borderRadius:8, color:TEXT, fontSize:13, outline:"none" }} />
               <div style={{ display:"flex", gap:6, flexWrap:"wrap", width: isMobile ? "100%" : "auto" }}>
@@ -1819,11 +1834,15 @@ export default function BattleBornIntelligence() {
                   <option value="name">Name</option>
                 </select>
               </div>
-              <span style={{ fontSize:11, color:MUTED }}>{filtered.length} results</span>
+              <span style={{ fontSize:11, color:MUTED }}>{reapFilter === "all" ? filtered.length : filtered.filter(c => reapFilter === "entrepreneurs" || getCompanyReapConnections(c.id).has(reapFilter)).length} results</span>
             </div>
 
             <div style={{ display:"grid", gap:6 }}>
-              {filtered.map(c => (
+              {filtered.filter(c => {
+                if (reapFilter === "all") return true;
+                if (reapFilter === "entrepreneurs") return true;
+                return getCompanyReapConnections(c.id).has(reapFilter);
+              }).map(c => (
                 <div key={c.id} onClick={() => setSelectedCompany(selectedCompany?.id === c.id ? null : c)} style={{ display:"flex", alignItems:"center", gap: isMobile ? 8 : 12, padding: isMobile ? "10px 10px" : "12px 16px", background: selectedCompany?.id === c.id ? "#1A1814" : CARD, border:`1px solid ${selectedCompany?.id === c.id ? GOLD+"40" : BORDER}`, borderRadius:10, cursor:"pointer", transition:"all 0.15s" }}>
                   <div style={{ flex:1, minWidth:0 }}>
                     <div style={{ display:"flex", alignItems:"center", gap:6, flexWrap:"wrap" }}>
@@ -1847,8 +1866,14 @@ export default function BattleBornIntelligence() {
         {view === "investors" && !fundDetail && (
           <div style={fadeIn}>
             <div style={{ fontSize:10, color:MUTED, letterSpacing:1, textTransform:"uppercase", marginBottom:16 }}>Fund & Program Performance</div>
+            <ReapChipBar />
             <div style={{ display:"grid", gap:10 }}>
-              {FUNDS.map(f => {
+              {FUNDS.filter(f => {
+                if (reapFilter === "all") return true;
+                if (reapFilter === "risk_capital") return true;
+                if (reapFilter === "government") return f.type === "SSBCI";
+                return false;
+              }).map(f => {
                 const portCos = allScored.filter(c => c.eligible.includes(f.id));
                 const avgIRS = portCos.length ? Math.round(portCos.reduce((s,c) => s+c.irs,0)/portCos.length) : 0;
                 return (
@@ -1950,7 +1975,8 @@ export default function BattleBornIntelligence() {
         {view === "graph" && (
           <div style={fadeIn}>
             <div style={{ fontSize:10, color:MUTED, letterSpacing:1, textTransform:"uppercase", marginBottom:12 }}>Ontological Relationship Graph — {VERIFIED_EDGES.length} Verified Edges · Graph Intelligence Active</div>
-            <OntologyGraphView onSelectCompany={(id)=>{setSelectedCompany(COMPANIES.find(c=>c.id===id)||null);setView("companies");}} />
+            <ReapChipBar />
+            <OntologyGraphView reapFilter={reapFilter} onSelectCompany={(id)=>{setSelectedCompany(COMPANIES.find(c=>c.id===id)||null);setView("companies");}} />
           </div>
         )}
 
@@ -2112,6 +2138,99 @@ export default function BattleBornIntelligence() {
                   </div>
                 </div>
               ))}
+            </div>
+          </div>
+        )}
+
+        {/* ═══════════════════════ WEEKLY BRIEF ═══════════════════════ */}
+        {view === "brief" && (
+          <div style={{ ...fadeIn, maxWidth:900, margin:"0 auto" }}>
+            <style>{`@media print { .no-print { display: none !important; } body { background: white !important; color: black !important; } }`}</style>
+            <div style={{ textAlign:"center", marginBottom:24, paddingBottom:16, borderBottom:`2px solid ${GOLD}40` }}>
+              <div style={{ fontSize:10, color:GOLD, letterSpacing:2, textTransform:"uppercase", marginBottom:4 }}>Battle Born Intelligence</div>
+              <div style={{ fontSize: isMobile ? 20 : 26, fontWeight:800, color:TEXT }}>GOED Weekly Intelligence Brief</div>
+              <div style={{ fontSize:12, color:MUTED, marginTop:4 }}>Week Ending {new Date().toLocaleDateString("en-US", { year:"numeric", month:"long", day:"numeric" })}</div>
+              <div style={{ fontSize:10, color:MUTED, marginTop:2 }}>Innovation-Based Economic Development</div>
+            </div>
+            {(() => {
+              const ssbciFunds = FUNDS.filter(f=>f.type==="SSBCI");
+              const ssbciDeployed = ssbciFunds.reduce((s,f)=>s+f.deployed,0);
+              const avgLev = ssbciFunds.filter(f=>f.leverage).reduce((s,f)=>s+f.leverage,0)/ssbciFunds.filter(f=>f.leverage).length;
+              const privateLev = Math.round(ssbciDeployed * avgLev);
+              const ssbciCompanies = allScored.filter(c=>c.eligible.some(e=>["bbv","fundnv","1864"].includes(e)));
+              const ssbciAvgIRS = ssbciCompanies.length ? Math.round(ssbciCompanies.reduce((s,c)=>s+c.irs,0)/ssbciCompanies.length) : 0;
+              return (
+                <div style={{ display:"grid", gridTemplateColumns: isMobile ? "repeat(2,1fr)" : "repeat(4,1fr)", gap:10, marginBottom:24 }}>
+                  <Stat label="SSBCI Deployed" value={fmt(ssbciDeployed)} sub={`${ssbciFunds.length} funds`} color={PURPLE} />
+                  <Stat label="Private Leverage" value={fmt(privateLev)} sub={`${avgLev.toFixed(1)}x ratio`} color={GREEN} />
+                  <Stat label="Portfolio Cos" value={ssbciCompanies.length} sub={`of ${COMPANIES.length}`} color={GOLD} />
+                  <Stat label="Avg IRS" value={ssbciAvgIRS} sub="SSBCI portfolio" color={ssbciAvgIRS >= 70 ? GREEN : GOLD} />
+                </div>
+              );
+            })()}
+            {REAP_PILLARS.filter(p => p.id !== "all").map(pillar => {
+              const allEntities = [...EXTERNALS, ...ECOSYSTEM_ORGS, ...ACCELERATORS];
+              const pillarEntities = allEntities.filter(e => getReapPillar(e) === pillar.id);
+              const pillarFunds = FUNDS.filter(f => getReapPillar(f) === pillar.id);
+              const pillarCompanies = pillar.id === "entrepreneurs" ? allScored : allScored.filter(c => getCompanyReapConnections(c.id).has(pillar.id));
+              const pillarEvents = TIMELINE_EVENTS.filter(ev => {
+                if (pillar.id === "entrepreneurs") return ["funding","momentum","launch","hiring"].includes(ev.type);
+                if (pillar.id === "risk_capital") return ["funding"].includes(ev.type);
+                if (pillar.id === "government") return ["grant"].includes(ev.type);
+                if (pillar.id === "corporations") return ["partnership"].includes(ev.type);
+                return false;
+              }).slice(0, 3);
+              let metrics = [];
+              if (pillar.id === "risk_capital") {
+                const totalDeployed = pillarFunds.reduce((s,f)=>s+f.deployed,0);
+                const ssbciFunds = pillarFunds.filter(f=>f.type==="SSBCI");
+                metrics = [`${pillarFunds.length} funds tracked`, `${fmt(totalDeployed)} deployed`, `${ssbciFunds.length} SSBCI programs`];
+              } else if (pillar.id === "entrepreneurs") {
+                const gradeA = pillarCompanies.filter(c=>c.grade.startsWith("A")).length;
+                const topMover = [...pillarCompanies].sort((a,b)=>b.momentum-a.momentum)[0];
+                metrics = [`${pillarCompanies.length} companies tracked`, `${gradeA} Grade A companies`, topMover ? `Top: ${topMover.name} (momentum ${topMover.momentum})` : ""].filter(Boolean);
+              } else if (pillar.id === "government") {
+                metrics = [`${pillarEntities.length} government entities`, `SSBCI administered by GOED`, `DOE, SBIR/STTR, AFWERX active`];
+              } else if (pillar.id === "corporations") {
+                metrics = [`${pillarEntities.length} corporate partners`, `${pillarCompanies.length} companies with corporate ties`];
+              } else if (pillar.id === "universities") {
+                metrics = [`${pillarEntities.length} university hubs`, `UNR Innevation Center + UNLV Tech Park`];
+              }
+              return (
+                <div key={pillar.id} style={{ background:CARD, border:`1px solid ${BORDER}`, borderRadius:10, padding: isMobile ? 14 : 20, marginBottom:12, borderLeft:`3px solid ${pillar.color}` }}>
+                  <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:10 }}>
+                    <div style={{ fontSize:14, fontWeight:700, color:pillar.color }}>{pillar.icon} {pillar.label}</div>
+                    <span style={{ fontSize:10, padding:"2px 8px", borderRadius:10, background:pillar.color+"15", color:pillar.color }}>{pillarCompanies.length} companies</span>
+                  </div>
+                  <div style={{ display:"flex", gap:12, flexWrap:"wrap", marginBottom:10 }}>
+                    {metrics.map((m,i) => <span key={i} style={{ fontSize:11, color:TEXT }}>{m}</span>)}
+                  </div>
+                  {pillarEvents.length > 0 && (
+                    <div style={{ borderTop:`1px solid ${BORDER}`, paddingTop:8, marginTop:6 }}>
+                      <div style={{ fontSize:9, color:MUTED, textTransform:"uppercase", letterSpacing:1, marginBottom:6 }}>Recent Activity</div>
+                      {pillarEvents.map((ev, i) => (
+                        <div key={i} style={{ fontSize:11, color:TEXT, marginBottom:4 }}>
+                          <span style={{ color:MUTED }}>{ev.date.slice(5)}</span> {ev.icon} <span style={{ fontWeight:600 }}>{ev.company}</span> — {ev.detail}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {pillar.id !== "entrepreneurs" && pillarCompanies.length > 0 && (
+                    <div style={{ borderTop:`1px solid ${BORDER}`, paddingTop:8, marginTop:6 }}>
+                      <div style={{ fontSize:9, color:MUTED, textTransform:"uppercase", letterSpacing:1, marginBottom:6 }}>Key Companies</div>
+                      <div style={{ display:"flex", gap:6, flexWrap:"wrap" }}>
+                        {pillarCompanies.sort((a,b)=>b.irs-a.irs).slice(0,6).map(c => (
+                          <span key={c.id} style={{ fontSize:10, padding:"2px 8px", borderRadius:4, background:pillar.color+"12", border:`1px solid ${pillar.color}25`, color:TEXT }}>{c.name}</span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+            <div style={{ textAlign:"center", paddingTop:16, borderTop:`1px solid ${BORDER}`, marginTop:8 }}>
+              <div style={{ fontSize:10, color:MUTED }}>Generated by Battle Born Intelligence · {new Date().toLocaleString()}</div>
+              <button className="no-print" onClick={() => window.print()} style={{ marginTop:10, padding:"8px 20px", background:GOLD+"20", color:GOLD, border:`1px solid ${GOLD}40`, borderRadius:8, fontSize:11, fontWeight:600, cursor:"pointer" }}>🖨 Print Brief</button>
             </div>
           </div>
         )}
