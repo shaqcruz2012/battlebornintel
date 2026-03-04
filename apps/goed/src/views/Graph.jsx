@@ -11,7 +11,7 @@ cytoscape.use(coseBilkent);
 export default function Graph({ isMobile, setSelectedCompany, setView }) {
   const containerRef = useRef(null);
   const cyRef = useRef(null);
-  const { data: graphData } = useApi("/api/graph");
+  const { data: graphData } = useApi("/graph");
   const [reapFilter, setReapFilter] = useState("all");
   const [selected, setSelected] = useState(null);
   const [colorMode, setColorMode] = useState("default");
