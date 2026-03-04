@@ -11,7 +11,9 @@
   "dependencies": {
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
-    "@bbi/ui-core": "workspace:*"
+    "@bbi/ui-core": "workspace:*",
+    "cytoscape": "^3.31.0",
+    "cytoscape-cose-bilkent": "^4.1.0"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^5.1.1",
