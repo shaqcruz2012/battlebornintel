@@ -42,6 +42,46 @@ const VIEWS = [
   { id: "map", label: "Map", icon: "⊕" },
 ];
 
+const REAP_PILLARS = [
+  { id: "all", label: "All", icon: "◎", color: GOLD },
+  { id: "risk_capital", label: "Risk Capital", icon: "◈", color: GREEN },
+  { id: "corporations", label: "Corporations", icon: "△", color: BLUE },
+  { id: "entrepreneurs", label: "Entrepreneurs", icon: "⬡", color: GOLD },
+  { id: "universities", label: "Universities", icon: "▣", color: PURPLE },
+  { id: "government", label: "Government", icon: "⊕", color: RED },
+];
+
+function getReapPillar(entity) {
+  if (!entity) return null;
+  if (entity.type === "SSBCI" || entity.type === "Angel" || entity.type === "Deep Tech VC" || entity.type === "Growth VC" || entity.type === "Accelerator") return "risk_capital";
+  if (entity.etype === "VC Firm" || entity.etype === "PE Firm" || entity.etype === "Investment Co" || entity.etype === "SPAC") return "risk_capital";
+  if (entity.etype === "Corporation") return "corporations";
+  if (entity.etype === "University" || entity.etype === "University Hub") return "universities";
+  if (entity.etype === "Government" || entity.etype === "Economic Development") return "government";
+  if (entity.etype === "Foundation") return "government";
+  if (entity.stage || entity.momentum !== undefined) return "entrepreneurs";
+  if (entity.atype) return "risk_capital";
+  return null;
+}
+
+function getCompanyReapConnections(companyId) {
+  const connected = new Set();
+  const allEntities = [...EXTERNALS, ...ECOSYSTEM_ORGS, ...ACCELERATORS];
+  VERIFIED_EDGES.forEach(e => {
+    const cId = `c_${companyId}`;
+    if (e.source === cId || e.target === cId) {
+      const otherId = e.source === cId ? e.target : e.source;
+      const entity = allEntities.find(x => x.id === otherId);
+      if (entity) {
+        const pillar = getReapPillar(entity);
+        if (pillar) connected.add(pillar);
+      }
+      const fundMatch = otherId.startsWith("f_") ? FUNDS.find(f => f.id === otherId.replace("f_","")) : null;
+      if (fundMatch) connected.add("risk_capital");
+    }
+  });
+  return connected;
+}
 
 // --- REAL NEVADA STARTUP DATA ---
 // Sources: Crunchbase, PitchBook, SEC filings, press releases, TechTribune, Failory, StartUpNV
@@ -1444,6 +1484,24 @@ export default function BattleBornIntelligence() {
   const [mapHover, setMapHover] = useState(null);
   const [sectorDetail, setSectorDetail] = useState(null);
   const [fundDetail, setFundDetail] = useState(null);
+  const [reapFilter, setReapFilter] = useState("all");
+
+  const ReapChipBar = () => (
+    <div style={{ display:"flex", gap:6, marginBottom:14, flexWrap:"wrap" }}>
+      {REAP_PILLARS.map(p => (
+        <button key={p.id} onClick={() => setReapFilter(p.id)}
+          style={{
+            padding:"5px 12px", borderRadius:20, fontSize:10, fontWeight:600, cursor:"pointer",
+            border:`1px solid ${reapFilter === p.id ? p.color+"60" : BORDER}`,
+            background: reapFilter === p.id ? p.color+"18" : "transparent",
+            color: reapFilter === p.id ? p.color : MUTED,
+            transition:"all 0.15s"
+          }}>
+          {p.icon} {p.label}
+        </button>
+      ))}
+    </div>
+  );
 
   const filtered = useMemo(() => COMPANIES.filter(c => {
     if (search && !c.name.toLowerCase().includes(search.toLowerCase()) && !c.sector.join(" ").toLowerCase().includes(search.toLowerCase())) return false;
