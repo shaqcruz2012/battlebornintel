@@ -1599,11 +1599,22 @@ export default function BattleBornIntelligence() {
         {view === "dashboard" && (
           <div style={fadeIn}>
             <div style={{ display:"grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(auto-fit, minmax(180px, 1fr))", gap: isMobile ? 8 : 16, marginBottom:24 }}>
-              <Stat label="Companies" value={<Counter end={COMPANIES.length} />} sub={`${allScored.filter(c=>c.grade.startsWith("A")).length} Grade A`} />
-              <Stat label="Total Capital" value={<Counter end={totalFunding} prefix="$" suffix="M" />} sub="Private + SSBCI" color={GREEN} />
-              <Stat label="Avg Momentum" value={<Counter end={avgMomentum} />} sub="0-100 composite" color={avgMomentum > 60 ? GREEN : GOLD} />
-              <Stat label="Total Jobs" value={<Counter end={totalEmployees} />} sub="Across ecosystem" color={BLUE} />
-              {!isMobile && <Stat label="SSBCI Deployed" value={fmt(FUNDS.filter(f=>f.type==="SSBCI").reduce((s,f)=>s+f.deployed,0))} sub={`${(FUNDS.filter(f=>f.type==="SSBCI").reduce((s,f)=>s+(f.leverage||0),0)/FUNDS.filter(f=>f.type==="SSBCI"&&f.leverage).length).toFixed(1)}x leverage`} color={PURPLE} />}
+              {(() => {
+                const ssbciFunds = FUNDS.filter(f=>f.type==="SSBCI");
+                const ssbciDeployed = ssbciFunds.reduce((s,f)=>s+f.deployed,0);
+                const avgLev = ssbciFunds.filter(f=>f.leverage).reduce((s,f)=>s+f.leverage,0)/ssbciFunds.filter(f=>f.leverage).length;
+                const privateLev = Math.round(ssbciDeployed * avgLev);
+                const ssbciCompanies = allScored.filter(c=>c.eligible.some(e=>["bbv","fundnv","1864"].includes(e)));
+                const ssbciAvgIRS = ssbciCompanies.length ? Math.round(ssbciCompanies.reduce((s,c)=>s+c.irs,0)/ssbciCompanies.length) : 0;
+                return (<>
+                  <Stat label="SSBCI Deployed" value={fmt(ssbciDeployed)} sub={`${ssbciFunds.length} active funds`} color={PURPLE} />
+                  <Stat label="Private Capital Leveraged" value={fmt(privateLev)} sub={`${avgLev.toFixed(1)}x avg ratio`} color={GREEN} />
+                  <Stat label="SSBCI Portfolio" value={ssbciCompanies.length} sub={`of ${COMPANIES.length} tracked`} color={GOLD} />
+                  <Stat label="Portfolio Avg IRS" value={ssbciAvgIRS} sub="SSBCI companies" color={ssbciAvgIRS >= 70 ? GREEN : GOLD} />
+                  {!isMobile && <Stat label="Ecosystem Capital" value={<Counter end={totalFunding} prefix="$" suffix="M" />} sub="All companies" />}
+                  {!isMobile && <Stat label="Total Jobs" value={<Counter end={totalEmployees} />} sub="Across ecosystem" color={BLUE} />}
+                </>);
+              })()}
             </div>
 
             {/* Sector Heat Strip */}
@@ -1626,7 +1637,12 @@ export default function BattleBornIntelligence() {
             <div style={{ display:"grid", gridTemplateColumns: isTablet ? "1fr" : "2fr 1fr", gap:20 }}>
               <div style={{ background:CARD, border:`1px solid ${BORDER}`, borderRadius:10, padding: isMobile ? 14 : 20 }}>
                 <div style={{ fontSize:10, color:MUTED, letterSpacing:1, textTransform:"uppercase", marginBottom:14 }}>Top Momentum — Live Rankings</div>
-                {[...COMPANIES].sort((a, b) => b.momentum - a.momentum).slice(0, isMobile ? 6 : 10).map((c, i) => (
+                {[...COMPANIES].sort((a, b) => {
+                  const aSSBCI = a.eligible.some(e=>["bbv","fundnv","1864"].includes(e)) ? 1 : 0;
+                  const bSSBCI = b.eligible.some(e=>["bbv","fundnv","1864"].includes(e)) ? 1 : 0;
+                  if (bSSBCI !== aSSBCI) return bSSBCI - aSSBCI;
+                  return b.momentum - a.momentum;
+                }).slice(0, isMobile ? 6 : 10).map((c, i) => (
                   <div key={c.id} onClick={() => { setSelectedCompany(c); }} style={{ display:"flex", alignItems:"center", padding:"8px 0", borderBottom: i < 9 ? `1px solid ${BORDER}` : "none", cursor:"pointer", gap:8 }}>
                     <span style={{ width:20, fontSize:12, color: i < 3 ? GOLD : MUTED, fontWeight:600 }}>{i + 1}</span>
                     <div style={{ flex:1, minWidth:0 }}>
