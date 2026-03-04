@@ -3,8 +3,7 @@ import cytoscape from "cytoscape";
 import coseBilkent from "cytoscape-cose-bilkent";
 import { useApi } from "../hooks/useApi.js";
 import { GP, NODE_CFG, REL_CFG, GSTAGE_C } from "@bbi/ui-core/constants";
-import { REAP_PILLARS, getReapPillar } from "@bbi/ui-core/reap";
-import { computeGraphMetrics } from "@bbi/ui-core/scoring";
+import { getReapPillar } from "@bbi/ui-core/reap";
 import ReapChipBar from "../components/ReapChipBar.jsx";
 
 cytoscape.use(coseBilkent);
