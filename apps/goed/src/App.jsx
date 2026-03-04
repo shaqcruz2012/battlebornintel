@@ -33,8 +33,10 @@ export default function App() {
   const [view, setView] = useState("dashboard");
   const [selectedCompany, setSelectedCompany] = useState(null);
   const [mobileNav, setMobileNav] = useState(false);
+  const [portfolioFilter, setPortfolioFilter] = useState("bbv");
   const px = isMobile ? 12 : 24;
 
+  const fundParam = portfolioFilter === "all" ? "" : `?fund=${portfolioFilter}`;
   const ActiveView = VIEW_MAP[view] || Dashboard;
 
   return (
@@ -50,6 +52,12 @@ export default function App() {
           <span style={{ fontSize:9, color:MUTED, background:"#1A1814", padding:"2px 6px", borderRadius:4 }}>v6.0</span>
         </div>
         <div style={{ display:"flex", gap:8, alignItems:"center" }}>
+          {/* Portfolio Toggle */}
+          <div style={{ display:"flex", borderRadius:4, overflow:"hidden", border:`1px solid ${BORDER}` }}>
+            {[["bbv","BBV Portfolio"],["all","Full Ecosystem"]].map(([val, label]) => (
+              <button key={val} onClick={() => setPortfolioFilter(val)} style={{ background: portfolioFilter === val ? GOLD+"25" : "transparent", border:"none", color: portfolioFilter === val ? GOLD : MUTED, fontSize: isMobile ? 8 : 9, padding: isMobile ? "3px 6px" : "4px 10px", cursor:"pointer", fontWeight: portfolioFilter === val ? 700 : 400, letterSpacing: 0.5 }}>{label}</button>
+            ))}
+          </div>
           <div style={{ display:"flex", gap:4, alignItems:"center" }}>
             <div style={{ width:7, height:7, borderRadius:"50%", background:GREEN, animation:"pulse 2s infinite" }} />
             <span style={{ fontSize:10, color:MUTED }}>LIVE</span>
@@ -75,6 +83,7 @@ export default function App() {
           isTablet={isTablet}
           setSelectedCompany={setSelectedCompany}
           setView={setView}
+          fundParam={fundParam}
         />
       </div>
 
