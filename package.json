@@ -8,5 +8,10 @@
   },
   "devDependencies": {
     "concurrently": "^9.1.2"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "better-sqlite3"
+    ]
   }
 }
