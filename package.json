@@ -1,0 +1,12 @@
+{
+  "name": "battlebornintel",
+  "private": true,
+  "scripts": {
+    "dev": "concurrently \"pnpm --filter @bbi/api dev\" \"pnpm --filter @bbi/goed dev\"",
+    "build": "pnpm --filter @bbi/goed build",
+    "seed": "pnpm --filter @bbi/api seed"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  }
+}

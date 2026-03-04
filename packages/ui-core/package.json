@@ -1,0 +1,12 @@
+{
+  "name": "@bbi/ui-core",
+  "version": "0.0.0",
+  "type": "module",
+  "main": "src/index.js",
+  "exports": {
+    ".": "./src/index.js",
+    "./constants": "./src/constants.js",
+    "./scoring": "./src/scoring.js",
+    "./reap": "./src/reap.js"
+  }
+}
