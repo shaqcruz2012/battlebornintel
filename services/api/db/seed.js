@@ -1,5 +1,5 @@
-import Database from "better-sqlite3";
-import { readFileSync } from "fs";
+import initSqlJs from "sql.js";
+import { readFileSync, writeFileSync } from "fs";
 import { fileURLToPath } from "url";
 import { dirname, join } from "path";
 
@@ -7,8 +7,8 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const dbPath = join(__dirname, "bbi.db");
 const schemaPath = join(__dirname, "schema.sql");
 
-const db = new Database(dbPath);
-db.pragma("journal_mode = WAL");
+const SQL = await initSqlJs();
+const db = new SQL.Database();
 db.exec(readFileSync(schemaPath, "utf8"));
 
 // ── DATA ──
@@ -669,63 +669,81 @@ const VERIFIED_EDGES = [
 // ── SEED FUNCTIONS ──
 
 function seedCompanies(companies) {
+  db.exec("BEGIN");
   const stmt = db.prepare(`INSERT OR REPLACE INTO companies (id, name, stage, sectors, city, region, funding, momentum, employees, founded, description, eligible, lat, lng) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);
-  const tx = db.transaction(() => {
-    for (const c of companies) {
-      stmt.run(c.id, c.name, c.stage, JSON.stringify(c.sector), c.city, c.region, c.funding, c.momentum, c.employees, c.founded, c.description, JSON.stringify(c.eligible), c.lat, c.lng);
-    }
-  });
-  tx();
+  for (const c of companies) {
+    stmt.bind([c.id, c.name, c.stage, JSON.stringify(c.sector), c.city, c.region, c.funding, c.momentum, c.employees, c.founded, c.description, JSON.stringify(c.eligible), c.lat, c.lng]);
+    stmt.step();
+    stmt.reset();
+  }
+  stmt.free();
+  db.exec("COMMIT");
   console.log(`Seeded ${companies.length} companies`);
 }
 
 function seedFunds(funds) {
+  db.exec("BEGIN");
   const stmt = db.prepare(`INSERT OR REPLACE INTO funds (id, name, type, allocated, deployed, leverage, companies, thesis) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`);
-  const tx = db.transaction(() => {
-    for (const f of funds) stmt.run(f.id, f.name, f.type, f.allocated, f.deployed, f.leverage, f.companies, f.thesis);
-  });
-  tx();
+  for (const f of funds) {
+    stmt.bind([f.id, f.name, f.type, f.allocated, f.deployed, f.leverage, f.companies, f.thesis]);
+    stmt.step();
+    stmt.reset();
+  }
+  stmt.free();
+  db.exec("COMMIT");
   console.log(`Seeded ${funds.length} funds`);
 }
 
 function seedEntities(graphFunds, people, externals, accelerators, ecosystemOrgs) {
+  db.exec("BEGIN");
   const stmt = db.prepare(`INSERT OR REPLACE INTO entities (id, name, category, etype, atype, role, city, region, founded, company_id, note) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);
-  const tx = db.transaction(() => {
-    for (const f of graphFunds) stmt.run(f.id, f.name, "graph_fund", null, null, null, null, null, null, null, f.type);
-    for (const p of people) stmt.run(p.id, p.name, "person", null, null, p.role, null, null, null, p.companyId, p.note);
-    for (const x of externals) stmt.run(x.id, x.name, "external", x.etype, null, null, null, null, null, null, x.note);
-    for (const a of accelerators) stmt.run(a.id, a.name, "accelerator", null, a.atype, null, a.city, a.region, a.founded, null, a.note);
-    for (const o of ecosystemOrgs) stmt.run(o.id, o.name, "ecosystem", o.etype, null, null, o.city, o.region, null, null, o.note);
-  });
-  tx();
+  for (const f of graphFunds) { stmt.bind([f.id, f.name, "graph_fund", null, null, null, null, null, null, null, f.type]); stmt.step(); stmt.reset(); }
+  for (const p of people) { stmt.bind([p.id, p.name, "person", null, null, p.role, null, null, null, p.companyId, p.note]); stmt.step(); stmt.reset(); }
+  for (const x of externals) { stmt.bind([x.id, x.name, "external", x.etype, null, null, null, null, null, null, x.note]); stmt.step(); stmt.reset(); }
+  for (const a of accelerators) { stmt.bind([a.id, a.name, "accelerator", null, a.atype, null, a.city, a.region, a.founded, null, a.note]); stmt.step(); stmt.reset(); }
+  for (const o of ecosystemOrgs) { stmt.bind([o.id, o.name, "ecosystem", o.etype, null, null, o.city, o.region, null, null, o.note]); stmt.step(); stmt.reset(); }
+  stmt.free();
+  db.exec("COMMIT");
   const total = graphFunds.length + people.length + externals.length + accelerators.length + ecosystemOrgs.length;
   console.log(`Seeded ${total} entities`);
 }
 
 function seedEdges(edges) {
+  db.exec("BEGIN");
   const stmt = db.prepare(`INSERT INTO edges (source, target, rel, note, year) VALUES (?, ?, ?, ?, ?)`);
-  const tx = db.transaction(() => {
-    for (const e of edges) stmt.run(e.source, e.target, e.rel, e.note, e.y || null);
-  });
-  tx();
+  for (const e of edges) {
+    stmt.bind([e.source, e.target, e.rel, e.note, e.y || null]);
+    stmt.step();
+    stmt.reset();
+  }
+  stmt.free();
+  db.exec("COMMIT");
   console.log(`Seeded ${edges.length} edges`);
 }
 
 function seedTimeline(events) {
+  db.exec("BEGIN");
   const stmt = db.prepare(`INSERT INTO timeline_events (date, type, company, detail, icon) VALUES (?, ?, ?, ?, ?)`);
-  const tx = db.transaction(() => {
-    for (const e of events) stmt.run(e.date, e.type, e.company, e.detail, e.icon);
-  });
-  tx();
+  for (const e of events) {
+    stmt.bind([e.date, e.type, e.company, e.detail, e.icon]);
+    stmt.step();
+    stmt.reset();
+  }
+  stmt.free();
+  db.exec("COMMIT");
   console.log(`Seeded ${events.length} timeline events`);
 }
 
 function seedListings(listings) {
+  db.exec("BEGIN");
   const stmt = db.prepare(`INSERT OR REPLACE INTO listings (company_id, exchange, ticker) VALUES (?, ?, ?)`);
-  const tx = db.transaction(() => {
-    for (const l of listings) stmt.run(l.companyId, l.exchange, l.ticker);
-  });
-  tx();
+  for (const l of listings) {
+    stmt.bind([l.companyId, l.exchange, l.ticker]);
+    stmt.step();
+    stmt.reset();
+  }
+  stmt.free();
+  db.exec("COMMIT");
   console.log(`Seeded ${listings.length} listings`);
 }
 
@@ -738,5 +756,6 @@ seedEntities(GRAPH_FUNDS, PEOPLE, EXTERNALS, ACCELERATORS, ECOSYSTEM_ORGS);
 seedEdges(VERIFIED_EDGES);
 seedTimeline(TIMELINE_EVENTS);
 seedListings(LISTINGS);
+writeFileSync(dbPath, Buffer.from(db.export()));
 console.log("Done! Database at:", dbPath);
 db.close();

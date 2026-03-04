@@ -1,6 +1,7 @@
 import express from "express";
 import cors from "cors";
-import Database from "better-sqlite3";
+import initSqlJs from "sql.js";
+import { readFileSync } from "fs";
 import { fileURLToPath } from "url";
 import { dirname, join } from "path";
 import companiesRouter from "./routes/companies.js";
@@ -12,8 +13,25 @@ import statsRouter from "./routes/stats.js";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const dbPath = join(__dirname, "db", "bbi.db");
 
-const db = new Database(dbPath, { readonly: true });
-db.pragma("journal_mode = WAL");
+// sql.js helpers — return arrays of plain objects like better-sqlite3
+function queryAll(db, sql, params = []) {
+  const stmt = db.prepare(sql);
+  if (params.length) stmt.bind(params);
+  const results = [];
+  while (stmt.step()) results.push(stmt.getAsObject());
+  stmt.free();
+  return results;
+}
+
+function queryOne(db, sql, params = []) {
+  const results = queryAll(db, sql, params);
+  return results[0] || null;
+}
+
+// Async init: load sql.js WASM, open existing DB file, then start Express
+const SQL = await initSqlJs();
+const buffer = readFileSync(dbPath);
+const db = new SQL.Database(buffer);
 
 const app = express();
 app.use(cors());
@@ -21,6 +39,8 @@ app.use(express.json());
 
 app.use((req, res, next) => {
   req.db = db;
+  req.queryAll = (sql, params) => queryAll(db, sql, params);
+  req.queryOne = (sql, params) => queryOne(db, sql, params);
   next();
 });
 

@@ -4,13 +4,13 @@ import { computeIRS } from "../../../packages/ui-core/src/scoring.js";
 const router = Router();
 
 router.get("/ssbci", (req, res) => {
-  const ssbciFunds = req.db.prepare("SELECT * FROM funds WHERE type = 'SSBCI'").all();
+  const ssbciFunds = req.queryAll("SELECT * FROM funds WHERE type = 'SSBCI'");
   const totalDeployed = ssbciFunds.reduce((s, f) => s + f.deployed, 0);
   const totalAllocated = ssbciFunds.reduce((s, f) => s + (f.allocated || 0), 0);
   const avgLeverage = ssbciFunds.filter(f => f.leverage).reduce((s, f) => s + f.leverage, 0) / ssbciFunds.filter(f => f.leverage).length;
   const privateLeveraged = Math.round(totalDeployed * avgLeverage);
 
-  const companies = req.db.prepare("SELECT * FROM companies").all().map(r => ({
+  const companies = req.queryAll("SELECT * FROM companies").map(r => ({
     ...r, sector: JSON.parse(r.sectors || "[]"), eligible: JSON.parse(r.eligible || "[]"),
   }));
   const scored = companies.map(computeIRS);
@@ -31,7 +31,7 @@ router.get("/ssbci", (req, res) => {
 });
 
 router.get("/ecosystem", (req, res) => {
-  const companies = req.db.prepare("SELECT * FROM companies").all();
+  const companies = req.queryAll("SELECT * FROM companies");
   const totalFunding = companies.reduce((s, c) => s + c.funding, 0);
   const totalEmployees = companies.reduce((s, c) => s + c.employees, 0);
   res.json({ totalFunding, totalEmployees, companyCount: companies.length });

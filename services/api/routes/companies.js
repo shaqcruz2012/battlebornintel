@@ -4,7 +4,7 @@ import { computeIRS } from "../../../packages/ui-core/src/scoring.js";
 const router = Router();
 
 router.get("/", (req, res) => {
-  const rows = req.db.prepare("SELECT * FROM companies ORDER BY momentum DESC").all();
+  const rows = req.queryAll("SELECT * FROM companies ORDER BY momentum DESC");
   const companies = rows.map(r => ({
     ...r,
     sector: JSON.parse(r.sectors || "[]"),
@@ -15,12 +15,12 @@ router.get("/", (req, res) => {
 });
 
 router.get("/:id", (req, res) => {
-  const row = req.db.prepare("SELECT * FROM companies WHERE id = ?").get(req.params.id);
+  const row = req.queryOne("SELECT * FROM companies WHERE id = ?", [req.params.id]);
   if (!row) return res.status(404).json({ error: "Not found" });
   const company = { ...row, sector: JSON.parse(row.sectors || "[]"), eligible: JSON.parse(row.eligible || "[]") };
   const scored = computeIRS(company);
-  const edges = req.db.prepare("SELECT * FROM edges WHERE source = ? OR target = ?").all(`c_${row.id}`, `c_${row.id}`);
-  const timeline = req.db.prepare("SELECT * FROM timeline_events WHERE company = ? ORDER BY date DESC").all(row.name);
+  const edges = req.queryAll("SELECT * FROM edges WHERE source = ? OR target = ?", [`c_${row.id}`, `c_${row.id}`]);
+  const timeline = req.queryAll("SELECT * FROM timeline_events WHERE company = ? ORDER BY date DESC", [row.name]);
   res.json({ ...scored, edges, timeline });
 });
 

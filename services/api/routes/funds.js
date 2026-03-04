@@ -3,7 +3,7 @@ import { Router } from "express";
 const router = Router();
 
 router.get("/", (req, res) => {
-  const funds = req.db.prepare("SELECT * FROM funds").all();
+  const funds = req.queryAll("SELECT * FROM funds");
   res.json(funds);
 });
 
