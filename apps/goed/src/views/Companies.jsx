@@ -5,8 +5,8 @@ import ReapChipBar from "../components/ReapChipBar.jsx";
 import Grade from "../components/Grade.jsx";
 import MBar from "../components/MBar.jsx";
 
-export default function Companies({ isMobile, isTablet, setSelectedCompany, setView }) {
-  const { data: companies } = useApi("/companies");
+export default function Companies({ isMobile, isTablet, setSelectedCompany, setView, fundParam }) {
+  const { data: companies } = useApi("/companies" + fundParam);
   const [search, setSearch] = useState("");
   const [stageFilter, setStageFilter] = useState("all");
   const [regionFilter, setRegionFilter] = useState("all");

@@ -7,8 +7,8 @@ import Counter from "../components/Counter.jsx";
 import Spark from "../components/Spark.jsx";
 import MBar from "../components/MBar.jsx";
 
-export default function Dashboard({ isMobile, isTablet, setSelectedCompany, setView }) {
-  const { data: companies } = useApi("/companies");
+export default function Dashboard({ isMobile, isTablet, setSelectedCompany, setView, fundParam }) {
+  const { data: companies } = useApi("/companies" + fundParam);
   const { data: funds } = useApi("/funds");
 
   if (!companies || !funds) return <div style={{ padding:40, textAlign:"center", color:MUTED }}>Loading dashboard...</div>;

@@ -5,8 +5,8 @@ import { SHEAT } from "@bbi/ui-core/scoring";
 import Grade from "../components/Grade.jsx";
 import Stat from "../components/Stat.jsx";
 
-export default function Sectors({ isMobile, isTablet, setSelectedCompany, setView }) {
-  const { data: companies } = useApi("/companies");
+export default function Sectors({ isMobile, isTablet, setSelectedCompany, setView, fundParam }) {
+  const { data: companies } = useApi("/companies" + fundParam);
   const [sectorDetail, setSectorDetail] = useState(null);
 
   if (!companies) return <div style={{ padding:40, textAlign:"center", color:MUTED }}>Loading sectors...</div>;

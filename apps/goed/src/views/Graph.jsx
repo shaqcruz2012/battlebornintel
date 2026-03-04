@@ -8,10 +8,10 @@ import ReapChipBar from "../components/ReapChipBar.jsx";
 
 cytoscape.use(coseBilkent);
 
-export default function Graph({ isMobile, setSelectedCompany, setView }) {
+export default function Graph({ isMobile, setSelectedCompany, setView, fundParam }) {
   const containerRef = useRef(null);
   const cyRef = useRef(null);
-  const { data: graphData } = useApi("/graph");
+  const { data: graphData } = useApi("/graph" + fundParam);
   const [reapFilter, setReapFilter] = useState("all");
   const [selected, setSelected] = useState(null);
   const [colorMode, setColorMode] = useState("default");

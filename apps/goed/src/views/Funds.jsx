@@ -5,9 +5,9 @@ import ReapChipBar from "../components/ReapChipBar.jsx";
 import Stat from "../components/Stat.jsx";
 import Grade from "../components/Grade.jsx";
 
-export default function Funds({ isMobile, isTablet, setSelectedCompany, setView }) {
+export default function Funds({ isMobile, isTablet, setSelectedCompany, setView, fundParam }) {
   const { data: funds } = useApi("/funds");
-  const { data: companies } = useApi("/companies");
+  const { data: companies } = useApi("/companies" + fundParam);
   const [fundDetail, setFundDetail] = useState(null);
   const [reapFilter, setReapFilter] = useState("all");
 

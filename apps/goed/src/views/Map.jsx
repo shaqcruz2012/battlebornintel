@@ -2,8 +2,8 @@ import { useState } from "react";
 import { useApi } from "../hooks/useApi.js";
 import { BORDER, MUTED, GOLD, TEXT, DARK, STAGE_COLORS, fadeIn, fmt, stageLabel } from "@bbi/ui-core";
 
-export default function Map({ isMobile, isTablet, setSelectedCompany, setView }) {
-  const { data: companies } = useApi("/companies");
+export default function Map({ isMobile, isTablet, setSelectedCompany, setView, fundParam }) {
+  const { data: companies } = useApi("/companies" + fundParam);
   const [mapHover, setMapHover] = useState(null);
 
   if (!companies) return <div style={{ padding:40, textAlign:"center", color:MUTED }}>Loading map...</div>;

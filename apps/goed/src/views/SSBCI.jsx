@@ -2,9 +2,9 @@ import { useApi } from "../hooks/useApi.js";
 import { CARD, BORDER, MUTED, GOLD, GREEN, BLUE, PURPLE, fadeIn, fmt } from "@bbi/ui-core";
 import Stat from "../components/Stat.jsx";
 
-export default function SSBCI({ isMobile, isTablet, setSelectedCompany, setView }) {
+export default function SSBCI({ isMobile, isTablet, setSelectedCompany, setView, fundParam }) {
   const { data: funds } = useApi("/funds");
-  const { data: companies } = useApi("/companies");
+  const { data: companies } = useApi("/companies" + fundParam);
 
   if (!funds || !companies) return <div style={{ padding:40, textAlign:"center", color:MUTED }}>Loading SSBCI...</div>;
 

@@ -1,8 +1,8 @@
 import { useApi } from "../hooks/useApi.js";
 import { BORDER, MUTED, GOLD, GREEN, BLUE, ORANGE, PURPLE, TEXT, fadeIn } from "@bbi/ui-core";
 
-export default function Timeline({ isMobile, isTablet, setSelectedCompany, setView }) {
-  const { data: events } = useApi("/timeline");
+export default function Timeline({ isMobile, isTablet, setSelectedCompany, setView, fundParam }) {
+  const { data: events } = useApi("/timeline" + fundParam);
 
   if (!events) return <div style={{ padding:40, textAlign:"center", color:MUTED }}>Loading timeline...</div>;
 

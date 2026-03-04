@@ -3,11 +3,11 @@ import { CARD, BORDER, MUTED, GOLD, GREEN, PURPLE, TEXT, fadeIn, fmt } from "@bb
 import { REAP_PILLARS, getReapPillar, getCompanyReapConnections } from "@bbi/ui-core/reap";
 import Stat from "../components/Stat.jsx";
 
-export default function Brief({ isMobile, isTablet, setSelectedCompany, setView }) {
-  const { data: companies } = useApi("/companies");
+export default function Brief({ isMobile, isTablet, setSelectedCompany, setView, fundParam }) {
+  const { data: companies } = useApi("/companies" + fundParam);
   const { data: funds } = useApi("/funds");
-  const { data: timeline } = useApi("/timeline");
-  const { data: graphData } = useApi("/graph");
+  const { data: timeline } = useApi("/timeline" + fundParam);
+  const { data: graphData } = useApi("/graph" + fundParam);
 
   if (!companies || !funds || !timeline || !graphData) return <div style={{ padding:40, textAlign:"center", color:MUTED }}>Loading brief...</div>;
 

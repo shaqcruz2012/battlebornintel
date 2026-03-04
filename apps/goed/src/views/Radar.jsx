@@ -6,8 +6,8 @@ import Stat from "../components/Stat.jsx";
 import Spark from "../components/Spark.jsx";
 import MBar from "../components/MBar.jsx";
 
-export default function Radar({ isMobile, isTablet, setSelectedCompany, setView }) {
-  const { data: companies } = useApi("/companies");
+export default function Radar({ isMobile, isTablet, setSelectedCompany, setView, fundParam }) {
+  const { data: companies } = useApi("/companies" + fundParam);
 
   if (!companies) return <div style={{ padding:40, textAlign:"center", color:MUTED }}>Loading radar...</div>;
 
