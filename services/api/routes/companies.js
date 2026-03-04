@@ -3,6 +3,11 @@ import { computeIRS } from "../../../packages/ui-core/src/scoring.js";
 
 const router = Router();
 
+function filterByFund(companies, fund) {
+  if (!fund || fund === "all") return companies;
+  return companies.filter(c => c.eligible.includes(fund));
+}
+
 router.get("/", (req, res) => {
   const rows = req.queryAll("SELECT * FROM companies ORDER BY momentum DESC");
   const companies = rows.map(r => ({
@@ -10,7 +15,8 @@ router.get("/", (req, res) => {
     sector: JSON.parse(r.sectors || "[]"),
     eligible: JSON.parse(r.eligible || "[]"),
   }));
-  const scored = companies.map(computeIRS).sort((a, b) => b.irs - a.irs);
+  const filtered = filterByFund(companies, req.query.fund);
+  const scored = filtered.map(computeIRS).sort((a, b) => b.irs - a.irs);
   res.json(scored);
 });
 
