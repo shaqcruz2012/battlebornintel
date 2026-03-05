@@ -2,3 +2,4 @@ node_modules/
 services/api/db/bbi.db
 dist/
 .claude/
+agents/.env

@@ -1,0 +1,17 @@
+{
+  "name": "@bbi/agents",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "timeline": "node timeline/run.js",
+    "snapshot": "node snapshot/run.js",
+    "scheduler": "node scheduler.js"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.39.0",
+    "node-cron": "^3.0.3",
+    "sql.js": "^1.12.0",
+    "dotenv": "^16.5.0"
+  }
+}
