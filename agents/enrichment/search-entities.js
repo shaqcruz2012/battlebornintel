@@ -59,7 +59,15 @@ export function loadSparseEntities(db) {
     [cutoff]
   );
 
-  const all = [...entities, ...accelerators];
+  // Deduplicate by id (entity could appear in both queries)
+  const seen = new Set(entities.map(e => e.id));
+  const all = [...entities];
+  for (const acc of accelerators) {
+    if (!seen.has(acc.id)) {
+      all.push(acc);
+      seen.add(acc.id);
+    }
+  }
 
   // Sort by sparseness (most sparse first), then alphabetically for determinism
   all.sort((a, b) => {
@@ -159,7 +167,7 @@ export function getAllEntityNames(db) {
  */
 export function getEntityEdges(db, entityId) {
   return queryAll(db,
-    `SELECT e.source, e.target, e.rel, t.name as targetName
+    `SELECT e.source, e.target, e.rel, COALESCE(t.name, c.name) as targetName
      FROM edges e
      LEFT JOIN entities t ON e.target = t.id
      LEFT JOIN companies c ON e.target = CAST(c.id AS TEXT)
