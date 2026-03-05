@@ -52,8 +52,15 @@ cron.schedule("15 6 1 1,4,7,10 *", () => {
   runAgent("snapshot/run.js", ["quarterly"]);
 }, { timezone: "America/Los_Angeles" });
 
+// Weekly enrichment: Sunday 7:00am PST
+cron.schedule("0 7 * * 0", () => {
+  console.log("\n🔍 Weekly enrichment run");
+  runAgent("enrichment/run.js");
+}, { timezone: "America/Los_Angeles" });
+
 console.log(`\n${"=".repeat(50)}`);
 console.log("BBI Agent Scheduler running");
-console.log("  Timeline: 6:30am + 12:00pm PST daily");
-console.log("  Snapshot: 1st of month (monthly) + Jan/Apr/Jul/Oct (quarterly)");
+console.log("  Timeline:    6:30am + 12:00pm PST daily");
+console.log("  Snapshot:    1st of month (monthly) + Jan/Apr/Jul/Oct (quarterly)");
+console.log("  Enrichment:  Sunday 7:00am PST weekly");
 console.log(`${"=".repeat(50)}\n`);

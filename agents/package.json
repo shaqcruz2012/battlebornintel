@@ -6,6 +6,7 @@
   "scripts": {
     "timeline": "node timeline/run.js",
     "snapshot": "node snapshot/run.js",
+    "enrichment": "node enrichment/run.js",
     "scheduler": "node scheduler.js"
   },
   "dependencies": {
