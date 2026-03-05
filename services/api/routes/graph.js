@@ -45,7 +45,11 @@ router.get("/", (req, res) => {
     });
   });
 
-  res.json({ nodes, edges: filteredEdges, listings });
+  // Validate edges — only include edges whose source AND target exist as node IDs
+  const nodeIds = new Set(nodes.map(n => n.id));
+  const validEdges = filteredEdges.filter(e => nodeIds.has(e.source) && nodeIds.has(e.target));
+
+  res.json({ nodes, edges: validEdges, listings });
 });
 
 export default router;

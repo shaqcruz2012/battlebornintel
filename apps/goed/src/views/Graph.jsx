@@ -6,7 +6,7 @@ import { GP, NODE_CFG, REL_CFG, GSTAGE_C } from "@bbi/ui-core/constants";
 import { getReapPillar } from "@bbi/ui-core/reap";
 import ReapChipBar from "../components/ReapChipBar.jsx";
 
-cytoscape.use(coseBilkent);
+try { cytoscape.use(coseBilkent); } catch (_) { /* already registered */ }
 
 export default function Graph({ isMobile, setSelectedCompany, setView, fundParam }) {
   const containerRef = useRef(null);
@@ -52,7 +52,9 @@ export default function Graph({ isMobile, setSelectedCompany, setView, fundParam
   useEffect(() => {
     if (!containerRef.current || elements.length === 0) return;
 
-    const cy = cytoscape({
+    let cy;
+    try {
+    cy = cytoscape({
       container: containerRef.current,
       elements,
       style: [
@@ -147,6 +149,9 @@ export default function Graph({ isMobile, setSelectedCompany, setView, fundParam
     cyRef.current = cy;
 
     return () => cy.destroy();
+    } catch (err) {
+      console.error("Cytoscape init error:", err);
+    }
   }, [elements]);
 
   // Apply REAP filter
