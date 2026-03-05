@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "node --watch server.js",
     "start": "node server.js",
-    "seed": "node db/seed.js"
+    "seed": "node db/seed.js",
+    "migrate": "node db/migrate-v2.js"
   },
   "dependencies": {
     "sql.js": "^1.12.0",
