@@ -6,12 +6,9 @@
 // Common suffixes to strip from entity names for comparison.
 // These are legal/structural designators that don't contribute to identity.
 const STRIP_SUFFIXES = [
-  "incorporated", "inc", "llc", "llp", "lp", "ltd", "limited",
-  "partners", "partner", "capital", "ventures", "venture",
-  "fund", "funds", "group", "management", "mgmt",
-  "holdings", "holding", "corp", "corporation",
-  "co", "company", "associates", "advisors", "advisory",
-  "investment", "investments", "equity",
+  "inc", "llc", "partners", "capital", "ventures",
+  "fund", "group", "management", "holdings", "lp",
+  "corp", "corporation", "co", "company", "limited", "ltd",
 ];
 
 /**
@@ -25,8 +22,8 @@ const STRIP_SUFFIXES = [
 export function normalizeName(name) {
   if (!name) return "";
   let n = name.toLowerCase().trim();
-  // Remove punctuation like periods, commas, quotes, parens
-  n = n.replace(/[.,'"!?()]/g, "");
+  // Remove all non-alphanumeric, non-space characters (punctuation, &, -, etc.)
+  n = n.replace(/[^a-z0-9\s]/g, "");
   // Strip suffixes (whole-word matches only)
   for (const suffix of STRIP_SUFFIXES) {
     const re = new RegExp(`\\b${suffix}\\b`, "g");
@@ -95,10 +92,12 @@ export function fuzzyMatch(candidateName, existingNames) {
       return existing; // Perfect match, return immediately
     }
 
-    // Tier 2: Containment check
+    // Tier 2: Containment check (require min 3 chars to avoid false positives)
+    const shorter = normCandidate.length < normExisting.length ? normCandidate : normExisting;
     if (
-      normCandidate.includes(normExisting) ||
-      normExisting.includes(normCandidate)
+      shorter.length >= 3 &&
+      (normCandidate.includes(normExisting) ||
+        normExisting.includes(normCandidate))
     ) {
       const score = 0.9;
       if (score > bestScore) {
@@ -146,10 +145,12 @@ export function findDuplicates(candidateName, existingNames) {
       continue;
     }
 
-    // Containment
+    // Containment (require min 3 chars to avoid false positives)
+    const shorter = normCandidate.length < normExisting.length ? normCandidate : normExisting;
     if (
-      normCandidate.includes(normExisting) ||
-      normExisting.includes(normCandidate)
+      shorter.length >= 3 &&
+      (normCandidate.includes(normExisting) ||
+        normExisting.includes(normCandidate))
     ) {
       matches.push({ name: existing, score: 0.9, method: "containment" });
       continue;
