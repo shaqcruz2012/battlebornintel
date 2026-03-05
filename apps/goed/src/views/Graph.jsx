@@ -5,6 +5,7 @@ import { useApi } from "../hooks/useApi.js";
 import { GP, NODE_CFG, REL_CFG, GSTAGE_C } from "@bbi/ui-core/constants";
 import { getReapPillar } from "@bbi/ui-core/reap";
 import ReapChipBar from "../components/ReapChipBar.jsx";
+import GraphHoverPanel from "../components/GraphHoverPanel.jsx";
 
 try { cytoscape.use(coseBilkent); } catch (_) { /* already registered */ }
 
@@ -15,6 +16,10 @@ export default function Graph({ isMobile, setSelectedCompany, setView, fundParam
   const [reapFilter, setReapFilter] = useState("all");
   const [selected, setSelected] = useState(null);
   const [colorMode, setColorMode] = useState("default");
+  const [hoverNode, setHoverNode] = useState(null);
+  const [hoverPos, setHoverPos] = useState({ x: 0, y: 0 });
+  const [pinned, setPinned] = useState(false);
+  const pinnedRef = useRef(false);
 
   // Build Cytoscape elements from API data
   const elements = useMemo(() => {
@@ -126,24 +131,34 @@ export default function Graph({ isMobile, setSelectedCompany, setView, fundParam
       maxZoom: 4,
     });
 
+    let hoverTimeout = null;
+    cy.on("mouseover", "node", (evt) => {
+      if (pinnedRef.current) return;
+      clearTimeout(hoverTimeout);
+      const node = evt.target;
+      const pos = node.renderedPosition();
+      setHoverPos({ x: pos.x, y: pos.y });
+      setHoverNode({ id: node.id(), ...node.data() });
+    });
+    cy.on("mouseout", "node", () => {
+      if (pinnedRef.current) return;
+      hoverTimeout = setTimeout(() => setHoverNode(null), 200);
+    });
     cy.on("tap", "node", (evt) => {
       const node = evt.target;
-      setSelected({
-        id: node.id(),
-        label: node.data("label"),
-        type: node.data("type"),
-        ...node.data(),
-      });
-      if (node.data("type") === "company") {
-        const companyId = parseInt(node.id().replace("c_", ""));
-        if (!isNaN(companyId)) {
-          // Could navigate to company detail
-        }
-      }
+      setHoverNode({ id: node.id(), ...node.data() });
+      const pos = node.renderedPosition();
+      setHoverPos({ x: pos.x, y: pos.y });
+      pinnedRef.current = true;
+      setPinned(true);
     });
-
     cy.on("tap", (evt) => {
-      if (evt.target === cy) setSelected(null);
+      if (evt.target === cy) {
+        pinnedRef.current = false;
+        setPinned(false);
+        setHoverNode(null);
+        setSelected(null);
+      }
     });
 
     cyRef.current = cy;
@@ -199,12 +214,12 @@ export default function Graph({ isMobile, setSelectedCompany, setView, fundParam
           border: `1px solid ${GP.border}`,
         }}
       />
-      {selected && (
-        <div style={{ marginTop: 8, padding: 12, background: GP.surface, borderRadius: 8, border: `1px solid ${GP.border}` }}>
-          <div style={{ fontSize: 14, fontWeight: 700, color: GP.text }}>{selected.label}</div>
-          <div style={{ fontSize: 10, color: GP.muted }}>{selected.type} {selected.note ? `— ${selected.note}` : ""}</div>
-        </div>
-      )}
+      <GraphHoverPanel
+        node={hoverNode || selected}
+        position={hoverPos}
+        isMobile={isMobile}
+        onPin={() => { pinnedRef.current = true; setPinned(true); }}
+      />
     </div>
   );
 }
