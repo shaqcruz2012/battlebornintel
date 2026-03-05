@@ -1,4 +1,4 @@
-import { run, queryOne } from "../lib/db.js";
+import { run } from "../lib/db.js";
 import { extractEntityDetails } from "../lib/llm.js";
 import { computeConfidence, shouldQuarantine } from "../lib/confidence.js";
 import { classifySource } from "../lib/search.js";
@@ -138,11 +138,13 @@ function applyEnrichment(db, entity, details) {
   run(db,
     `UPDATE entities SET
        city = COALESCE(city, ?),
+       region = COALESCE(region, ?),
        founded = COALESCE(founded, ?),
        note = CASE WHEN (note IS NULL OR LENGTH(note) < 50) AND ? != '' THEN ? ELSE note END
      WHERE id = ?`,
     [
       details.hq_city || null,
+      details.hq_state || null,
       details.founding_year || null,
       newNote,
       newNote,
