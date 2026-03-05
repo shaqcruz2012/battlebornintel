@@ -7,6 +7,7 @@
     ".": "./src/index.js",
     "./constants": "./src/constants.js",
     "./scoring": "./src/scoring.js",
-    "./reap": "./src/reap.js"
+    "./reap": "./src/reap.js",
+    "./ontology": "./src/ontology.js"
   }
 }

@@ -9,6 +9,8 @@ import fundsRouter from "./routes/funds.js";
 import graphRouter from "./routes/graph.js";
 import timelineRouter from "./routes/timeline.js";
 import statsRouter from "./routes/stats.js";
+import sourcesRouter from "./routes/sources.js";
+import snapshotsRouter from "./routes/snapshots.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const dbPath = join(__dirname, "db", "bbi.db");
@@ -49,6 +51,8 @@ app.use("/api/funds", fundsRouter);
 app.use("/api/graph", graphRouter);
 app.use("/api/timeline", timelineRouter);
 app.use("/api/stats", statsRouter);
+app.use("/api/sources", sourcesRouter);
+app.use("/api/snapshots", snapshotsRouter);
 
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => console.log(`BBI API running on :${PORT}`));
