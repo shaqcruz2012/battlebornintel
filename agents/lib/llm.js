@@ -96,3 +96,178 @@ Respond with ONLY valid JSON:
     return { verified: false, notes: "LLM parse error" };
   }
 }
+
+export async function extractEntityDetails(entityName, entityType, snippets) {
+  const client = getClient();
+
+  const response = await client.messages.create({
+    model: "claude-haiku-4-20250414",
+    max_tokens: 1024,
+    messages: [{
+      role: "user",
+      content: `You are a risk capital intelligence agent for Nevada's innovation ecosystem.
+
+Extract structured details about "${entityName}" (a ${entityType}) from these search results.
+
+Search results:
+${snippets}
+
+Respond with ONLY valid JSON (no markdown, no explanation).
+If no relevant information found, respond with: {"enrichment": null}
+
+If details found:
+{
+  "enrichment": {
+    "fund_size_millions": null,
+    "aum_millions": null,
+    "founding_year": null,
+    "hq_city": null,
+    "hq_state": null,
+    "investment_thesis": null,
+    "stage_focus": null,
+    "sector_focus": null,
+    "key_partners": null,
+    "enrichment_confidence": "exact|approximate|inferred"
+  }
+}
+
+CRITICAL RULES:
+- Only extract facts explicitly stated in the source text.
+- fund_size_millions and aum_millions MUST appear as exact dollar amounts in the text. Do NOT estimate.
+- founding_year must be an explicit year from the text.
+- investment_thesis should be one sentence max.
+- stage_focus is an array like ["seed", "series_a", "series_b", "growth"].
+- sector_focus is an array like ["AI", "Cleantech", "Fintech"].
+- key_partners is an array of {"name": "...", "title": "..."} objects (max 3).
+- Be conservative. When in doubt, set fields to null.`
+    }],
+  });
+
+  try {
+    const parsed = JSON.parse(response.content[0].text.trim());
+    return parsed.enrichment;
+  } catch {
+    return null;
+  }
+}
+
+export async function extractRelationships(entityName, entityType, knownEdges, existingEntityNames, snippets) {
+  const client = getClient();
+
+  const edgeList = knownEdges.map(e => `  - ${e.rel} → ${e.targetName || e.target}`).join("\n") || "  (none known)";
+  const entityList = existingEntityNames.slice(0, 200).join(", ");
+
+  const response = await client.messages.create({
+    model: "claude-haiku-4-20250414",
+    max_tokens: 1024,
+    messages: [{
+      role: "user",
+      content: `You are a risk capital intelligence agent for Nevada's innovation ecosystem.
+
+Identify relationships between "${entityName}" (a ${entityType}) and other entities from these search results.
+
+Known relationships for ${entityName}:
+${edgeList}
+
+Existing entities in the graph (match target names to these):
+${entityList}
+
+Search results:
+${snippets}
+
+Respond with ONLY valid JSON. If no new relationships found: {"relationships": []}
+
+{
+  "relationships": [
+    {
+      "target_name": "Name of entity from the existing list above",
+      "rel_type": "invested_in|loaned_to|manages|founded|partners_with|accelerated_by|grants_to|acquired",
+      "note": "Brief description of the relationship",
+      "year": null,
+      "deal_size_millions": null,
+      "relationship_confidence": "exact|approximate|inferred"
+    }
+  ]
+}
+
+CRITICAL RULES:
+- target_name MUST match or closely match a name from the existing entities list above.
+- Both entities must be named explicitly in the source text.
+- deal_size_millions must appear as an exact dollar amount in the text. Do NOT estimate.
+- year must be explicit in the text.
+- Do NOT include relationships already listed in "Known relationships".
+- Only include relationships relevant to risk capital formation in Nevada.
+- Be conservative. When in doubt, omit the relationship.`
+    }],
+  });
+
+  try {
+    const parsed = JSON.parse(response.content[0].text.trim());
+    return parsed.relationships || [];
+  } catch {
+    return [];
+  }
+}
+
+export async function extractNewEntity(candidateName, existingEntityNames, snippets) {
+  const client = getClient();
+
+  const entityList = existingEntityNames.slice(0, 200).join(", ");
+
+  const response = await client.messages.create({
+    model: "claude-haiku-4-20250414",
+    max_tokens: 1024,
+    messages: [{
+      role: "user",
+      content: `You are a risk capital intelligence agent for Nevada's innovation ecosystem.
+
+Determine if "${candidateName}" is a real risk capital entity (VC firm, PE firm, angel group, accelerator, or corporate VC) with a verified connection to Nevada's ecosystem.
+
+Existing Nevada ecosystem entities:
+${entityList}
+
+Search results about "${candidateName}":
+${snippets}
+
+Respond with ONLY valid JSON.
+If NOT a real entity or no verified Nevada connection: {"new_entity": null}
+
+If real and connected:
+{
+  "new_entity": {
+    "name": "Exact legal/common name",
+    "etype": "VC Firm|PE Firm|Angel|Corporation|Accelerator",
+    "city": null,
+    "region": null,
+    "founded": null,
+    "note": "One-sentence description",
+    "fund_size_millions": null,
+    "investment_thesis": null,
+    "relationships": [
+      {
+        "target_name": "Name from existing entities list",
+        "rel_type": "invested_in|partners_with|manages|founded|acquired",
+        "note": "Brief description",
+        "year": null,
+        "deal_size_millions": null
+      }
+    ]
+  }
+}
+
+CRITICAL RULES:
+- The entity MUST have at least one relationship to an existing entity listed above.
+- target_name in relationships MUST match a name from the existing entities list.
+- Dollar amounts must appear as exact numbers in the text.
+- founding year must be explicit in the text.
+- Be conservative. When in doubt, return {"new_entity": null}.`
+    }],
+  });
+
+  try {
+    const parsed = JSON.parse(response.content[0].text.trim());
+    return parsed.new_entity;
+  } catch {
+    return null;
+  }
+}
