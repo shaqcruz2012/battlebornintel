@@ -1,7 +1,7 @@
 import pg from 'pg';
 import { readFileSync } from 'fs';
 import { resolve, dirname } from 'path';
-import { fileURLToPath } from 'url';
+import { fileURLToPath, pathToFileURL } from 'url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(__dirname, '..', '..');
@@ -18,7 +18,7 @@ try {
 
 const DATABASE_URL =
   process.env.DATABASE_URL ||
-  'postgresql://bbi:bbi_dev_password@localhost:5432/battlebornintel';
+  'postgresql://bbi:bbi_dev_password@localhost:5433/battlebornintel';
 
 const pool = new pg.Pool({ connectionString: DATABASE_URL });
 
@@ -27,16 +27,11 @@ async function seed() {
   console.log('Connected to PostgreSQL');
 
   try {
-    // Dynamic import of frontend data modules
-    const { COMPANIES } = await import(
-      resolve(ROOT, 'frontend/src/data/companies.js')
-    );
-    const { FUNDS } = await import(
-      resolve(ROOT, 'frontend/src/data/funds.js')
-    );
-    const { VERIFIED_EDGES } = await import(
-      resolve(ROOT, 'frontend/src/data/edges.js')
-    );
+    // Dynamic import of frontend data modules (pathToFileURL for Windows ESM compat)
+    const toURL = (p) => pathToFileURL(resolve(ROOT, p)).href;
+    const { COMPANIES } = await import(toURL('frontend/src/data/companies.js'));
+    const { FUNDS } = await import(toURL('frontend/src/data/funds.js'));
+    const { VERIFIED_EDGES } = await import(toURL('frontend/src/data/edges.js'));
     const {
       GRAPH_FUNDS,
       PEOPLE,
@@ -44,10 +39,8 @@ async function seed() {
       ACCELERATORS,
       ECOSYSTEM_ORGS,
       LISTINGS,
-    } = await import(resolve(ROOT, 'frontend/src/data/graph-entities.js'));
-    const { TIMELINE } = await import(
-      resolve(ROOT, 'frontend/src/data/timeline.js')
-    );
+    } = await import(toURL('frontend/src/data/graph-entities.js'));
+    const { TIMELINE } = await import(toURL('frontend/src/data/timeline.js'));
     const {
       SHEAT,
       STAGE_NORMS,
@@ -59,7 +52,7 @@ async function seed() {
       GSTAGE_C,
       STAGE_COLORS,
       COMM_COLORS,
-    } = await import(resolve(ROOT, 'frontend/src/data/constants.js'));
+    } = await import(toURL('frontend/src/data/constants.js'));
 
     await client.query('BEGIN');
 
@@ -241,9 +234,7 @@ async function seed() {
     );
 
     // 12. Pre-compute IRS scores
-    const { computeIRS } = await import(
-      resolve(ROOT, 'api/src/engine/scoring.js')
-    );
+    const { computeIRS } = await import(toURL('api/src/engine/scoring.js'));
     for (const c of COMPANIES) {
       const company = {
         ...c,
@@ -265,9 +256,7 @@ async function seed() {
     console.log(`  computed_scores: ${COMPANIES.length} rows`);
 
     // 13. Pre-compute graph metrics
-    const { computeGraphMetrics } = await import(
-      resolve(ROOT, 'api/src/engine/graph-metrics.js')
-    );
+    const { computeGraphMetrics } = await import(toURL('api/src/engine/graph-metrics.js'));
     // Build node list (same as graph-builder logic)
     const gNodes = [];
     const gSet = new Set();

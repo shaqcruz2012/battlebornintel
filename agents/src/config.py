@@ -8,7 +8,7 @@ load_dotenv(ROOT / ".env")
 
 DATABASE_URL = os.getenv(
     "DATABASE_URL",
-    "postgresql://bbi:bbi_dev_password@localhost:5432/battlebornintel",
+    "postgresql://bbi:bbi_dev_password@localhost:5433/battlebornintel",
 )
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
 API_BASE_URL = os.getenv("API_BASE_URL", "http://localhost:3001")
