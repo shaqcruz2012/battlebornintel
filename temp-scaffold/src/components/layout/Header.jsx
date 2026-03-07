@@ -17,7 +17,7 @@ const STAGES = [
 ];
 
 export function Header({ activeView, onViewChange }) {
-  const { filters, setRegion, setStage } = useFilters();
+  const { filters, setRegion, setStage, setSearch } = useFilters();
 
   return (
     <header className={styles.header}>
@@ -27,6 +27,14 @@ export function Header({ activeView, onViewChange }) {
       </div>
 
       <div className={styles.controls}>
+        <input
+          className={styles.searchInput}
+          type="text"
+          placeholder="Search companies..."
+          value={filters.search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
+        <span className={styles.divider} />
         {REGIONS.map((r) => (
           <FilterChip
             key={r.value}
@@ -35,7 +43,7 @@ export function Header({ activeView, onViewChange }) {
             onClick={() => setRegion(r.value)}
           />
         ))}
-        <span style={{ width: 1, height: 20, background: 'var(--border-subtle)', margin: '0 4px' }} />
+        <span className={styles.divider} />
         {STAGES.map((s) => (
           <FilterChip
             key={s.value}

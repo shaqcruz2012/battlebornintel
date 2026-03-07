@@ -15,8 +15,10 @@ export default function App() {
         <Header activeView={view} onViewChange={setView} />
         <ViewTabs active={view} onChange={setView} />
 
-        {view === 'executive' && <ExecutiveDashboard />}
-        {view === 'graph' && <GraphView />}
+        <div className="fade-in" key={view}>
+          {view === 'executive' && <ExecutiveDashboard />}
+          {view === 'graph' && <GraphView />}
+        </div>
       </AppShell>
     </FilterProvider>
   );

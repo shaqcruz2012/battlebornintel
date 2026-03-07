@@ -36,6 +36,33 @@
   gap: var(--space-sm);
 }
 
+.searchInput {
+  padding: 6px 14px;
+  border-radius: 20px;
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-card);
+  color: var(--text-primary);
+  font-size: var(--text-caption);
+  width: 180px;
+  outline: none;
+  transition: border-color var(--transition-fast);
+}
+
+.searchInput::placeholder {
+  color: var(--text-disabled);
+}
+
+.searchInput:focus {
+  border-color: var(--accent-teal);
+}
+
+.divider {
+  width: 1px;
+  height: 20px;
+  background: var(--border-subtle);
+  flex-shrink: 0;
+}
+
 @media (max-width: 768px) {
   .header {
     flex-direction: column;
