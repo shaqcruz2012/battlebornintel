@@ -11,6 +11,7 @@ import kpisRouter from './routes/kpis.js';
 import timelineRouter from './routes/timeline.js';
 import constantsRouter from './routes/constants.js';
 import analysisRouter from './routes/analysis.js';
+import adminRouter from './routes/admin.js';
 
 const app = express();
 
@@ -35,6 +36,7 @@ app.use('/api/kpis', kpisRouter);
 app.use('/api/timeline', timelineRouter);
 app.use('/api/constants', constantsRouter);
 app.use('/api/analysis', analysisRouter);
+app.use('/api/admin', adminRouter);
 
 // Error handler
 app.use(errorHandler);

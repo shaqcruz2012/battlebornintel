@@ -240,6 +240,73 @@ async function seed() {
       `  constants: ${Object.keys(constantsMap).length} rows`
     );
 
+    // 12. Pre-compute IRS scores
+    const { computeIRS } = await import(
+      resolve(ROOT, 'api/src/engine/scoring.js')
+    );
+    for (const c of COMPANIES) {
+      const company = {
+        ...c,
+        sector: c.sector || [],
+        eligible: c.eligible || [],
+        funding: c.funding || 0,
+      };
+      const { irs, grade, triggers, dims } = computeIRS(
+        company,
+        SHEAT,
+        STAGE_NORMS
+      );
+      await client.query(
+        `INSERT INTO computed_scores (company_id, irs_score, grade, triggers, dims)
+         VALUES ($1, $2, $3, $4, $5)`,
+        [c.id, irs, grade, triggers, JSON.stringify(dims)]
+      );
+    }
+    console.log(`  computed_scores: ${COMPANIES.length} rows`);
+
+    // 13. Pre-compute graph metrics
+    const { computeGraphMetrics } = await import(
+      resolve(ROOT, 'api/src/engine/graph-metrics.js')
+    );
+    // Build node list (same as graph-builder logic)
+    const gNodes = [];
+    const gSet = new Set();
+    const gAdd = (id, label, type, extra = {}) => {
+      if (!gSet.has(id)) { gSet.add(id); gNodes.push({ id, label, type, ...extra }); }
+    };
+    COMPANIES.forEach((c) =>
+      gAdd(`c_${c.id}`, c.name, 'company', { funding: c.funding || 0 })
+    );
+    GRAPH_FUNDS.forEach((f) => gAdd(`f_${f.id}`, f.name, 'fund'));
+    PEOPLE.forEach((p) => gAdd(p.id, p.name, 'person'));
+    EXTERNALS.forEach((x) => gAdd(x.id, x.name, 'external'));
+    ACCELERATORS.forEach((a) => gAdd(a.id, a.name, 'accelerator'));
+    ECOSYSTEM_ORGS.forEach((o) => gAdd(o.id, o.name, 'ecosystem'));
+
+    const gEdges = VERIFIED_EDGES
+      .filter((e) => gSet.has(e.source) && gSet.has(e.target))
+      .map((e) => ({ source: e.source, target: e.target, rel: e.rel }));
+    // Add derived edges
+    COMPANIES.forEach((c) => {
+      (c.eligible || []).forEach((f) => {
+        if (gSet.has(`f_${f}`)) gEdges.push({ source: `c_${c.id}`, target: `f_${f}`, rel: 'eligible_for' });
+      });
+      (c.sector || []).forEach((s) => {
+        if (gSet.has(`s_${s}`)) gEdges.push({ source: `c_${c.id}`, target: `s_${s}`, rel: 'operates_in' });
+      });
+    });
+
+    const metrics = computeGraphMetrics(gNodes, gEdges);
+    const nodeIds = Object.keys(metrics.pagerank);
+    for (const nodeId of nodeIds) {
+      await client.query(
+        `INSERT INTO graph_metrics_cache (node_id, pagerank, betweenness, community_id)
+         VALUES ($1, $2, $3, $4)`,
+        [nodeId, metrics.pagerank[nodeId], metrics.betweenness[nodeId], metrics.communities[nodeId]]
+      );
+    }
+    console.log(`  graph_metrics_cache: ${nodeIds.length} rows`);
+
     await client.query('COMMIT');
     console.log('\nSeed complete!');
   } catch (err) {
