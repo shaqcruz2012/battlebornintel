@@ -68,6 +68,11 @@
   font-size: var(--text-body-sm);
 }
 
+.headerWithTip {
+  cursor: help;
+  border-bottom: 1px dotted var(--text-disabled);
+}
+
 @media (max-width: 1200px) {
   .wrapper {
     grid-column: 1 / -1;

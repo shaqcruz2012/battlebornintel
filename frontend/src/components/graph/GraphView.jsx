@@ -3,7 +3,7 @@ import { computeLayout } from '../../engine/graph-builder';
 import { useGraph, useGraphMetrics } from '../../api/hooks';
 import { useWindowSize } from '../../hooks/useWindowSize';
 import { MainGrid } from '../layout/AppShell';
-import { GraphControls } from './GraphControls';
+import { GraphControls, GraphOverlayControls } from './GraphControls';
 import { GraphCanvas } from './GraphCanvas';
 import { GraphLegend } from './GraphLegend';
 import { NodeDetail } from './NodeDetail';
@@ -67,9 +67,7 @@ export function GraphView() {
       <div className={styles.wrapper}>
         <GraphControls
           nodeFilters={nodeFilters}
-          onToggleNode={toggleNode}
-          colorMode={colorMode}
-          onColorModeChange={setColorMode}
+          onSetNodeFilters={setNodeFilters}
           search={search}
           onSearchChange={setSearch}
         />
@@ -85,6 +83,12 @@ export function GraphView() {
               searchTerm={search}
             />
             <GraphLegend colorMode={colorMode} nodeFilters={nodeFilters} />
+            <GraphOverlayControls
+              nodeFilters={nodeFilters}
+              onToggleNode={toggleNode}
+              colorMode={colorMode}
+              onColorModeChange={setColorMode}
+            />
           </div>
 
           <NodeDetail

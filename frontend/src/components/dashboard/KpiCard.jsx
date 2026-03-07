@@ -1,5 +1,6 @@
 import { CountUp } from '../shared/CountUp';
 import { Sparkline } from '../shared/Sparkline';
+import { Tooltip } from '../shared/Tooltip';
 import styles from './KpiCard.module.css';
 
 export function KpiCard({
@@ -13,8 +14,9 @@ export function KpiCard({
   sparkColor,
   active = false,
   onClick,
+  tooltip,
 }) {
-  return (
+  const card = (
     <div
       className={`${styles.kpiCard} ${active ? styles.active : ''}`}
       onClick={onClick}
@@ -39,5 +41,13 @@ export function KpiCard({
       </div>
       {secondary && <span className={styles.secondary}>{secondary}</span>}
     </div>
+  );
+
+  if (!tooltip) return card;
+
+  return (
+    <Tooltip title={label} text={tooltip} position="below">
+      {card}
+    </Tooltip>
   );
 }

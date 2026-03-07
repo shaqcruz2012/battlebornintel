@@ -30,8 +30,8 @@
   flex-wrap: wrap;
   gap: var(--space-lg);
   padding: var(--space-md) 0;
-  border-top: 1px solid var(--border);
-  border-bottom: 1px solid var(--border);
+  border-top: 1px solid var(--border-subtle);
+  border-bottom: 1px solid var(--border-subtle);
   margin-bottom: var(--space-md);
 }
 
@@ -67,7 +67,7 @@
   color: var(--text-secondary);
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--border-subtle);
 }
 
 .entityRow {
@@ -75,7 +75,7 @@
   grid-template-columns: 1fr 120px 1fr;
   gap: var(--space-sm);
   padding: var(--space-xs) 0;
-  border-bottom: 1px solid color-mix(in srgb, var(--border) 40%, transparent);
+  border-bottom: 1px solid color-mix(in srgb, var(--border-subtle) 40%, transparent);
   font-size: var(--text-sm);
 }
 

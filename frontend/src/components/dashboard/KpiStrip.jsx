@@ -1,6 +1,17 @@
 import { KpiCard } from './KpiCard';
 import styles from './KpiStrip.module.css';
 
+const TOOLTIPS = {
+  capitalDeployed:
+    'Sum of deployed capital across all 8 ecosystem funds — BBV, FundNV, 1864 Fund, AngelNV, Sierra Angels, DCVC, Stripes, and StartUpNV. Includes both SSBCI-backed and private venture funds active in the Nevada ecosystem.',
+  privateLeverage:
+    'Weighted average private leverage across the 3 SSBCI-backed funds (BBV, FundNV, 1864), weighted by each fund\'s deployed amount. Measures how many private dollars each SSBCI dollar mobilized — the core metric Treasury uses to evaluate program effectiveness.',
+  ecosystemCapacity:
+    'Total headcount across all tracked portfolio companies. Serves as a proxy for the ecosystem\'s absorptive capacity and direct economic footprint. Filters apply — if you\'ve narrowed by stage or sector, this reflects that subset.',
+  innovationIndex:
+    'Composite index: 40% average momentum score across companies + 30% share of companies with momentum ≥75 (top performers) + 30% share of companies in sectors with heat score ≥80 (hot sectors). Designed to capture both breadth and depth of ecosystem momentum.',
+};
+
 export function KpiStrip({ kpis, funds = [], activeSortBy, onSortChange }) {
   if (!kpis) return null;
 
@@ -22,6 +33,7 @@ export function KpiStrip({ kpis, funds = [], activeSortBy, onSortChange }) {
         sparkData={sparkCapital}
         active={activeSortBy === 'funding'}
         onClick={() => onSortChange('funding')}
+        tooltip={TOOLTIPS.capitalDeployed}
       />
       <KpiCard
         label={kpis.privateLeverage.label}
@@ -33,6 +45,7 @@ export function KpiStrip({ kpis, funds = [], activeSortBy, onSortChange }) {
         sparkColor="var(--accent-gold)"
         active={activeSortBy === 'leverage'}
         onClick={() => onSortChange('irs')}
+        tooltip={TOOLTIPS.privateLeverage}
       />
       <KpiCard
         label={kpis.ecosystemCapacity.label}
@@ -41,6 +54,7 @@ export function KpiStrip({ kpis, funds = [], activeSortBy, onSortChange }) {
         sparkData={sparkCapacity}
         active={activeSortBy === 'employees'}
         onClick={() => onSortChange('momentum')}
+        tooltip={TOOLTIPS.ecosystemCapacity}
       />
       <KpiCard
         label={kpis.innovationIndex.label}
@@ -50,6 +64,7 @@ export function KpiStrip({ kpis, funds = [], activeSortBy, onSortChange }) {
         sparkColor="var(--status-success)"
         active={activeSortBy === 'momentum'}
         onClick={() => onSortChange('irs')}
+        tooltip={TOOLTIPS.innovationIndex}
       />
     </div>
   );
