@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
-import { buildGraph, computeLayout } from '../../engine/graph-builder';
-import { computeGraphMetrics } from '../../engine/graph-metrics';
+import { computeLayout } from '../../engine/graph-builder';
+import { useGraph, useGraphMetrics } from '../../api/hooks';
 import { useWindowSize } from '../../hooks/useWindowSize';
 import { MainGrid } from '../layout/AppShell';
 import { GraphControls } from './GraphControls';
@@ -21,20 +21,6 @@ const DEFAULT_NODE_FILTERS = {
   ecosystem: true,
 };
 
-const DEFAULT_REL_FILTERS = {
-  eligible_for: true,
-  operates_in: true,
-  headquartered_in: true,
-  invested_in: true,
-  listed_on: true,
-  accelerated_by: true,
-  won_pitch: true,
-  incubated_by: true,
-  program_of: true,
-  supports: true,
-  housed_at: true,
-};
-
 export function GraphView() {
   const { width: winW, height: winH } = useWindowSize();
   const [nodeFilters, setNodeFilters] = useState(DEFAULT_NODE_FILTERS);
@@ -48,20 +34,33 @@ export function GraphView() {
   const w = Math.min(winW - 64, 1200);
   const h = Math.max(500, winH - 280);
 
-  const graphData = useMemo(
-    () => buildGraph(nodeFilters, DEFAULT_REL_FILTERS),
+  // Active node types for API query
+  const activeNodeTypes = useMemo(
+    () => Object.entries(nodeFilters).filter(([, v]) => v).map(([k]) => k),
     [nodeFilters]
   );
 
+  // Fetch graph data from API
+  const { data: graphData, isLoading: loadingGraph } = useGraph(activeNodeTypes);
+  const { data: metricsData, isLoading: loadingMetrics } = useGraphMetrics(activeNodeTypes);
+
+  // D3 layout stays client-side (needs viewport dimensions)
   const layout = useMemo(
-    () => computeLayout(graphData, w, h),
+    () => graphData ? computeLayout(graphData, w, h) : { nodes: [], edges: [] },
     [graphData, w, h]
   );
 
-  const metrics = useMemo(
-    () => computeGraphMetrics(graphData.nodes, graphData.edges),
-    [graphData]
-  );
+  const metrics = metricsData || { pagerank: {}, betweenness: {}, communities: {}, watchlist: [] };
+
+  if (loadingGraph || loadingMetrics) {
+    return (
+      <MainGrid>
+        <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-secondary)' }}>
+          Loading graph...
+        </div>
+      </MainGrid>
+    );
+  }
 
   return (
     <MainGrid>

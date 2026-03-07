@@ -1,5 +1,3 @@
-import { useMemo } from 'react';
-import { computeSectorStats } from '../../engine/kpi';
 import styles from './SectorHeatStrip.module.css';
 
 function heatColor(heat) {
@@ -9,9 +7,7 @@ function heatColor(heat) {
   return 'var(--text-disabled)';
 }
 
-export function SectorHeatStrip({ companies, activeSector, onSectorChange }) {
-  const sectors = useMemo(() => computeSectorStats(companies), [companies]);
-
+export function SectorHeatStrip({ sectors = [], activeSector, onSectorChange }) {
   return (
     <div className={styles.wrapper}>
       <div className={styles.label}>Sector Heat</div>

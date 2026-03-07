@@ -1,9 +1,5 @@
-import { useMemo } from 'react';
 import { useFilters } from '../../hooks/useFilters';
-import { COMPANIES } from '../../data/companies';
-import { FUNDS } from '../../data/funds';
-import { computeIRS } from '../../engine/scoring';
-import { filterCompanies } from '../../engine/filters';
+import { useCompanies, useKpis, useSectorStats, useFunds } from '../../api/hooks';
 import { MainGrid } from '../layout/AppShell';
 import { KpiStrip } from './KpiStrip';
 import { SectorHeatStrip } from './SectorHeatStrip';
@@ -14,42 +10,55 @@ import { RiskAlerts } from './RiskAlerts';
 export function ExecutiveDashboard() {
   const { filters, setSortBy, setSector } = useFilters();
 
-  // Score all companies once
-  const scored = useMemo(() => COMPANIES.map(computeIRS), []);
+  const { data: companies = [], isLoading: loadingCompanies } = useCompanies({
+    stage: filters.stage,
+    region: filters.region,
+    sector: filters.sector,
+    search: filters.search,
+    sortBy: filters.sortBy,
+  });
 
-  // Filter based on current filter state
-  const filtered = useMemo(
-    () =>
-      filterCompanies(scored, {
-        search: filters.search,
-        stage: filters.stage,
-        region: filters.region,
-        sector: filters.sector,
-        sortBy: filters.sortBy,
-      }),
-    [scored, filters]
-  );
+  const { data: kpis, isLoading: loadingKpis } = useKpis({
+    stage: filters.stage,
+    region: filters.region,
+    sector: filters.sector,
+  });
+
+  const { data: sectorStats = [], isLoading: loadingSectors } = useSectorStats();
+  const { data: funds = [] } = useFunds();
+
+  const isLoading = loadingCompanies || loadingKpis || loadingSectors;
+
+  if (isLoading) {
+    return (
+      <MainGrid>
+        <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-secondary)' }}>
+          Loading dashboard...
+        </div>
+      </MainGrid>
+    );
+  }
 
   return (
     <MainGrid>
       <KpiStrip
-        companies={filtered}
-        funds={FUNDS}
+        kpis={kpis}
+        funds={funds}
         activeSortBy={filters.sortBy}
         onSortChange={setSortBy}
       />
       <SectorHeatStrip
-        companies={scored}
+        sectors={sectorStats}
         activeSector={filters.sector}
         onSectorChange={setSector}
       />
       <MomentumTable
-        companies={filtered}
+        companies={companies}
         sortBy={filters.sortBy}
         onSortChange={setSortBy}
       />
-      <NarrativePanel companies={filtered} />
-      <RiskAlerts companies={filtered} />
+      <NarrativePanel companies={companies} />
+      <RiskAlerts companies={companies} />
     </MainGrid>
   );
 }

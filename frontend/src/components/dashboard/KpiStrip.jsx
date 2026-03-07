@@ -1,11 +1,8 @@
-import { useMemo } from 'react';
-import { computeKPIs } from '../../engine/kpi';
-import { fmt } from '../../engine/formatters';
 import { KpiCard } from './KpiCard';
 import styles from './KpiStrip.module.css';
 
-export function KpiStrip({ companies, funds, activeSortBy, onSortChange }) {
-  const kpis = useMemo(() => computeKPIs(companies, funds), [companies, funds]);
+export function KpiStrip({ kpis, funds = [], activeSortBy, onSortChange }) {
+  if (!kpis) return null;
 
   // Synthetic sparkline data (trending representation)
   const sparkCapital = [12, 18, 22, 28, 35, 40, kpis.capitalDeployed.value];
