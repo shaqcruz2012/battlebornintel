@@ -11,6 +11,27 @@
   font-weight: var(--weight-bold);
   color: var(--text-primary);
   margin-bottom: var(--space-sm);
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.aiBadge {
+  font-size: 10px;
+  font-weight: var(--weight-bold);
+  color: var(--accent-teal);
+  background: color-mix(in srgb, var(--accent-teal) 15%, transparent);
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+  letter-spacing: 0.5px;
+}
+
+.headline {
+  font-size: var(--text-caption);
+  color: var(--accent-teal);
+  font-weight: var(--weight-semibold);
+  margin-bottom: var(--space-md);
+  line-height: 1.4;
 }
 
 .dimList {

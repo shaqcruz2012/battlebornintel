@@ -57,8 +57,8 @@ export function ExecutiveDashboard() {
         sortBy={filters.sortBy}
         onSortChange={setSortBy}
       />
-      <NarrativePanel companies={companies} />
-      <RiskAlerts companies={companies} />
+      <NarrativePanel companies={companies} funds={funds} />
+      <RiskAlerts companies={companies} funds={funds} />
     </MainGrid>
   );
 }
