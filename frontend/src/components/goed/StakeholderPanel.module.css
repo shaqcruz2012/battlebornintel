@@ -1,0 +1,122 @@
+.panel {
+  grid-column: 1 / -1;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  margin-bottom: var(--space-lg);
+}
+
+.icon {
+  font-size: 1.8rem;
+}
+
+.title {
+  font-size: var(--text-h3);
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.desc {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  margin: 2px 0 0;
+}
+
+.metricsRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-lg);
+  padding: var(--space-md) 0;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  margin-bottom: var(--space-md);
+}
+
+.metric {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.metricValue {
+  font-size: var(--text-h3);
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.metricLabel {
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.entityList {
+  margin-top: var(--space-sm);
+}
+
+.entityHeader {
+  display: grid;
+  grid-template-columns: 1fr 120px 1fr;
+  gap: var(--space-sm);
+  padding: var(--space-xs) 0;
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  border-bottom: 1px solid var(--border);
+}
+
+.entityRow {
+  display: grid;
+  grid-template-columns: 1fr 120px 1fr;
+  gap: var(--space-sm);
+  padding: var(--space-xs) 0;
+  border-bottom: 1px solid color-mix(in srgb, var(--border) 40%, transparent);
+  font-size: var(--text-sm);
+}
+
+.entityName {
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.entityType {
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
+}
+
+.entityNote {
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.moreCount {
+  padding: var(--space-sm) 0;
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  text-align: center;
+}
+
+.footer {
+  padding-top: var(--space-md);
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+  text-align: right;
+}
+
+@media (max-width: 768px) {
+  .entityHeader,
+  .entityRow {
+    grid-template-columns: 1fr 80px;
+  }
+  .entityNote {
+    display: none;
+  }
+}

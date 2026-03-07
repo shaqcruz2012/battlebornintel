@@ -1,0 +1,7 @@
+.loading {
+  grid-column: 1 / -1;
+  text-align: center;
+  padding: var(--space-3xl);
+  color: var(--text-secondary);
+  font-size: var(--text-body);
+}

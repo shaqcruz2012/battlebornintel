@@ -1,0 +1,25 @@
+.placeholder {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 300px;
+}
+
+.content {
+  text-align: center;
+  padding: var(--space-3xl);
+}
+
+.title {
+  font-size: var(--text-h2);
+  color: var(--text-primary);
+  margin-bottom: var(--space-md);
+}
+
+.subtitle {
+  font-size: var(--text-body);
+  color: var(--text-secondary);
+  max-width: 480px;
+  line-height: 1.6;
+}

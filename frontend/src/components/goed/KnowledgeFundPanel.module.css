@@ -1,0 +1,79 @@
+.panel {
+  grid-column: 1 / -1;
+}
+
+.sectionHeader {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  margin-bottom: var(--space-md);
+}
+
+.sectionTitle {
+  font-size: var(--text-h3);
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.badge {
+  font-size: var(--text-xs);
+  color: var(--accent-teal);
+  background: color-mix(in srgb, var(--accent-teal) 12%, transparent);
+  padding: 2px 8px;
+  border-radius: 4px;
+  letter-spacing: 0.04em;
+}
+
+.program {
+  padding: var(--space-md) 0;
+  border-top: 1px solid var(--border);
+}
+
+.program:last-child {
+  padding-bottom: 0;
+}
+
+.programHeader {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-xs);
+}
+
+.programName {
+  font-size: var(--text-body);
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.programType {
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+  background: color-mix(in srgb, var(--text-secondary) 12%, transparent);
+  padding: 1px 6px;
+  border-radius: 3px;
+}
+
+.programNote {
+  font-size: var(--text-sm);
+  color: var(--accent-gold);
+  margin-bottom: var(--space-xs);
+}
+
+.programDesc {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  margin-bottom: var(--space-xs);
+  line-height: 1.5;
+}
+
+.connections {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  margin-top: var(--space-xs);
+}
+
+.connLabel {
+  color: var(--text-primary);
+  font-weight: 500;
+}

@@ -109,3 +109,20 @@ export function useRiskAssessments() {
     staleTime: 300_000,
   });
 }
+
+/** GOED dashboard summary — composes existing queries */
+const GOED_NODE_TYPES = ['company', 'fund', 'person', 'external', 'accelerator', 'ecosystem'];
+
+export function useGoedSummary() {
+  const fundsQuery = useFunds();
+  const graphQuery = useGraph(GOED_NODE_TYPES, 2026);
+  const companiesQuery = useCompanies({});
+
+  return {
+    funds: fundsQuery.data || [],
+    graph: graphQuery.data || { nodes: [], edges: [] },
+    companies: companiesQuery.data || [],
+    isLoading:
+      fundsQuery.isLoading || graphQuery.isLoading || companiesQuery.isLoading,
+  };
+}
