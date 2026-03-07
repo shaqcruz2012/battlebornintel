@@ -1,16 +1,30 @@
+import { useState } from 'react';
+import { FilterProvider } from './hooks/useFilters';
+import { AppShell } from './components/layout/AppShell';
+import { Header } from './components/layout/Header';
+import { ViewTabs } from './components/layout/ViewTabs';
+
 export default function App() {
+  const [view, setView] = useState('executive');
+
   return (
-    <div style={{ minHeight: '100vh' }}>
-      <div style={{
-        padding: 'var(--space-2xl)',
-        textAlign: 'center',
-        color: 'var(--text-primary)'
-      }}>
-        <h1>Battle Born Intelligence</h1>
-        <p className="caption" style={{ marginTop: 'var(--space-sm)' }}>
-          Weekly Innovation Brief — Foundation loaded
-        </p>
-      </div>
-    </div>
-  )
+    <FilterProvider>
+      <AppShell>
+        <Header activeView={view} onViewChange={setView} />
+        <ViewTabs active={view} onChange={setView} />
+
+        {view === 'executive' && (
+          <div style={{ color: 'var(--text-secondary)', padding: 'var(--space-xl)' }}>
+            Executive Dashboard — loading...
+          </div>
+        )}
+
+        {view === 'graph' && (
+          <div style={{ color: 'var(--text-secondary)', padding: 'var(--space-xl)' }}>
+            Graph Intelligence — loading...
+          </div>
+        )}
+      </AppShell>
+    </FilterProvider>
+  );
 }
