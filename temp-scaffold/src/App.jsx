@@ -3,6 +3,7 @@ import { FilterProvider } from './hooks/useFilters';
 import { AppShell } from './components/layout/AppShell';
 import { Header } from './components/layout/Header';
 import { ViewTabs } from './components/layout/ViewTabs';
+import { ExecutiveDashboard } from './components/dashboard/ExecutiveDashboard';
 
 export default function App() {
   const [view, setView] = useState('executive');
@@ -13,11 +14,7 @@ export default function App() {
         <Header activeView={view} onViewChange={setView} />
         <ViewTabs active={view} onChange={setView} />
 
-        {view === 'executive' && (
-          <div style={{ color: 'var(--text-secondary)', padding: 'var(--space-xl)' }}>
-            Executive Dashboard — loading...
-          </div>
-        )}
+        {view === 'executive' && <ExecutiveDashboard />}
 
         {view === 'graph' && (
           <div style={{ color: 'var(--text-secondary)', padding: 'var(--space-xl)' }}>
