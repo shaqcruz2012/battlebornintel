@@ -18,6 +18,26 @@ function nodeColor(node, colorMode, communities) {
   return NODE_CFG[node.type]?.color || '#888';
 }
 
+function edgeId(e) {
+  const sid = typeof e.source === 'object' ? e.source.id : e.source;
+  const tid = typeof e.target === 'object' ? e.target.id : e.target;
+  return { sid, tid };
+}
+
+function edgeLabel(e) {
+  const rc = REL_CFG[e.rel];
+  return rc?.label || e.rel?.replace(/_/g, ' ') || '';
+}
+
+function edgeValue(e) {
+  if (e.note) {
+    const match = e.note.match(/\$[\d,.]+[BMK]?/);
+    if (match) return match[0];
+  }
+  if (e.event_year) return String(e.event_year);
+  return '';
+}
+
 export function GraphCanvas({
   layout,
   metrics,
@@ -80,6 +100,22 @@ export function GraphCanvas({
 
   const { nodes, edges } = layout;
 
+  // Compute connected node IDs and highlighted edges for selected node
+  const { connectedIds, highlightedEdges } = useMemo(() => {
+    if (!selectedNode) return { connectedIds: new Set(), highlightedEdges: new Set() };
+    const cIds = new Set();
+    const hEdges = new Set();
+    edges.forEach((e, i) => {
+      const { sid, tid } = edgeId(e);
+      if (sid === selectedNode || tid === selectedNode) {
+        cIds.add(sid);
+        cIds.add(tid);
+        hEdges.add(i);
+      }
+    });
+    return { connectedIds: cIds, highlightedEdges: hEdges };
+  }, [selectedNode, edges]);
+
   if (!nodes || nodes.length === 0) {
     return (
       <div className={styles.canvasWrap} ref={containerRef}>
@@ -106,13 +142,16 @@ export function GraphCanvas({
         preserveAspectRatio="xMidYMid meet"
       >
         <g transform={`translate(${pan.x},${pan.y}) scale(${zoom})`}>
-          {/* Edges */}
+          {/* Edges — base layer */}
           {edges.map((e, i) => {
             const sx = e.source.x || 0;
             const sy = e.source.y || 0;
             const tx = e.target.x || 0;
             const ty = e.target.y || 0;
             const rc = REL_CFG[e.rel];
+            const isHighlighted = highlightedEdges.has(i);
+            const dimEdge = selectedNode && !isHighlighted;
+
             return (
               <line
                 key={i}
@@ -120,23 +159,96 @@ export function GraphCanvas({
                 y1={sy}
                 x2={tx}
                 y2={ty}
-                stroke={rc?.color || '#333'}
-                strokeWidth={0.6}
+                stroke={isHighlighted ? (rc?.color || 'var(--accent-teal)') : (rc?.color || '#333')}
+                strokeWidth={isHighlighted ? 2 : 0.6}
                 strokeDasharray={rc?.dash || ''}
-                opacity={0.4}
+                opacity={dimEdge ? 0.08 : isHighlighted ? 0.9 : 0.4}
               />
             );
           })}
+
+          {/* Edge labels — only for highlighted edges */}
+          {selectedNode &&
+            edges.map((e, i) => {
+              if (!highlightedEdges.has(i)) return null;
+              const sx = e.source.x || 0;
+              const sy = e.source.y || 0;
+              const tx = e.target.x || 0;
+              const ty = e.target.y || 0;
+              const mx = (sx + tx) / 2;
+              const my = (sy + ty) / 2;
+              const label = edgeLabel(e);
+              const val = edgeValue(e);
+              const rc = REL_CFG[e.rel];
+
+              return (
+                <g key={`label-${i}`} pointerEvents="none">
+                  <rect
+                    x={mx - 40}
+                    y={my - 14}
+                    width={80}
+                    height={val ? 24 : 14}
+                    rx={3}
+                    fill="var(--bg-card)"
+                    fillOpacity={0.85}
+                    stroke={rc?.color || 'var(--border-subtle)'}
+                    strokeWidth={0.5}
+                  />
+                  <text
+                    x={mx}
+                    y={my - 3}
+                    textAnchor="middle"
+                    fill={rc?.color || 'var(--text-secondary)'}
+                    fontSize={7}
+                    fontFamily="var(--font-body)"
+                    fontWeight="600"
+                    letterSpacing="0.3"
+                  >
+                    {label.toUpperCase()}
+                  </text>
+                  {val && (
+                    <text
+                      x={mx}
+                      y={my + 7}
+                      textAnchor="middle"
+                      fill="var(--text-primary)"
+                      fontSize={8}
+                      fontFamily="var(--font-heading)"
+                      fontWeight="700"
+                    >
+                      {val}
+                    </text>
+                  )}
+                </g>
+              );
+            })}
 
           {/* Nodes */}
           {nodes.map((n) => {
             const r = nodeRadius(n);
             const fill = nodeColor(n, colorMode, metrics?.communities);
             const isSelected = selectedNode === n.id;
-            const dim = searchTerm && !matchesSearch(n);
+            const isConnected = connectedIds.has(n.id);
+            const dimBySearch = searchTerm && !matchesSearch(n);
+            const dimBySelection = selectedNode && !isSelected && !isConnected;
+            const dim = dimBySearch || dimBySelection;
 
             return (
-              <g key={n.id} opacity={dim ? 0.15 : 1}>
+              <g key={n.id} opacity={dim ? 0.12 : 1}>
+                {/* Connected node ring */}
+                {isConnected && !isSelected && selectedNode && (
+                  <circle
+                    cx={n.x}
+                    cy={n.y}
+                    r={r + 3}
+                    fill="none"
+                    stroke="var(--accent-teal)"
+                    strokeWidth={1}
+                    opacity={0.4}
+                    strokeDasharray="3,2"
+                  />
+                )}
+                {/* Selected node ring */}
                 {isSelected && (
                   <circle
                     cx={n.x}
@@ -153,8 +265,8 @@ export function GraphCanvas({
                   cy={n.y}
                   r={r}
                   fill={fill}
-                  stroke={isSelected ? '#fff' : 'rgba(0,0,0,0.3)'}
-                  strokeWidth={isSelected ? 1.5 : 0.5}
+                  stroke={isSelected ? '#fff' : isConnected && selectedNode ? 'var(--accent-teal)' : 'rgba(0,0,0,0.3)'}
+                  strokeWidth={isSelected ? 1.5 : isConnected && selectedNode ? 1 : 0.5}
                   style={{ cursor: 'pointer' }}
                   onClick={() => onSelectNode?.(n.id === selectedNode ? null : n.id)}
                   onMouseEnter={(e) =>
@@ -167,14 +279,15 @@ export function GraphCanvas({
                   }
                   onMouseLeave={() => setTooltip(null)}
                 />
-                {(r >= 10 || isSelected) && (
+                {(r >= 10 || isSelected || (isConnected && selectedNode)) && (
                   <text
                     x={n.x}
                     y={n.y + r + 12}
                     textAnchor="middle"
-                    fill="var(--text-secondary)"
-                    fontSize={9}
+                    fill={isConnected && selectedNode ? 'var(--text-primary)' : 'var(--text-secondary)'}
+                    fontSize={isSelected ? 10 : 9}
                     fontFamily="var(--font-body)"
+                    fontWeight={isConnected && selectedNode ? '600' : 'normal'}
                     pointerEvents="none"
                   >
                     {n.label?.length > 18 ? n.label.slice(0, 16) + '...' : n.label}
