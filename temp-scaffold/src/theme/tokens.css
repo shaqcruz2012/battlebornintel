@@ -1,0 +1,76 @@
+:root {
+  /* Backgrounds */
+  --bg-root: #050609;
+  --bg-card: #0C1014;
+  --bg-elevated: #131820;
+  --bg-hover: #1A2029;
+
+  /* Text */
+  --text-primary: #F5F7FA;
+  --text-secondary: #9BA1B3;
+  --text-disabled: #5B6170;
+
+  /* Accents */
+  --accent-teal: #45D7C6;
+  --accent-gold: #F5C76C;
+
+  /* Status */
+  --status-success: #45D7C6;
+  --status-warning: #F5C76C;
+  --status-risk: #F8615A;
+
+  /* Borders */
+  --border-subtle: rgba(255, 255, 255, 0.06);
+  --border-hover: rgba(255, 255, 255, 0.12);
+  --border-active: rgba(69, 215, 198, 0.4);
+
+  /* Typography */
+  --font-heading: 'Georgia', 'Charter', 'Times New Roman', serif;
+  --font-body: 'Inter', system-ui, -apple-system, sans-serif;
+
+  /* Type scale */
+  --text-h1: 28px;
+  --text-h2: 22px;
+  --text-card-numeric: 28px;
+  --text-body: 15px;
+  --text-body-sm: 14px;
+  --text-caption: 13px;
+  --text-caption-sm: 12px;
+
+  /* Weights */
+  --weight-regular: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+  --weight-bold: 700;
+
+  /* Spacing */
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 12px;
+  --space-lg: 16px;
+  --space-xl: 24px;
+  --space-2xl: 32px;
+  --space-3xl: 48px;
+
+  /* Grid */
+  --grid-columns: 12;
+  --grid-gutter: 24px;
+  --grid-margin: 32px;
+
+  /* Radii */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+
+  /* Transitions */
+  --transition-fast: 150ms ease;
+  --transition-normal: 300ms ease;
+
+  /* Shadows */
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.3);
+  --shadow-elevated: 0 4px 12px rgba(0, 0, 0, 0.4);
+
+  /* Header */
+  --header-height: 72px;
+  --kpi-strip-height: 200px;
+}
