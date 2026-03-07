@@ -4,6 +4,7 @@ import { AppShell } from './components/layout/AppShell';
 import { Header } from './components/layout/Header';
 import { ViewTabs } from './components/layout/ViewTabs';
 import { ExecutiveDashboard } from './components/dashboard/ExecutiveDashboard';
+import { GraphView } from './components/graph/GraphView';
 
 export default function App() {
   const [view, setView] = useState('executive');
@@ -15,12 +16,7 @@ export default function App() {
         <ViewTabs active={view} onChange={setView} />
 
         {view === 'executive' && <ExecutiveDashboard />}
-
-        {view === 'graph' && (
-          <div style={{ color: 'var(--text-secondary)', padding: 'var(--space-xl)' }}>
-            Graph Intelligence — loading...
-          </div>
-        )}
+        {view === 'graph' && <GraphView />}
       </AppShell>
     </FilterProvider>
   );

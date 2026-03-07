@@ -1,0 +1,40 @@
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-md) 0;
+}
+
+.searchInput {
+  padding: 6px 14px;
+  border-radius: 20px;
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-card);
+  color: var(--text-primary);
+  font-size: var(--text-caption);
+  width: 200px;
+  outline: none;
+  transition: border-color var(--transition-fast);
+}
+
+.searchInput::placeholder {
+  color: var(--text-disabled);
+}
+
+.searchInput:focus {
+  border-color: var(--accent-teal);
+}
+
+.separator {
+  width: 1px;
+  height: 20px;
+  background: var(--border-subtle);
+}
+
+.modeLabel {
+  font-size: var(--text-caption-sm);
+  color: var(--text-disabled);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
