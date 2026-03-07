@@ -1,5 +1,6 @@
 import express from 'express';
 import cors from 'cors';
+import compression from 'compression';
 import cfg from './config.js';
 import pool from './db/pool.js';
 import { errorHandler } from './middleware/errorHandler.js';
@@ -15,6 +16,7 @@ import adminRouter from './routes/admin.js';
 
 const app = express();
 
+app.use(compression());
 app.use(cors());
 app.use(express.json());
 

@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef, useEffect } from 'react';
 import { computeLayout } from '../../engine/graph-builder';
 import { useGraph, useGraphMetrics } from '../../api/hooks';
 import { useWindowSize } from '../../hooks/useWindowSize';
@@ -31,8 +31,17 @@ export function GraphView() {
   const toggleNode = (key) =>
     setNodeFilters((f) => ({ ...f, [key]: !f[key] }));
 
-  const w = Math.min(winW - 64, 1200);
-  const h = Math.max(500, winH - 280);
+  // Debounce dimensions so D3 layout doesn't recompute on every resize pixel
+  const rawW = Math.min(winW - 64, 1200);
+  const rawH = Math.max(500, winH - 280);
+  const [dims, setDims] = useState({ w: rawW, h: rawH });
+  const debounceRef = useRef(null);
+  useEffect(() => {
+    clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => setDims({ w: rawW, h: rawH }), 200);
+    return () => clearTimeout(debounceRef.current);
+  }, [rawW, rawH]);
+  const { w, h } = dims;
 
   // Active node types for API query
   const activeNodeTypes = useMemo(

@@ -2,10 +2,14 @@ import pool from '../pool.js';
 
 export async function getAllCompanies({ stage, region, sector, search, sortBy } = {}) {
   let sql = `
+    WITH latest_scores AS (
+      SELECT DISTINCT ON (company_id) company_id, irs_score, grade, triggers, dims
+      FROM computed_scores
+      ORDER BY company_id, computed_at DESC
+    )
     SELECT c.*, cs.irs_score, cs.grade, cs.triggers, cs.dims
     FROM companies c
-    LEFT JOIN computed_scores cs ON cs.company_id = c.id
-      AND cs.computed_at = (SELECT MAX(computed_at) FROM computed_scores WHERE company_id = c.id)
+    LEFT JOIN latest_scores cs ON cs.company_id = c.id
   `;
   const conditions = [];
   const params = [];
@@ -61,10 +65,14 @@ export async function getAllCompanies({ stage, region, sector, search, sortBy } 
 
 export async function getCompanyById(id) {
   const { rows } = await pool.query(
-    `SELECT c.*, cs.irs_score, cs.grade, cs.triggers, cs.dims
+    `WITH latest_scores AS (
+       SELECT DISTINCT ON (company_id) company_id, irs_score, grade, triggers, dims
+       FROM computed_scores
+       ORDER BY company_id, computed_at DESC
+     )
+     SELECT c.*, cs.irs_score, cs.grade, cs.triggers, cs.dims
      FROM companies c
-     LEFT JOIN computed_scores cs ON cs.company_id = c.id
-       AND cs.computed_at = (SELECT MAX(computed_at) FROM computed_scores WHERE company_id = c.id)
+     LEFT JOIN latest_scores cs ON cs.company_id = c.id
      WHERE c.id = $1`,
     [id]
   );

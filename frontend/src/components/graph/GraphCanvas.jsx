@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useMemo, useEffect } from 'react';
+import { useState, useRef, useCallback, useMemo, useEffect, memo } from 'react';
 import { NODE_CFG, REL_CFG, COMM_COLORS } from '../../data/constants';
 import { useWindowSize } from '../../hooks/useWindowSize';
 import styles from './GraphCanvas.module.css';
@@ -24,7 +24,7 @@ function edgeId(e) {
   return { sid, tid };
 }
 
-function edgeLabel(e) {
+function edgeLabelText(e) {
   const rc = REL_CFG[e.rel];
   return rc?.label || e.rel?.replace(/_/g, ' ') || '';
 }
@@ -37,6 +37,105 @@ function edgeValue(e) {
   if (e.event_year) return String(e.event_year);
   return '';
 }
+
+/* ── Memoized sub-components ── */
+
+const EdgeLine = memo(function EdgeLine({ sx, sy, tx, ty, color, strokeWidth, dash, opacity }) {
+  return (
+    <line
+      x1={sx} y1={sy} x2={tx} y2={ty}
+      stroke={color}
+      strokeWidth={strokeWidth}
+      strokeDasharray={dash}
+      opacity={opacity}
+    />
+  );
+});
+
+const EdgeLabel = memo(function EdgeLabel({ sx, sy, tx, ty, label, val, relColor }) {
+  const mx = (sx + tx) / 2;
+  const my = (sy + ty) / 2;
+  return (
+    <g pointerEvents="none">
+      <rect
+        x={mx - 40} y={my - 14}
+        width={80} height={val ? 24 : 14}
+        rx={3}
+        fill="var(--bg-card)" fillOpacity={0.85}
+        stroke={relColor || 'var(--border-subtle)'} strokeWidth={0.5}
+      />
+      <text
+        x={mx} y={my - 3}
+        textAnchor="middle"
+        fill={relColor || 'var(--text-secondary)'}
+        fontSize={7} fontFamily="var(--font-body)"
+        fontWeight="600" letterSpacing="0.3"
+      >
+        {label.toUpperCase()}
+      </text>
+      {val && (
+        <text
+          x={mx} y={my + 7}
+          textAnchor="middle"
+          fill="var(--text-primary)"
+          fontSize={8} fontFamily="var(--font-heading)" fontWeight="700"
+        >
+          {val}
+        </text>
+      )}
+    </g>
+  );
+});
+
+const NodeCircle = memo(function NodeCircle({
+  node, r, fill, isSelected, isConnected, hasSelection, dim,
+  onSelect, onHover, onLeave,
+}) {
+  const showLabel = r >= 10 || isSelected || (isConnected && hasSelection);
+  return (
+    <g opacity={dim ? 0.12 : 1}>
+      {isConnected && !isSelected && hasSelection && (
+        <circle
+          cx={node.x} cy={node.y} r={r + 3}
+          fill="none" stroke="var(--accent-teal)"
+          strokeWidth={1} opacity={0.4} strokeDasharray="3,2"
+        />
+      )}
+      {isSelected && (
+        <circle
+          cx={node.x} cy={node.y} r={r + 4}
+          fill="none" stroke="var(--accent-teal)"
+          strokeWidth={2} opacity={0.6}
+        />
+      )}
+      <circle
+        cx={node.x} cy={node.y} r={r}
+        fill={fill}
+        stroke={isSelected ? '#fff' : isConnected && hasSelection ? 'var(--accent-teal)' : 'rgba(0,0,0,0.3)'}
+        strokeWidth={isSelected ? 1.5 : isConnected && hasSelection ? 1 : 0.5}
+        style={{ cursor: 'pointer' }}
+        onClick={onSelect}
+        onMouseEnter={onHover}
+        onMouseLeave={onLeave}
+      />
+      {showLabel && (
+        <text
+          x={node.x} y={node.y + r + 12}
+          textAnchor="middle"
+          fill={isConnected && hasSelection ? 'var(--text-primary)' : 'var(--text-secondary)'}
+          fontSize={isSelected ? 10 : 9}
+          fontFamily="var(--font-body)"
+          fontWeight={isConnected && hasSelection ? '600' : 'normal'}
+          pointerEvents="none"
+        >
+          {node.label?.length > 18 ? node.label.slice(0, 16) + '...' : node.label}
+        </text>
+      )}
+    </g>
+  );
+});
+
+/* ── Main canvas ── */
 
 export function GraphCanvas({
   layout,
@@ -153,15 +252,12 @@ export function GraphCanvas({
             const dimEdge = selectedNode && !isHighlighted;
 
             return (
-              <line
+              <EdgeLine
                 key={i}
-                x1={sx}
-                y1={sy}
-                x2={tx}
-                y2={ty}
-                stroke={isHighlighted ? (rc?.color || 'var(--accent-teal)') : (rc?.color || '#333')}
+                sx={sx} sy={sy} tx={tx} ty={ty}
+                color={isHighlighted ? (rc?.color || 'var(--accent-teal)') : (rc?.color || '#333')}
                 strokeWidth={isHighlighted ? 2 : 0.6}
-                strokeDasharray={rc?.dash || ''}
+                dash={rc?.dash || ''}
                 opacity={dimEdge ? 0.08 : isHighlighted ? 0.9 : 0.4}
               />
             );
@@ -175,51 +271,16 @@ export function GraphCanvas({
               const sy = e.source.y || 0;
               const tx = e.target.x || 0;
               const ty = e.target.y || 0;
-              const mx = (sx + tx) / 2;
-              const my = (sy + ty) / 2;
-              const label = edgeLabel(e);
-              const val = edgeValue(e);
               const rc = REL_CFG[e.rel];
 
               return (
-                <g key={`label-${i}`} pointerEvents="none">
-                  <rect
-                    x={mx - 40}
-                    y={my - 14}
-                    width={80}
-                    height={val ? 24 : 14}
-                    rx={3}
-                    fill="var(--bg-card)"
-                    fillOpacity={0.85}
-                    stroke={rc?.color || 'var(--border-subtle)'}
-                    strokeWidth={0.5}
-                  />
-                  <text
-                    x={mx}
-                    y={my - 3}
-                    textAnchor="middle"
-                    fill={rc?.color || 'var(--text-secondary)'}
-                    fontSize={7}
-                    fontFamily="var(--font-body)"
-                    fontWeight="600"
-                    letterSpacing="0.3"
-                  >
-                    {label.toUpperCase()}
-                  </text>
-                  {val && (
-                    <text
-                      x={mx}
-                      y={my + 7}
-                      textAnchor="middle"
-                      fill="var(--text-primary)"
-                      fontSize={8}
-                      fontFamily="var(--font-heading)"
-                      fontWeight="700"
-                    >
-                      {val}
-                    </text>
-                  )}
-                </g>
+                <EdgeLabel
+                  key={`label-${i}`}
+                  sx={sx} sy={sy} tx={tx} ty={ty}
+                  label={edgeLabelText(e)}
+                  val={edgeValue(e)}
+                  relColor={rc?.color}
+                />
               );
             })}
 
@@ -234,66 +295,19 @@ export function GraphCanvas({
             const dim = dimBySearch || dimBySelection;
 
             return (
-              <g key={n.id} opacity={dim ? 0.12 : 1}>
-                {/* Connected node ring */}
-                {isConnected && !isSelected && selectedNode && (
-                  <circle
-                    cx={n.x}
-                    cy={n.y}
-                    r={r + 3}
-                    fill="none"
-                    stroke="var(--accent-teal)"
-                    strokeWidth={1}
-                    opacity={0.4}
-                    strokeDasharray="3,2"
-                  />
-                )}
-                {/* Selected node ring */}
-                {isSelected && (
-                  <circle
-                    cx={n.x}
-                    cy={n.y}
-                    r={r + 4}
-                    fill="none"
-                    stroke="var(--accent-teal)"
-                    strokeWidth={2}
-                    opacity={0.6}
-                  />
-                )}
-                <circle
-                  cx={n.x}
-                  cy={n.y}
-                  r={r}
-                  fill={fill}
-                  stroke={isSelected ? '#fff' : isConnected && selectedNode ? 'var(--accent-teal)' : 'rgba(0,0,0,0.3)'}
-                  strokeWidth={isSelected ? 1.5 : isConnected && selectedNode ? 1 : 0.5}
-                  style={{ cursor: 'pointer' }}
-                  onClick={() => onSelectNode?.(n.id === selectedNode ? null : n.id)}
-                  onMouseEnter={(e) =>
-                    setTooltip({
-                      x: e.clientX,
-                      y: e.clientY,
-                      label: n.label,
-                      type: n.type,
-                    })
-                  }
-                  onMouseLeave={() => setTooltip(null)}
-                />
-                {(r >= 10 || isSelected || (isConnected && selectedNode)) && (
-                  <text
-                    x={n.x}
-                    y={n.y + r + 12}
-                    textAnchor="middle"
-                    fill={isConnected && selectedNode ? 'var(--text-primary)' : 'var(--text-secondary)'}
-                    fontSize={isSelected ? 10 : 9}
-                    fontFamily="var(--font-body)"
-                    fontWeight={isConnected && selectedNode ? '600' : 'normal'}
-                    pointerEvents="none"
-                  >
-                    {n.label?.length > 18 ? n.label.slice(0, 16) + '...' : n.label}
-                  </text>
-                )}
-              </g>
+              <NodeCircle
+                key={n.id}
+                node={n}
+                r={r}
+                fill={fill}
+                isSelected={isSelected}
+                isConnected={isConnected}
+                hasSelection={!!selectedNode}
+                dim={dim}
+                onSelect={() => onSelectNode?.(n.id === selectedNode ? null : n.id)}
+                onHover={(e) => setTooltip({ x: e.clientX, y: e.clientY, label: n.label, type: n.type })}
+                onLeave={() => setTooltip(null)}
+              />
             );
           })}
         </g>
@@ -320,7 +334,7 @@ export function GraphCanvas({
           onClick={() => { setZoom(1); setPan({ x: 0, y: 0 }); }}
           type="button"
         >
-          ⟲
+          &#x27F2;
         </button>
       </div>
 

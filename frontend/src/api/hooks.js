@@ -6,7 +6,7 @@ export function useCompanies(filters = {}) {
   return useQuery({
     queryKey: ['companies', filters],
     queryFn: () => api.getCompanies(filters),
-    staleTime: 60_000,
+    staleTime: 300_000,
   });
 }
 
@@ -16,6 +16,7 @@ export function useCompany(id) {
     queryKey: ['company', id],
     queryFn: () => api.getCompany(id),
     enabled: !!id,
+    staleTime: 300_000,
   });
 }
 
@@ -24,7 +25,7 @@ export function useFunds() {
   return useQuery({
     queryKey: ['funds'],
     queryFn: () => api.getFunds(),
-    staleTime: 120_000,
+    staleTime: 300_000,
   });
 }
 
@@ -33,7 +34,7 @@ export function useGraph(nodeTypes, yearMax) {
   return useQuery({
     queryKey: ['graph', nodeTypes, yearMax],
     queryFn: () => api.getGraph(nodeTypes, yearMax),
-    staleTime: 60_000,
+    staleTime: 300_000,
   });
 }
 
@@ -42,7 +43,7 @@ export function useGraphMetrics(nodeTypes) {
   return useQuery({
     queryKey: ['graphMetrics', nodeTypes],
     queryFn: () => api.getGraphMetrics(nodeTypes),
-    staleTime: 120_000,
+    staleTime: 300_000,
   });
 }
 
@@ -51,7 +52,7 @@ export function useKpis(filters = {}) {
   return useQuery({
     queryKey: ['kpis', filters],
     queryFn: () => api.getKpis(filters),
-    staleTime: 60_000,
+    staleTime: 300_000,
   });
 }
 
@@ -60,7 +61,7 @@ export function useSectorStats() {
   return useQuery({
     queryKey: ['sectorStats'],
     queryFn: () => api.getSectorStats(),
-    staleTime: 120_000,
+    staleTime: 300_000,
   });
 }
 
@@ -69,7 +70,7 @@ export function useTimeline(params = {}) {
   return useQuery({
     queryKey: ['timeline', params],
     queryFn: () => api.getTimeline(params),
-    staleTime: 60_000,
+    staleTime: 300_000,
   });
 }
 
@@ -78,7 +79,7 @@ export function useConstants() {
   return useQuery({
     queryKey: ['constants'],
     queryFn: () => api.getConstants(),
-    staleTime: 300_000,
+    staleTime: 600_000,
   });
 }
 

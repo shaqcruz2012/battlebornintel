@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { KpiCard } from './KpiCard';
 import styles from './KpiStrip.module.css';
 
@@ -15,11 +16,11 @@ const TOOLTIPS = {
 export function KpiStrip({ kpis, funds = [], activeSortBy, onSortChange }) {
   if (!kpis) return null;
 
-  // Synthetic sparkline data (trending representation)
-  const sparkCapital = [12, 18, 22, 28, 35, 40, kpis.capitalDeployed.value];
-  const sparkLeverage = [2, 3.5, 4, 5, 6, kpis.privateLeverage.value];
-  const sparkCapacity = [800, 1200, 1600, 2000, kpis.ecosystemCapacity.value];
-  const sparkMomentum = [40, 50, 55, 60, kpis.innovationIndex.value];
+  // Synthetic sparkline data (memoized to prevent child re-renders)
+  const sparkCapital = useMemo(() => [12, 18, 22, 28, 35, 40, kpis.capitalDeployed.value], [kpis.capitalDeployed.value]);
+  const sparkLeverage = useMemo(() => [2, 3.5, 4, 5, 6, kpis.privateLeverage.value], [kpis.privateLeverage.value]);
+  const sparkCapacity = useMemo(() => [800, 1200, 1600, 2000, kpis.ecosystemCapacity.value], [kpis.ecosystemCapacity.value]);
+  const sparkMomentum = useMemo(() => [40, 50, 55, 60, kpis.innovationIndex.value], [kpis.innovationIndex.value]);
 
   return (
     <div className={styles.strip}>

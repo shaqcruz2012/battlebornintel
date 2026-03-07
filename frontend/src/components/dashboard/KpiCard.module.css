@@ -9,6 +9,7 @@
   cursor: pointer;
   transition: all var(--transition-fast);
   min-width: 0;
+  contain: layout style paint;
 }
 
 .kpiCard:hover {
