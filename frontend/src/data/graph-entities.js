@@ -181,4 +181,5 @@ export const LISTINGS = [
   {companyId:65,exchange:"Nasdaq",ticker:"SSNT"},{companyId:67,exchange:"OTC",ticker:"PLNHF"},
   {companyId:71,exchange:"TSX",ticker:"JP"},{companyId:73,exchange:"NYSE",ticker:"AQMS"},
   {companyId:74,exchange:"NYSE",ticker:"ORA"},{companyId:75,exchange:"Nasdaq",ticker:"NVEE"},
+  {companyId:26,exchange:"Nasdaq",ticker:"DAIC"},
 ];

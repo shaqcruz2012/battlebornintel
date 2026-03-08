@@ -38,6 +38,11 @@ export function computeKPIs(companies, funds) {
       label: 'Capital Deployed',
       secondary: `${fs.length} active funds`,
     },
+    ssbciCapitalDeployed: {
+      value: ssbciDeployed,
+      label: 'SSBCI Capital Deployed',
+      secondary: `${ssbciFunds.length} SSBCI funds`,
+    },
     privateLeverage: {
       value: privateLeverage,
       label: 'Private Leverage',
