@@ -15,15 +15,15 @@ const TOOLTIPS = {
     'Composite index: 40% average momentum score across companies + 30% share of companies with momentum ≥75 (top performers) + 30% share of companies in sectors with heat score ≥80 (hot sectors). Designed to capture both breadth and depth of ecosystem momentum.',
 };
 
-export function KpiStrip({ kpis, funds = [], activeSortBy, onSortChange }) {
-  if (!kpis) return null;
-
+export function KpiStrip({ kpis, activeSortBy, onSortChange }) {
   // Synthetic sparkline data (memoized to prevent child re-renders)
-  const sparkCapital = useMemo(() => [12, 18, 22, 28, 35, 40, kpis.capitalDeployed?.value || 0], [kpis.capitalDeployed?.value]);
-  const sparkSsbciCapital = useMemo(() => [8, 12, 15, 18, 22, kpis.ssbciCapitalDeployed?.value || 0], [kpis.ssbciCapitalDeployed?.value]);
-  const sparkLeverage = useMemo(() => [2, 3.5, 4, 5, 6, kpis.privateLeverage?.value || 0], [kpis.privateLeverage?.value]);
-  const sparkCapacity = useMemo(() => [800, 1200, 1600, 2000, kpis.ecosystemCapacity.value], [kpis.ecosystemCapacity.value]);
-  const sparkMomentum = useMemo(() => [40, 50, 55, 60, kpis.innovationIndex.value], [kpis.innovationIndex.value]);
+  const sparkCapital = useMemo(() => [12, 18, 22, 28, 35, 40, kpis?.capitalDeployed?.value || 0], [kpis?.capitalDeployed?.value]);
+  const sparkSsbciCapital = useMemo(() => [8, 12, 15, 18, 22, kpis?.ssbciCapitalDeployed?.value || 0], [kpis?.ssbciCapitalDeployed?.value]);
+  const sparkLeverage = useMemo(() => [2, 3.5, 4, 5, 6, kpis?.privateLeverage?.value || 0], [kpis?.privateLeverage?.value]);
+  const sparkCapacity = useMemo(() => [800, 1200, 1600, 2000, kpis?.ecosystemCapacity?.value || 0], [kpis?.ecosystemCapacity?.value]);
+  const sparkMomentum = useMemo(() => [40, 50, 55, 60, kpis?.innovationIndex?.value || 0], [kpis?.innovationIndex?.value]);
+
+  if (!kpis) return null;
 
   return (
     <div className={styles.strip}>

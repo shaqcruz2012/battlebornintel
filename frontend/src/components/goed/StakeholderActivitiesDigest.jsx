@@ -5,8 +5,6 @@ import {
   filterActivitiesByLocation,
   formatShortDate,
   formatFullDate,
-  getActivityTypeIcon,
-  getActivityTypeColor,
   getActivityTypeLabel,
   NEVADA_REGIONS,
   NEVADA_REGION_LABELS,

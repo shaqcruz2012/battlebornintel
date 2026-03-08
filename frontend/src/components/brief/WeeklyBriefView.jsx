@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { MainGrid } from '../layout/AppShell';
 import { useWeeklyBriefs } from '../../hooks/useWeeklyBriefs';
-import { getTodayWeekStart, getWeekMondays, formatDate } from '../../utils/weeks';
+import { getTodayWeekStart, formatDate } from '../../utils/weeks';
 import { WeeklyBriefCard } from './WeeklyBriefCard';
 import styles from './WeeklyBriefView.module.css';
 
@@ -144,7 +144,7 @@ export function WeeklyBriefView() {
 
             {/* Weeks */}
             <div className={styles.weeks}>
-              {filteredWeeks.map((week, idx) => {
+              {filteredWeeks.map((week) => {
                 const isCurrentWeek = week.weekStart === currentWeekDate;
                 return (
                   <div key={week.weekStart}>

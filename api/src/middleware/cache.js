@@ -97,8 +97,19 @@ const cache = new Cache();
  * Cache middleware factory
  * @param {string} keyPrefix - Prefix for cache keys (e.g., 'companies')
  * @param {number} ttlMs - Time-to-live in milliseconds (default 5 minutes)
+ * @param {Object} options - Optional settings
+ * @param {string} options.cacheControl - Cache-Control header value (default: 'public, max-age=3600')
  */
-export function cacheMiddleware(keyPrefix = '', ttlMs = 300000) {
+export function cacheMiddleware(keyPrefix = '', ttlMs = 300000, options = {}) {
+  const cacheControl = options.cacheControl || 'public, max-age=3600';
+  const browserTtlSec = parseInt(cacheControl.match(/max-age=(\d+)/)?.[1] || '3600', 10);
+
+  function applyHttpCacheHeaders(res) {
+    res.setHeader('Cache-Control', cacheControl);
+    const expires = new Date(Date.now() + browserTtlSec * 1000);
+    res.setHeader('Expires', expires.toUTCString());
+  }
+
   return (req, res, next) => {
     const key = Cache.generateKey(req.method, keyPrefix ? `/${keyPrefix}${req.path}` : req.path, req.query);
 
@@ -106,6 +117,7 @@ export function cacheMiddleware(keyPrefix = '', ttlMs = 300000) {
     if (req.method === 'GET' && cache.has(key)) {
       const cached = cache.get(key);
       res.setHeader('X-Cache', 'HIT');
+      applyHttpCacheHeaders(res);
       return res.json(cached);
     }
 
@@ -115,6 +127,7 @@ export function cacheMiddleware(keyPrefix = '', ttlMs = 300000) {
       if (req.method === 'GET' && res.statusCode === 200) {
         cache.set(key, data, ttlMs);
         res.setHeader('X-Cache', 'MISS');
+        applyHttpCacheHeaders(res);
       }
       return originalJson(data);
     };

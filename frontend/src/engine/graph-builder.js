@@ -1,9 +1,13 @@
 import * as d3 from 'd3';
-import { COMPANIES } from '../data/companies.js';
-import { GRAPH_FUNDS, PEOPLE, EXTERNALS, ACCELERATORS, ECOSYSTEM_ORGS, LISTINGS } from '../data/graph-entities.js';
-import { VERIFIED_EDGES } from '../data/edges.js';
+import { loadCompaniesData, loadEdgesData, loadGraphEntitiesData } from '../utils/lazyLoadData.js';
 
-export function buildGraph(filters, relFilters, yearFilter = 2026) {
+export async function buildGraph(filters, relFilters, yearFilter = 2026) {
+  const [COMPANIES, VERIFIED_EDGES, entities] = await Promise.all([
+    loadCompaniesData(),
+    loadEdgesData(),
+    loadGraphEntitiesData(),
+  ]);
+  const { GRAPH_FUNDS = [], PEOPLE = [], EXTERNALS = [], ACCELERATORS = [], ECOSYSTEM_ORGS = [], LISTINGS = [] } = entities;
   const nodes = [];
   const edges = [];
   const nodeSet = new Set();

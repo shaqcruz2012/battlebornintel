@@ -40,7 +40,7 @@ async function seed() {
       ECOSYSTEM_ORGS,
       LISTINGS,
     } = await import(toURL('frontend/src/data/graph-entities.js'));
-    const { TIMELINE } = await import(toURL('frontend/src/data/timeline.js'));
+    const { TIMELINE_EVENTS: TIMELINE } = await import(toURL('frontend/src/data/timeline.js'));
     const {
       SHEAT,
       STAGE_NORMS,

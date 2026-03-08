@@ -21,7 +21,7 @@ export async function getStakeholderActivities(filters = {}) {
   let sql = `
     WITH timeline_data AS (
       SELECT
-        t.id,
+        t.id::text,
         t.event_date as date,
         t.event_type as activity_type,
         t.company_name,
@@ -37,7 +37,7 @@ export async function getStakeholderActivities(filters = {}) {
     graph_edge_activities AS (
       SELECT
         'graph-' || g.id as id,
-        g.event_year::text || '-01-01'::date as date,
+        (g.event_year::text || '-01-01')::date as date,
         CASE g.rel
           WHEN 'FUNDING' THEN 'funding'
           WHEN 'INVESTMENT' THEN 'funding'

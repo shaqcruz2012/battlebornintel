@@ -42,6 +42,16 @@ export const REL_CFG = {
   filed_with:{color:GP.pink,label:"Filed With",dash:"4,4"},
   competes_with:{color:"#FF7043",label:"Competes With",dash:"2,4"},
   grants_to:{color:GP.green,label:"Grants To",dash:"4,2"},
+  qualifies_for:{color:"#22C55E",label:"Qualifies For",dash:"6,4"},
+  fund_opportunity:{color:"#16A34A",label:"Potential Investor",dash:"6,4"},
+  potential_lp:{color:"#818CF8",label:"Potential LP",dash:"6,4"},
+};
+
+// Edge category configuration
+export const EDGE_CATEGORY_CFG = {
+  historical: { label: 'Historical', style: '', opacity: 0.4 },
+  opportunity: { label: 'Opportunities', style: '6,4', opacity: 0.6 },
+  projected: { label: 'Projected', style: '2,3', opacity: 0.3 },
 };
 
 export const GSTAGE_C = {

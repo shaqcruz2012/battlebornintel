@@ -1,7 +1,7 @@
 import { useState, useMemo, useRef, useEffect } from 'react';
 import { useFilters } from '../../hooks/useFilters';
-import { computeLayout } from '../../engine/graph-builder';
 import { useGraph, useGraphMetrics } from '../../api/hooks';
+import { useGraphLayout } from '../../hooks/useGraphLayout';
 import { useWindowSize } from '../../hooks/useWindowSize';
 import { MainGrid } from '../layout/AppShell';
 import { GraphControls, GraphOverlayControls } from './GraphControls';
@@ -29,6 +29,8 @@ export function GraphView() {
   const [colorMode, setColorMode] = useState('type');
   const [search, setSearch] = useState('');
   const [selectedNode, setSelectedNode] = useState(null);
+  const [showOpportunities, setShowOpportunities] = useState(false);
+  const [opportunityFilter, setOpportunityFilter] = useState('all');
 
   const toggleNode = (key) =>
     setNodeFilters((f) => ({ ...f, [key]: !f[key] }));
@@ -43,7 +45,7 @@ export function GraphView() {
     debounceRef.current = setTimeout(() => setDims({ w: rawW, h: rawH }), 200);
     return () => clearTimeout(debounceRef.current);
   }, [rawW, rawH]);
-  const { w, h } = dims;
+  void dims; // dims state triggers re-renders when window dimensions change
 
   // Active node types for API query
   const activeNodeTypes = useMemo(
@@ -55,15 +57,26 @@ export function GraphView() {
   const { data: graphData, isLoading: loadingGraph } = useGraph(activeNodeTypes, 2026, filters.region);
   const { data: metricsData, isLoading: loadingMetrics } = useGraphMetrics(activeNodeTypes);
 
-  // D3 layout stays client-side (needs viewport dimensions)
-  const layout = useMemo(
-    () => graphData ? computeLayout(graphData, w, h) : { nodes: [], edges: [] },
-    [graphData, w, h]
-  );
+  // Compute D3 layout in Web Worker to keep UI responsive
+  const rawNodes = graphData?.nodes || [];
+  const rawEdges = graphData?.edges || [];
+  const { layout: workerLayout, isLoading: layoutLoading } = useGraphLayout(rawNodes, rawEdges);
+
+  // Resolve edge source/target from string IDs to node objects (required by GraphCanvas)
+  const layout = useMemo(() => {
+    const { nodes, edges } = workerLayout;
+    if (!nodes.length) return { nodes: [], edges: [] };
+    const nodeById = {};
+    nodes.forEach((n) => { nodeById[n.id] = n; });
+    const resolvedEdges = edges
+      .filter((e) => nodeById[e.source] && nodeById[e.target])
+      .map((e) => ({ ...e, source: nodeById[e.source], target: nodeById[e.target] }));
+    return { nodes, edges: resolvedEdges };
+  }, [workerLayout]);
 
   const metrics = metricsData || { pagerank: {}, betweenness: {}, communities: {}, watchlist: [] };
 
-  if (loadingGraph || loadingMetrics) {
+  if (loadingGraph || loadingMetrics || layoutLoading) {
     return (
       <MainGrid>
         <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-secondary)' }}>
@@ -92,6 +105,8 @@ export function GraphView() {
               selectedNode={selectedNode}
               onSelectNode={setSelectedNode}
               searchTerm={search}
+              showOpportunities={showOpportunities}
+              opportunityFilter={opportunityFilter}
             />
             <GraphLegend colorMode={colorMode} nodeFilters={nodeFilters} />
             <GraphOverlayControls
@@ -99,6 +114,10 @@ export function GraphView() {
               onToggleNode={toggleNode}
               colorMode={colorMode}
               onColorModeChange={setColorMode}
+              showOpportunities={showOpportunities}
+              onToggleOpportunities={() => setShowOpportunities((v) => !v)}
+              opportunityFilter={opportunityFilter}
+              onOpportunityFilterChange={setOpportunityFilter}
             />
           </div>
 

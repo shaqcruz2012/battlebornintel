@@ -77,11 +77,21 @@ export function GraphControls({
   );
 }
 
+const OPP_FILTERS = [
+  { value: 'all', label: 'All' },
+  { value: 'programs', label: 'Programs' },
+  { value: 'funds', label: 'Funds' },
+];
+
 export function GraphOverlayControls({
   nodeFilters,
   onToggleNode,
   colorMode,
   onColorModeChange,
+  showOpportunities = false,
+  onToggleOpportunities,
+  opportunityFilter = 'all',
+  onOpportunityFilterChange,
 }) {
   return (
     <div className={styles.overlay}>
@@ -105,6 +115,24 @@ export function GraphOverlayControls({
             label={m.label}
             active={colorMode === m.value}
             onClick={() => onColorModeChange(m.value)}
+            small
+          />
+        ))}
+      </div>
+      <div className={styles.overlayRow}>
+        <span className={styles.overlayLabel}>Edges</span>
+        <FilterChip
+          label="Opportunities"
+          active={showOpportunities}
+          onClick={onToggleOpportunities}
+          small
+        />
+        {showOpportunities && OPP_FILTERS.map((f) => (
+          <FilterChip
+            key={f.value}
+            label={f.label}
+            active={opportunityFilter === f.value}
+            onClick={() => onOpportunityFilterChange?.(f.value)}
             small
           />
         ))}

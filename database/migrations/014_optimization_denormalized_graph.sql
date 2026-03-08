@@ -59,14 +59,14 @@ CREATE MATERIALIZED VIEW graph_data_snapshot AS
     f.fund_type,                 -- fund_type for funds
     NULL::VARCHAR,               -- no region
     NULL::TEXT[],                -- no sectors
-    f.deployed_m,
+    NULL::NUMERIC,               -- no deployed_m on graph_funds
     NULL::INTEGER,               -- no momentum
     NULL::INTEGER,               -- no employees
     NULL::INTEGER,               -- no founded
     NULL::TEXT[],                -- no eligible
     NULL::VARCHAR,               -- no city
     TRUE,
-    f.thesis,
+    NULL::TEXT,                  -- no thesis on graph_funds
     f.fund_type,
     NULL::VARCHAR,
     NULL::VARCHAR
@@ -243,19 +243,19 @@ CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_graph_snapshot_sectors_trgm
 -- ... (6 more blocks)
 
 -- NEW: Single loop for all entities
-// const nodes = [];
-// const nodeSet = new Set();
-// for (const row of entityRows) {
-//   const id = row.entity_id;
-//   if (nodeSet.has(id)) continue;
-//   nodeSet.add(id);
-//   nodes.push({
-//     id,
-//     label: row.name,
-//     type: row.entity_type,
-//     // ... properties from denormalized columns
-//   });
-// }
+-- const nodes = [];
+-- const nodeSet = new Set();
+-- for (const row of entityRows) {
+--   const id = row.entity_id;
+--   if (nodeSet.has(id)) continue;
+--   nodeSet.add(id);
+--   nodes.push({
+--     id,
+--     label: row.name,
+--     type: row.entity_type,
+--     // ... properties from denormalized columns
+--   });
+-- }
 
 -- ============================================================
 -- Performance Impact

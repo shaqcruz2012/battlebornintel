@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, useCallback } from 'react';
+import { useEffect, useState, useRef } from 'react';
 
 /**
  * Hook to compute graph layout using Web Worker
@@ -25,7 +25,7 @@ export function useGraphLayout(nodes, edges, options = {}) {
           new URL('../workers/d3-layout.worker.js', import.meta.url),
           { type: 'module' }
         );
-      } catch (err) {
+      } catch {
         console.warn('Web Worker not supported, falling back to main thread');
       }
     }

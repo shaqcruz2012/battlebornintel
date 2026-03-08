@@ -1,7 +1,6 @@
-import { useState, useMemo } from 'react';
+import { useMemo } from 'react';
 import { TIMELINE_EVENTS } from '../data/timeline';
 import {
-  getWeekStart,
   getWeekEnd,
   isDateInWeek,
   getWeekMondays,

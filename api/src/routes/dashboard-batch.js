@@ -9,12 +9,12 @@ import { cacheMiddleware } from '../middleware/cache.js';
 import { getAllCompanies, getCompanyById } from '../db/queries/companies.js';
 import { getAllFunds } from '../db/queries/funds.js';
 import { getKpis } from '../db/queries/kpis.js';
-import { getSectorStats } from '../db/queries/sectors.js';
+import { getSectorStats } from '../db/queries/kpis.js';
 
 const router = Router();
 
-// Apply cache middleware to batch endpoint (5 minute TTL)
-router.use(cacheMiddleware('dashboard-batch', 300000));
+// Apply cache middleware to batch endpoint (5 minute TTL, real-time data)
+router.use(cacheMiddleware('dashboard-batch', 300000, { cacheControl: 'public, max-age=300' }));
 
 /**
  * GET /api/dashboard-batch

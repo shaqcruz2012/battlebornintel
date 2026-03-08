@@ -13,7 +13,6 @@ import styles from './ActivityCard.module.css';
  */
 export const ActivityCard = memo(function ActivityCard({ activity }) {
   const {
-    id,
     company_name,
     activity_type,
     description,

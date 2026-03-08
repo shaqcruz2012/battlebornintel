@@ -106,7 +106,7 @@ self.addEventListener('message', (e) => {
 
   try {
     // Initialize node positions if not already set
-    const initializedNodes = nodes.map((n, i) => ({
+    const initializedNodes = nodes.map((n) => ({
       ...n,
       x: n.x || Math.random() * 600,
       y: n.y || Math.random() * 600,

@@ -17,7 +17,7 @@ export async function loadCompaniesData() {
 
   try {
     const module = await import('../data/companies.js');
-    const data = module.companies || module.default || [];
+    const data = module.COMPANIES || module.companies || module.default || [];
     cache.set('companies', data);
     return data;
   } catch (error) {
@@ -28,6 +28,8 @@ export async function loadCompaniesData() {
 
 /**
  * Lazy load graph entities
+ * Returns the full module with named exports: GRAPH_FUNDS, PEOPLE, EXTERNALS,
+ * ACCELERATORS, ECOSYSTEM_ORGS, LISTINGS
  */
 export async function loadGraphEntitiesData() {
   if (cache.has('graphEntities')) {
@@ -36,12 +38,11 @@ export async function loadGraphEntitiesData() {
 
   try {
     const module = await import('../data/graph-entities.js');
-    const data = module.graphEntities || module.default || [];
-    cache.set('graphEntities', data);
-    return data;
+    cache.set('graphEntities', module);
+    return module;
   } catch (error) {
     console.error('Failed to load graph entities data:', error);
-    return [];
+    return {};
   }
 }
 
@@ -55,7 +56,7 @@ export async function loadEdgesData() {
 
   try {
     const module = await import('../data/edges.js');
-    const data = module.edges || module.default || [];
+    const data = module.VERIFIED_EDGES || module.edges || module.default || [];
     cache.set('edges', data);
     return data;
   } catch (error) {

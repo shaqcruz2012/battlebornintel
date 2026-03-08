@@ -144,6 +144,8 @@ export function GraphCanvas({
   selectedNode,
   onSelectNode,
   searchTerm = '',
+  showOpportunities = false,
+  opportunityFilter = 'all', // 'all' | 'programs' | 'funds'
 }) {
   const containerRef = useRef(null);
   const { width: winW, height: winH } = useWindowSize();
@@ -251,14 +253,28 @@ export function GraphCanvas({
             const isHighlighted = highlightedEdges.has(i);
             const dimEdge = selectedNode && !isHighlighted;
 
+            // Opportunity edge handling
+            const isOpportunity = e.edge_category === 'opportunity' || e.rel === 'qualifies_for' || e.rel === 'fund_opportunity' || e.rel === 'potential_lp';
+            if (isOpportunity && !showOpportunities) return null;
+            if (isOpportunity && opportunityFilter === 'programs' && e.rel !== 'qualifies_for') return null;
+            if (isOpportunity && opportunityFilter === 'funds' && e.rel !== 'fund_opportunity') return null;
+
+            // Use per-edge visual overrides from DB, fall back to REL_CFG
+            const edgeColor = e.edge_color || (isHighlighted ? (rc?.color || 'var(--accent-teal)') : (rc?.color || '#333'));
+            const edgeDash = e.edge_style ?? (rc?.dash || '');
+            const edgeOpacity = isOpportunity
+              ? (e.edge_opacity ?? (dimEdge ? 0.05 : 0.5))
+              : (dimEdge ? 0.08 : isHighlighted ? 0.9 : 0.4);
+            const edgeWidth = isOpportunity ? (isHighlighted ? 1.5 : 0.5) : (isHighlighted ? 2 : 0.6);
+
             return (
               <EdgeLine
                 key={i}
                 sx={sx} sy={sy} tx={tx} ty={ty}
-                color={isHighlighted ? (rc?.color || 'var(--accent-teal)') : (rc?.color || '#333')}
-                strokeWidth={isHighlighted ? 2 : 0.6}
-                dash={rc?.dash || ''}
-                opacity={dimEdge ? 0.08 : isHighlighted ? 0.9 : 0.4}
+                color={edgeColor}
+                strokeWidth={edgeWidth}
+                dash={edgeDash}
+                opacity={edgeOpacity}
               />
             );
           })}

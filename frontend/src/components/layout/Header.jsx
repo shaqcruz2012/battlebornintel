@@ -16,7 +16,7 @@ const STAGES = [
   { value: 'growth', label: 'Growth' },
 ];
 
-export function Header({ activeView, onViewChange }) {
+export function Header() {
   const { filters, setRegion, setStage, setSearch } = useFilters();
 
   return (
