@@ -4,6 +4,7 @@ import compression from 'compression';
 import cfg from './config.js';
 import pool from './db/pool.js';
 import { errorHandler } from './middleware/errorHandler.js';
+import { cacheMiddleware, getCacheStats } from './middleware/cache.js';
 
 import companiesRouter from './routes/companies.js';
 import fundsRouter from './routes/funds.js';
@@ -13,6 +14,8 @@ import timelineRouter from './routes/timeline.js';
 import constantsRouter from './routes/constants.js';
 import analysisRouter from './routes/analysis.js';
 import adminRouter from './routes/admin.js';
+import dashboardBatchRouter from './routes/dashboard-batch.js';
+import stakeholderActivitiesRouter from './routes/stakeholder-activities.js';
 
 const app = express();
 
@@ -30,15 +33,24 @@ app.get('/api/health', async (req, res) => {
   }
 });
 
-// Routes
-app.use('/api/companies', companiesRouter);
-app.use('/api/funds', fundsRouter);
-app.use('/api/graph', graphRouter);
-app.use('/api/kpis', kpisRouter);
-app.use('/api/timeline', timelineRouter);
-app.use('/api/constants', constantsRouter);
-app.use('/api/analysis', analysisRouter);
+// Cache stats endpoint (for monitoring)
+app.get('/api/cache-stats', (req, res) => {
+  res.json(getCacheStats());
+});
+
+// Routes with per-route caching
+app.use('/api/companies', cacheMiddleware('companies', 300000), companiesRouter);
+app.use('/api/funds', cacheMiddleware('funds', 300000), fundsRouter);
+app.use('/api/graph', cacheMiddleware('graph', 300000), graphRouter);
+app.use('/api/kpis', cacheMiddleware('kpis', 300000), kpisRouter);
+app.use('/api/timeline', cacheMiddleware('timeline', 300000), timelineRouter);
+app.use('/api/constants', cacheMiddleware('constants', 600000), constantsRouter);
+app.use('/api/analysis', cacheMiddleware('analysis', 300000), analysisRouter);
+app.use('/api/stakeholder-activities', cacheMiddleware('stakeholderActivities', 300000), stakeholderActivitiesRouter);
 app.use('/api/admin', adminRouter);
+
+// High-impact batch endpoint for dashboard
+app.use('/api/dashboard-batch', dashboardBatchRouter);
 
 // Error handler
 app.use(errorHandler);

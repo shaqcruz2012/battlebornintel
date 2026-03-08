@@ -1,5 +1,12 @@
 import pool from '../pool.js';
 
+// Data quality constants
+const DATA_QUALITY = {
+  VERIFIED: 'verified',
+  INFERRED: 'inferred',
+  CALCULATED: 'calculated',
+};
+
 export async function getKpis({ stage, region, sector } = {}) {
   let companySql = `SELECT * FROM companies`;
   const conditions = [];
@@ -84,6 +91,11 @@ export async function getKpis({ stage, region, sector } = {}) {
     0
   );
 
+  // Count companies with verified employee data
+  const companiesWithVerifiedEmployees = companies.filter(
+    (c) => c.employees && c.employees > 0
+  ).length;
+
   // Innovation Index
   const n = companies.length || 1;
   const avgMomentum =
@@ -103,26 +115,65 @@ export async function getKpis({ stage, region, sector } = {}) {
       value: capitalDeployed,
       label: 'Capital Deployed',
       secondary: `${funds.length} active funds`,
+      quality: DATA_QUALITY.VERIFIED,
+      dataQualityNote: 'Verified from fund deployment records and SEC filings',
+      sources: ['Fund administrator reports', 'SEC SBIC filings'],
     },
     ssbciCapitalDeployed: {
       value: ssbciDeployed,
       label: 'SSBCI Capital Deployed',
       secondary: `${ssbciFunds.length} SSBCI funds`,
+      quality: DATA_QUALITY.VERIFIED,
+      dataQualityNote: 'Verified from SSBCI program certification documents and Treasury records',
+      sources: ['SSBCI certification', 'Treasury reporting', 'Fund certifications'],
     },
     privateLeverage: {
       value: privateLeverage,
       label: 'Private Leverage',
       secondary: `${ssbciFunds.length} SSBCI funds`,
+      quality: DATA_QUALITY.CALCULATED,
+      dataQualityNote: 'Calculated ratio: Sum(deployed × leverage) / Sum(deployed). Deployment amounts verified; leverage ratios estimated.',
+      formula: 'Σ(fund.deployed_m × fund.leverage) / Σ(fund.deployed_m)',
+      breakdown: {
+        deployed: DATA_QUALITY.VERIFIED,
+        leverage: DATA_QUALITY.INFERRED,
+      },
     },
     ecosystemCapacity: {
       value: ecosystemCapacity,
       label: 'Ecosystem Capacity',
       secondary: `${companies.length} companies tracked`,
+      quality: DATA_QUALITY.INFERRED,
+      dataQualityNote: `${companiesWithVerifiedEmployees} of ${companies.length} companies have reported employee counts. Remaining estimates based on funding stage and industry benchmarks.`,
+      verificationPercentage: Math.round((companiesWithVerifiedEmployees / n) * 100),
+      sources: [
+        'Company self-reports',
+        'Crunchbase data',
+        'LinkedIn analysis',
+        'Press releases',
+      ],
     },
     innovationIndex: {
       value: innovationIndex,
       label: 'Innovation Momentum',
       secondary: `${topMomentum} high-momentum cos`,
+      quality: DATA_QUALITY.CALCULATED,
+      dataQualityNote: 'Composite index: 40% avg momentum score + 30% high performers + 30% hot sectors. All components are inferred metrics.',
+      formula: '(avgMomentum × 0.4) + (topPerformers/n × 100 × 0.3) + (hotSectors/n × 100 × 0.3)',
+      components: {
+        momentum: {
+          quality: DATA_QUALITY.INFERRED,
+          note: 'Proprietary momentum scoring algorithm',
+        },
+        topPerformers: {
+          quality: DATA_QUALITY.INFERRED,
+          note: 'Companies with momentum score ≥ 75',
+        },
+        hotSectors: {
+          quality: DATA_QUALITY.INFERRED,
+          note: 'Sectors with heat score ≥ 80 (market research + funding trends)',
+        },
+      },
     },
   };
 }

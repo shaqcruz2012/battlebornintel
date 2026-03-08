@@ -93,11 +93,31 @@ export function useCompanyAnalysis(id) {
   });
 }
 
-/** Weekly intelligence brief */
-export function useWeeklyBrief() {
+/** Weekly intelligence brief - current/latest */
+export function useWeeklyBrief(params = {}) {
   return useQuery({
-    queryKey: ['analysis', 'brief'],
-    queryFn: () => api.getWeeklyBrief(),
+    queryKey: ['analysis', 'brief', params],
+    queryFn: () => api.getWeeklyBrief(params),
+    staleTime: 300_000,
+  });
+}
+
+/** Weekly brief for specific week */
+export function useWeeklyBriefWeek(weekStart) {
+  return useQuery({
+    queryKey: ['analysis', 'brief', weekStart],
+    queryFn: () => api.getWeeklyBriefByWeek(weekStart),
+    enabled: !!weekStart,
+    staleTime: 300_000,
+  });
+}
+
+/** Weekly brief range (e.g., past year) */
+export function useWeeklyBriefRange(startWeek, endWeek) {
+  return useQuery({
+    queryKey: ['analysis', 'brief', 'range', startWeek, endWeek],
+    queryFn: () => api.getWeeklyBriefRange(startWeek, endWeek),
+    enabled: !!(startWeek && endWeek),
     staleTime: 300_000,
   });
 }
@@ -107,6 +127,15 @@ export function useRiskAssessments() {
   return useQuery({
     queryKey: ['analysis', 'risks'],
     queryFn: () => api.getRiskAssessments(),
+    staleTime: 300_000,
+  });
+}
+
+/** Stakeholder activities digest */
+export function useStakeholderActivities(params = {}) {
+  return useQuery({
+    queryKey: ['stakeholderActivities', params],
+    queryFn: () => api.getStakeholderActivities(params),
     staleTime: 300_000,
   });
 }

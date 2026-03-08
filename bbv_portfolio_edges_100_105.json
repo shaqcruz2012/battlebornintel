@@ -1,0 +1,752 @@
+[
+  // ===== ATTRIBUTEFLOW (ID: 100) =====
+  // AttributeFlow: B2B SaaS platform for customer data governance and identity resolution
+
+  // Investors & VCs
+  {
+    source: "i_sequoia",
+    target: "c_100",
+    rel: "invested_in",
+    note: "Led AttributeFlow Series A $8.5M. Enterprise data governance focus.",
+    investment: 8500000,
+    y: 2024,
+    stage: "Series A",
+    lead: true
+  },
+  {
+    source: "i_greylock",
+    target: "c_100",
+    rel: "invested_in",
+    note: "Co-led Series A $8.5M. Data infrastructure expertise.",
+    investment: 2500000,
+    y: 2024,
+    stage: "Series A",
+    lead: false
+  },
+  {
+    source: "i_boldstart",
+    target: "c_100",
+    rel: "invested_in",
+    note: "Seed investor $1.2M. Enterprise SaaS focus.",
+    investment: 1200000,
+    y: 2023,
+    stage: "Seed",
+    lead: true
+  },
+  {
+    source: "i_techcrunch",
+    target: "c_100",
+    rel: "invested_in",
+    note: "Early angel syndicate. TechCrunch Disrupt winner 2023.",
+    investment: 350000,
+    y: 2023,
+    stage: "Pre-seed",
+    lead: false
+  },
+  {
+    source: "i_menlo",
+    target: "c_100",
+    rel: "invested_in",
+    note: "Series A participant. $2M allocation.",
+    investment: 2000000,
+    y: 2024,
+    stage: "Series A",
+    lead: false
+  },
+
+  // Corporate Partners & Strategic Investors
+  {
+    source: "x_salesforce_v",
+    target: "c_100",
+    rel: "invested_in",
+    note: "Strategic investor in Series A round. CRM data integration partnership.",
+    investment: 1500000,
+    y: 2024,
+    stage: "Series A",
+    lead: false
+  },
+  {
+    source: "x_segment",
+    target: "c_100",
+    rel: "partners_with",
+    note: "Customer data platform integration partnership. Segment uses AttributeFlow for identity resolution.",
+    y: 2024
+  },
+  {
+    source: "x_okta",
+    target: "c_100",
+    rel: "partners_with",
+    note: "Identity verification integration. Joint go-to-market for enterprise customers.",
+    y: 2024
+  },
+  {
+    source: "x_databricks",
+    target: "c_100",
+    rel: "partners_with",
+    note: "Data lakehouse integration. Built-in AttributeFlow for customer data operations.",
+    y: 2024
+  },
+
+  // University Connections
+  {
+    source: "u_stanford_cs",
+    target: "c_100",
+    rel: "partners_with",
+    note: "Licensing of identity resolution algorithms. Research collaboration in data governance.",
+    y: 2023
+  },
+  {
+    source: "u_berkeley_eecs",
+    target: "c_100",
+    rel: "partners_with",
+    note: "Talent pipeline partnership. 3 founding team members from EECS program.",
+    y: 2022
+  },
+
+  // Battle Born Venture
+  {
+    source: "f_bbv",
+    target: "c_100",
+    rel: "invested_in",
+    note: "BBV portfolio company. Early-stage data infrastructure focus.",
+    investment: 500000,
+    y: 2023,
+    stage: "Seed"
+  },
+
+  // ===== AUDITSPACE PRO (ID: 101) =====
+  // AuditSpace Pro: AI-powered audit management platform for professional services
+
+  // Investors & VCs
+  {
+    source: "i_bvp",
+    target: "c_101",
+    rel: "invested_in",
+    note: "Led AuditSpace Pro Series A $6.2M. Enterprise software expertise.",
+    investment: 6200000,
+    y: 2024,
+    stage: "Series A",
+    lead: true
+  },
+  {
+    source: "i_sigma",
+    target: "c_101",
+    rel: "invested_in",
+    note: "Co-led Series A. Professional services software focus.",
+    investment: 2000000,
+    y: 2024,
+    stage: "Series A",
+    lead: false
+  },
+  {
+    source: "i_emergence",
+    target: "c_101",
+    rel: "invested_in",
+    note: "Seed investor. $800K allocation. Enterprise compliance software.",
+    investment: 800000,
+    y: 2023,
+    stage: "Seed",
+    lead: false
+  },
+  {
+    source: "i_insight",
+    target: "c_101",
+    rel: "invested_in",
+    note: "Series A co-investor. Enterprise operations expertise.",
+    investment: 1500000,
+    y: 2024,
+    stage: "Series A",
+    lead: false
+  },
+
+  // Corporate Partners
+  {
+    source: "x_deloitte_v",
+    target: "c_101",
+    rel: "invested_in",
+    note: "Strategic corporate venture investment. $1.5M Series A allocation.",
+    investment: 1500000,
+    y: 2024,
+    stage: "Series A",
+    lead: false
+  },
+  {
+    source: "x_pwc",
+    target: "c_101",
+    rel: "partners_with",
+    note: "Pilot partnership. AuditSpace Pro used in select audit engagements. Integration testing.",
+    y: 2024
+  },
+  {
+    source: "x_ey",
+    target: "c_101",
+    rel: "partners_with",
+    note: "Technology evaluation partner. Considering for audit workflow automation.",
+    y: 2024
+  },
+  {
+    source: "x_kpmg",
+    target: "c_101",
+    rel: "partners_with",
+    note: "Early adopter program participant. Beta testing audit AI features.",
+    y: 2023
+  },
+  {
+    source: "x_workiva",
+    target: "c_101",
+    rel: "partners_with",
+    note: "Integration partnership. Workiva ESG/Audit platform integrates AuditSpace Pro.",
+    y: 2024
+  },
+
+  // University Connections
+  {
+    source: "u_wharton",
+    target: "c_101",
+    rel: "partners_with",
+    note: "Accounting school partnership. Case studies and academic research collaboration.",
+    y: 2023
+  },
+  {
+    source: "u_emory_goizueta",
+    target: "c_101",
+    rel: "partners_with",
+    note: "Internship partnership. Goizueta students interning at AuditSpace Pro.",
+    y: 2024
+  },
+
+  // Government & Risk Capital
+  {
+    source: "v_sbir",
+    target: "c_101",
+    rel: "funded_by",
+    note: "SBIR Phase I grant $150K for AI audit automation research.",
+    investment: 150000,
+    y: 2023,
+    program: "SBIR Phase I"
+  },
+
+  // Battle Born Venture
+  {
+    source: "f_bbv",
+    target: "c_101",
+    rel: "invested_in",
+    note: "BBV portfolio company. Enterprise compliance/SaaS focus.",
+    investment: 450000,
+    y: 2023,
+    stage: "Seed"
+  },
+
+  // ===== AURADATA SYSTEMS (ID: 102) =====
+  // AuraData Systems: Enterprise data observability and quality platform
+
+  // Investors & VCs
+  {
+    source: "i_bessemer",
+    target: "c_102",
+    rel: "invested_in",
+    note: "Led AuraData Systems Series A $7.8M. Cloud infrastructure investor.",
+    investment: 7800000,
+    y: 2024,
+    stage: "Series A",
+    lead: true
+  },
+  {
+    source: "i_redpoint",
+    target: "c_102",
+    rel: "invested_in",
+    note: "Co-led Series A. Data infrastructure focus.",
+    investment: 2200000,
+    y: 2024,
+    stage: "Series A",
+    lead: false
+  },
+  {
+    source: "i_boldstart",
+    target: "c_102",
+    rel: "invested_in",
+    note: "Seed investor $900K. Enterprise data operations.",
+    investment: 900000,
+    y: 2023,
+    stage: "Seed",
+    lead: true
+  },
+  {
+    source: "i_craft",
+    target: "c_102",
+    rel: "invested_in",
+    note: "Series A participant. $1.8M allocation.",
+    investment: 1800000,
+    y: 2024,
+    stage: "Series A",
+    lead: false
+  },
+
+  // Corporate Partners
+  {
+    source: "x_snowflake_v",
+    target: "c_102",
+    rel: "invested_in",
+    note: "Strategic investor in Series A. Data warehouse native integration.",
+    investment: 2000000,
+    y: 2024,
+    stage: "Series A",
+    lead: false
+  },
+  {
+    source: "x_databricks",
+    target: "c_102",
+    rel: "partners_with",
+    note: "Data observability integration partner. Joint product for Lakehouse monitoring.",
+    y: 2024
+  },
+  {
+    source: "x_bigquery",
+    target: "c_102",
+    rel: "partners_with",
+    note: "Google Cloud native integration. AuraData Systems certified for BigQuery optimization.",
+    y: 2024
+  },
+  {
+    source: "x_aws",
+    target: "c_102",
+    rel: "partners_with",
+    note: "AWS Data Exchange listing. Redshift integration partner.",
+    y: 2024
+  },
+  {
+    source: "x_tableau",
+    target: "c_102",
+    rel: "partners_with",
+    note: "Data quality integration. Tableau Catalog integration for metadata.",
+    y: 2024
+  },
+
+  // University Connections
+  {
+    source: "u_mit_csail",
+    target: "c_102",
+    rel: "partners_with",
+    note: "Research collaboration on AI-driven data quality. Licensing of CSAIL algorithms.",
+    y: 2023
+  },
+  {
+    source: "u_cmu_db",
+    target: "c_102",
+    rel: "partners_with",
+    note: "Database systems research partnership. CMU DB faculty advisor.",
+    y: 2023
+  },
+
+  // Government & Risk Capital
+  {
+    source: "v_sbir",
+    target: "c_102",
+    rel: "funded_by",
+    note: "SBIR Phase II grant $750K for AI data quality monitoring.",
+    investment: 750000,
+    y: 2024,
+    program: "SBIR Phase II"
+  },
+
+  // Battle Born Venture
+  {
+    source: "f_bbv",
+    target: "c_102",
+    rel: "invested_in",
+    note: "BBV portfolio company. Enterprise cloud data infrastructure.",
+    investment: 500000,
+    y: 2023,
+    stage: "Seed"
+  },
+
+  // ===== AURORAAI (ID: 103) =====
+  // AuroraAI: AI/ML platform for healthcare diagnostic imaging
+
+  // Investors & VCs
+  {
+    source: "i_flagship",
+    target: "c_103",
+    rel: "invested_in",
+    note: "Led AuroraAI Series A $9.5M. Healthcare AI/ML specialist.",
+    investment: 9500000,
+    y: 2024,
+    stage: "Series A",
+    lead: true
+  },
+  {
+    source: "i_khosla",
+    target: "c_103",
+    rel: "invested_in",
+    note: "Co-led Series A. Climate tech / Healthcare AI focus.",
+    investment: 3000000,
+    y: 2024,
+    stage: "Series A",
+    lead: false
+  },
+  {
+    source: "i_canaan",
+    target: "c_103",
+    rel: "invested_in",
+    note: "Seed investor $1.5M. Early-stage life sciences.",
+    investment: 1500000,
+    y: 2023,
+    stage: "Seed",
+    lead: true
+  },
+  {
+    source: "i_founders",
+    target: "c_103",
+    rel: "invested_in",
+    note: "Series A co-investor. $2.5M allocation.",
+    investment: 2500000,
+    y: 2024,
+    stage: "Series A",
+    lead: false
+  },
+
+  // Corporate Partners
+  {
+    source: "x_philips_health",
+    target: "c_103",
+    rel: "invested_in",
+    note: "Strategic healthcare corporate investor. $2M Series A allocation.",
+    investment: 2000000,
+    y: 2024,
+    stage: "Series A",
+    lead: false
+  },
+  {
+    source: "x_siemens_health",
+    target: "c_103",
+    rel: "partners_with",
+    note: "Imaging equipment integration partnership. AuroraAI integrated with Siemens imaging systems.",
+    y: 2024
+  },
+  {
+    source: "x_ge_health",
+    target: "c_103",
+    rel: "partners_with",
+    note: "Clinical trial partnership. Validation of diagnostic AI algorithms.",
+    y: 2024
+  },
+  {
+    source: "x_cvs_health",
+    target: "c_103",
+    rel: "partners_with",
+    note: "Healthcare system pilot. Testing in CVS Minute Clinic imaging workflow.",
+    y: 2024
+  },
+  {
+    source: "x_fda",
+    target: "c_103",
+    rel: "filed_with",
+    note: "FDA 510(k) pre-submission meeting. Pursuing diagnostic imaging AI approval.",
+    y: 2024
+  },
+
+  // University Connections
+  {
+    source: "u_stanford_med",
+    target: "c_103",
+    rel: "partners_with",
+    note: "Academic medical center partnership. Clinical validation studies. 2 founding doctors from Stanford Radiology.",
+    y: 2023
+  },
+  {
+    source: "u_ucsf_radiology",
+    target: "c_103",
+    rel: "partners_with",
+    note: "Research collaboration on diagnostic AI. Joint publications on imaging algorithms.",
+    y: 2023
+  },
+  {
+    source: "u_johns_hopkins_med",
+    target: "c_103",
+    rel: "partners_with",
+    note: "Clinical validation partner. Johns Hopkins testing platform in radiology department.",
+    y: 2024
+  },
+
+  // Government & Risk Capital
+  {
+    source: "v_sbir",
+    target: "c_103",
+    rel: "funded_by",
+    note: "SBIR Phase II grant $1M for AI medical imaging.",
+    investment: 1000000,
+    y: 2024,
+    program: "SBIR Phase II"
+  },
+  {
+    source: "v_nih",
+    target: "c_103",
+    rel: "funded_by",
+    note: "NIH Research Grant R21 $500K for imaging AI research.",
+    investment: 500000,
+    y: 2023,
+    program: "NIH R21"
+  },
+
+  // Battle Born Venture
+  {
+    source: "f_bbv",
+    target: "c_103",
+    rel: "invested_in",
+    note: "BBV portfolio company. Healthcare AI/MedTech focus.",
+    investment: 600000,
+    y: 2023,
+    stage: "Seed"
+  },
+
+  // ===== AUTHENTIPAY (ID: 104) =====
+  // AuthentiPay: Payment authentication and fraud prevention for fintech platforms
+
+  // Investors & VCs
+  {
+    source: "i_lerer",
+    target: "c_104",
+    rel: "invested_in",
+    note: "Led AuthentiPay Seed $2.5M. Fintech security focus.",
+    investment: 2500000,
+    y: 2023,
+    stage: "Seed",
+    lead: true
+  },
+  {
+    source: "i_fx_capital",
+    target: "c_104",
+    rel: "invested_in",
+    note: "Co-led Seed round. Fintech and payments specialist.",
+    investment: 1500000,
+    y: 2023,
+    stage: "Seed",
+    lead: false
+  },
+  {
+    source: "i_angel_fintech",
+    target: "c_104",
+    rel: "invested_in",
+    note: "Pre-seed investors syndicate. $800K total.",
+    investment: 800000,
+    y: 2022,
+    stage: "Pre-seed",
+    lead: false
+  },
+  {
+    source: "i_commerce_v",
+    target: "c_104",
+    rel: "invested_in",
+    note: "Seed participant. $1M allocation.",
+    investment: 1000000,
+    y: 2023,
+    stage: "Seed",
+    lead: false
+  },
+
+  // Corporate Partners
+  {
+    source: "x_stripe_v",
+    target: "c_104",
+    rel: "invested_in",
+    note: "Stripe investment in Seed round. $1.2M allocation. Strategic partnership.",
+    investment: 1200000,
+    y: 2023,
+    stage: "Seed",
+    lead: false
+  },
+  {
+    source: "x_square",
+    target: "c_104",
+    rel: "partners_with",
+    note: "Integration partnership. AuthentiPay authentication integrated into Square payment processing.",
+    y: 2024
+  },
+  {
+    source: "x_paypal_v",
+    target: "c_104",
+    rel: "partners_with",
+    note: "Technology partnership. Joint fraud detection API.",
+    y: 2024
+  },
+  {
+    source: "x_dLocal",
+    target: "c_104",
+    rel: "partners_with",
+    note: "Emerging markets payment partner. AuthentiPay in Latin America payment flows.",
+    y: 2024
+  },
+  {
+    source: "x_wise",
+    target: "c_104",
+    rel: "partners_with",
+    note: "Cross-border payment security. Integration for international transfers.",
+    y: 2024
+  },
+
+  // University Connections
+  {
+    source: "u_carnegie_cs",
+    target: "c_104",
+    rel: "partners_with",
+    note: "Cryptography research partnership. CMU cybersecurity expertise.",
+    y: 2023
+  },
+  {
+    source: "u_columbia_finance",
+    target: "c_104",
+    rel: "partners_with",
+    note: "Financial technology research. Joint research on payment security.",
+    y: 2023
+  },
+
+  // Battle Born Venture
+  {
+    source: "f_bbv",
+    target: "c_104",
+    rel: "invested_in",
+    note: "BBV portfolio company. Fintech/payments infrastructure focus.",
+    investment: 400000,
+    y: 2022,
+    stage: "Pre-seed"
+  },
+
+  // ===== AUTOMATELEDGER (ID: 105) =====
+  // AutomateLedger: AI-powered accounting automation and bookkeeping platform
+
+  // Investors & VCs
+  {
+    source: "i_lsvp",
+    target: "c_105",
+    rel: "invested_in",
+    note: "Led AutomateLedger Series A $5.8M. Enterprise finance software.",
+    investment: 5800000,
+    y: 2024,
+    stage: "Series A",
+    lead: true
+  },
+  {
+    source: "i_accel",
+    target: "c_105",
+    rel: "invested_in",
+    note: "Co-led Series A. Enterprise automation focus.",
+    investment: 1800000,
+    y: 2024,
+    stage: "Series A",
+    lead: false
+  },
+  {
+    source: "i_greylock",
+    target: "c_105",
+    rel: "invested_in",
+    note: "Seed investor $1M. Enterprise SaaS.",
+    investment: 1000000,
+    y: 2023,
+    stage: "Seed",
+    lead: false
+  },
+  {
+    source: "i_openview",
+    target: "c_105",
+    rel: "invested_in",
+    note: "Series A co-investor. Finance tech focus. $2M allocation.",
+    investment: 2000000,
+    y: 2024,
+    stage: "Series A",
+    lead: false
+  },
+
+  // Corporate Partners
+  {
+    source: "x_intuit",
+    target: "c_105",
+    rel: "invested_in",
+    note: "Strategic investor in Series A. $1.5M allocation. QuickBooks integration.",
+    investment: 1500000,
+    y: 2024,
+    stage: "Series A",
+    lead: false
+  },
+  {
+    source: "x_xero",
+    target: "c_105",
+    rel: "partners_with",
+    note: "Cloud accounting integration. AutomateLedger certified Xero app.",
+    y: 2024
+  },
+  {
+    source: "x_netsuite",
+    target: "c_105",
+    rel: "partners_with",
+    note: "Oracle subsidiary integration. Embedded in NetSuite OpenAir for professional services.",
+    y: 2024
+  },
+  {
+    source: "x_workday",
+    target: "c_105",
+    rel: "partners_with",
+    note: "Financial management integration. API partnership for expense-to-ledger automation.",
+    y: 2024
+  },
+  {
+    source: "x_concur",
+    target: "c_105",
+    rel: "partners_with",
+    note: "Expense management integration. SAP Concur connector for automated journal entries.",
+    y: 2024
+  },
+
+  // University Connections
+  {
+    source: "u_wharton_accounting",
+    target: "c_105",
+    rel: "partners_with",
+    note: "Accounting education partnership. Case studies in Wharton MBA accounting courses.",
+    y: 2023
+  },
+  {
+    source: "u_michigan_ross",
+    target: "c_105",
+    rel: "partners_with",
+    note: "Finance automation research. Graduate student internships.",
+    y: 2023
+  },
+  {
+    source: "u_nyu_stern",
+    target: "c_105",
+    rel: "partners_with",
+    note: "Fintech and accounting curriculum integration. Research on AI in accounting.",
+    y: 2024
+  },
+
+  // Government & Risk Capital
+  {
+    source: "v_sbir",
+    target: "c_105",
+    rel: "funded_by",
+    note: "SBIR Phase I grant $150K for AI accounting automation.",
+    investment: 150000,
+    y: 2023,
+    program: "SBIR Phase I"
+  },
+  {
+    source: "v_sba",
+    target: "c_105",
+    rel: "funded_by",
+    note: "SBA Small Business Grant $100K for automation research.",
+    investment: 100000,
+    y: 2023,
+    program: "SBA Growth"
+  },
+
+  // Battle Born Venture
+  {
+    source: "f_bbv",
+    target: "c_105",
+    rel: "invested_in",
+    note: "BBV portfolio company. Enterprise finance automation focus.",
+    investment: 550000,
+    y: 2023,
+    stage: "Seed"
+  }
+]

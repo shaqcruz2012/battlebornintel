@@ -1,0 +1,114 @@
+================================================================================
+BATTLE BORN VENTURE PORTFOLIO COMPANIES 76-81 - RESEARCH DELIVERABLES
+Research Date: March 7, 2026
+================================================================================
+
+RESEARCH SCOPE:
+Companies: 6 BBV portfolio companies (IDs 76-81)
+  - c_76: Access Health Dental
+  - c_77: Adaract
+  - c_78: AI Foundation
+  - c_79: AIR Corp
+  - c_80: Battle Born Beer
+  - c_81: Beloit Kombucha
+
+DATA TYPES RESEARCHED:
+  ✓ Investors & VCs (10 identified)
+  ✓ Risk Capital Sources (SBIR, SSBCI, government grants)
+  ✓ Corporate Partners (5 identified)
+  ✓ University Connections (2 major spinouts)
+
+================================================================================
+DELIVERABLE FILES (6 Total)
+================================================================================
+
+1. edge-research-c76-c81.json
+   Format: JSON array
+   Size: 30 edge objects
+   Status: Database-ready
+   Location: /edge-research-c76-c81.json
+
+2. EDGES-FORMATTED-C76-C81.js
+   Format: JavaScript edge definitions
+   Size: 30 edges + entity definitions
+   Status: Copy-paste ready
+   Location: /EDGES-FORMATTED-C76-C81.js
+
+3. RESEARCH-SUMMARY-BBV-COMPANIES-76-81.md
+   Format: Markdown with tables
+   Size: ~2,500 lines
+   Status: Comprehensive reference
+   Location: /RESEARCH-SUMMARY-BBV-COMPANIES-76-81.md
+
+4. INVESTOR-PARTNER-REFERENCE-C76-C81.md
+   Format: Markdown structured tables
+   Size: ~1,800 lines
+   Status: Integration reference
+   Location: /INVESTOR-PARTNER-REFERENCE-C76-C81.md
+
+5. RESEARCH-SOURCES-C76-C81.md
+   Format: Markdown bibliography
+   Size: ~1,200 lines
+   Status: Complete source attribution
+   Location: /RESEARCH-SOURCES-C76-C81.md
+
+6. INTEGRATION-GUIDE-C76-C81.md
+   Format: Markdown implementation guide
+   Size: ~800 lines
+   Status: Ready for developer implementation
+   Location: /INTEGRATION-GUIDE-C76-C81.md
+
+================================================================================
+KEY FINDINGS SUMMARY
+================================================================================
+
+INVESTORS IDENTIFIED: 10
+  - Founders Fund: $17M Series B in AI Foundation
+  - SOSV: Strategic investment in AIR Corp (Jan 2026)
+  - AngelNV: $400K prize to Adaract
+  - APG Partners: Healthcare PE investor
+  - genera8tor: Co-investor in Beloit Kombucha
+  - H7 BioCapital, Brandtech, Alpha Edison, Endeavor, Biz Stone
+
+CORPORATE PARTNERS: 5
+  - Caesars, MGM (Access Health Dental)
+  - Kerry Ingredients (Beloit Kombucha)
+  - Parlay 6 Brewing (Battle Born Beer)
+  - NASA (AIR Corp)
+
+UNIVERSITY SPINOUTS: 2
+  - Adaract (UNR Mechanical Engineering)
+  - AIR Corp (UNR Robotics - Dr. Hung M. La)
+
+GOVERNMENT FUNDING: 3 Programs
+  - SBIR Air Force (Adaract)
+  - SSBCI (Multiple companies)
+  - GOED Strategic (AIR Corp)
+
+TOTAL DISCLOSED FUNDING: $29.2+ Million
+
+================================================================================
+ENTITY ADDITIONS REQUIRED
+================================================================================
+
+NEW INVESTOR IDS (10):
+  i_apg_partners, i_h7_biocapital, i_founders_fund, i_brandtech_group
+  i_alpha_edison, i_you_and_mr_jones, i_endeavor, i_biz_stone
+  i_grey_collar_ventures, i_sosv
+
+NEW PARTNER IDS (2):
+  x_parlay6, x_kerry
+
+================================================================================
+INTEGRATION STATUS
+================================================================================
+
+EDGES READY: 30 (organized by company 76-81)
+ENTITIES READY: 12 (10 investors + 2 partners)
+CONFIDENCE LEVEL: 90% high/medium confidence
+TESTING CHECKLIST: Included in integration guide
+ESTIMATED INTEGRATION TIME: 1 hour
+
+Ready for immediate implementation.
+
+================================================================================

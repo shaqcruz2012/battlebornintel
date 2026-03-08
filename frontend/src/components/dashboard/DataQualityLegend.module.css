@@ -1,0 +1,140 @@
+.legend {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+  padding: var(--space-lg);
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+}
+
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.title {
+  font-family: var(--font-heading);
+  font-size: var(--text-label);
+  font-weight: var(--weight-bold);
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.subtitle {
+  font-size: var(--text-body);
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+.items {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.item {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-md);
+  padding: var(--space-md);
+  background: var(--bg-subtle);
+  border-radius: var(--radius-sm);
+  transition: all var(--transition-fast);
+  cursor: help;
+}
+
+.item:hover {
+  background: var(--bg-hover);
+  border-color: var(--border-active);
+}
+
+.badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
+  border-radius: var(--radius-sm);
+  border: 2px solid;
+  font-weight: var(--weight-bold);
+  font-size: var(--text-label);
+  flex-shrink: 0;
+}
+
+.badge-verified {
+  background: rgba(16, 185, 129, 0.1);
+  color: var(--status-success);
+  border-color: var(--status-success);
+}
+
+.badge-inferred {
+  background: rgba(245, 158, 11, 0.1);
+  color: #d97706;
+  border-color: #d97706;
+}
+
+.badge-calculated {
+  background: rgba(59, 130, 246, 0.1);
+  color: #3b82f6;
+  border-color: #3b82f6;
+}
+
+.content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  flex: 1;
+  min-width: 0;
+}
+
+.content .title {
+  font-size: var(--text-body-bold);
+  margin: 0;
+  color: var(--text-primary);
+}
+
+.shortDesc {
+  font-size: var(--text-body);
+  color: var(--text-secondary);
+  margin: 0;
+  line-height: 1.4;
+}
+
+.note {
+  padding: var(--space-md);
+  background: rgba(59, 130, 246, 0.05);
+  border-left: 3px solid #3b82f6;
+  border-radius: var(--radius-sm);
+}
+
+.note p {
+  font-size: var(--text-body);
+  color: var(--text-secondary);
+  margin: 0;
+  line-height: 1.5;
+}
+
+@media (max-width: 768px) {
+  .legend {
+    gap: var(--space-md);
+    padding: var(--space-md);
+  }
+
+  .items {
+    gap: var(--space-sm);
+  }
+
+  .item {
+    padding: var(--space-sm);
+    gap: var(--space-sm);
+  }
+
+  .badge {
+    width: 28px;
+    height: 28px;
+    font-size: var(--text-body);
+  }
+}

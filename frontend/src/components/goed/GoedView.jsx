@@ -8,6 +8,7 @@ import { StakeholderSelector } from './StakeholderSelector';
 import { SsbciKpiStrip } from './SsbciKpiStrip';
 import { StakeholderPanel } from './StakeholderPanel';
 import { KnowledgeFundPanel } from './KnowledgeFundPanel';
+import { StakeholderActivitiesDigest } from './StakeholderActivitiesDigest';
 import styles from './GoedView.module.css';
 
 export function GoedView() {
@@ -49,6 +50,7 @@ export function GoedView() {
         allEdges={graph.edges}
         nodes={graph.nodes}
       />
+      <StakeholderActivitiesDigest />
     </MainGrid>
   );
 }

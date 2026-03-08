@@ -63,9 +63,22 @@ export const api = {
   getCompanyAnalysis: (id) =>
     fetchJSON(`${BASE}/analysis/company/${id}`).then((r) => r.data),
 
-  getWeeklyBrief: () =>
-    fetchJSON(`${BASE}/analysis/brief`).then((r) => r),
+  getWeeklyBrief: (params = {}) =>
+    fetchJSON(`${BASE}/analysis/brief`, params).then((r) => r),
+
+  getWeeklyBriefByWeek: (weekStart) =>
+    fetchJSON(`${BASE}/analysis/brief/${weekStart}`).then((r) => r.data),
+
+  getWeeklyBriefRange: (startWeek, endWeek) =>
+    fetchJSON(`${BASE}/analysis/brief`, {
+      weekStart: startWeek,
+      weekEnd: endWeek,
+    }).then((r) => r),
 
   getRiskAssessments: () =>
     fetchJSON(`${BASE}/analysis/risks`).then((r) => r.data),
+
+  // Stakeholder Activities
+  getStakeholderActivities: (params = {}) =>
+    fetchJSON(`${BASE}/stakeholder-activities`, params).then((r) => r.data),
 };

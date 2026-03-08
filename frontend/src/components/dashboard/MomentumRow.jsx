@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, memo, useMemo } from 'react';
 import { fmt, stageLabel } from '../../engine/formatters';
 import { GRADE_COLORS, TRIGGER_CFG } from '../../data/constants';
 import { StatusBadge } from '../shared/StatusBadge';
@@ -14,9 +14,80 @@ const DIM_LABELS = {
   team: 'Team',
 };
 
-export function MomentumRow({ company, rank }) {
+const ExpandedContent = memo(function ExpandedContent({ company }) {
+  const c = company;
+  // Memoize trigger configuration lookups
+  const triggerConfigs = useMemo(() => {
+    if (!c.triggers || c.triggers.length === 0) return [];
+    return c.triggers.map((t) => ({
+      id: t,
+      cfg: TRIGGER_CFG[t],
+    })).filter(t => t.cfg);
+  }, [c.triggers]);
+
+  return (
+    <div className={styles.expandedContent}>
+      {c.description && (
+        <p className={styles.description}>{c.description}</p>
+      )}
+
+      {c.dims && (
+        <div className={styles.dims}>
+          {Object.entries(c.dims).map(([key, val]) => (
+            <div key={key} className={styles.dim}>
+              <span className={styles.dimLabel}>
+                {DIM_LABELS[key] || key}
+              </span>
+              <div className={styles.dimBar}>
+                <div
+                  className={styles.dimFill}
+                  style={{
+                    width: `${val}%`,
+                    background:
+                      val >= 70
+                        ? 'var(--accent-teal)'
+                        : val >= 40
+                          ? 'var(--accent-gold)'
+                          : 'var(--status-risk)',
+                  }}
+                />
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {triggerConfigs.length > 0 && (
+        <div className={styles.triggers}>
+          {triggerConfigs.map(({ id, cfg }) => (
+            <StatusBadge
+              key={id}
+              variant={
+                cfg.color.includes('EF44') || cfg.color.includes('F971')
+                  ? 'risk'
+                  : cfg.color.includes('F59E') || cfg.color.includes('F973')
+                    ? 'warning'
+                    : 'success'
+              }
+            >
+              {cfg.label}
+            </StatusBadge>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+});
+
+export const MomentumRow = memo(function MomentumRow({ company, rank }) {
   const [open, setOpen] = useState(false);
   const c = company;
+
+  // Memoize grade color lookup
+  const gradeColor = useMemo(
+    () => GRADE_COLORS[c.grade] || 'var(--text-disabled)',
+    [c.grade]
+  );
 
   return (
     <div className={styles.row}>
@@ -46,7 +117,7 @@ export function MomentumRow({ company, rank }) {
 
         <span
           className={styles.grade}
-          style={{ color: GRADE_COLORS[c.grade] || 'var(--text-disabled)' }}
+          style={{ color: gradeColor }}
         >
           {c.grade || '—'}
         </span>
@@ -56,61 +127,7 @@ export function MomentumRow({ company, rank }) {
         </span>
       </div>
 
-      {open && (
-        <div className={styles.expandedContent}>
-          {c.description && (
-            <p className={styles.description}>{c.description}</p>
-          )}
-
-          {c.dims && (
-            <div className={styles.dims}>
-              {Object.entries(c.dims).map(([key, val]) => (
-                <div key={key} className={styles.dim}>
-                  <span className={styles.dimLabel}>
-                    {DIM_LABELS[key] || key}
-                  </span>
-                  <div className={styles.dimBar}>
-                    <div
-                      className={styles.dimFill}
-                      style={{
-                        width: `${val}%`,
-                        background:
-                          val >= 70
-                            ? 'var(--accent-teal)'
-                            : val >= 40
-                              ? 'var(--accent-gold)'
-                              : 'var(--status-risk)',
-                      }}
-                    />
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {c.triggers && c.triggers.length > 0 && (
-            <div className={styles.triggers}>
-              {c.triggers.map((t) => {
-                const cfg = TRIGGER_CFG[t];
-                return cfg ? (
-                  <StatusBadge
-                    key={t}
-                    variant={
-                      cfg.color.includes('EF44') || cfg.color.includes('F971')
-                        ? 'risk'
-                        : cfg.color.includes('F59E') || cfg.color.includes('F973')
-                          ? 'warning'
-                          : 'success'
-                    }
-                  >
-                    {cfg.label}
-                  </StatusBadge>
-                ) : null;
-              })}
-            </div>
-          )}
-        </div>
-      )}
+      {open && <ExpandedContent company={c} />}
     </div>
   );
-}
+});

@@ -38,6 +38,8 @@ export function KpiStrip({ kpis, funds = [], activeSortBy, onSortChange }) {
         active={activeSortBy === 'funding'}
         onClick={() => onSortChange('funding')}
         tooltip={TOOLTIPS.capitalDeployed}
+        quality={kpis.capitalDeployed?.quality}
+        dataQualityNote={kpis.capitalDeployed?.dataQualityNote}
       />
       <KpiCard
         label={kpis.ssbciCapitalDeployed?.label || 'SSBCI Capital Deployed'}
@@ -51,6 +53,8 @@ export function KpiStrip({ kpis, funds = [], activeSortBy, onSortChange }) {
         active={activeSortBy === 'ssbci'}
         onClick={() => onSortChange('ssbci')}
         tooltip={TOOLTIPS.ssbciCapitalDeployed}
+        quality={kpis.ssbciCapitalDeployed?.quality}
+        dataQualityNote={kpis.ssbciCapitalDeployed?.dataQualityNote}
       />
       <KpiCard
         label={kpis.privateLeverage?.label || 'Private Leverage'}
@@ -63,6 +67,8 @@ export function KpiStrip({ kpis, funds = [], activeSortBy, onSortChange }) {
         active={activeSortBy === 'leverage'}
         onClick={() => onSortChange('irs')}
         tooltip={TOOLTIPS.privateLeverage}
+        quality={kpis.privateLeverage?.quality}
+        dataQualityNote={kpis.privateLeverage?.dataQualityNote}
       />
       <KpiCard
         label={kpis.ecosystemCapacity?.label || 'Ecosystem Capacity'}
@@ -72,6 +78,8 @@ export function KpiStrip({ kpis, funds = [], activeSortBy, onSortChange }) {
         active={activeSortBy === 'employees'}
         onClick={() => onSortChange('momentum')}
         tooltip={TOOLTIPS.ecosystemCapacity}
+        quality={kpis.ecosystemCapacity?.quality}
+        dataQualityNote={kpis.ecosystemCapacity?.dataQualityNote}
       />
       <KpiCard
         label={kpis.innovationIndex?.label || 'Innovation Momentum'}
@@ -82,6 +90,8 @@ export function KpiStrip({ kpis, funds = [], activeSortBy, onSortChange }) {
         active={activeSortBy === 'momentum'}
         onClick={() => onSortChange('irs')}
         tooltip={TOOLTIPS.innovationIndex}
+        quality={kpis.innovationIndex?.quality}
+        dataQualityNote={kpis.innovationIndex?.dataQualityNote}
       />
     </div>
   );

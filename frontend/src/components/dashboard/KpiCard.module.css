@@ -22,6 +22,26 @@
   background: rgba(69, 215, 198, 0.04);
 }
 
+/* Data quality styling */
+.quality-inferred {
+  opacity: 0.85;
+}
+
+.quality-calculated {
+  opacity: 0.9;
+}
+
+.quality-verified {
+  opacity: 1;
+}
+
+.labelRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm);
+}
+
 .label {
   font-family: var(--font-body);
   font-size: var(--text-caption);
@@ -29,6 +49,44 @@
   color: var(--text-disabled);
   text-transform: uppercase;
   letter-spacing: 1px;
+  flex: 1;
+}
+
+.qualityBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 4px;
+  font-size: var(--text-caption-sm);
+  font-weight: var(--weight-bold);
+  border-radius: var(--radius-sm);
+  flex-shrink: 0;
+  cursor: help;
+  transition: all var(--transition-fast);
+}
+
+.qualityBadge.quality-verified {
+  background: rgba(16, 185, 129, 0.15);
+  color: var(--status-success);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.qualityBadge.quality-inferred {
+  background: rgba(245, 158, 11, 0.15);
+  color: #d97706;
+  border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+.qualityBadge.quality-calculated {
+  background: rgba(59, 130, 246, 0.15);
+  color: #3b82f6;
+  border: 1px solid rgba(59, 130, 246, 0.3);
+}
+
+.qualityBadge:hover {
+  box-shadow: 0 0 8px currentColor;
 }
 
 .valueRow {
@@ -49,6 +107,16 @@
 .secondary {
   font-size: var(--text-caption-sm);
   color: var(--text-disabled);
+}
+
+.dataQualityNote {
+  font-size: var(--text-caption-sm);
+  color: var(--text-disabled);
+  line-height: 1.4;
+  margin-top: var(--space-xs);
+  padding-top: var(--space-xs);
+  border-top: 1px solid var(--border-subtle);
+  font-style: italic;
 }
 
 .delta {

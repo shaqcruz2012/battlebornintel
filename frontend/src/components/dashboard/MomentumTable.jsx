@@ -1,3 +1,4 @@
+import { useMemo, useRef, useEffect, useState } from 'react';
 import { MomentumRow } from './MomentumRow';
 import { Tooltip } from '../shared/Tooltip';
 import styles from './MomentumTable.module.css';
@@ -15,7 +16,49 @@ const IRS_TOOLTIP =
 const GRADE_TOOLTIP =
   'Letter grade mapped from IRS score: A (≥85), A- (≥78), B+ (≥72), B (≥65), B- (≥58), C+ (≥50), C (≥42), D (<42). Grades are relative to the Nevada ecosystem — a B+ here means strong investment readiness by local standards, not a national benchmark.';
 
+// Virtual window configuration
+const ROW_HEIGHT = 80; // Approximate height of a MomentumRow
+const BUFFER_SIZE = 3; // Extra rows to render above/below visible window
+
 export function MomentumTable({ companies, sortBy, onSortChange }) {
+  const containerRef = useRef(null);
+  const [visibleRange, setVisibleRange] = useState({ start: 0, end: 15 });
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const handleScroll = () => {
+      const scrollTop = container.scrollTop;
+      const viewportHeight = container.clientHeight;
+
+      // Calculate visible range with buffer
+      const start = Math.max(0, Math.floor((scrollTop - ROW_HEIGHT * BUFFER_SIZE) / ROW_HEIGHT));
+      const end = Math.min(
+        companies.length,
+        Math.ceil((scrollTop + viewportHeight + ROW_HEIGHT * BUFFER_SIZE) / ROW_HEIGHT)
+      );
+
+      setVisibleRange({ start, end });
+    };
+
+    container.addEventListener('scroll', handleScroll);
+    return () => container.removeEventListener('scroll', handleScroll);
+  }, [companies.length]);
+
+  // Calculate offscreen spacer heights for efficiency
+  const topSpacerHeight = visibleRange.start * ROW_HEIGHT;
+  const bottomSpacerHeight = Math.max(0, (companies.length - visibleRange.end) * ROW_HEIGHT);
+  const totalHeight = companies.length * ROW_HEIGHT;
+
+  // Memoize visible companies to prevent unnecessary renders
+  const visibleCompanies = useMemo(() => {
+    return companies.slice(visibleRange.start, visibleRange.end).map((c, i) => ({
+      company: c,
+      rank: visibleRange.start + i + 1,
+    }));
+  }, [companies, visibleRange]);
+
   return (
     <div className={styles.wrapper}>
       <div className={styles.header}>
@@ -50,9 +93,28 @@ export function MomentumTable({ companies, sortBy, onSortChange }) {
       {companies.length === 0 ? (
         <div className={styles.empty}>No companies match current filters</div>
       ) : (
-        companies.map((c, i) => (
-          <MomentumRow key={c.id} company={c} rank={i + 1} />
-        ))
+        <div
+          ref={containerRef}
+          className={styles.virtualContainer}
+          style={{ maxHeight: '600px', overflow: 'auto' }}
+        >
+          <div style={{ height: `${totalHeight}px`, position: 'relative' }}>
+            {/* Top spacer */}
+            {topSpacerHeight > 0 && (
+              <div style={{ height: `${topSpacerHeight}px` }} />
+            )}
+
+            {/* Visible rows */}
+            {visibleCompanies.map(({ company: c, rank }) => (
+              <MomentumRow key={c.id} company={c} rank={rank} />
+            ))}
+
+            {/* Bottom spacer */}
+            {bottomSpacerHeight > 0 && (
+              <div style={{ height: `${bottomSpacerHeight}px` }} />
+            )}
+          </div>
+        </div>
       )}
     </div>
   );
