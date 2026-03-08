@@ -8,6 +8,7 @@ import pool from '../pool.js';
  * - until: ISO date string (e.g., 2025-12-31)
  * - limit: number of activities to return (default: 50)
  * - type: activity type filter
+ * - stakeholderType: stakeholder category filter (gov_policy, university, corporate, risk_capital, ecosystem)
  */
 export async function getStakeholderActivities(filters = {}) {
   const {
@@ -16,6 +17,7 @@ export async function getStakeholderActivities(filters = {}) {
     until,
     limit = 50,
     type,
+    stakeholderType,
   } = filters;
 
   let sql = `
@@ -30,7 +32,8 @@ export async function getStakeholderActivities(filters = {}) {
         'timeline_event' as source,
         true as verified,
         c.city,
-        c.region
+        c.region,
+        NULL::varchar as stakeholder_type
       FROM timeline_events t
       LEFT JOIN companies c ON LOWER(c.name) = LOWER(t.company_name)
     ),
@@ -51,16 +54,34 @@ export async function getStakeholderActivities(filters = {}) {
         'graph_edge' as source,
         false as verified,
         c.city,
-        c.region
+        c.region,
+        NULL::varchar as stakeholder_type
       FROM graph_edges g
       LEFT JOIN companies c ON c.slug = g.target_id OR c.slug = g.source_id
       WHERE g.event_year IS NOT NULL
         AND c.id IS NOT NULL
     ),
+    enriched_activities AS (
+      SELECT
+        'sa-' || sa.id::text as id,
+        sa.activity_date as date,
+        sa.activity_type,
+        sa.company_id as company_name,
+        sa.description,
+        sa.location,
+        sa.source,
+        (sa.data_quality = 'VERIFIED') as verified,
+        split_part(sa.location, ',', 1) as city,
+        split_part(sa.location, ',', 2) as region,
+        sa.stakeholder_type
+      FROM stakeholder_activities sa
+    ),
     combined_activities AS (
       SELECT * FROM timeline_data
       UNION ALL
       SELECT * FROM graph_edge_activities
+      UNION ALL
+      SELECT * FROM enriched_activities
     )
     SELECT
       id,
@@ -72,7 +93,8 @@ export async function getStakeholderActivities(filters = {}) {
       source,
       verified,
       city,
-      region
+      region,
+      stakeholder_type
     FROM combined_activities
     WHERE 1=1
   `;
@@ -108,6 +130,13 @@ export async function getStakeholderActivities(filters = {}) {
     paramIndex++;
   }
 
+  // Filter by stakeholder type category
+  if (stakeholderType && stakeholderType !== 'all') {
+    sql += ` AND stakeholder_type = $${paramIndex}`;
+    params.push(stakeholderType.toLowerCase());
+    paramIndex++;
+  }
+
   sql += ` ORDER BY date DESC LIMIT $${paramIndex}`;
   params.push(limit);
 
@@ -122,6 +151,7 @@ export async function getStakeholderActivities(filters = {}) {
       location: row.location,
       source: row.source,
       verified: row.verified,
+      stakeholder_type: row.stakeholder_type,
     }));
   } catch (error) {
     console.error('Error fetching stakeholder activities:', error);

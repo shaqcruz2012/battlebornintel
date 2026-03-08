@@ -19,6 +19,7 @@ const router = Router();
  *  - until: ISO date string (e.g., 2025-12-31)
  *  - limit: number of activities (default: 50, max: 200)
  *  - type: activity type filter (funding, partnership, award, etc.)
+ *  - stakeholder_type: stakeholder category filter (gov_policy, university, corporate, risk_capital, ecosystem)
  */
 router.get('/', async (req, res, next) => {
   try {
@@ -28,6 +29,7 @@ router.get('/', async (req, res, next) => {
       until,
       limit = 50,
       type,
+      stakeholder_type,
     } = req.query;
 
     // Validate and sanitize inputs
@@ -40,12 +42,22 @@ router.get('/', async (req, res, next) => {
       return res.status(400).json({ error: 'until must be ISO date format YYYY-MM-DD' });
     }
 
+    const VALID_STAKEHOLDER_TYPES = new Set([
+      'gov_policy', 'university', 'corporate', 'risk_capital', 'ecosystem',
+    ]);
+    if (stakeholder_type && stakeholder_type !== 'all' && !VALID_STAKEHOLDER_TYPES.has(stakeholder_type)) {
+      return res.status(400).json({
+        error: `stakeholder_type must be one of: ${[...VALID_STAKEHOLDER_TYPES].join(', ')}`,
+      });
+    }
+
     const data = await getStakeholderActivities({
       location,
       since,
       until,
       limit: parsedLimit,
       type,
+      stakeholderType: stakeholder_type,
     });
 
     res.json({
@@ -59,6 +71,7 @@ router.get('/', async (req, res, next) => {
           since: since || null,
           until: until || null,
           type: type || null,
+          stakeholder_type: (stakeholder_type && stakeholder_type !== 'all') ? stakeholder_type : null,
         },
       },
     });

@@ -6,6 +6,7 @@ const VIEWS = [
   { id: 'funds', label: 'Funds' },
   { id: 'brief', label: 'Weekly Brief' },
   { id: 'goed', label: 'GOED' },
+  { id: 'feed', label: 'Activity Feed' },
   { id: 'graph', label: 'Graph Intelligence' },
 ];
 
