@@ -83,6 +83,11 @@ export async function getKpis({ stage, region, sector } = {}) {
       label: 'Capital Deployed',
       secondary: `${funds.length} active funds`,
     },
+    ssbciCapitalDeployed: {
+      value: ssbciDeployed,
+      label: 'SSBCI Capital Deployed',
+      secondary: `${ssbciFunds.length} SSBCI funds`,
+    },
     privateLeverage: {
       value: privateLeverage,
       label: 'Private Leverage',
