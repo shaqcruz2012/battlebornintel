@@ -32,10 +32,11 @@ export const api = {
     fetchJSON(`${BASE}/funds/${id}`).then((r) => r.data),
 
   // Graph
-  getGraph: (nodeTypes, yearMax) =>
+  getGraph: (nodeTypes, yearMax, region) =>
     fetchJSON(`${BASE}/graph`, {
       nodeTypes: nodeTypes?.join(','),
       yearMax,
+      region,
     }).then((r) => r.data),
 
   getGraphMetrics: (nodeTypes) =>

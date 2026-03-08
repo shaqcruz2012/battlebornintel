@@ -1,6 +1,6 @@
 import pool from '../pool.js';
 
-export async function getGraphData({ nodeTypes = [], yearMax = 2026 } = {}) {
+export async function getGraphData({ nodeTypes = [], yearMax = 2026, region } = {}) {
   const nodes = [];
   const nodeSet = new Set();
 
@@ -14,8 +14,14 @@ export async function getGraphData({ nodeTypes = [], yearMax = 2026 } = {}) {
   // Load companies once — reused for nodes, sectors, regions, and derived edges
   const needCompanies = ['company', 'sector', 'region'].some(t => nodeTypes.includes(t))
     || (nodeTypes.includes('fund') || nodeTypes.includes('exchange'));
+  let companySql = `SELECT id, name, stage, funding_m, momentum, employees, city, region, sectors, eligible, founded FROM companies`;
+  const companyParams = [];
+  if (needCompanies && region && region !== 'all') {
+    companySql += ` WHERE region = $1`;
+    companyParams.push(region);
+  }
   const companyRows = needCompanies
-    ? (await pool.query(`SELECT id, name, stage, funding_m, momentum, employees, city, region, sectors, eligible, founded FROM companies`)).rows
+    ? (await pool.query(companySql, companyParams)).rows
     : [];
 
   // Load people once — reused for nodes and founder edges
@@ -25,6 +31,13 @@ export async function getGraphData({ nodeTypes = [], yearMax = 2026 } = {}) {
     : [];
 
   // Parallel fetch for independent tables
+  const accelSql = nodeTypes.includes('accelerator')
+    ? `SELECT id, name, accel_type, city, region, founded, note FROM accelerators${region && region !== 'all' ? ` WHERE region = $1` : ''}`
+    : null;
+  const ecoSql = nodeTypes.includes('ecosystem')
+    ? `SELECT id, name, entity_type, city, region, note FROM ecosystem_orgs${region && region !== 'all' ? ` WHERE region = $1` : ''}`
+    : null;
+
   const [fundRows, externalRows, accelRows, ecoRows, edgeRows, listingRows, exchangeRows] = await Promise.all([
     nodeTypes.includes('fund')
       ? pool.query(`SELECT id, name, fund_type FROM graph_funds`).then(r => r.rows)
@@ -32,11 +45,11 @@ export async function getGraphData({ nodeTypes = [], yearMax = 2026 } = {}) {
     nodeTypes.includes('external')
       ? pool.query(`SELECT id, name, entity_type, note FROM externals`).then(r => r.rows)
       : [],
-    nodeTypes.includes('accelerator')
-      ? pool.query(`SELECT id, name, accel_type, city, region, founded, note FROM accelerators`).then(r => r.rows)
+    accelSql
+      ? pool.query(accelSql, region && region !== 'all' ? [region] : []).then(r => r.rows)
       : [],
-    nodeTypes.includes('ecosystem')
-      ? pool.query(`SELECT id, name, entity_type, city, region, note FROM ecosystem_orgs`).then(r => r.rows)
+    ecoSql
+      ? pool.query(ecoSql, region && region !== 'all' ? [region] : []).then(r => r.rows)
       : [],
     pool.query(
       `SELECT source_id, target_id, rel, note, event_year FROM graph_edges WHERE (event_year IS NULL OR event_year <= $1)`,

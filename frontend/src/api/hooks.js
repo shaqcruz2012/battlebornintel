@@ -30,10 +30,10 @@ export function useFunds() {
 }
 
 /** Graph nodes + edges */
-export function useGraph(nodeTypes, yearMax) {
+export function useGraph(nodeTypes, yearMax, region) {
   return useQuery({
-    queryKey: ['graph', nodeTypes, yearMax],
-    queryFn: () => api.getGraph(nodeTypes, yearMax),
+    queryKey: ['graph', nodeTypes, yearMax, region],
+    queryFn: () => api.getGraph(nodeTypes, yearMax, region),
     staleTime: 300_000,
   });
 }

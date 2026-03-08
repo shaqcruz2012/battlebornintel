@@ -1,4 +1,5 @@
 import { useState, useMemo, useRef, useEffect } from 'react';
+import { useFilters } from '../../hooks/useFilters';
 import { computeLayout } from '../../engine/graph-builder';
 import { useGraph, useGraphMetrics } from '../../api/hooks';
 import { useWindowSize } from '../../hooks/useWindowSize';
@@ -22,6 +23,7 @@ const DEFAULT_NODE_FILTERS = {
 };
 
 export function GraphView() {
+  const { filters } = useFilters();
   const { width: winW, height: winH } = useWindowSize();
   const [nodeFilters, setNodeFilters] = useState(DEFAULT_NODE_FILTERS);
   const [colorMode, setColorMode] = useState('type');
@@ -49,8 +51,8 @@ export function GraphView() {
     [nodeFilters]
   );
 
-  // Fetch graph data from API
-  const { data: graphData, isLoading: loadingGraph } = useGraph(activeNodeTypes);
+  // Fetch graph data from API with region filtering
+  const { data: graphData, isLoading: loadingGraph } = useGraph(activeNodeTypes, 2026, filters.region);
   const { data: metricsData, isLoading: loadingMetrics } = useGraphMetrics(activeNodeTypes);
 
   // D3 layout stays client-side (needs viewport dimensions)
