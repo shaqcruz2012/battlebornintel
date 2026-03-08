@@ -114,10 +114,10 @@ export function useRiskAssessments() {
 /** GOED dashboard summary — composes existing queries */
 const GOED_NODE_TYPES = ['company', 'fund', 'person', 'external', 'accelerator', 'ecosystem'];
 
-export function useGoedSummary() {
+export function useGoedSummary(region) {
   const fundsQuery = useFunds();
-  const graphQuery = useGraph(GOED_NODE_TYPES, 2026);
-  const companiesQuery = useCompanies({});
+  const graphQuery = useGraph(GOED_NODE_TYPES, 2026, region);
+  const companiesQuery = useCompanies(region ? { region } : {});
 
   return {
     funds: fundsQuery.data || [],

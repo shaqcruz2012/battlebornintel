@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { useFilters } from '../../hooks/useFilters';
 import { MainGrid } from '../layout/AppShell';
 import { useGoedSummary } from '../../api/hooks';
 import { STAKEHOLDERS, getKnowledgeFundEdges } from '../../data/stakeholders';
@@ -10,8 +11,9 @@ import { KnowledgeFundPanel } from './KnowledgeFundPanel';
 import styles from './GoedView.module.css';
 
 export function GoedView() {
+  const { filters } = useFilters();
   const [activeStakeholder, setActiveStakeholder] = useState('government');
-  const { funds, graph, companies, isLoading } = useGoedSummary();
+  const { funds, graph, companies, isLoading } = useGoedSummary(filters.region);
 
   const knowledgeFundEdges = useMemo(
     () => getKnowledgeFundEdges(graph.edges),
