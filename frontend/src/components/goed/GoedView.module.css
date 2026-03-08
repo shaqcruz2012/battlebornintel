@@ -1,0 +1,10 @@
+/* ── GOED View: Loading state ──────────────────────────── */
+
+.loading {
+  grid-column: 1 / -1;
+  text-align: center;
+  padding: var(--space-3xl);
+  color: var(--text-disabled);
+  font-size: var(--text-body-sm);
+  font-style: italic;
+}

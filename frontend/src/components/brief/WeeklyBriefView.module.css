@@ -1,0 +1,342 @@
+.container {
+  grid-column: 1 / -1;
+  padding: var(--space-lg);
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--space-xl);
+  padding-bottom: var(--space-lg);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.titleSection {
+  flex: 1;
+}
+
+.title {
+  font-size: var(--text-h2);
+  color: var(--text-primary);
+  margin: 0 0 var(--space-sm) 0;
+}
+
+.subtitle {
+  font-size: var(--text-body);
+  color: var(--text-secondary);
+  margin: 0;
+  line-height: 1.6;
+}
+
+.controls {
+  display: flex;
+  gap: var(--space-md);
+  align-items: center;
+}
+
+.button {
+  padding: 8px 16px;
+  background: var(--accent-primary);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: var(--text-body);
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.button:hover {
+  background: var(--accent-secondary);
+  transform: translateY(-1px);
+}
+
+.button:disabled {
+  background: var(--border-subtle);
+  cursor: not-allowed;
+  transform: none;
+}
+
+.filterSection {
+  display: flex;
+  gap: var(--space-md);
+  margin-bottom: var(--space-lg);
+  padding: var(--space-md);
+  background: var(--bg-elevated);
+  border-radius: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.filterLabel {
+  font-size: var(--text-body);
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.filterChips {
+  display: flex;
+  gap: var(--space-sm);
+  flex-wrap: wrap;
+}
+
+.chip {
+  padding: 6px 12px;
+  background: var(--bg-card);
+  color: var(--text-primary);
+  border: 1px solid var(--border-subtle);
+  border-radius: 20px;
+  font-size: var(--text-small);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.chip:hover {
+  border-color: var(--accent-primary);
+  background: rgba(59, 130, 246, 0.05);
+}
+
+.chip.active {
+  background: var(--accent-primary);
+  color: white;
+  border-color: var(--accent-primary);
+}
+
+.timeline {
+  position: relative;
+}
+
+.timelineAxis {
+  position: absolute;
+  left: 18px;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: linear-gradient(
+    to bottom,
+    var(--accent-primary),
+    rgba(59, 130, 246, 0.3),
+    var(--border-subtle)
+  );
+}
+
+.weeks {
+  position: relative;
+  padding-left: 60px;
+  display: flex;
+  flex-direction: column;
+}
+
+.weekMarker {
+  position: absolute;
+  left: 0;
+  width: 40px;
+  height: 40px;
+  margin-top: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+}
+
+.weekDot {
+  width: 8px;
+  height: 8px;
+  background: var(--accent-primary);
+  border: 3px solid var(--bg-card);
+  border-radius: 50%;
+  cursor: help;
+  transition: all 0.2s ease;
+}
+
+.weekMarker:hover .weekDot {
+  width: 12px;
+  height: 12px;
+  box-shadow: 0 0 12px var(--accent-primary);
+}
+
+.weekNumber {
+  position: absolute;
+  left: -50px;
+  width: 40px;
+  text-align: right;
+  font-size: var(--text-small);
+  color: var(--text-secondary);
+  font-weight: 600;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.emptyState {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 300px;
+  padding: var(--space-3xl);
+}
+
+.emptyContent {
+  text-align: center;
+}
+
+.emptyTitle {
+  font-size: var(--text-h3);
+  color: var(--text-primary);
+  margin-bottom: var(--space-md);
+}
+
+.emptyText {
+  font-size: var(--text-body);
+  color: var(--text-secondary);
+  max-width: 400px;
+  line-height: 1.6;
+}
+
+.loadingSpinner {
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  border: 2px solid var(--border-subtle);
+  border-top-color: var(--accent-primary);
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.scrollToTop {
+  position: fixed;
+  bottom: var(--space-lg);
+  right: var(--space-lg);
+  width: 48px;
+  height: 48px;
+  background: var(--accent-primary);
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 20px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  transition: all 0.2s ease;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.scrollToTop.visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.scrollToTop:hover {
+  background: var(--accent-secondary);
+  transform: translateY(-2px);
+}
+
+/* Print styles */
+@media print {
+  .controls,
+  .filterSection,
+  .scrollToTop {
+    display: none;
+  }
+
+  .container {
+    padding: 0;
+  }
+
+  .header {
+    border: none;
+    padding-bottom: 0;
+  }
+
+  .timelineAxis {
+    display: none;
+  }
+
+  .weeks {
+    padding-left: 0;
+  }
+
+  .weekMarker,
+  .weekNumber {
+    display: none;
+  }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .container {
+    padding: var(--space-md);
+  }
+
+  .header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-md);
+  }
+
+  .controls {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+
+  .filterSection {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .weeks {
+    padding-left: 40px;
+  }
+
+  .timelineAxis {
+    left: 8px;
+  }
+
+  .weekMarker {
+    width: 32px;
+  }
+
+  .weekNumber {
+    display: none;
+  }
+
+  .scrollToTop {
+    width: 40px;
+    height: 40px;
+    font-size: 16px;
+  }
+}
+
+@media (max-width: 480px) {
+  .title {
+    font-size: var(--text-h3);
+  }
+
+  .weeks {
+    padding-left: 30px;
+  }
+
+  .timelineAxis {
+    left: 4px;
+  }
+
+  .weekMarker {
+    width: 24px;
+    height: 24px;
+  }
+
+  .weekDot {
+    width: 6px;
+    height: 6px;
+  }
+}

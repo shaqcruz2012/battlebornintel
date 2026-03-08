@@ -32,18 +32,57 @@ const GSTAGE_C = { pre_seed:GP.dim,seed:GP.blue,series_a:GP.green,series_b:GP.or
 
 const VIEWS = [
   { id: "dashboard", label: "Home", icon: "◆" },
+  { id: "ssbci", label: "SSBCI", icon: "★" },
   { id: "radar", label: "Radar", icon: "📡" },
   { id: "companies", label: "Companies", icon: "⬡" },
   { id: "investors", label: "Funds", icon: "◈" },
   { id: "sectors", label: "Sectors", icon: "◉" },
-  { id: "watchlist", label: "Watchlist", icon: "☆" },
-  { id: "compare", label: "Compare", icon: "⟺" },
   { id: "graph", label: "Graph", icon: "🕸" },
   { id: "timeline", label: "Activity", icon: "⏱" },
-  { id: "ssbci", label: "SSBCI", icon: "★" },
   { id: "map", label: "Map", icon: "⊕" },
+  { id: "brief", label: "Brief", icon: "📋" },
 ];
 
+const REAP_PILLARS = [
+  { id: "all", label: "All", icon: "◎", color: GOLD },
+  { id: "risk_capital", label: "Risk Capital", icon: "◈", color: GREEN },
+  { id: "corporations", label: "Corporations", icon: "△", color: BLUE },
+  { id: "entrepreneurs", label: "Entrepreneurs", icon: "⬡", color: GOLD },
+  { id: "universities", label: "Universities", icon: "▣", color: PURPLE },
+  { id: "government", label: "Government", icon: "⊕", color: RED },
+];
+
+function getReapPillar(entity) {
+  if (!entity) return null;
+  if (entity.type === "SSBCI" || entity.type === "Angel" || entity.type === "Deep Tech VC" || entity.type === "Growth VC" || entity.type === "Accelerator") return "risk_capital";
+  if (entity.etype === "VC Firm" || entity.etype === "PE Firm" || entity.etype === "Investment Co" || entity.etype === "SPAC") return "risk_capital";
+  if (entity.etype === "Corporation") return "corporations";
+  if (entity.etype === "University" || entity.etype === "University Hub") return "universities";
+  if (entity.etype === "Government" || entity.etype === "Economic Development") return "government";
+  if (entity.etype === "Foundation") return "government";
+  if (entity.stage || entity.momentum !== undefined) return "entrepreneurs";
+  if (entity.atype) return "risk_capital";
+  return null;
+}
+
+function getCompanyReapConnections(companyId) {
+  const connected = new Set();
+  const allEntities = [...EXTERNALS, ...ECOSYSTEM_ORGS, ...ACCELERATORS];
+  VERIFIED_EDGES.forEach(e => {
+    const cId = `c_${companyId}`;
+    if (e.source === cId || e.target === cId) {
+      const otherId = e.source === cId ? e.target : e.source;
+      const entity = allEntities.find(x => x.id === otherId);
+      if (entity) {
+        const pillar = getReapPillar(entity);
+        if (pillar) connected.add(pillar);
+      }
+      const fundMatch = otherId.startsWith("f_") ? FUNDS.find(f => f.id === otherId.replace("f_","")) : null;
+      if (fundMatch) connected.add("risk_capital");
+    }
+  });
+  return connected;
+}
 
 // --- REAL NEVADA STARTUP DATA ---
 // Sources: Crunchbase, PitchBook, SEC filings, press releases, TechTribune, Failory, StartUpNV
@@ -984,7 +1023,7 @@ function computeGraphMetrics(nodes, edges) {
 // Glowing edges, curved beziers, directional arrows, animated pulses, zoom/pan
 // ══════════════════════════════════════════════════════════════════════════════
 
-function OntologyGraphView({onSelectCompany}) {
+function OntologyGraphView({onSelectCompany, reapFilter="all"}) {
   const [filters, setFilters] = useState({company:true, fund:true, accelerator:true, sector:false, region:false, person:true, external:true, ecosystem:true, exchange:false});
   const [relFilters, setRelFilters] = useState({eligible_for:true,operates_in:false,headquartered_in:false,invested_in:true,loaned_to:true,partners_with:true,contracts_with:true,acquired:true,founder_of:true,manages:true,listed_on:false,accelerated_by:true,won_pitch:true,incubated_by:true,program_of:true,supports:true,housed_at:true,collaborated_with:true,funds:true,approved_by:true,filed_with:true,competes_with:true});
   const [hoverId, setHoverId] = useState(null);
@@ -1011,6 +1050,18 @@ function OntologyGraphView({onSelectCompany}) {
   const searchMatches = useMemo(() => { if (!gSearch || gSearch.length < 2) return []; const q=gSearch.toLowerCase(); return layout.nodes.filter(n => n.label.toLowerCase().includes(q)).slice(0,8); }, [gSearch, layout.nodes]);
   const mob = typeof window !== "undefined" && window.innerWidth < 700;
   const selectNode = (n) => { setSelected(n); setGSearch(""); if(mob) setGPanel("detail"); };
+
+  const reapNodeMatch = (node) => {
+    if (reapFilter === "all") return true;
+    const entity = [...EXTERNALS, ...ECOSYSTEM_ORGS, ...ACCELERATORS].find(x => x.id === node.id);
+    if (entity) return getReapPillar(entity) === reapFilter;
+    if (node.id.startsWith("f_")) {
+      const fund = FUNDS.find(f => f.id === node.id.replace("f_",""));
+      return fund ? getReapPillar(fund) === reapFilter : false;
+    }
+    if (node.type === "company") return reapFilter === "entrepreneurs";
+    return false;
+  };
 
   // 2-hop neighborhood for Palantir-style lens effect
   const connectedSet = useMemo(() => {
@@ -1245,9 +1296,10 @@ function OntologyGraphView({onSelectCompany}) {
                 const inHop2=connectedSet?.all?.has(n.id)&&!inHop1;
                 const isDim=connectedSet&&!connectedSet.all.has(n.id);
                 const showLabel=isH||isSel||r>13||["fund","accelerator","ecosystem","region","exchange"].includes(n.type)||(inHop1&&hoverId);
-                const opacity=isDim?0.06:inHop2?0.35:1;
+                const baseOpacity=isDim?0.06:inHop2?0.35:1;
+                const opacity=reapNodeMatch(n)?baseOpacity:0.15;
                 return (
-                  <g key={n.id} style={{cursor:"pointer",opacity,transition:"opacity 0.2s"}}
+                  <g key={n.id} style={{cursor:"pointer",opacity,transition:"opacity 0.3s"}}
                     onMouseEnter={()=>setHoverId(n.id)} onMouseLeave={()=>setHoverId(null)}
                     onClick={e=>{e.stopPropagation();selectNode(n);}}
                     onTouchStart={e=>{e.preventDefault();selectNode(n);}}>
@@ -1441,13 +1493,29 @@ export default function BattleBornIntelligence() {
   const [stageFilter, setStageFilter] = useState("all");
   const [regionFilter, setRegionFilter] = useState("all");
   const [selectedCompany, setSelectedCompany] = useState(null);
-  const [compareList, setCompareList] = useState([]);
   const [sortBy, setSortBy] = useState("momentum");
   const [mobileNav, setMobileNav] = useState(false);
   const [mapHover, setMapHover] = useState(null);
-  const [watchlist, setWatchlist] = useState([]);
   const [sectorDetail, setSectorDetail] = useState(null);
   const [fundDetail, setFundDetail] = useState(null);
+  const [reapFilter, setReapFilter] = useState("all");
+
+  const ReapChipBar = () => (
+    <div style={{ display:"flex", gap:6, marginBottom:14, flexWrap:"wrap" }}>
+      {REAP_PILLARS.map(p => (
+        <button key={p.id} onClick={() => setReapFilter(p.id)}
+          style={{
+            padding:"5px 12px", borderRadius:20, fontSize:10, fontWeight:600, cursor:"pointer",
+            border:`1px solid ${reapFilter === p.id ? p.color+"60" : BORDER}`,
+            background: reapFilter === p.id ? p.color+"18" : "transparent",
+            color: reapFilter === p.id ? p.color : MUTED,
+            transition:"all 0.15s"
+          }}>
+          {p.icon} {p.label}
+        </button>
+      ))}
+    </div>
+  );
 
   const filtered = useMemo(() => COMPANIES.filter(c => {
     if (search && !c.name.toLowerCase().includes(search.toLowerCase()) && !c.sector.join(" ").toLowerCase().includes(search.toLowerCase())) return false;
@@ -1462,11 +1530,6 @@ export default function BattleBornIntelligence() {
   const avgMomentum = Math.round(COMPANIES.reduce((s, c) => s + c.momentum, 0) / COMPANIES.length);
   const totalEmployees = COMPANIES.reduce((s, c) => s + c.employees, 0);
   const px = isMobile ? 12 : 24;
-
-  // Watchlist helpers
-  const toggleWatchlist = (id) => setWatchlist(w => w.includes(id) ? w.filter(x => x !== id) : [...w, id]);
-  const isWatched = (id) => watchlist.includes(id);
-  const watchedCompanies = useMemo(() => allScored.filter(c => watchlist.includes(c.id)), [allScored, watchlist]);
 
   // Sector analytics
   const sectorStats = useMemo(() => {
@@ -1518,7 +1581,6 @@ export default function BattleBornIntelligence() {
             <div style={{ fontSize:12, color:MUTED, marginTop:2 }}>{sc.city}, NV · Est. {sc.founded} · {sc.employees} people</div>
           </div>
           <div style={{ display:"flex", gap:4 }}>
-            <button onClick={() => toggleWatchlist(sc.id)} style={{ background:isWatched(sc.id) ? GOLD+"20" : "none", border:`1px solid ${isWatched(sc.id) ? GOLD+"40" : BORDER}`, color:isWatched(sc.id) ? GOLD : MUTED, fontSize:16, cursor:"pointer", padding:"4px 8px", borderRadius:6, lineHeight:1 }}>{isWatched(sc.id) ? "★" : "☆"}</button>
             <button onClick={() => setSelectedCompany(null)} style={{ background:"none", border:"none", color:MUTED, fontSize:22, cursor:"pointer", padding:8, lineHeight:1 }}>✕</button>
           </div>
         </div>
@@ -1609,12 +1671,22 @@ export default function BattleBornIntelligence() {
         {view === "dashboard" && (
           <div style={fadeIn}>
             <div style={{ display:"grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(auto-fit, minmax(180px, 1fr))", gap: isMobile ? 8 : 16, marginBottom:24 }}>
-              <Stat label="Companies" value={<Counter end={COMPANIES.length} />} sub={`${allScored.filter(c=>c.grade.startsWith("A")).length} Grade A`} />
-              <Stat label="Total Capital" value={<Counter end={totalFunding} prefix="$" suffix="M" />} sub="Private + SSBCI" color={GREEN} />
-              <Stat label="Avg Momentum" value={<Counter end={avgMomentum} />} sub="0-100 composite" color={avgMomentum > 60 ? GREEN : GOLD} />
-              <Stat label="Total Jobs" value={<Counter end={totalEmployees} />} sub="Across ecosystem" color={BLUE} />
-              {!isMobile && <Stat label="SSBCI Deployed" value={fmt(FUNDS.filter(f=>f.type==="SSBCI").reduce((s,f)=>s+f.deployed,0))} sub={`${(FUNDS.filter(f=>f.type==="SSBCI").reduce((s,f)=>s+(f.leverage||0),0)/FUNDS.filter(f=>f.type==="SSBCI"&&f.leverage).length).toFixed(1)}x leverage`} color={PURPLE} />}
-              {!isMobile && <Stat label="Watchlist" value={watchlist.length} sub="companies tracked" />}
+              {(() => {
+                const ssbciFunds = FUNDS.filter(f=>f.type==="SSBCI");
+                const ssbciDeployed = ssbciFunds.reduce((s,f)=>s+f.deployed,0);
+                const avgLev = ssbciFunds.filter(f=>f.leverage).reduce((s,f)=>s+f.leverage,0)/ssbciFunds.filter(f=>f.leverage).length;
+                const privateLev = Math.round(ssbciDeployed * avgLev);
+                const ssbciCompanies = allScored.filter(c=>c.eligible.some(e=>["bbv","fundnv","1864"].includes(e)));
+                const ssbciAvgIRS = ssbciCompanies.length ? Math.round(ssbciCompanies.reduce((s,c)=>s+c.irs,0)/ssbciCompanies.length) : 0;
+                return (<>
+                  <Stat label="SSBCI Deployed" value={fmt(ssbciDeployed)} sub={`${ssbciFunds.length} active funds`} color={PURPLE} />
+                  <Stat label="Private Capital Leveraged" value={fmt(privateLev)} sub={`${avgLev.toFixed(1)}x avg ratio`} color={GREEN} />
+                  <Stat label="SSBCI Portfolio" value={ssbciCompanies.length} sub={`of ${COMPANIES.length} tracked`} color={GOLD} />
+                  <Stat label="Portfolio Avg IRS" value={ssbciAvgIRS} sub="SSBCI companies" color={ssbciAvgIRS >= 70 ? GREEN : GOLD} />
+                  {!isMobile && <Stat label="Ecosystem Capital" value={<Counter end={totalFunding} prefix="$" suffix="M" />} sub="All companies" />}
+                  {!isMobile && <Stat label="Total Jobs" value={<Counter end={totalEmployees} />} sub="Across ecosystem" color={BLUE} />}
+                </>);
+              })()}
             </div>
 
             {/* Sector Heat Strip */}
@@ -1637,7 +1709,12 @@ export default function BattleBornIntelligence() {
             <div style={{ display:"grid", gridTemplateColumns: isTablet ? "1fr" : "2fr 1fr", gap:20 }}>
               <div style={{ background:CARD, border:`1px solid ${BORDER}`, borderRadius:10, padding: isMobile ? 14 : 20 }}>
                 <div style={{ fontSize:10, color:MUTED, letterSpacing:1, textTransform:"uppercase", marginBottom:14 }}>Top Momentum — Live Rankings</div>
-                {[...COMPANIES].sort((a, b) => b.momentum - a.momentum).slice(0, isMobile ? 6 : 10).map((c, i) => (
+                {[...COMPANIES].sort((a, b) => {
+                  const aSSBCI = a.eligible.some(e=>["bbv","fundnv","1864"].includes(e)) ? 1 : 0;
+                  const bSSBCI = b.eligible.some(e=>["bbv","fundnv","1864"].includes(e)) ? 1 : 0;
+                  if (bSSBCI !== aSSBCI) return bSSBCI - aSSBCI;
+                  return b.momentum - a.momentum;
+                }).slice(0, isMobile ? 6 : 10).map((c, i) => (
                   <div key={c.id} onClick={() => { setSelectedCompany(c); }} style={{ display:"flex", alignItems:"center", padding:"8px 0", borderBottom: i < 9 ? `1px solid ${BORDER}` : "none", cursor:"pointer", gap:8 }}>
                     <span style={{ width:20, fontSize:12, color: i < 3 ? GOLD : MUTED, fontWeight:600 }}>{i + 1}</span>
                     <div style={{ flex:1, minWidth:0 }}>
@@ -1726,7 +1803,6 @@ export default function BattleBornIntelligence() {
                       {c.triggers.slice(0,4).map(t => { const cfg = TRIGGER_CFG[t]; return cfg ? <span key={t} style={{ fontSize:8, padding:"2px 6px", borderRadius:8, background:cfg.c+"12", color:cfg.c }}>{cfg.i} {cfg.l}</span> : null; })}
                     </div>}
                     <div style={{ fontSize:13, fontWeight:700, color:gc, width:28, textAlign:"right" }}>{c.irs}</div>
-                    <button onClick={e => { e.stopPropagation(); toggleWatchlist(c.id); }} style={{ background:"none", border:"none", color:isWatched(c.id) ? GOLD : MUTED+"60", cursor:"pointer", fontSize:14, padding:2, transition:"color 0.15s" }}>{isWatched(c.id) ? "★" : "☆"}</button>
                   </div>
                 );
               })}
@@ -1737,6 +1813,7 @@ export default function BattleBornIntelligence() {
         {/* ═══════════════════════ COMPANIES ═══════════════════════ */}
         {view === "companies" && (
           <div style={fadeIn}>
+            <ReapChipBar />
             <div style={{ display:"flex", gap: isMobile ? 6 : 12, marginBottom:16, flexWrap:"wrap", alignItems:"center" }}>
               <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search companies, sectors..." style={{ flex:1, minWidth: isMobile ? "100%" : 200, padding:"10px 14px", background:CARD, border:`1px solid ${BORDER}`, borderRadius:8, color:TEXT, fontSize:13, outline:"none" }} />
               <div style={{ display:"flex", gap:6, flexWrap:"wrap", width: isMobile ? "100%" : "auto" }}>
@@ -1757,11 +1834,15 @@ export default function BattleBornIntelligence() {
                   <option value="name">Name</option>
                 </select>
               </div>
-              <span style={{ fontSize:11, color:MUTED }}>{filtered.length} results</span>
+              <span style={{ fontSize:11, color:MUTED }}>{reapFilter === "all" ? filtered.length : filtered.filter(c => reapFilter === "entrepreneurs" || getCompanyReapConnections(c.id).has(reapFilter)).length} results</span>
             </div>
 
             <div style={{ display:"grid", gap:6 }}>
-              {filtered.map(c => (
+              {filtered.filter(c => {
+                if (reapFilter === "all") return true;
+                if (reapFilter === "entrepreneurs") return true;
+                return getCompanyReapConnections(c.id).has(reapFilter);
+              }).map(c => (
                 <div key={c.id} onClick={() => setSelectedCompany(selectedCompany?.id === c.id ? null : c)} style={{ display:"flex", alignItems:"center", gap: isMobile ? 8 : 12, padding: isMobile ? "10px 10px" : "12px 16px", background: selectedCompany?.id === c.id ? "#1A1814" : CARD, border:`1px solid ${selectedCompany?.id === c.id ? GOLD+"40" : BORDER}`, borderRadius:10, cursor:"pointer", transition:"all 0.15s" }}>
                   <div style={{ flex:1, minWidth:0 }}>
                     <div style={{ display:"flex", alignItems:"center", gap:6, flexWrap:"wrap" }}>
@@ -1775,8 +1856,6 @@ export default function BattleBornIntelligence() {
                   {!isMobile && <div style={{ display:"flex", gap:3, flexShrink:0 }}>
                     {c.eligible.map(e => <span key={e} style={{ fontSize:8, padding:"1px 5px", borderRadius:3, background:GOLD+"20", color:GOLD }}>{e.toUpperCase()}</span>)}
                   </div>}
-                  <button onClick={e => { e.stopPropagation(); setCompareList(prev => prev.includes(c.id) ? prev.filter(x=>x!==c.id) : [...prev.slice(-3),c.id]); }} style={{ width:28, height:28, borderRadius:6, border:`1px solid ${compareList.includes(c.id) ? GOLD : BORDER}`, background:compareList.includes(c.id) ? GOLD+"20" : "transparent", color:compareList.includes(c.id) ? GOLD : MUTED, cursor:"pointer", fontSize:12, flexShrink:0 }}>⟺</button>
-                  <button onClick={e => { e.stopPropagation(); toggleWatchlist(c.id); }} style={{ background:"none", border:"none", color:isWatched(c.id) ? GOLD : MUTED+"60", cursor:"pointer", fontSize:14, padding:2 }}>{isWatched(c.id) ? "★" : "☆"}</button>
                 </div>
               ))}
             </div>
@@ -1787,8 +1866,14 @@ export default function BattleBornIntelligence() {
         {view === "investors" && !fundDetail && (
           <div style={fadeIn}>
             <div style={{ fontSize:10, color:MUTED, letterSpacing:1, textTransform:"uppercase", marginBottom:16 }}>Fund & Program Performance</div>
+            <ReapChipBar />
             <div style={{ display:"grid", gap:10 }}>
-              {FUNDS.map(f => {
+              {FUNDS.filter(f => {
+                if (reapFilter === "all") return true;
+                if (reapFilter === "risk_capital") return true;
+                if (reapFilter === "government") return f.type === "SSBCI";
+                return false;
+              }).map(f => {
                 const portCos = allScored.filter(c => c.eligible.includes(f.id));
                 const avgIRS = portCos.length ? Math.round(portCos.reduce((s,c) => s+c.irs,0)/portCos.length) : 0;
                 return (
@@ -1887,106 +1972,11 @@ export default function BattleBornIntelligence() {
           </div>
         )}
 
-        {/* ═══════════════════════ COMPARE ═══════════════════════ */}
-        {view === "compare" && (
-          <div style={fadeIn}>
-            <div style={{ fontSize:10, color:MUTED, letterSpacing:1, textTransform:"uppercase", marginBottom:16 }}>Side-by-Side Comparison</div>
-            {compareList.length < 2 ? (
-              <div style={{ textAlign:"center", padding:60, color:MUTED }}>
-                <div style={{ fontSize:32, marginBottom:12 }}>⟺</div>
-                <div style={{ fontSize:14 }}>Select 2-4 companies from the Companies tab</div>
-                <div style={{ fontSize:12, marginTop:8 }}>Tap the ⟺ button on any company card</div>
-              </div>
-            ) : (
-              <div style={{ overflowX:"auto" }}>
-                <table style={{ width:"100%", borderCollapse:"collapse", fontSize:12 }}>
-                  <thead>
-                    <tr>
-                      <th style={{ textAlign:"left", padding:10, borderBottom:`1px solid ${BORDER}`, color:MUTED, fontSize:10, position:"sticky", left:0, background:DARK }}>Metric</th>
-                      {compareList.map(id => { const c = COMPANIES.find(x=>x.id===id); return <th key={id} style={{ textAlign:"center", padding:10, borderBottom:`1px solid ${BORDER}`, minWidth:120 }}>{c?.name}</th>; })}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {[
-                      { l:"Stage", fn:c=>stageLabel(c.stage) },
-                      { l:"Funding", fn:c=>fmt(c.funding), num:c=>c.funding },
-                      { l:"Momentum", fn:c=>c.momentum, num:c=>c.momentum },
-                      { l:"Employees", fn:c=>c.employees, num:c=>c.employees },
-                      { l:"Founded", fn:c=>c.founded },
-                      { l:"IRS Grade", fn:c=>computeIRS(c).grade },
-                      { l:"IRS Score", fn:c=>computeIRS(c).irs, num:c=>computeIRS(c).irs },
-                      { l:"Triggers", fn:c=>computeIRS(c).triggers.length, num:c=>computeIRS(c).triggers.length },
-                      { l:"SSBCI Programs", fn:c=>c.eligible.filter(e=>["bbv","fundnv","1864"].includes(e)).length, num:c=>c.eligible.filter(e=>["bbv","fundnv","1864"].includes(e)).length },
-                      { l:"Sectors", fn:c=>c.sector.join(", ") },
-                    ].map(row => {
-                      const vals = compareList.map(id => COMPANIES.find(x=>x.id===id)).filter(Boolean);
-                      const maxVal = row.num ? Math.max(...vals.map(c=>row.num(c))) : null;
-                      return (
-                        <tr key={row.l}>
-                          <td style={{ padding:10, borderBottom:`1px solid ${BORDER}`, color:MUTED, fontSize:11, fontWeight:600, position:"sticky", left:0, background:DARK }}>{row.l}</td>
-                          {vals.map(c => {
-                            const isMax = row.num && row.num(c) === maxVal && vals.filter(v=>row.num(v)===maxVal).length === 1;
-                            return <td key={c.id} style={{ padding:10, borderBottom:`1px solid ${BORDER}`, textAlign:"center", color:isMax ? GREEN : TEXT, fontWeight:isMax ? 700 : 400 }}>{row.fn(c)}</td>;
-                          })}
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            )}
-              {/* Shared Investors / Relationships */}
-              {(() => {
-                const cIds = compareList.map(id => `c_${id}`);
-                const investorMap = {};
-                VERIFIED_EDGES.forEach(e => {
-                  cIds.forEach(cid => {
-                    const match = (e.source === cid || e.target === cid);
-                    if (!match) return;
-                    const otherId = e.source === cid ? e.target : e.source;
-                    if (cIds.includes(otherId)) return;
-                    if (!investorMap[otherId]) investorMap[otherId] = {id:otherId, companies:[], edges:[]};
-                    investorMap[otherId].companies.push(cid);
-                    investorMap[otherId].edges.push({...e, companyId:cid});
-                  });
-                });
-                const shared = Object.values(investorMap).filter(v => v.companies.length >= 2).sort((a,b) => b.companies.length - a.companies.length);
-                const allInvestors = Object.values(investorMap).sort((a,b) => b.companies.length - a.companies.length);
-                const allNodes = [...EXTERNALS,...ACCELERATORS,...ECOSYSTEM_ORGS,...PEOPLE];
-                const findName = id => allNodes.find(n => n.id === id)?.name || id;
-                return (<>
-                  {shared.length > 0 && (<div style={{marginTop:20}}>
-                    <div style={{fontSize:10,color:GOLD,letterSpacing:1,textTransform:"uppercase",marginBottom:8}}>Shared Connections ({shared.length})</div>
-                    {shared.map(s => (
-                      <div key={s.id} style={{padding:"8px 12px",background:CARD,border:`1px solid ${BORDER}`,borderRadius:6,marginBottom:6,borderLeft:`3px solid ${GREEN}`}}>
-                        <div style={{fontWeight:600,fontSize:12,color:TEXT}}>{findName(s.id)}</div>
-                        <div style={{fontSize:10,color:MUTED,marginTop:2}}>
-                          {s.edges.map((e,i) => {
-                            const cName = COMPANIES.find(c => `c_${c.id}` === e.companyId)?.name || e.companyId;
-                            return <span key={i}>{i>0?" · ":""}{e.rel.replace(/_/g," ")} → {cName}{e.note?` (${e.note})`:""}</span>;
-                          })}
-                        </div>
-                      </div>
-                    ))}
-                  </div>)}
-                  {allInvestors.length > 0 && (<div style={{marginTop:16}}>
-                    <div style={{fontSize:10,color:MUTED,letterSpacing:1,textTransform:"uppercase",marginBottom:8}}>All Verified Relationships</div>
-                    <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
-                      {allInvestors.slice(0,20).map(inv => (
-                        <span key={inv.id} style={{fontSize:9,padding:"3px 8px",borderRadius:4,background:inv.companies.length>=2?GREEN+"15":CARD,border:`1px solid ${inv.companies.length>=2?GREEN+"40":BORDER}`,color:inv.companies.length>=2?GREEN:MUTED}}>
-                          {findName(inv.id)} ({inv.companies.length})
-                        </span>
-                      ))}
-                    </div>
-                  </div>)}
-                </>);
-              })()}
-          </div>
-        )}
         {view === "graph" && (
           <div style={fadeIn}>
             <div style={{ fontSize:10, color:MUTED, letterSpacing:1, textTransform:"uppercase", marginBottom:12 }}>Ontological Relationship Graph — {VERIFIED_EDGES.length} Verified Edges · Graph Intelligence Active</div>
-            <OntologyGraphView onSelectCompany={(id)=>{setSelectedCompany(COMPANIES.find(c=>c.id===id)||null);setView("companies");}} />
+            <ReapChipBar />
+            <OntologyGraphView reapFilter={reapFilter} onSelectCompany={(id)=>{setSelectedCompany(COMPANIES.find(c=>c.id===id)||null);setView("companies");}} />
           </div>
         )}
 
@@ -2146,103 +2136,110 @@ export default function BattleBornIntelligence() {
                     <div style={{ fontSize:16, fontWeight:700, color:GOLD }}>{c.irs}</div>
                     <div style={{ fontSize:8, color:MUTED }}>IRS</div>
                   </div>
-                  <button onClick={e => { e.stopPropagation(); toggleWatchlist(c.id); }} style={{ background:"none", border:"none", color:isWatched(c.id) ? GOLD : MUTED, cursor:"pointer", fontSize:16, padding:4 }}>{isWatched(c.id) ? "★" : "☆"}</button>
                 </div>
               ))}
             </div>
           </div>
         )}
 
-        {/* ═══════════════════════ WATCHLIST ═══════════════════════ */}
-        {view === "watchlist" && (
-          <div style={{ padding:px, animation:"fadeIn 0.4s ease-out" }}>
-            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:20 }}>
-              <div><div style={{ fontSize: isMobile ? 18 : 22, fontWeight:800, color:TEXT }}>My Watchlist</div>
-              <div style={{ fontSize:11, color:MUTED, marginTop:2 }}>{watchlist.length} companies tracked</div></div>
-              {watchlist.length > 0 && <button onClick={() => setWatchlist([])} style={{ background:"none", border:`1px solid ${RED}40`, color:RED, fontSize:10, padding:"5px 10px", borderRadius:6, cursor:"pointer" }}>Clear All</button>}
+        {/* ═══════════════════════ WEEKLY BRIEF ═══════════════════════ */}
+        {view === "brief" && (
+          <div style={{ ...fadeIn, maxWidth:900, margin:"0 auto" }}>
+            <style>{`@media print { .no-print { display: none !important; } body { background: white !important; color: black !important; } }`}</style>
+            <div style={{ textAlign:"center", marginBottom:24, paddingBottom:16, borderBottom:`2px solid ${GOLD}40` }}>
+              <div style={{ fontSize:10, color:GOLD, letterSpacing:2, textTransform:"uppercase", marginBottom:4 }}>Battle Born Intelligence</div>
+              <div style={{ fontSize: isMobile ? 20 : 26, fontWeight:800, color:TEXT }}>GOED Weekly Intelligence Brief</div>
+              <div style={{ fontSize:12, color:MUTED, marginTop:4 }}>Week Ending {new Date().toLocaleDateString("en-US", { year:"numeric", month:"long", day:"numeric" })}</div>
+              <div style={{ fontSize:10, color:MUTED, marginTop:2 }}>Innovation-Based Economic Development</div>
             </div>
-
-            {watchlist.length === 0 ? (
-              <div style={{ background:CARD, border:`1px solid ${BORDER}`, borderRadius:12, padding:40, textAlign:"center" }}>
-                <div style={{ fontSize:32, marginBottom:12 }}>☆</div>
-                <div style={{ fontSize:14, color:TEXT, marginBottom:6 }}>No companies watched yet</div>
-                <div style={{ fontSize:11, color:MUTED, marginBottom:16 }}>Star any company from the Radar, Companies, or Sectors view to track it here.</div>
-                <button onClick={() => setView("radar")} style={{ padding:"8px 20px", background:GOLD+"20", color:GOLD, border:`1px solid ${GOLD}40`, borderRadius:8, fontSize:12, fontWeight:600, cursor:"pointer" }}>Browse Radar →</button>
-              </div>
-            ) : (
-              <>
-                {/* Portfolio Summary */}
-                <div style={{ display:"grid", gridTemplateColumns: isMobile ? "repeat(2,1fr)" : "repeat(4,1fr)", gap:10, marginBottom:20 }}>
-                  <Stat label="Watched" value={watchedCompanies.length} />
-                  <Stat label="Avg IRS" value={watchedCompanies.length ? Math.round(watchedCompanies.reduce((s,c) => s+c.irs, 0) / watchedCompanies.length) : 0} color={GREEN} />
-                  <Stat label="Total Raised" value={fmt(watchedCompanies.reduce((s,c) => s+c.funding, 0))} />
-                  <Stat label="Total Team" value={watchedCompanies.reduce((s,c) => s+c.employees, 0).toLocaleString()} />
+            {(() => {
+              const ssbciFunds = FUNDS.filter(f=>f.type==="SSBCI");
+              const ssbciDeployed = ssbciFunds.reduce((s,f)=>s+f.deployed,0);
+              const avgLev = ssbciFunds.filter(f=>f.leverage).reduce((s,f)=>s+f.leverage,0)/ssbciFunds.filter(f=>f.leverage).length;
+              const privateLev = Math.round(ssbciDeployed * avgLev);
+              const ssbciCompanies = allScored.filter(c=>c.eligible.some(e=>["bbv","fundnv","1864"].includes(e)));
+              const ssbciAvgIRS = ssbciCompanies.length ? Math.round(ssbciCompanies.reduce((s,c)=>s+c.irs,0)/ssbciCompanies.length) : 0;
+              return (
+                <div style={{ display:"grid", gridTemplateColumns: isMobile ? "repeat(2,1fr)" : "repeat(4,1fr)", gap:10, marginBottom:24 }}>
+                  <Stat label="SSBCI Deployed" value={fmt(ssbciDeployed)} sub={`${ssbciFunds.length} funds`} color={PURPLE} />
+                  <Stat label="Private Leverage" value={fmt(privateLev)} sub={`${avgLev.toFixed(1)}x ratio`} color={GREEN} />
+                  <Stat label="Portfolio Cos" value={ssbciCompanies.length} sub={`of ${COMPANIES.length}`} color={GOLD} />
+                  <Stat label="Avg IRS" value={ssbciAvgIRS} sub="SSBCI portfolio" color={ssbciAvgIRS >= 70 ? GREEN : GOLD} />
                 </div>
-
-                {/* Grade distribution bar */}
-                {(() => {
-                  const gdist = {};
-                  watchedCompanies.forEach(c => { gdist[c.grade] = (gdist[c.grade] || 0) + 1; });
-                  const total = watchedCompanies.length || 1;
-                  return (
-                    <div style={{ background:CARD, border:`1px solid ${BORDER}`, borderRadius:8, padding:12, marginBottom:16 }}>
-                      <div style={{ fontSize:10, color:MUTED, marginBottom:6 }}>Grade Distribution</div>
-                      <div style={{ display:"flex", borderRadius:4, overflow:"hidden", height:8 }}>
-                        {["A","A-","B+","B","B-","C+","C","D"].filter(g => gdist[g]).map(g => (
-                          <div key={g} style={{ width:`${(gdist[g]/total)*100}%`, background:GRADE_COLORS[g] || MUTED, transition:"width 0.3s" }} title={`${g}: ${gdist[g]}`} />
-                        ))}
-                      </div>
-                      <div style={{ display:"flex", gap:8, marginTop:6 }}>
-                        {["A","A-","B+","B","B-","C+","C","D"].filter(g => gdist[g]).map(g => (
-                          <span key={g} style={{ fontSize:9, color:GRADE_COLORS[g] || MUTED }}>{g}: {gdist[g]}</span>
-                        ))}
-                      </div>
-                    </div>
-                  );
-                })()}
-
-                {/* Company list */}
-                <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
-                  {watchedCompanies.sort((a,b) => b.irs - a.irs).map(c => (
-                    <div key={c.id} style={{ background:CARD, border:`1px solid ${BORDER}`, borderRadius:8, padding: isMobile ? "10px 12px" : "12px 16px", display:"flex", alignItems:"center", gap:10, cursor:"pointer", transition:"border-color 0.2s" }}
-                      onMouseEnter={e => e.currentTarget.style.borderColor = GOLD+"60"} onMouseLeave={e => e.currentTarget.style.borderColor = BORDER}>
-                      <Grade grade={c.grade} />
-                      <div style={{ flex:1, minWidth:0 }} onClick={() => setSelectedCompany(c)}>
-                        <div style={{ display:"flex", alignItems:"center", gap:6, flexWrap:"wrap" }}>
-                          <span style={{ fontSize:13, fontWeight:700, color:TEXT }}>{c.name}</span>
-                          <span style={{ fontSize:9, padding:"1px 6px", borderRadius:4, background:STAGE_COLORS[c.stage]+"25", color:STAGE_COLORS[c.stage] || MUTED }}>{stageLabel(c.stage)}</span>
-                          {c.triggers.slice(0,2).map(t => <span key={t} style={{ fontSize:8, color:TRIGGER_CFG[t]?.c || MUTED }}>{TRIGGER_CFG[t]?.i}</span>)}
+              );
+            })()}
+            {REAP_PILLARS.filter(p => p.id !== "all").map(pillar => {
+              const allEntities = [...EXTERNALS, ...ECOSYSTEM_ORGS, ...ACCELERATORS];
+              const pillarEntities = allEntities.filter(e => getReapPillar(e) === pillar.id);
+              const pillarFunds = FUNDS.filter(f => getReapPillar(f) === pillar.id);
+              const pillarCompanies = pillar.id === "entrepreneurs" ? allScored : allScored.filter(c => getCompanyReapConnections(c.id).has(pillar.id));
+              const pillarEvents = TIMELINE_EVENTS.filter(ev => {
+                if (pillar.id === "entrepreneurs") return ["funding","momentum","launch","hiring"].includes(ev.type);
+                if (pillar.id === "risk_capital") return ["funding"].includes(ev.type);
+                if (pillar.id === "government") return ["grant"].includes(ev.type);
+                if (pillar.id === "corporations") return ["partnership"].includes(ev.type);
+                return false;
+              }).slice(0, 3);
+              let metrics = [];
+              if (pillar.id === "risk_capital") {
+                const totalDeployed = pillarFunds.reduce((s,f)=>s+f.deployed,0);
+                const ssbciFunds = pillarFunds.filter(f=>f.type==="SSBCI");
+                metrics = [`${pillarFunds.length} funds tracked`, `${fmt(totalDeployed)} deployed`, `${ssbciFunds.length} SSBCI programs`];
+              } else if (pillar.id === "entrepreneurs") {
+                const gradeA = pillarCompanies.filter(c=>c.grade.startsWith("A")).length;
+                const topMover = [...pillarCompanies].sort((a,b)=>b.momentum-a.momentum)[0];
+                metrics = [`${pillarCompanies.length} companies tracked`, `${gradeA} Grade A companies`, topMover ? `Top: ${topMover.name} (momentum ${topMover.momentum})` : ""].filter(Boolean);
+              } else if (pillar.id === "government") {
+                metrics = [`${pillarEntities.length} government entities`, `SSBCI administered by GOED`, `DOE, SBIR/STTR, AFWERX active`];
+              } else if (pillar.id === "corporations") {
+                metrics = [`${pillarEntities.length} corporate partners`, `${pillarCompanies.length} companies with corporate ties`];
+              } else if (pillar.id === "universities") {
+                metrics = [`${pillarEntities.length} university hubs`, `UNR Innevation Center + UNLV Tech Park`];
+              }
+              return (
+                <div key={pillar.id} style={{ background:CARD, border:`1px solid ${BORDER}`, borderRadius:10, padding: isMobile ? 14 : 20, marginBottom:12, borderLeft:`3px solid ${pillar.color}` }}>
+                  <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:10 }}>
+                    <div style={{ fontSize:14, fontWeight:700, color:pillar.color }}>{pillar.icon} {pillar.label}</div>
+                    <span style={{ fontSize:10, padding:"2px 8px", borderRadius:10, background:pillar.color+"15", color:pillar.color }}>{pillarCompanies.length} companies</span>
+                  </div>
+                  <div style={{ display:"flex", gap:12, flexWrap:"wrap", marginBottom:10 }}>
+                    {metrics.map((m,i) => <span key={i} style={{ fontSize:11, color:TEXT }}>{m}</span>)}
+                  </div>
+                  {pillarEvents.length > 0 && (
+                    <div style={{ borderTop:`1px solid ${BORDER}`, paddingTop:8, marginTop:6 }}>
+                      <div style={{ fontSize:9, color:MUTED, textTransform:"uppercase", letterSpacing:1, marginBottom:6 }}>Recent Activity</div>
+                      {pillarEvents.map((ev, i) => (
+                        <div key={i} style={{ fontSize:11, color:TEXT, marginBottom:4 }}>
+                          <span style={{ color:MUTED }}>{ev.date.slice(5)}</span> {ev.icon} <span style={{ fontWeight:600 }}>{ev.company}</span> — {ev.detail}
                         </div>
-                        <div style={{ fontSize:10, color:MUTED, marginTop:2 }}>{c.city} · {(c.sector||[]).slice(0,2).join(", ")} · {fmt(c.funding)} · {c.employees} people</div>
-                      </div>
-                      <div style={{ textAlign:"right", flexShrink:0 }}>
-                        <div style={{ fontSize:18, fontWeight:700, color:GOLD }}>{c.irs}</div>
-                        <div style={{ fontSize:8, color:MUTED }}>IRS</div>
-                      </div>
-                      <button onClick={() => toggleWatchlist(c.id)} style={{ background:"none", border:"none", color:GOLD, cursor:"pointer", fontSize:18, padding:4 }} title="Remove from watchlist">★</button>
+                      ))}
                     </div>
-                  ))}
+                  )}
+                  {pillar.id !== "entrepreneurs" && pillarCompanies.length > 0 && (
+                    <div style={{ borderTop:`1px solid ${BORDER}`, paddingTop:8, marginTop:6 }}>
+                      <div style={{ fontSize:9, color:MUTED, textTransform:"uppercase", letterSpacing:1, marginBottom:6 }}>Key Companies</div>
+                      <div style={{ display:"flex", gap:6, flexWrap:"wrap" }}>
+                        {pillarCompanies.sort((a,b)=>b.irs-a.irs).slice(0,6).map(c => (
+                          <span key={c.id} style={{ fontSize:10, padding:"2px 8px", borderRadius:4, background:pillar.color+"12", border:`1px solid ${pillar.color}25`, color:TEXT }}>{c.name}</span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
-              </>
-            )}
+              );
+            })}
+            <div style={{ textAlign:"center", paddingTop:16, borderTop:`1px solid ${BORDER}`, marginTop:8 }}>
+              <div style={{ fontSize:10, color:MUTED }}>Generated by Battle Born Intelligence · {new Date().toLocaleString()}</div>
+              <button className="no-print" onClick={() => window.print()} style={{ marginTop:10, padding:"8px 20px", background:GOLD+"20", color:GOLD, border:`1px solid ${GOLD}40`, borderRadius:8, fontSize:11, fontWeight:600, cursor:"pointer" }}>🖨 Print Brief</button>
+            </div>
           </div>
         )}
+
       </div>
 
       {/* DETAIL PANEL */}
       <DetailPanel />
 
-      {/* COMPARE FLOATING BAR */}
-      {compareList.length > 0 && view !== "compare" && (
-        <div style={{ position:"fixed", bottom: isMobile ? 12 : 20, left:"50%", transform:"translateX(-50%)", background:CARD, border:`1px solid ${GOLD}40`, borderRadius:12, padding: isMobile ? "8px 12px" : "10px 20px", display:"flex", alignItems:"center", gap: isMobile ? 8 : 12, zIndex:200, boxShadow:`0 8px 32px ${DARK}`, animation:"slideUp 0.3s ease-out", maxWidth:"90vw" }}>
-          <span style={{ fontSize:11, color:GOLD, flexShrink:0 }}>⟺ {compareList.length}</span>
-          {!isMobile && <div style={{ display:"flex", gap:4 }}>
-            {compareList.map(id => { const c=COMPANIES.find(x=>x.id===id); return <span key={id} style={{ fontSize:10, padding:"2px 6px", borderRadius:4, background:GOLD+"15", color:TEXT }}>{c?.name}</span>; })}
-          </div>}
-          <button onClick={() => setView("compare")} style={{ padding:"6px 14px", background:GOLD, color:DARK, border:"none", borderRadius:6, fontSize:11, fontWeight:700, cursor:"pointer" }}>Compare</button>
-          <button onClick={() => setCompareList([])} style={{ background:"none", border:"none", color:MUTED, cursor:"pointer", fontSize:14, padding:4 }}>✕</button>
-        </div>
-      )}
     </div>
   );
 }

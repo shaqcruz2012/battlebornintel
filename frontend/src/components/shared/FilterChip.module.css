@@ -1,0 +1,62 @@
+/* ── FilterChip: Bloomberg-style filter toggle ─────────── */
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+  padding: 5px 12px;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-body);
+  font-size: var(--text-caption-sm);
+  font-weight: var(--weight-medium);
+  border: 1px solid var(--border-subtle);
+  background: transparent;
+  color: var(--text-disabled);
+  cursor: pointer;
+  transition:
+    all var(--transition-instant);
+  white-space: nowrap;
+  user-select: none;
+  letter-spacing: 0.01em;
+}
+
+.chip:hover {
+  border-color: var(--border-hover);
+  color: var(--text-secondary);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.chip:active {
+  transform: scale(0.98);
+  transition-duration: 50ms;
+}
+
+/* ── Active state ──────────────────────────────────────── */
+
+.active {
+  background: rgba(69, 215, 198, 0.08);
+  border-color: rgba(69, 215, 198, 0.3);
+  color: var(--accent-teal);
+}
+
+.active:hover {
+  background: rgba(69, 215, 198, 0.12);
+  border-color: rgba(69, 215, 198, 0.4);
+}
+
+/* ── Small variant ─────────────────────────────────────── */
+
+.small {
+  padding: 2px 8px;
+  font-size: var(--text-micro);
+  border-radius: var(--radius-xs);
+}
+
+/* ── Count ─────────────────────────────────────────────── */
+
+.count {
+  font-family: var(--font-mono);
+  font-size: var(--text-micro);
+  opacity: 0.6;
+  font-variant-numeric: tabular-nums;
+}

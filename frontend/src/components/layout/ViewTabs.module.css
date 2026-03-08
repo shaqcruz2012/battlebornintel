@@ -1,0 +1,47 @@
+/* ── ViewTabs: Bloomberg-style top navigation ──────────── */
+
+.tabs {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  margin: var(--space-lg) 0 var(--space-sm);
+  border-bottom: 1px solid var(--border-medium);
+}
+
+.tab {
+  position: relative;
+  padding: var(--space-sm) var(--space-xl);
+  font-family: var(--font-body);
+  font-size: var(--text-body-sm);
+  font-weight: var(--weight-medium);
+  color: var(--text-disabled);
+  background: none;
+  border: none;
+  cursor: pointer;
+  transition: color var(--transition-instant);
+  letter-spacing: 0.01em;
+}
+
+.tab:hover {
+  color: var(--text-secondary);
+}
+
+.tab:active {
+  color: var(--text-primary);
+}
+
+.active {
+  color: var(--accent-teal);
+  font-weight: var(--weight-semibold);
+}
+
+.active::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: var(--space-xl);
+  right: var(--space-xl);
+  height: 2px;
+  background: var(--accent-teal);
+  border-radius: 1px 1px 0 0;
+}

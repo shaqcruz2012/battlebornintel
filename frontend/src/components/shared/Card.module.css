@@ -1,0 +1,54 @@
+/* ── Card: Base container ───────────────────────────────── */
+
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: var(--space-xl);
+  transition:
+    border-color var(--transition-fast),
+    box-shadow var(--transition-fast),
+    background var(--transition-fast);
+  box-shadow: var(--shadow-inset);
+}
+
+.card:hover {
+  border-color: var(--border-hover);
+}
+
+/* ── Clickable ─────────────────────────────────────────── */
+
+.clickable {
+  cursor: pointer;
+}
+
+.clickable:hover {
+  box-shadow: var(--shadow-elevated);
+  border-color: var(--border-active);
+  background: var(--bg-elevated);
+}
+
+.clickable:active {
+  transform: translateY(0.5px);
+  transition-duration: 50ms;
+}
+
+/* ── Elevated ──────────────────────────────────────────── */
+
+.elevated {
+  background: var(--bg-elevated);
+  box-shadow: var(--shadow-card);
+  border-color: var(--border-medium);
+}
+
+/* ── Compact ───────────────────────────────────────────── */
+
+.compact {
+  padding: var(--space-lg);
+}
+
+/* ── No padding ────────────────────────────────────────── */
+
+.noPad {
+  padding: 0;
+}
