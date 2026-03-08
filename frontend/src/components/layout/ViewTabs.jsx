@@ -2,6 +2,8 @@ import styles from './ViewTabs.module.css';
 
 const VIEWS = [
   { id: 'executive', label: 'Executive Dashboard' },
+  { id: 'companies', label: 'Companies' },
+  { id: 'funds', label: 'Funds' },
   { id: 'brief', label: 'Weekly Brief' },
   { id: 'goed', label: 'GOED' },
   { id: 'graph', label: 'Graph Intelligence' },

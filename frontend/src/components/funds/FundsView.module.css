@@ -1,0 +1,379 @@
+/* ── Funds View: Bloomberg-style portfolio dashboard ────── */
+
+.wrapper {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xl);
+  padding: var(--space-lg) 0;
+}
+
+/* ── KPI Strip: 4-cell Bloomberg terminal grid ─────────── */
+
+.kpiStrip {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1px;
+  background: var(--border-grid);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.kpiCell {
+  background: var(--bg-elevated);
+  padding: var(--space-lg) var(--space-xl);
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.kpiValue {
+  font-family: var(--font-mono);
+  font-size: var(--text-card-numeric-sm);
+  font-weight: var(--weight-semibold);
+  color: var(--accent-teal);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+  line-height: var(--leading-tight);
+}
+
+.kpiLabel {
+  font-family: var(--font-body);
+  font-size: var(--text-micro);
+  font-weight: var(--weight-semibold);
+  color: var(--text-disabled);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+/* ── Controls bar ──────────────────────────────────────── */
+
+.controls {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+}
+
+.controlsLabel {
+  font-family: var(--font-body);
+  font-size: var(--text-caption-sm);
+  color: var(--text-disabled);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+.sortBtn {
+  padding: var(--space-xs) var(--space-md);
+  background: transparent;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-body);
+  font-size: var(--text-caption-sm);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition:
+    border-color var(--transition-fast),
+    color var(--transition-fast),
+    background var(--transition-fast);
+  white-space: nowrap;
+}
+
+.sortBtn:hover {
+  border-color: var(--border-hover);
+  color: var(--text-primary);
+  background: var(--bg-hover);
+}
+
+.sortBtnActive {
+  border-color: var(--border-active);
+  color: var(--accent-teal);
+  background: var(--bg-active-row);
+}
+
+/* ── Funds grid ────────────────────────────────────────── */
+
+.fundsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  gap: var(--space-lg);
+}
+
+/* ── Fund card ─────────────────────────────────────────── */
+
+.fundCard {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: var(--space-xl);
+  cursor: pointer;
+  transition:
+    border-color var(--transition-fast),
+    background var(--transition-fast),
+    box-shadow var(--transition-fast);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.fundCard:hover {
+  border-color: var(--border-hover);
+  background: var(--bg-elevated);
+}
+
+.fundCard.expanded {
+  border-color: var(--border-active);
+  background: var(--bg-active-row);
+}
+
+/* ── Fund header ───────────────────────────────────────── */
+
+.fundHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm);
+}
+
+.fundName {
+  font-family: var(--font-heading);
+  font-size: var(--text-h3);
+  font-weight: var(--weight-semibold);
+  color: var(--text-primary);
+  line-height: var(--leading-snug);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.typeBadge {
+  display: inline-flex;
+  align-items: center;
+  padding: var(--space-2xs) var(--space-sm);
+  font-family: var(--font-mono);
+  font-size: var(--text-micro);
+  font-weight: var(--weight-bold);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  border-radius: var(--radius-xs);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* ── Deployment bar ────────────────────────────────────── */
+
+.deployBar {
+  height: 4px;
+  background: var(--border-subtle);
+  border-radius: var(--radius-xs);
+  overflow: hidden;
+}
+
+.deployFill {
+  height: 100%;
+  background: var(--accent-teal);
+  border-radius: var(--radius-xs);
+  transition: width var(--transition-normal);
+}
+
+/* ── Deployment stats ──────────────────────────────────── */
+
+.deployStats {
+  display: flex;
+  justify-content: space-between;
+  font-family: var(--font-mono);
+  font-size: var(--text-caption-sm);
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+.deployStatsLabel {
+  color: var(--text-disabled);
+  font-family: var(--font-body);
+  font-size: var(--text-micro);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-right: var(--space-2xs);
+}
+
+/* ── Fund meta row ─────────────────────────────────────── */
+
+.fundMeta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  flex-wrap: wrap;
+}
+
+.leverageTag {
+  font-family: var(--font-mono);
+  font-size: var(--text-caption-sm);
+  color: var(--accent-gold);
+  font-weight: var(--weight-semibold);
+  font-variant-numeric: tabular-nums;
+}
+
+.companyCount {
+  font-family: var(--font-body);
+  font-size: var(--text-caption-sm);
+  color: var(--text-secondary);
+}
+
+/* ── Thesis text ───────────────────────────────────────── */
+
+.thesis {
+  font-family: var(--font-body);
+  font-size: var(--text-caption-sm);
+  color: var(--text-secondary);
+  font-style: italic;
+  line-height: var(--leading-normal);
+  margin: 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* ── Portfolio table ───────────────────────────────────── */
+
+.portfolioTable {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: var(--space-md);
+  border-top: 1px solid var(--border-subtle);
+}
+
+.portfolioTh {
+  font-family: var(--font-body);
+  font-size: var(--text-micro);
+  font-weight: var(--weight-semibold);
+  color: var(--text-disabled);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  text-align: left;
+  padding: var(--space-sm) var(--space-sm);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.portfolioTh:last-child {
+  text-align: right;
+}
+
+.portfolioTd {
+  padding: var(--space-xs) var(--space-sm);
+  font-family: var(--font-body);
+  font-size: var(--text-caption-sm);
+  color: var(--text-secondary);
+  vertical-align: middle;
+}
+
+.portfolioName {
+  font-weight: var(--weight-semibold);
+  color: var(--text-primary);
+}
+
+.portfolioGrade {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  padding: 0 var(--space-xs);
+  font-family: var(--font-mono);
+  font-size: var(--text-micro);
+  font-weight: var(--weight-bold);
+  border-radius: var(--radius-xs);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.portfolioFunding {
+  font-family: var(--font-mono);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.emptyPortfolio {
+  font-family: var(--font-body);
+  font-size: var(--text-caption-sm);
+  color: var(--text-disabled);
+  font-style: italic;
+  text-align: center;
+  padding: var(--space-lg) 0;
+  margin-top: var(--space-md);
+  border-top: 1px solid var(--border-subtle);
+}
+
+/* ── Loading skeleton ──────────────────────────────────── */
+
+.loadingWrapper {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xl);
+  padding: var(--space-lg) 0;
+}
+
+.skeletonKpi {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1px;
+  background: var(--border-grid);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.skeletonKpiCell {
+  height: 80px;
+  background: var(--bg-card);
+}
+
+.skeletonGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  gap: var(--space-lg);
+}
+
+.skeletonCard {
+  height: 200px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+}
+
+/* ── Responsive ────────────────────────────────────────── */
+
+@media (max-width: 1200px) {
+  .kpiStrip {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .skeletonKpi {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .kpiStrip {
+    grid-template-columns: 1fr;
+  }
+
+  .fundsGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .skeletonKpi {
+    grid-template-columns: 1fr;
+  }
+
+  .skeletonGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .deployStats {
+    flex-direction: column;
+    gap: var(--space-2xs);
+  }
+}

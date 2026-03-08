@@ -8,6 +8,8 @@ import { ExecutiveDashboard } from './components/dashboard/ExecutiveDashboard';
 const WeeklyBriefView = lazy(() => import('./components/brief/WeeklyBriefView').then(m => ({ default: m.WeeklyBriefView })));
 const GoedView = lazy(() => import('./components/goed/GoedView').then(m => ({ default: m.GoedView })));
 const GraphView = lazy(() => import('./components/graph/GraphView').then(m => ({ default: m.GraphView })));
+const CompaniesView = lazy(() => import('./components/companies/CompaniesView').then(m => ({ default: m.CompaniesView })));
+const FundsView = lazy(() => import('./components/funds/FundsView').then(m => ({ default: m.FundsView })));
 
 const TabFallback = () => (
   <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-secondary)' }}>
@@ -28,6 +30,8 @@ export default function App() {
           {view === 'executive' && <ExecutiveDashboard />}
           <Suspense fallback={<TabFallback />}>
             {view === 'brief' && <WeeklyBriefView />}
+            {view === 'companies' && <CompaniesView />}
+            {view === 'funds' && <FundsView />}
             {view === 'goed' && <GoedView />}
             {view === 'graph' && <GraphView />}
           </Suspense>
