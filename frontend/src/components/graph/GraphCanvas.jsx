@@ -248,6 +248,7 @@ export function GraphCanvas({
   searchTerm = '',
   showOpportunities = false,
   opportunityFilter = 'all', // 'all' | 'programs' | 'funds'
+  focusNodeId = null,
 }) {
   const containerRef = useRef(null);
   const { width: winW, height: winH } = useWindowSize();
@@ -263,6 +264,50 @@ export function GraphCanvas({
 
   const w = Math.min(winW - 16, 1800);
   const h = Math.max(640, winH - 104); // header(64) + tabs(40)
+
+  const fitAll = useCallback(() => {
+    const { nodes } = layout;
+    if (!nodes || !nodes.length) return;
+    const xs = nodes.map((n) => n.x || 0);
+    const ys = nodes.map((n) => n.y || 0);
+    const minX = Math.min(...xs);
+    const maxX = Math.max(...xs);
+    const minY = Math.min(...ys);
+    const maxY = Math.max(...ys);
+    const padX = 60, padY = 60;
+    const fitW = Math.max(maxX - minX, 1);
+    const fitH = Math.max(maxY - minY, 1);
+    const s = Math.min((w - padX * 2) / fitW, (h - padY * 2) / fitH, 2);
+    const cx = (minX + maxX) / 2;
+    const cy = (minY + maxY) / 2;
+    setZoom(s);
+    setPan({ x: w / 2 - cx * s, y: h / 2 - cy * s });
+  }, [layout, w, h]);
+
+  const hasFitRef = useRef(false);
+  useEffect(() => {
+    if (layout.nodes.length === 0) {
+      hasFitRef.current = false;
+    }
+    if (layout.nodes.length > 0 && !hasFitRef.current) {
+      hasFitRef.current = true;
+      // Small delay allows SVG to render first
+      const t = setTimeout(fitAll, 50);
+      return () => clearTimeout(t);
+    }
+  }, [layout.nodes.length, fitAll]);
+
+  useEffect(() => {
+    if (!focusNodeId) return;
+    const node = layout.nodes.find((n) => n.id === focusNodeId);
+    if (!node) return;
+    const targetZoom = Math.max(zoom, 1.8);
+    setZoom(targetZoom);
+    setPan({
+      x: w / 2 - (node.x || 0) * targetZoom,
+      y: h / 2 - (node.y || 0) * targetZoom,
+    });
+  }, [focusNodeId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const searchLower = searchTerm.toLowerCase();
   const matchesSearch = useCallback(
@@ -567,7 +612,7 @@ export function GraphCanvas({
         </button>
         <button
           className={styles.zoomBtn}
-          onClick={() => { setZoom(1); setPan({ x: 0, y: 0 }); }}
+          onClick={fitAll}
           type="button"
           title="Reset view"
         >

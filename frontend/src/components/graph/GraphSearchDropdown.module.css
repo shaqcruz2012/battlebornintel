@@ -1,0 +1,154 @@
+/* ── GraphSearchDropdown: Bloomberg-style search results panel ── */
+
+/* ── Container ── */
+
+.dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  z-index: 200;
+  background: rgba(10, 14, 20, 0.96);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(69, 215, 198, 0.2);
+  border-top: none;
+  border-radius: 0 0 6px 6px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  max-height: 320px;
+  overflow-y: auto;
+  /* Custom scrollbar */
+  scrollbar-width: thin;
+  scrollbar-color: rgba(69, 215, 198, 0.2) transparent;
+}
+
+.dropdown::-webkit-scrollbar {
+  width: 4px;
+}
+
+.dropdown::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.dropdown::-webkit-scrollbar-thumb {
+  background: rgba(69, 215, 198, 0.2);
+  border-radius: 2px;
+}
+
+.dropdown::-webkit-scrollbar-thumb:hover {
+  background: rgba(69, 215, 198, 0.4);
+}
+
+/* ── Section grouping ── */
+
+.section {
+  /* No extra padding — section header provides its own */
+}
+
+.sectionHeader {
+  padding: 6px 12px 3px;
+  font-size: 9px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: rgba(107, 106, 114, 0.8); /* muted monochrome */
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  user-select: none;
+}
+
+/* ── Result rows ── */
+
+.resultRow {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 12px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: background 80ms ease;
+  user-select: none;
+  min-height: 28px;
+}
+
+.resultRow:last-child {
+  /* Slight extra padding before border radius curves */
+  padding-bottom: 6px;
+}
+
+.resultRowActive {
+  background: rgba(69, 215, 198, 0.12);
+}
+
+.resultRow:hover,
+.resultRow:focus {
+  background: rgba(69, 215, 198, 0.1);
+  outline: none;
+}
+
+/* ── Type dot ── */
+
+.typeDot {
+  flex-shrink: 0;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  /* backgroundColor set inline via style prop */
+}
+
+/* ── Node name ── */
+
+.nodeName {
+  flex: 1;
+  color: #d4d0c8; /* --text-primary equivalent */
+  font-weight: 600;
+  font-size: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+/* ── Matched text highlight ── */
+
+.matchHighlight {
+  background: transparent;
+  color: #45d7c6; /* teal accent */
+  font-weight: 700;
+}
+
+/* ── Type badge ── */
+
+.typeBadge {
+  flex-shrink: 0;
+  font-size: 9px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 1px 5px;
+  border-radius: 3px;
+  border: 1px solid transparent;
+  /* color and borderColor set inline via style prop */
+  white-space: nowrap;
+  background: transparent;
+}
+
+/* ── Region text ── */
+
+.regionText {
+  flex-shrink: 0;
+  font-size: 10px;
+  color: rgba(107, 106, 114, 0.9); /* muted */
+  white-space: nowrap;
+  max-width: 80px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ── Empty state ── */
+
+.emptyState {
+  padding: 14px 12px;
+  font-size: 11px;
+  color: rgba(107, 106, 114, 0.8);
+  text-align: center;
+  font-style: italic;
+}
