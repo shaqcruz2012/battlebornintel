@@ -26,6 +26,9 @@ router.get('/', async (req, res, next) => {
     if (!VALID_TYPES.includes(entityType)) {
       return res.status(400).json({ error: `Invalid entityType. Use: ${VALID_TYPES.join(', ')}` });
     }
+    if (!VALID_SORTS.includes(sortBy)) {
+      return res.status(400).json({ error: `Invalid sortBy. Use: ${VALID_SORTS.join(', ')}` });
+    }
 
     const result = await getOpportunities({
       quality: quality !== 'all' ? quality : undefined,

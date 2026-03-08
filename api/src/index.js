@@ -24,6 +24,31 @@ app.use(compression());
 app.use(cors());
 app.use(express.json());
 
+// ── Simple in-memory rate limiter (no extra deps) ───────────────────────────
+function makeRateLimiter({ windowMs = 60_000, max = 200, message = 'Too many requests' } = {}) {
+  const counts = new Map();
+  setInterval(() => counts.clear(), windowMs).unref();
+  return (req, res, next) => {
+    const key = req.ip || 'unknown';
+    const current = (counts.get(key) || 0) + 1;
+    counts.set(key, current);
+    if (current > max) return res.status(429).json({ error: message });
+    next();
+  };
+}
+
+const publicLimit = makeRateLimiter({ windowMs: 60_000, max: 300 });
+const adminLimit  = makeRateLimiter({ windowMs: 60_000, max: 10, message: 'Admin rate limit exceeded' });
+
+// ── Admin API key guard ─────────────────────────────────────────────────────
+function requireAdminKey(req, res, next) {
+  const key = req.headers['x-admin-key'];
+  if (cfg.adminApiKey && key !== cfg.adminApiKey) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+  next();
+}
+
 // Health check
 app.get('/api/health', async (req, res) => {
   try {
@@ -39,21 +64,22 @@ app.get('/api/cache-stats', (req, res) => {
   res.json(getCacheStats());
 });
 
-// Routes with per-route caching
+// Routes with per-route caching + rate limiting on public routes
 // Standard GET endpoints: browser cache 1 hour (public, max-age=3600)
-app.use('/api/companies', cacheMiddleware('companies', 300000, { cacheControl: 'public, max-age=3600' }), companiesRouter);
-app.use('/api/funds', cacheMiddleware('funds', 300000, { cacheControl: 'public, max-age=3600' }), fundsRouter);
-app.use('/api/graph', cacheMiddleware('graph', 300000, { cacheControl: 'public, max-age=3600' }), graphRouter);
-app.use('/api/kpis', cacheMiddleware('kpis', 300000, { cacheControl: 'public, max-age=3600' }), kpisRouter);
-app.use('/api/timeline', cacheMiddleware('timeline', 300000, { cacheControl: 'public, max-age=3600' }), timelineRouter);
-app.use('/api/constants', cacheMiddleware('constants', 600000, { cacheControl: 'public, max-age=3600' }), constantsRouter);
-app.use('/api/analysis', cacheMiddleware('analysis', 300000, { cacheControl: 'public, max-age=3600' }), analysisRouter);
-app.use('/api/stakeholder-activities', cacheMiddleware('stakeholderActivities', 300000, { cacheControl: 'public, max-age=3600' }), stakeholderActivitiesRouter);
-app.use('/api/opportunities', cacheMiddleware('opportunities', 300000, { cacheControl: 'public, max-age=3600' }), opportunitiesRouter);
-app.use('/api/admin', adminRouter);
+app.use('/api/companies',             publicLimit, cacheMiddleware('companies', 300000, { cacheControl: 'public, max-age=3600' }), companiesRouter);
+app.use('/api/funds',                 publicLimit, cacheMiddleware('funds', 300000, { cacheControl: 'public, max-age=3600' }), fundsRouter);
+app.use('/api/graph',                 publicLimit, cacheMiddleware('graph', 300000, { cacheControl: 'public, max-age=3600' }), graphRouter);
+app.use('/api/kpis',                  publicLimit, cacheMiddleware('kpis', 300000, { cacheControl: 'public, max-age=3600' }), kpisRouter);
+app.use('/api/timeline',              publicLimit, cacheMiddleware('timeline', 300000, { cacheControl: 'public, max-age=3600' }), timelineRouter);
+app.use('/api/constants',             publicLimit, cacheMiddleware('constants', 600000, { cacheControl: 'public, max-age=3600' }), constantsRouter);
+app.use('/api/analysis',              publicLimit, cacheMiddleware('analysis', 300000, { cacheControl: 'public, max-age=3600' }), analysisRouter);
+app.use('/api/stakeholder-activities',publicLimit, cacheMiddleware('stakeholderActivities', 300000, { cacheControl: 'public, max-age=3600' }), stakeholderActivitiesRouter);
+app.use('/api/opportunities',         publicLimit, cacheMiddleware('opportunities', 300000, { cacheControl: 'public, max-age=3600' }), opportunitiesRouter);
+// Admin routes: key-gated + strict rate limit
+app.use('/api/admin', adminLimit, requireAdminKey, adminRouter);
 
 // High-impact batch endpoint for dashboard
-app.use('/api/dashboard-batch', dashboardBatchRouter);
+app.use('/api/dashboard-batch', publicLimit, dashboardBatchRouter);
 
 // Error handler
 app.use(errorHandler);

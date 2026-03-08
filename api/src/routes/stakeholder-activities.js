@@ -32,6 +32,13 @@ router.get('/', async (req, res, next) => {
 
     // Validate and sanitize inputs
     const parsedLimit = Math.min(parseInt(limit, 10) || 50, 200);
+    const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+    if (since && !ISO_DATE.test(since)) {
+      return res.status(400).json({ error: 'since must be ISO date format YYYY-MM-DD' });
+    }
+    if (until && !ISO_DATE.test(until)) {
+      return res.status(400).json({ error: 'until must be ISO date format YYYY-MM-DD' });
+    }
 
     const data = await getStakeholderActivities({
       location,
