@@ -17,8 +17,9 @@ class ForceSimulation {
     }));
     this.edges = edges;
     this.alpha = 1;
-    this.alphaDecay = 0.0228;
-    this.alphaMin = 0.001;
+    this.alphaDecay = 0.05;      // faster convergence (default 0.0228 is too slow for large graphs)
+    this.alphaMin = 0.01;        // stop earlier (default 0.001 runs too many iterations)
+    this.velocityDecay = 0.4;    // damping factor (D3 default 0.4); velocity multiplier = 1 - velocityDecay
   }
 
   // Apply Coulomb repulsion between nodes
@@ -64,8 +65,8 @@ class ForceSimulation {
     this.applyRepulsion(-30);
     this.applyAttraction(0.1);
 
-    // Damping
-    const damping = 0.6;
+    // Damping: velocity multiplier = 1 - velocityDecay (matches D3 convention)
+    const damping = 1 - this.velocityDecay;
 
     // Update positions
     for (const node of this.nodes) {

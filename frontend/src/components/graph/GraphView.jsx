@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef, useEffect } from 'react';
+import { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import { useFilters } from '../../hooks/useFilters';
 import { useGraph, useGraphMetrics } from '../../api/hooks';
 import { useGraphLayout } from '../../hooks/useGraphLayout';
@@ -32,8 +32,17 @@ export function GraphView() {
   const [showOpportunities, setShowOpportunities] = useState(false);
   const [opportunityFilter, setOpportunityFilter] = useState('all');
 
-  const toggleNode = (key) =>
-    setNodeFilters((f) => ({ ...f, [key]: !f[key] }));
+  // FIX 7a: Wrap in useCallback so GraphOverlayControls gets a stable reference
+  // and doesn't re-render on every parent state change.
+  const toggleNode = useCallback(
+    (key) => setNodeFilters((f) => ({ ...f, [key]: !f[key] })),
+    []
+  );
+
+  // Stable setSelectedNode wrapper so GraphCanvas's onSelectNode prop is stable.
+  const handleSelectNode = useCallback((id) => setSelectedNode(id), []);
+  const handleCloseNode = useCallback(() => setSelectedNode(null), []);
+  const handleToggleOpportunities = useCallback(() => setShowOpportunities((v) => !v), []);
 
   // Debounce dimensions so D3 layout doesn't recompute on every resize pixel
   const rawW = Math.min(winW - 64, 1200);
@@ -42,10 +51,20 @@ export function GraphView() {
   const debounceRef = useRef(null);
   useEffect(() => {
     clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => setDims({ w: rawW, h: rawH }), 200);
+    debounceRef.current = setTimeout(() => {
+      // Only update dims when the change is significant (>50px) to avoid
+      // unnecessary re-renders from minor resize events.
+      setDims((prev) => {
+        if (Math.abs(rawW - prev.w) > 50 || Math.abs(rawH - prev.h) > 50) {
+          return { w: rawW, h: rawH };
+        }
+        return prev;
+      });
+    }, 200);
     return () => clearTimeout(debounceRef.current);
   }, [rawW, rawH]);
-  void dims; // dims state triggers re-renders when window dimensions change
+  // dims is passed to useGraphLayout so the worker re-runs only after the debounce
+  // settles (and only when dims actually changed by > 50 px, per the guard above).
 
   // Active node types for API query
   const activeNodeTypes = useMemo(
@@ -60,7 +79,10 @@ export function GraphView() {
   // Compute D3 layout in Web Worker to keep UI responsive
   const rawNodes = graphData?.nodes || [];
   const rawEdges = graphData?.edges || [];
-  const { layout: workerLayout, isLoading: layoutLoading } = useGraphLayout(rawNodes, rawEdges);
+  // FIX 7b: Pass debounced dims so the worker uses stable viewport dimensions.
+  // This is the primary consumer of `dims` state — it prevents D3 from seeing
+  // a new width/height on every resize pixel while the debounce is unsettled.
+  const { layout: workerLayout, isLoading: layoutLoading } = useGraphLayout(rawNodes, rawEdges, { width: dims.w, height: dims.h });
 
   // Resolve edge source/target from string IDs to node objects (required by GraphCanvas)
   const layout = useMemo(() => {
@@ -103,7 +125,7 @@ export function GraphView() {
               metrics={metrics}
               colorMode={colorMode}
               selectedNode={selectedNode}
-              onSelectNode={setSelectedNode}
+              onSelectNode={handleSelectNode}
               searchTerm={search}
               showOpportunities={showOpportunities}
               opportunityFilter={opportunityFilter}
@@ -115,7 +137,7 @@ export function GraphView() {
               colorMode={colorMode}
               onColorModeChange={setColorMode}
               showOpportunities={showOpportunities}
-              onToggleOpportunities={() => setShowOpportunities((v) => !v)}
+              onToggleOpportunities={handleToggleOpportunities}
               opportunityFilter={opportunityFilter}
               onOpportunityFilterChange={setOpportunityFilter}
             />
@@ -125,7 +147,7 @@ export function GraphView() {
             nodeId={selectedNode}
             layout={layout}
             metrics={metrics}
-            onClose={() => setSelectedNode(null)}
+            onClose={handleCloseNode}
           />
         </div>
       </div>

@@ -64,7 +64,7 @@ const GlowFilters = memo(function GlowFilters() {
 
 /* ── Memoized sub-components ── */
 
-const EdgeLine = memo(function EdgeLine({ sx, sy, tx, ty, color, strokeWidth, dash, opacity, isOpportunity, isHighlighted }) {
+const EdgeLine = memo(function EdgeLine({ sx, sy, tx, ty, color, strokeWidth, dash, opacity, isOpportunity, isHighlighted, animateDash }) {
   return (
     <line
       x1={sx} y1={sy} x2={tx} y2={ty}
@@ -74,7 +74,8 @@ const EdgeLine = memo(function EdgeLine({ sx, sy, tx, ty, color, strokeWidth, da
       opacity={opacity}
       strokeLinecap="round"
       strokeLinejoin="round"
-      style={isOpportunity && isHighlighted ? {
+      // FIX 3: Only animate dashes when the caller explicitly enables it (showOpportunities + count < 50)
+      style={isOpportunity && isHighlighted && animateDash ? {
         animation: 'dashFlow 1.5s linear infinite',
         strokeDashoffset: 0,
       } : undefined}
@@ -125,6 +126,9 @@ const EdgeLabel = memo(function EdgeLabel({ sx, sy, tx, ty, label, val, relColor
   );
 });
 
+// FIX 1 + FIX 5: NodeCircle no longer receives inline arrow callbacks (defeats memo) and
+// no longer applies the glow filter via inline style — the parent renders a single
+// <g filter="url(#nodeGlowStrong)"> wrapper only for the selected node.
 const NodeCircle = memo(function NodeCircle({
   node, r, fill, isSelected, isConnected, hasSelection, dim,
   onSelect, onHover, onLeave,
@@ -161,7 +165,7 @@ const NodeCircle = memo(function NodeCircle({
           />
         </>
       )}
-      {/* Main node circle */}
+      {/* Main node circle — glow filter is applied by the parent wrapper, not here */}
       <circle
         cx={node.x} cy={node.y} r={r}
         fill={fill}
@@ -175,7 +179,6 @@ const NodeCircle = memo(function NodeCircle({
         strokeWidth={isSelected ? 1.5 : isConnected && hasSelection ? 1 : 0.4}
         style={{
           cursor: 'pointer',
-          filter: isSelected ? 'url(#nodeGlowStrong)' : undefined,
           transition: 'stroke-width 200ms ease, stroke 200ms ease',
         }}
         onClick={onSelect}
@@ -241,7 +244,11 @@ export function GraphCanvas({
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [dragging, setDragging] = useState(false);
   const [dragStart, setDragStart] = useState(null);
-  const [tooltip, setTooltip] = useState(null);
+
+  // FIX 2: Tooltip state moved to refs — mouse-move no longer triggers React re-renders.
+  // We imperatively update a DOM div so the SVG subtree is untouched on hover.
+  const tooltipRef = useRef(null);
+  const tooltipActiveRef = useRef(false);
 
   const w = Math.min(winW - 64, 1200);
   const h = Math.max(500, winH - 280);
@@ -289,33 +296,59 @@ export function GraphCanvas({
 
   const { nodes, edges } = layout;
 
-  // Build tooltip data from node properties
-  const buildTooltipData = useCallback((node, e) => {
-    const data = {
-      x: e.clientX,
-      y: e.clientY,
-      label: node.label,
-      type: node.type,
-      typeColor: NODE_CFG[node.type]?.color || '#888',
-    };
+  // FIX 2: Imperative tooltip helpers — no setState, no re-renders on hover.
+  const showTooltip = useCallback((node, clientX, clientY) => {
+    const el = tooltipRef.current;
+    if (!el) return;
+
+    const typeColor = NODE_CFG[node.type]?.color || '#888';
+    let metricsHtml = '';
 
     if (node.type === 'company') {
-      data.metrics = [];
-      if (node.funding) data.metrics.push({ label: 'Funding', value: fmt(node.funding) });
-      if (node.stage) data.metrics.push({ label: 'Stage', value: node.stage.replace(/_/g, ' ') });
-      if (node.employees) data.metrics.push({ label: 'Emp', value: String(node.employees) });
-      if (node.momentum) data.metrics.push({ label: 'MTM', value: String(node.momentum) });
+      const parts = [];
+      if (node.funding) parts.push({ label: 'Funding', value: fmt(node.funding) });
+      if (node.stage)   parts.push({ label: 'Stage',   value: node.stage.replace(/_/g, ' ') });
+      if (node.employees) parts.push({ label: 'Emp',   value: String(node.employees) });
+      if (node.momentum)  parts.push({ label: 'MTM',   value: String(node.momentum) });
+      metricsHtml = parts.map(m =>
+        `<div class="${styles.tooltipMetric}">` +
+        `<span class="${styles.tooltipMetricLabel}">${m.label}</span>` +
+        `<span class="${styles.tooltipMetricValue}">${m.value}</span>` +
+        `</div>`
+      ).join('');
     }
 
-    // Add graph metric if available
     const pr = metrics?.pagerank?.[node.id];
     if (pr !== undefined) {
-      data.metrics = data.metrics || [];
-      data.metrics.push({ label: 'PR', value: pr });
+      metricsHtml +=
+        `<div class="${styles.tooltipMetric}">` +
+        `<span class="${styles.tooltipMetricLabel}">PR</span>` +
+        `<span class="${styles.tooltipMetricValue}">${pr}</span>` +
+        `</div>`;
     }
 
-    return data;
+    el.innerHTML =
+      `<div class="${styles.tooltipHeader}">` +
+        `<div class="${styles.tooltipName}">${node.label ?? ''}</div>` +
+        `<div class="${styles.tooltipType}" style="color:${typeColor}">` +
+          `${NODE_CFG[node.type]?.icon ?? ''} ${NODE_CFG[node.type]?.label ?? node.type}` +
+        `</div>` +
+      `</div>` +
+      (metricsHtml
+        ? `<div class="${styles.tooltipMetrics}">${metricsHtml}</div>`
+        : '');
+
+    el.style.left = `${clientX + 14}px`;
+    el.style.top  = `${clientY - 10}px`;
+    el.style.display = 'block';
+    tooltipActiveRef.current = true;
   }, [metrics]);
+
+  const hideTooltip = useCallback(() => {
+    const el = tooltipRef.current;
+    if (el) el.style.display = 'none';
+    tooltipActiveRef.current = false;
+  }, []);
 
   // Compute connected node IDs and highlighted edges for selected node
   const { connectedIds, highlightedEdges } = useMemo(() => {
@@ -332,6 +365,40 @@ export function GraphCanvas({
     });
     return { connectedIds: cIds, highlightedEdges: hEdges };
   }, [selectedNode, edges]);
+
+  // FIX 1: Stable per-node callbacks via a map keyed by node.id so React.memo works.
+  // We memoize the maps on every nodes array change (which only happens when layout changes).
+  const selectCallbacks = useMemo(() => {
+    const map = {};
+    nodes.forEach((n) => {
+      map[n.id] = () => onSelectNode?.(n.id === selectedNode ? null : n.id);
+    });
+    return map;
+  }, [nodes, selectedNode, onSelectNode]);
+
+  const hoverCallbacks = useMemo(() => {
+    const map = {};
+    nodes.forEach((n) => {
+      map[n.id] = (e) => showTooltip(n, e.clientX, e.clientY);
+    });
+    return map;
+  }, [nodes, showTooltip]);
+
+  // FIX 3 + FIX 4: Pre-compute display thresholds once.
+  const nodeCount = nodes.length;
+  const tooManyForEdgeLabels = nodeCount > 150;   // skip edge labels entirely
+  const tooManyForFullOpacity = nodeCount > 300;  // reduce non-selected edge opacity
+
+  // FIX 3: Count opportunity edges to gate dash animation.
+  const opportunityEdgeCount = useMemo(() => {
+    if (!showOpportunities) return 0;
+    return edges.filter(e =>
+      e.edge_category === 'opportunity' || e.rel === 'qualifies_for' ||
+      e.rel === 'fund_opportunity' || e.rel === 'potential_lp'
+    ).length;
+  }, [edges, showOpportunities]);
+
+  const animateDash = showOpportunities && opportunityEdgeCount < 50;
 
   if (!nodes || nodes.length === 0) {
     return (
@@ -386,9 +453,13 @@ export function GraphCanvas({
             // Use per-edge visual overrides from DB, fall back to REL_CFG
             const edgeColor = e.edge_color || (isHighlighted ? (rc?.color || 'var(--accent-teal)') : (rc?.color || '#333'));
             const edgeDash = e.edge_style ?? (rc?.dash || '');
+
+            // FIX 4: At > 300 nodes, collapse non-selected edge opacity to 0.15 to reduce
+            // GPU overdraw from hundreds of semi-transparent overlapping strokes.
+            const baseNonSelectedOpacity = tooManyForFullOpacity ? 0.15 : 0.35;
             const edgeOpacity = isOpportunity
               ? (e.edge_opacity ?? (dimEdge ? 0.05 : 0.5))
-              : (dimEdge ? 0.06 : isHighlighted ? 0.85 : 0.35);
+              : (dimEdge ? 0.06 : isHighlighted ? 0.85 : baseNonSelectedOpacity);
             const edgeWidth = isOpportunity ? (isHighlighted ? 1.5 : 0.5) : (isHighlighted ? 2 : 0.5);
 
             return (
@@ -401,12 +472,13 @@ export function GraphCanvas({
                 opacity={edgeOpacity}
                 isOpportunity={isOpportunity}
                 isHighlighted={isHighlighted}
+                animateDash={animateDash}
               />
             );
           })}
 
-          {/* Edge labels — only for highlighted edges */}
-          {selectedNode &&
+          {/* FIX 4: Edge labels — skip entirely when node count > 150 (unreadable anyway) */}
+          {selectedNode && !tooManyForEdgeLabels &&
             edges.map((e, i) => {
               if (!highlightedEdges.has(i)) return null;
               const sx = e.source.x || 0;
@@ -436,7 +508,12 @@ export function GraphCanvas({
             const dimBySelection = selectedNode && !isSelected && !isConnected;
             const dim = dimBySearch || dimBySelection;
 
-            return (
+            // FIX 5: Glow filter applied as a <g> wrapper ONLY on the selected node.
+            // Previously `filter: url(#nodeGlowStrong)` was an inline style prop on
+            // every NodeCircle's inner <circle>, causing the filter string to be part
+            // of the memo comparison on every render and applying the blur shader to
+            // ALL nodes that have any selection state.
+            const inner = (
               <NodeCircle
                 key={n.id}
                 node={n}
@@ -446,11 +523,15 @@ export function GraphCanvas({
                 isConnected={isConnected}
                 hasSelection={!!selectedNode}
                 dim={dim}
-                onSelect={() => onSelectNode?.(n.id === selectedNode ? null : n.id)}
-                onHover={(e) => setTooltip(buildTooltipData(n, e))}
-                onLeave={() => setTooltip(null)}
+                onSelect={selectCallbacks[n.id]}
+                onHover={hoverCallbacks[n.id]}
+                onLeave={hideTooltip}
               />
             );
+
+            return isSelected
+              ? <g key={n.id} filter="url(#nodeGlowStrong)">{inner}</g>
+              : inner;
           })}
         </g>
       </svg>
@@ -483,30 +564,13 @@ export function GraphCanvas({
         </button>
       </div>
 
-      {/* Enhanced tooltip — Palantir data-dense dark card */}
-      {tooltip && (
-        <div
-          className={styles.tooltip}
-          style={{ left: tooltip.x + 14, top: tooltip.y - 10 }}
-        >
-          <div className={styles.tooltipHeader}>
-            <div className={styles.tooltipName}>{tooltip.label}</div>
-            <div className={styles.tooltipType} style={{ color: tooltip.typeColor }}>
-              {NODE_CFG[tooltip.type]?.icon} {NODE_CFG[tooltip.type]?.label || tooltip.type}
-            </div>
-          </div>
-          {tooltip.metrics && tooltip.metrics.length > 0 && (
-            <div className={styles.tooltipMetrics}>
-              {tooltip.metrics.map((m, i) => (
-                <div key={i} className={styles.tooltipMetric}>
-                  <span className={styles.tooltipMetricLabel}>{m.label}</span>
-                  <span className={styles.tooltipMetricValue}>{m.value}</span>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
+      {/* FIX 2: Tooltip rendered as a plain DOM div updated imperatively via ref.
+          Mouse-move / mouse-enter no longer triggers setState → no React re-renders. */}
+      <div
+        ref={tooltipRef}
+        className={styles.tooltip}
+        style={{ display: 'none', position: 'fixed' }}
+      />
     </div>
   );
 }
