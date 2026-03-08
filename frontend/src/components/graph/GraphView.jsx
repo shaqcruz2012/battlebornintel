@@ -45,8 +45,8 @@ export function GraphView() {
   const handleToggleOpportunities = useCallback(() => setShowOpportunities((v) => !v), []);
 
   // Debounce dimensions so D3 layout doesn't recompute on every resize pixel
-  const rawW = Math.min(winW - 64, 1200);
-  const rawH = Math.max(500, winH - 280);
+  const rawW = Math.min(winW - 16, 1800);
+  const rawH = Math.max(640, winH - 190);
   const [dims, setDims] = useState({ w: rawW, h: rawH });
   const debounceRef = useRef(null);
   useEffect(() => {

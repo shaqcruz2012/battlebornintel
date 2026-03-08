@@ -34,11 +34,9 @@ export function computeGraphMetrics(nodes, edges) {
     }
     pr = next;
   }
-  const prMax = Math.max(...pr);
-  const prMin = Math.min(...pr);
-  const prRange = prMax - prMin || 1;
+  const prMax = Math.max(...pr) || 1;
   const pagerank = {};
-  ids.forEach((id, i) => { pagerank[id] = Math.round(((pr[i] - prMin) / prRange) * 100); });
+  ids.forEach((id, i) => { pagerank[id] = pr[i] / prMax; });
 
   // Betweenness Centrality (Brandes' algorithm)
   const bc = new Float64Array(N).fill(0);
@@ -68,7 +66,7 @@ export function computeGraphMetrics(nodes, edges) {
   }
   const bcMax = Math.max(...bc) || 1;
   const betweenness = {};
-  ids.forEach((id, i) => { betweenness[id] = Math.round((bc[i] / bcMax) * 100); });
+  ids.forEach((id, i) => { betweenness[id] = bc[i] / bcMax; });
 
   // Community Detection (Label Propagation)
   const labels = Array.from({ length: N }, (_, i) => i);
@@ -113,11 +111,11 @@ export function computeGraphMetrics(nodes, edges) {
 
     if (funding > 50 && degree <= 3)
       signals.push({ type: 'undercovered', label: 'High funding, few connections', severity: Math.min(100, Math.round(funding / 10)), icon: 'eye' });
-    if (bcScore > 60)
-      signals.push({ type: 'bridge', label: 'Structural bridge between clusters', severity: bcScore, icon: 'bridge' });
-    if (prScore > 50 && funding < 100)
-      signals.push({ type: 'hidden_influence', label: 'Structurally important beyond funding', severity: prScore, icon: 'crystal' });
-    if (funding > 200 && prScore < 20)
+    if (bcScore > 0.60)
+      signals.push({ type: 'bridge', label: 'Structural bridge between clusters', severity: Math.round(bcScore * 100), icon: 'bridge' });
+    if (prScore > 0.50 && funding < 100)
+      signals.push({ type: 'hidden_influence', label: 'Structurally important beyond funding', severity: Math.round(prScore * 100), icon: 'crystal' });
+    if (funding > 200 && prScore < 0.20)
       signals.push({ type: 'isolated_capital', label: 'Large funding but low graph connectivity', severity: Math.round(funding / 50), icon: 'island' });
     if (degree >= 8)
       signals.push({ type: 'hub', label: `Hub node: ${degree} connections`, severity: degree * 5, icon: 'star' });

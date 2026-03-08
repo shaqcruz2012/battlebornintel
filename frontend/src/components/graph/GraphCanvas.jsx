@@ -4,10 +4,21 @@ import { useWindowSize } from '../../hooks/useWindowSize';
 import { fmt } from '../../engine/formatters';
 import styles from './GraphCanvas.module.css';
 
-function nodeRadius(node) {
+const MIN_R = 6;
+const MAX_R = 28;
+
+function nodeRadius(node, pagerank) {
   if (node.type === 'fund' || node.type === 'accelerator') return 14;
   if (node.type === 'sector' || node.type === 'ecosystem' || node.type === 'region') return 11;
-  if (node.type === 'company') return 7 + Math.sqrt(Math.max(0, node.funding || 0)) * 0.3;
+  if (node.type === 'company') {
+    // Use normalized PageRank (0–1) for log-scaled radius when available,
+    // otherwise fall back to funding-based sizing.
+    const pr = pagerank?.[node.id];
+    if (pr !== undefined) {
+      return MIN_R + (MAX_R - MIN_R) * Math.log(1 + pr * 9) / Math.log(10);
+    }
+    return Math.min(MAX_R, 7 + Math.sqrt(Math.max(0, node.funding || 0)) * 0.3);
+  }
   return 8;
 }
 
@@ -250,8 +261,8 @@ export function GraphCanvas({
   const tooltipRef = useRef(null);
   const tooltipActiveRef = useRef(false);
 
-  const w = Math.min(winW - 64, 1200);
-  const h = Math.max(500, winH - 280);
+  const w = Math.min(winW - 16, 1800);
+  const h = Math.max(640, winH - 190);
 
   const searchLower = searchTerm.toLowerCase();
   const matchesSearch = useCallback(
@@ -323,7 +334,7 @@ export function GraphCanvas({
       metricsHtml +=
         `<div class="${styles.tooltipMetric}">` +
         `<span class="${styles.tooltipMetricLabel}">PR</span>` +
-        `<span class="${styles.tooltipMetricValue}">${pr}</span>` +
+        `<span class="${styles.tooltipMetricValue}">${pr.toFixed(2)}</span>` +
         `</div>`;
     }
 
@@ -500,7 +511,7 @@ export function GraphCanvas({
 
           {/* Nodes */}
           {nodes.map((n) => {
-            const r = nodeRadius(n);
+            const r = nodeRadius(n, metrics?.pagerank);
             const fill = nodeColor(n, colorMode, metrics?.communities);
             const isSelected = selectedNode === n.id;
             const isConnected = connectedIds.has(n.id);

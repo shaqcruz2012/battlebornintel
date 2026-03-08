@@ -242,9 +242,16 @@ export async function getGraphMetrics() {
   const betweenness = {};
   const communities = {};
 
+  // The cache stores values as integers in the 0–100 range (legacy schema uses INTEGER columns).
+  // Normalize back to 0–1 floats so the frontend always receives a consistent scale.
+  const prValues = rows.map((r) => r.pagerank ?? 0);
+  const bcValues = rows.map((r) => r.betweenness ?? 0);
+  const prMax = Math.max(...prValues, 1);
+  const bcMax = Math.max(...bcValues, 1);
+
   for (const r of rows) {
-    pagerank[r.node_id] = r.pagerank;
-    betweenness[r.node_id] = r.betweenness;
+    pagerank[r.node_id] = (r.pagerank ?? 0) / prMax;
+    betweenness[r.node_id] = (r.betweenness ?? 0) / bcMax;
     communities[r.node_id] = r.community_id;
   }
 
