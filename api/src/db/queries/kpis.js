@@ -30,7 +30,28 @@ export async function getKpis({ stage, region, sector } = {}) {
   if (conditions.length) companySql += ' WHERE ' + conditions.join(' AND ');
 
   const { rows: companies } = await pool.query(companySql, params);
-  const { rows: funds } = await pool.query(`SELECT * FROM funds`);
+
+  // Get all funds first
+  const { rows: allFunds } = await pool.query(`SELECT * FROM funds`);
+
+  // Filter funds to those that have invested in the filtered companies
+  let funds = allFunds;
+  if (companies.length > 0) {
+    // Find funds that have invested_in edges to the filtered companies
+    const { rows: investmentEdges } = await pool.query(
+      `SELECT DISTINCT source_id FROM graph_edges
+       WHERE rel = 'invested_in'
+       AND target_id = ANY($1)`,
+      [companies.map(c => `c_${c.id}`)]
+    );
+    // Extract fund IDs from source_id (e.g., "f_bbv" -> "bbv", "f_fundnv" -> "fundnv")
+    const fundIds = investmentEdges.map(e => {
+      const match = e.source_id.match(/^f_(.+)$/);
+      return match ? match[1] : null;
+    }).filter(Boolean);
+
+    funds = allFunds.filter(f => fundIds.includes(f.id));
+  }
 
   // Load sector heat from constants
   const { rows: constRows } = await pool.query(
@@ -38,14 +59,14 @@ export async function getKpis({ stage, region, sector } = {}) {
   );
   const sectorHeat = constRows[0]?.value || {};
 
-  // Capital Deployed
+  // Capital Deployed - sum of all funds investing in filtered companies
   const ssbciFunds = funds.filter((f) => f.fund_type === 'SSBCI');
   const capitalDeployed = funds.reduce(
     (s, f) => s + parseFloat(f.deployed_m || 0),
     0
   );
 
-  // Private Leverage
+  // Private Leverage - SSBCI funds only
   const ssbciDeployed = ssbciFunds.reduce(
     (s, f) => s + parseFloat(f.deployed_m || 0),
     0
