@@ -7,12 +7,32 @@
   background: rgba(12, 16, 20, 0.92);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-sm);
-  padding: 12px 14px;
+  padding: 10px 12px;
   z-index: 5;
   min-width: 140px;
-  max-width: 200px;
+  max-width: 190px;
   backdrop-filter: blur(12px);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+/* ── Collapsed state — small icon-only pill ── */
+
+.collapsed {
+  position: absolute;
+  top: var(--space-lg);
+  left: var(--space-lg);
+  z-index: 5;
+}
+
+/* ── Header row with title + collapse toggle ── */
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 /* ── Section title — Economist header typography ── */
@@ -24,9 +44,32 @@
   color: var(--text-disabled);
   font-family: var(--font-body);
   font-weight: var(--weight-semibold);
-  margin-bottom: 10px;
-  padding-bottom: 6px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+/* ── Collapse / expand button ── */
+
+.collapseBtn {
+  width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border-subtle);
+  border-radius: 3px;
+  color: var(--text-disabled);
+  font-size: 12px;
+  cursor: pointer;
+  line-height: 1;
+  transition: all var(--transition-fast);
+  flex-shrink: 0;
+  font-family: var(--font-body);
+}
+
+.collapseBtn:hover {
+  background: rgba(69, 215, 198, 0.1);
+  color: var(--accent-teal);
+  border-color: rgba(69, 215, 198, 0.3);
 }
 
 /* ── Node type items ── */
@@ -62,7 +105,7 @@
 .separator {
   height: 1px;
   background: rgba(255, 255, 255, 0.06);
-  margin: 10px 0;
+  margin: 8px 0;
 }
 
 /* ── Edge type section ── */
@@ -74,13 +117,13 @@
   color: var(--text-disabled);
   font-family: var(--font-body);
   font-weight: var(--weight-semibold);
-  margin-bottom: 8px;
+  margin-bottom: 6px;
 }
 
 .edgeItems {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 5px;
 }
 
 .edgeItem {
@@ -131,8 +174,8 @@
 /* ── Stats footer ── */
 
 .stats {
-  margin-top: 10px;
-  padding-top: 8px;
+  margin-top: 8px;
+  padding-top: 6px;
   border-top: 1px solid rgba(255, 255, 255, 0.06);
   display: flex;
   justify-content: space-between;

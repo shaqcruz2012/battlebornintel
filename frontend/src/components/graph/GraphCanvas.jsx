@@ -4,12 +4,12 @@ import { useWindowSize } from '../../hooks/useWindowSize';
 import { fmt } from '../../engine/formatters';
 import styles from './GraphCanvas.module.css';
 
-const MIN_R = 6;
-const MAX_R = 28;
+const MIN_R = 3;
+const MAX_R = 11;
 
 function nodeRadius(node, pagerank) {
-  if (node.type === 'fund' || node.type === 'accelerator') return 14;
-  if (node.type === 'sector' || node.type === 'ecosystem' || node.type === 'region') return 11;
+  if (node.type === 'fund' || node.type === 'accelerator') return 8;
+  if (node.type === 'sector' || node.type === 'ecosystem' || node.type === 'region') return 6;
   if (node.type === 'company') {
     // Use normalized PageRank (0–1) for log-scaled radius when available,
     // otherwise fall back to funding-based sizing.
@@ -17,9 +17,9 @@ function nodeRadius(node, pagerank) {
     if (pr !== undefined) {
       return MIN_R + (MAX_R - MIN_R) * Math.log(1 + pr * 9) / Math.log(10);
     }
-    return Math.min(MAX_R, 7 + Math.sqrt(Math.max(0, node.funding || 0)) * 0.3);
+    return Math.min(MAX_R, 4 + Math.sqrt(Math.max(0, node.funding || 0)) * 0.15);
   }
-  return 8;
+  return 5;
 }
 
 function nodeColor(node, colorMode, communities) {
@@ -262,7 +262,7 @@ export function GraphCanvas({
   const tooltipActiveRef = useRef(false);
 
   const w = Math.min(winW - 16, 1800);
-  const h = Math.max(640, winH - 190);
+  const h = Math.max(640, winH - 104); // header(64) + tabs(40)
 
   const searchLower = searchTerm.toLowerCase();
   const matchesSearch = useCallback(

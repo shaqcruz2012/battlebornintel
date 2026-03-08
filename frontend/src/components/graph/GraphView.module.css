@@ -1,18 +1,37 @@
-.wrapper {
-  grid-column: 1 / -1;
+/* ── GraphView — full-viewport immersive graph layout ── */
+
+/* Takes over the full height below header + tabs (64 + 40 = 104px) */
+.graphPage {
+  /* Negative horizontal margin counteracts AppShell's 32px side padding
+     so the graph bleeds edge-to-edge on its row */
+  margin: 0 calc(-1 * var(--grid-margin));
+  height: calc(100dvh - 104px);
+  overflow: hidden;
   display: flex;
   flex-direction: column;
-  gap: var(--space-lg);
 }
 
 .body {
   display: flex;
-  gap: var(--space-lg);
+  flex: 1;
+  overflow: hidden;
   position: relative;
 }
 
-@media (max-width: 1200px) {
-  .body {
-    flex-direction: column;
-  }
+/* Canvas area fills all horizontal space left after NodeDetail */
+.canvasOuter {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Centered loading indicator */
+.loadingCenter {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-secondary);
+  font-family: var(--font-body);
+  font-size: var(--text-caption);
 }

@@ -1,7 +1,10 @@
+import { useState } from 'react';
 import { NODE_CFG, EDGE_CATEGORY_CFG } from '../../data/constants';
 import styles from './GraphLegend.module.css';
 
 export function GraphLegend({ colorMode, nodeFilters, layout }) {
+  const [collapsed, setCollapsed] = useState(false);
+
   const items = Object.entries(NODE_CFG)
     .filter(([key]) => nodeFilters[key])
     .map(([key, cfg]) => ({
@@ -14,12 +17,38 @@ export function GraphLegend({ colorMode, nodeFilters, layout }) {
   const nodeCount = layout?.nodes?.length || 0;
   const edgeCount = layout?.edges?.length || 0;
 
+  if (collapsed) {
+    return (
+      <div className={styles.collapsed}>
+        <button
+          className={styles.collapseBtn}
+          onClick={() => setCollapsed(false)}
+          title="Expand legend"
+          aria-label="Expand legend"
+        >
+          ≡
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div className={styles.legend}>
-      {/* Node types section */}
-      <div className={styles.title}>
-        {colorMode === 'community' ? 'Community Colors' : 'Node Types'}
+      {/* Header with collapse button */}
+      <div className={styles.header}>
+        <span className={styles.title}>
+          {colorMode === 'community' ? 'Community Colors' : 'Node Types'}
+        </span>
+        <button
+          className={styles.collapseBtn}
+          onClick={() => setCollapsed(true)}
+          title="Collapse legend"
+          aria-label="Collapse legend"
+        >
+          ×
+        </button>
       </div>
+
       <div className={styles.items}>
         {items.map((item) => (
           <div key={item.key} className={styles.item}>
