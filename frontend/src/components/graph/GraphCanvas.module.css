@@ -3,7 +3,7 @@
 .canvasWrap {
   position: relative;
   flex: 1;
-  min-height: 500px;
+  min-height: 640px;
   background: var(--bg-root);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-md);
