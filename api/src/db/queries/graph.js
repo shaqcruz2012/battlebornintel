@@ -25,25 +25,29 @@ export async function getGraphData({ nodeTypes = [], yearMax = 2026, region } = 
     : [];
 
   // Load people once — reused for nodes and founder edges
+  // note column excluded: free-text blob not needed for graph visualization
   const needPeople = nodeTypes.includes('person');
   const peopleRows = needPeople
-    ? (await pool.query(`SELECT id, name, role, note, company_id FROM people`)).rows
+    ? (await pool.query(`SELECT id, name, role, company_id FROM people`)).rows
     : [];
 
   // Parallel fetch for independent tables
+  // note columns excluded from accelerators and ecosystem_orgs — free-text not
+  // needed for graph visualization and adds unnecessary payload weight
   const accelSql = nodeTypes.includes('accelerator')
-    ? `SELECT id, name, accel_type, city, region, founded, note FROM accelerators${region && region !== 'all' ? ` WHERE region = $1` : ''}`
+    ? `SELECT id, name, accel_type, city, region, founded FROM accelerators${region && region !== 'all' ? ` WHERE region = $1` : ''}`
     : null;
   const ecoSql = nodeTypes.includes('ecosystem')
-    ? `SELECT id, name, entity_type, city, region, note FROM ecosystem_orgs${region && region !== 'all' ? ` WHERE region = $1` : ''}`
+    ? `SELECT id, name, entity_type, city, region FROM ecosystem_orgs${region && region !== 'all' ? ` WHERE region = $1` : ''}`
     : null;
 
   const [fundRows, externalRows, accelRows, ecoRows, edgeRows, listingRows, exchangeRows] = await Promise.all([
     nodeTypes.includes('fund')
       ? pool.query(`SELECT id, name, fund_type FROM graph_funds`).then(r => r.rows)
       : [],
+    // note excluded: free-text not needed for graph visualization
     nodeTypes.includes('external')
-      ? pool.query(`SELECT id, name, entity_type, note FROM externals`).then(r => r.rows)
+      ? pool.query(`SELECT id, name, entity_type FROM externals`).then(r => r.rows)
       : [],
     accelSql
       ? pool.query(accelSql, region && region !== 'all' ? [region] : []).then(r => r.rows)
@@ -52,7 +56,7 @@ export async function getGraphData({ nodeTypes = [], yearMax = 2026, region } = 
       ? pool.query(ecoSql, region && region !== 'all' ? [region] : []).then(r => r.rows)
       : [],
     pool.query(
-      `SELECT source_id, target_id, rel, note, event_year FROM graph_edges WHERE (event_year IS NULL OR event_year <= $1)`,
+      `SELECT source_id, target_id, rel, note, event_year, edge_category, edge_style, edge_color, edge_opacity FROM graph_edges WHERE (event_year IS NULL OR event_year <= $1)`,
       [yearMax]
     ).then(r => r.rows),
     nodeTypes.includes('exchange')
@@ -90,7 +94,6 @@ export async function getGraphData({ nodeTypes = [], yearMax = 2026, region } = 
     for (const p of peopleRows) {
       add(p.id, p.name, 'person', {
         role: p.role,
-        note: p.note,
         companyId: p.company_id,
       });
     }
@@ -98,7 +101,7 @@ export async function getGraphData({ nodeTypes = [], yearMax = 2026, region } = 
 
   if (nodeTypes.includes('external')) {
     for (const x of externalRows) {
-      add(x.id, x.name, 'external', { etype: x.entity_type, note: x.note });
+      add(x.id, x.name, 'external', { etype: x.entity_type });
     }
   }
 
@@ -109,7 +112,6 @@ export async function getGraphData({ nodeTypes = [], yearMax = 2026, region } = 
         city: a.city,
         region: a.region,
         founded: a.founded,
-        note: a.note,
       });
     }
   }
@@ -120,7 +122,6 @@ export async function getGraphData({ nodeTypes = [], yearMax = 2026, region } = 
         etype: o.entity_type,
         city: o.city,
         region: o.region,
-        note: o.note,
       });
     }
   }
@@ -165,13 +166,20 @@ export async function getGraphData({ nodeTypes = [], yearMax = 2026, region } = 
   const edges = [];
   for (const e of edgeRows) {
     if (nodeSet.has(e.source_id) && nodeSet.has(e.target_id)) {
-      edges.push({
+      const edge = {
         source: e.source_id,
         target: e.target_id,
         rel: e.rel,
-        note: e.note,
         y: e.event_year,
-      });
+      };
+      // Include visual metadata only when present to keep payload lean
+      if (e.edge_category && e.edge_category !== 'historical') {
+        edge.category = e.edge_category;
+      }
+      if (e.edge_style) edge.style = e.edge_style;
+      if (e.edge_color) edge.color = e.edge_color;
+      if (e.edge_opacity != null) edge.opacity = e.edge_opacity;
+      edges.push(edge);
     }
   }
 

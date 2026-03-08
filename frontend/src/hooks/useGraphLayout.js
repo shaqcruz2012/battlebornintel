@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useMemo } from 'react';
 
 /**
  * Hook to compute graph layout using Web Worker
@@ -38,6 +38,18 @@ export function useGraphLayout(nodes, edges, options = {}) {
       }
     };
   }, []);
+
+  // Stable keys derived from graph topology (IDs and connections), not object references.
+  // This prevents the layout from recomputing when upstream code recreates the same
+  // arrays with new references but identical data.
+  const nodesKey = useMemo(
+    () => JSON.stringify((nodes || []).map((n) => n.id).sort()),
+    [nodes]
+  );
+  const edgesKey = useMemo(
+    () => JSON.stringify((edges || []).map((e) => `${e.source}-${e.target}`).sort()),
+    [edges]
+  );
 
   // Compute layout when nodes/edges change
   useEffect(() => {
@@ -87,7 +99,8 @@ export function useGraphLayout(nodes, edges, options = {}) {
       worker.removeEventListener('message', handleMessage);
       worker.removeEventListener('error', handleError);
     };
-  }, [nodes, edges, iterations, enabled]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [nodesKey, edgesKey, iterations, enabled]);
 
   return { layout, isLoading, error };
 }
