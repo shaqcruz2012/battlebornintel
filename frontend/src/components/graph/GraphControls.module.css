@@ -1,22 +1,108 @@
-/* ── GraphControls: Bloomberg-style filter bar ─────────── */
+/* ── GraphControls: Bloomberg-style filter overlay ─────── */
 
-.controls {
+/* ── Overlay panel ─────────────────────────────────────── */
+
+.overlay {
+  position: absolute;
+  top: var(--space-sm);
+  right: var(--space-sm);
+  z-index: var(--z-sticky);
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-xs);
-  padding: var(--space-md) 0;
+  flex-direction: column;
+  gap: 4px;
+  background: rgba(10, 14, 20, 0.90);
+  backdrop-filter: blur(10px);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: var(--space-sm) var(--space-md);
+  max-width: 340px;
 }
 
+/* ── Collapsed state — single ⚙ icon ── */
+
+.collapsedOverlay {
+  position: absolute;
+  top: var(--space-sm);
+  right: var(--space-sm);
+  z-index: var(--z-sticky);
+}
+
+.expandBtn {
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(10, 14, 20, 0.90);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  color: var(--text-disabled);
+  font-size: 14px;
+  cursor: pointer;
+  backdrop-filter: blur(10px);
+  transition: all var(--transition-fast);
+}
+
+.expandBtn:hover {
+  background: rgba(69, 215, 198, 0.1);
+  color: var(--accent-teal);
+  border-color: rgba(69, 215, 198, 0.3);
+}
+
+/* ── Header row ── */
+
+.overlayHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 4px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  margin-bottom: 2px;
+}
+
+.overlayTitle {
+  font-family: var(--font-body);
+  font-size: 9px;
+  font-weight: var(--weight-semibold);
+  color: var(--text-disabled);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.collapseBtn {
+  width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border-subtle);
+  border-radius: 3px;
+  color: var(--text-disabled);
+  font-size: 12px;
+  cursor: pointer;
+  line-height: 1;
+  transition: all var(--transition-fast);
+  font-family: var(--font-body);
+}
+
+.collapseBtn:hover {
+  background: rgba(69, 215, 198, 0.1);
+  color: var(--accent-teal);
+  border-color: rgba(69, 215, 198, 0.3);
+}
+
+/* ── Search input ── */
+
 .searchInput {
-  padding: 5px 12px;
+  width: 100%;
+  padding: 5px 10px;
   border-radius: var(--radius-sm);
   border: 1px solid var(--border-subtle);
-  background: var(--bg-card);
+  background: rgba(255, 255, 255, 0.04);
   color: var(--text-primary);
   font-family: var(--font-body);
   font-size: var(--text-caption-sm);
-  width: 180px;
   outline: none;
   transition:
     border-color var(--transition-fast),
@@ -33,38 +119,7 @@
   box-shadow: var(--shadow-focus);
 }
 
-.separator {
-  width: 1px;
-  height: 16px;
-  background: var(--border-subtle);
-  margin: 0 var(--space-xs);
-}
-
-.modeLabel {
-  font-family: var(--font-body);
-  font-size: var(--text-micro);
-  font-weight: var(--weight-semibold);
-  color: var(--text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-}
-
-/* ── Overlay panel ─────────────────────────────────────── */
-
-.overlay {
-  position: absolute;
-  top: var(--space-sm);
-  right: var(--space-sm);
-  z-index: var(--z-sticky);
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  background: rgba(10, 14, 20, 0.88);
-  backdrop-filter: blur(8px);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-md);
-  padding: var(--space-sm) var(--space-md);
-}
+/* ── Row ── */
 
 .overlayRow {
   display: flex;

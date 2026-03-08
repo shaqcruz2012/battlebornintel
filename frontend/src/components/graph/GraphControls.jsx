@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { NODE_CFG } from '../../data/constants';
 import { FilterChip } from '../shared/FilterChip';
 import styles from './GraphControls.module.css';
@@ -44,57 +45,89 @@ function matchesPreset(nodeFilters, preset) {
   return Object.entries(preset.nodes).every(([k, v]) => nodeFilters[k] === v);
 }
 
-export function GraphControls({
-  nodeFilters,
-  onSetNodeFilters,
-  search,
-  onSearchChange,
-}) {
-  const activePreset = STAKEHOLDER_PRESETS.find((p) => matchesPreset(nodeFilters, p));
-
-  return (
-    <div className={styles.controls}>
-      <input
-        className={styles.searchInput}
-        type="text"
-        placeholder="Search nodes..."
-        value={search}
-        onChange={(e) => onSearchChange(e.target.value)}
-      />
-
-      <span className={styles.separator} />
-
-      <span className={styles.modeLabel}>View</span>
-      {STAKEHOLDER_PRESETS.map((p) => (
-        <FilterChip
-          key={p.id}
-          label={p.label}
-          active={activePreset?.id === p.id}
-          onClick={() => onSetNodeFilters(p.nodes)}
-        />
-      ))}
-    </div>
-  );
-}
-
 const OPP_FILTERS = [
   { value: 'all', label: 'All' },
   { value: 'programs', label: 'Programs' },
   { value: 'funds', label: 'Funds' },
 ];
 
+/**
+ * GraphOverlayControls — top-right floating panel inside the graph canvas.
+ * Includes search, view presets, node type toggles, color mode, and edge filters.
+ * Collapses to a single ⚙ icon to maximise canvas space.
+ */
 export function GraphOverlayControls({
   nodeFilters,
   onToggleNode,
+  onSetNodeFilters,
   colorMode,
   onColorModeChange,
   showOpportunities = false,
   onToggleOpportunities,
   opportunityFilter = 'all',
   onOpportunityFilterChange,
+  search = '',
+  onSearchChange,
 }) {
+  const [collapsed, setCollapsed] = useState(false);
+  const activePreset = STAKEHOLDER_PRESETS.find((p) => matchesPreset(nodeFilters, p));
+
+  if (collapsed) {
+    return (
+      <div className={styles.collapsedOverlay}>
+        <button
+          className={styles.expandBtn}
+          onClick={() => setCollapsed(false)}
+          title="Expand controls"
+          aria-label="Expand graph controls"
+        >
+          ⚙
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div className={styles.overlay}>
+      {/* Header row: label + collapse button */}
+      <div className={styles.overlayHeader}>
+        <span className={styles.overlayTitle}>Controls</span>
+        <button
+          className={styles.collapseBtn}
+          onClick={() => setCollapsed(true)}
+          title="Collapse controls"
+          aria-label="Collapse graph controls"
+        >
+          ×
+        </button>
+      </div>
+
+      {/* Search input */}
+      <div className={styles.overlayRow}>
+        <input
+          className={styles.searchInput}
+          type="text"
+          placeholder="Search nodes…"
+          value={search}
+          onChange={(e) => onSearchChange(e.target.value)}
+        />
+      </div>
+
+      {/* View presets */}
+      <div className={styles.overlayRow}>
+        <span className={styles.overlayLabel}>View</span>
+        {STAKEHOLDER_PRESETS.map((p) => (
+          <FilterChip
+            key={p.id}
+            label={p.label}
+            active={activePreset?.id === p.id}
+            onClick={() => onSetNodeFilters(p.nodes)}
+            small
+          />
+        ))}
+      </div>
+
+      {/* Node type toggles */}
       <div className={styles.overlayRow}>
         <span className={styles.overlayLabel}>Nodes</span>
         {NODE_TYPES.map((t) => (
@@ -107,6 +140,8 @@ export function GraphOverlayControls({
           />
         ))}
       </div>
+
+      {/* Color mode */}
       <div className={styles.overlayRow}>
         <span className={styles.overlayLabel}>Color</span>
         {COLOR_MODES.map((m) => (
@@ -119,6 +154,8 @@ export function GraphOverlayControls({
           />
         ))}
       </div>
+
+      {/* Edge controls */}
       <div className={styles.overlayRow}>
         <span className={styles.overlayLabel}>Edges</span>
         <FilterChip

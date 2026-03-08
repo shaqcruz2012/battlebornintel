@@ -3,8 +3,7 @@ import { useFilters } from '../../hooks/useFilters';
 import { useGraph, useGraphMetrics } from '../../api/hooks';
 import { useGraphLayout } from '../../hooks/useGraphLayout';
 import { useWindowSize } from '../../hooks/useWindowSize';
-import { MainGrid } from '../layout/AppShell';
-import { GraphControls, GraphOverlayControls } from './GraphControls';
+import { GraphOverlayControls } from './GraphControls';
 import { GraphCanvas } from './GraphCanvas';
 import { GraphLegend } from './GraphLegend';
 import { NodeDetail } from './NodeDetail';
@@ -44,9 +43,10 @@ export function GraphView() {
   const handleCloseNode = useCallback(() => setSelectedNode(null), []);
   const handleToggleOpportunities = useCallback(() => setShowOpportunities((v) => !v), []);
 
-  // Debounce dimensions so D3 layout doesn't recompute on every resize pixel
+  // Debounce dimensions so D3 layout doesn't recompute on every resize pixel.
+  // No controls bar above canvas any more — just header(64) + tabs(40) = 104px overhead.
   const rawW = Math.min(winW - 16, 1800);
-  const rawH = Math.max(640, winH - 190);
+  const rawH = Math.max(640, winH - 104);
   const [dims, setDims] = useState({ w: rawW, h: rawH });
   const debounceRef = useRef(null);
   useEffect(() => {
@@ -63,8 +63,6 @@ export function GraphView() {
     }, 200);
     return () => clearTimeout(debounceRef.current);
   }, [rawW, rawH]);
-  // dims is passed to useGraphLayout so the worker re-runs only after the debounce
-  // settles (and only when dims actually changed by > 50 px, per the guard above).
 
   // Active node types for API query
   const activeNodeTypes = useMemo(
@@ -79,9 +77,6 @@ export function GraphView() {
   // Compute D3 layout in Web Worker to keep UI responsive
   const rawNodes = graphData?.nodes || [];
   const rawEdges = graphData?.edges || [];
-  // FIX 7b: Pass debounced dims so the worker uses stable viewport dimensions.
-  // This is the primary consumer of `dims` state — it prevents D3 from seeing
-  // a new width/height on every resize pixel while the debounce is unsettled.
   const { layout: workerLayout, isLoading: layoutLoading } = useGraphLayout(rawNodes, rawEdges, { width: dims.w, height: dims.h });
 
   // Resolve edge source/target from string IDs to node objects (required by GraphCanvas)
@@ -100,57 +95,55 @@ export function GraphView() {
 
   if (loadingGraph || loadingMetrics || layoutLoading) {
     return (
-      <MainGrid>
-        <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-secondary)' }}>
+      <div className={styles.graphPage}>
+        <div className={styles.loadingCenter}>
           Loading graph...
         </div>
-      </MainGrid>
+      </div>
     );
   }
 
   return (
-    <MainGrid>
-      <div className={styles.wrapper}>
-        <GraphControls
-          nodeFilters={nodeFilters}
-          onSetNodeFilters={setNodeFilters}
-          search={search}
-          onSearchChange={setSearch}
-        />
-
-        <div className={styles.body}>
-          <div style={{ position: 'relative', flex: 1 }}>
-            <GraphCanvas
-              layout={layout}
-              metrics={metrics}
-              colorMode={colorMode}
-              selectedNode={selectedNode}
-              onSelectNode={handleSelectNode}
-              searchTerm={search}
-              showOpportunities={showOpportunities}
-              opportunityFilter={opportunityFilter}
-            />
-            <GraphLegend colorMode={colorMode} nodeFilters={nodeFilters} layout={layout} />
-            <GraphOverlayControls
-              nodeFilters={nodeFilters}
-              onToggleNode={toggleNode}
-              colorMode={colorMode}
-              onColorModeChange={setColorMode}
-              showOpportunities={showOpportunities}
-              onToggleOpportunities={handleToggleOpportunities}
-              opportunityFilter={opportunityFilter}
-              onOpportunityFilterChange={setOpportunityFilter}
-            />
-          </div>
-
-          <NodeDetail
-            nodeId={selectedNode}
+    <div className={styles.graphPage}>
+      <div className={styles.body}>
+        {/* Canvas area — fills all available space */}
+        <div className={styles.canvasOuter}>
+          <GraphCanvas
             layout={layout}
             metrics={metrics}
-            onClose={handleCloseNode}
+            colorMode={colorMode}
+            selectedNode={selectedNode}
+            onSelectNode={handleSelectNode}
+            searchTerm={search}
+            showOpportunities={showOpportunities}
+            opportunityFilter={opportunityFilter}
+          />
+          {/* Left overlay: legend (minimizable) */}
+          <GraphLegend colorMode={colorMode} nodeFilters={nodeFilters} layout={layout} />
+          {/* Right overlay: node/color/edge controls + search (minimizable) */}
+          <GraphOverlayControls
+            nodeFilters={nodeFilters}
+            onToggleNode={toggleNode}
+            onSetNodeFilters={setNodeFilters}
+            colorMode={colorMode}
+            onColorModeChange={setColorMode}
+            showOpportunities={showOpportunities}
+            onToggleOpportunities={handleToggleOpportunities}
+            opportunityFilter={opportunityFilter}
+            onOpportunityFilterChange={setOpportunityFilter}
+            search={search}
+            onSearchChange={setSearch}
           />
         </div>
+
+        {/* Node detail sidebar — slides in on node select */}
+        <NodeDetail
+          nodeId={selectedNode}
+          layout={layout}
+          metrics={metrics}
+          onClose={handleCloseNode}
+        />
       </div>
-    </MainGrid>
+    </div>
   );
 }
