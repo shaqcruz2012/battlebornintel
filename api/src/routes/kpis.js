@@ -15,7 +15,8 @@ router.get('/', async (req, res, next) => {
 
 router.get('/sectors', async (req, res, next) => {
   try {
-    const data = await getSectorStats();
+    const { region } = req.query;
+    const data = await getSectorStats({ region });
     res.json({ data });
   } catch (err) {
     next(err);

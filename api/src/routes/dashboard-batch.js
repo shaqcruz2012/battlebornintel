@@ -152,20 +152,23 @@ router.get('/executives', async (req, res, next) => {
 
 /**
  * GET /api/dashboard-batch/goed
- * Fetch GOED-specific data (funds + sectors + companies)
+ * Fetch GOED-specific data (kpis + sectors + companies)
+ *
+ * The `region` query param scopes all three datasets so that capital deployed,
+ * sector counts, and company lists all reflect the selected Nevada region.
  */
 router.get('/goed', async (req, res, next) => {
   try {
     const { region } = req.query;
 
-    const filters = region ? { region } : {};
+    const filters = region && region !== 'all' ? { region } : {};
 
-    const [funds, sectors, companies] = await Promise.all([
-      getAllFunds().catch(err => {
-        console.error('Funds query error:', err);
-        return [];
+    const [kpis, sectors, companies] = await Promise.all([
+      getKpis(filters).catch(err => {
+        console.error('KPIs query error:', err);
+        return {};
       }),
-      getSectorStats().catch(err => {
+      getSectorStats(filters).catch(err => {
         console.error('Sector stats query error:', err);
         return [];
       }),
@@ -175,7 +178,7 @@ router.get('/goed', async (req, res, next) => {
       }),
     ]);
 
-    res.json({ funds, sectors, companies });
+    res.json({ kpis, sectors, companies });
   } catch (err) {
     next(err);
   }

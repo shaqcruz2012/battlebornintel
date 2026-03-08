@@ -20,11 +20,11 @@ export function useCompany(id) {
   });
 }
 
-/** All funds */
-export function useFunds() {
+/** All funds — optionally filtered by region */
+export function useFunds(filters = {}) {
   return useQuery({
-    queryKey: ['funds'],
-    queryFn: () => api.getFunds(),
+    queryKey: ['funds', filters],
+    queryFn: () => api.getFunds(filters),
     staleTime: 300_000,
   });
 }
@@ -144,7 +144,7 @@ export function useStakeholderActivities(params = {}) {
 const GOED_NODE_TYPES = ['company', 'fund', 'person', 'external', 'accelerator', 'ecosystem'];
 
 export function useGoedSummary(region) {
-  const fundsQuery = useFunds();
+  const fundsQuery = useFunds(region && region !== 'all' ? { region } : {});
   const graphQuery = useGraph(GOED_NODE_TYPES, 2026, region);
   const companiesQuery = useCompanies(region ? { region } : {});
 

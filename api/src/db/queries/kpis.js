@@ -41,23 +41,37 @@ export async function getKpis({ stage, region, sector } = {}) {
   // Get all funds first
   const { rows: allFunds } = await pool.query(`SELECT * FROM funds`);
 
-  // Filter funds to those that have invested in the filtered companies
-  let funds = allFunds;
-  if (companies.length > 0) {
-    // Find funds that have invested_in edges to the filtered companies
-    const { rows: investmentEdges } = await pool.query(
-      `SELECT DISTINCT source_id FROM graph_edges
-       WHERE rel = 'invested_in'
-       AND target_id = ANY($1)`,
-      [companies.map(c => `c_${c.id}`)]
-    );
-    // Extract fund IDs from source_id (e.g., "f_bbv" -> "bbv", "f_fundnv" -> "fundnv")
-    const fundIds = investmentEdges.map(e => {
-      const match = e.source_id.match(/^f_(.+)$/);
-      return match ? match[1] : null;
-    }).filter(Boolean);
+  // Filter funds to those that have invested in the filtered companies.
+  // When a region (or other filter) is active we must always scope funds to
+  // the matching company set — even when that set is empty (→ zero capital).
+  let funds;
+  const isFiltered = (region && region !== 'all') ||
+                     (stage && stage !== 'all') ||
+                     (sector && sector !== 'all');
 
-    funds = allFunds.filter(f => fundIds.includes(f.id));
+  if (isFiltered) {
+    if (companies.length === 0) {
+      // No companies match the active filter → no capital deployed in this region
+      funds = [];
+    } else {
+      // Find funds that have invested_in edges to the filtered companies
+      const { rows: investmentEdges } = await pool.query(
+        `SELECT DISTINCT source_id FROM graph_edges
+         WHERE rel = 'invested_in'
+         AND target_id = ANY($1)`,
+        [companies.map(c => `c_${c.id}`)]
+      );
+      // Extract fund IDs from source_id (e.g., "f_bbv" -> "bbv", "f_fundnv" -> "fundnv")
+      const fundIds = investmentEdges.map(e => {
+        const match = e.source_id.match(/^f_(.+)$/);
+        return match ? match[1] : null;
+      }).filter(Boolean);
+
+      funds = allFunds.filter(f => fundIds.includes(f.id));
+    }
+  } else {
+    // No filter active → statewide totals use all funds
+    funds = allFunds;
   }
 
   // Load sector heat from constants
@@ -178,8 +192,14 @@ export async function getKpis({ stage, region, sector } = {}) {
   };
 }
 
-export async function getSectorStats() {
-  const { rows: companies } = await pool.query(`SELECT * FROM companies`);
+export async function getSectorStats({ region } = {}) {
+  let sectorSql = `SELECT * FROM companies`;
+  const sectorParams = [];
+  if (region && region !== 'all') {
+    sectorSql += ` WHERE region = $1`;
+    sectorParams.push(region);
+  }
+  const { rows: companies } = await pool.query(sectorSql, sectorParams);
   const { rows: constRows } = await pool.query(
     `SELECT value FROM constants WHERE key = 'sector_heat'`
   );
