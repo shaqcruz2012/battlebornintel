@@ -11,10 +11,16 @@
 
 .header {
   display: flex;
-  flex-direction: column;
-  gap: var(--space-sm);
+  align-items: flex-start;
+  justify-content: space-between;
   border-bottom: 1px solid var(--border-subtle);
   padding-bottom: var(--space-lg);
+}
+
+.headerMain {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
 }
 
 .title {
@@ -29,6 +35,31 @@
   font-size: var(--text-caption);
   color: var(--text-disabled);
   margin: 0;
+}
+
+/* ── Section preamble: explanatory narrative ───────────── */
+
+.sectionPreamble {
+  padding: var(--space-md) var(--space-lg);
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--border-subtle);
+  border-left: 3px solid color-mix(in srgb, var(--accent-teal) 40%, transparent);
+  border-radius: var(--radius-md);
+}
+
+.sectionPreambleTitle {
+  font-family: var(--font-heading);
+  font-size: var(--text-h2);
+  font-weight: var(--weight-bold);
+  color: var(--text-primary);
+  margin: 0 0 var(--space-sm);
+}
+
+.sectionPreambleBody {
+  font-size: var(--text-body-sm);
+  color: var(--text-secondary);
+  margin: 0;
+  line-height: 1.65;
 }
 
 .controls {
@@ -149,10 +180,17 @@
 
 .monthHeader {
   display: flex;
-  align-items: baseline;
+  align-items: flex-start;
+  justify-content: space-between;
   gap: var(--space-md);
   padding-bottom: var(--space-md);
   border-bottom: 1px solid var(--border-subtle);
+}
+
+.monthHeaderLeft {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
 }
 
 .monthName {
@@ -163,10 +201,18 @@
   margin: 0;
 }
 
+.monthContextNote {
+  font-size: var(--text-caption-sm);
+  color: var(--text-disabled);
+  font-style: italic;
+}
+
 .monthCount {
   font-size: var(--text-caption-sm);
   color: var(--text-disabled);
   font-weight: var(--weight-medium);
+  white-space: nowrap;
+  padding-top: 4px;
 }
 
 .dateGroups {
@@ -200,6 +246,12 @@
   font-size: var(--text-caption-sm);
   color: var(--text-disabled);
   cursor: help;
+}
+
+.dateItemCount {
+  font-size: var(--text-caption-sm);
+  color: var(--text-disabled);
+  margin-left: auto;
 }
 
 .activities {
@@ -256,17 +308,31 @@
 
 .emptyState {
   display: flex;
-  align-items: center;
-  justify-content: center;
+  align-items: flex-start;
+  justify-content: flex-start;
   padding: var(--space-2xl);
-  text-align: center;
-  color: var(--text-disabled);
   background: rgba(255, 255, 255, 0.02);
   border: 1px dashed var(--border-subtle);
   border-radius: var(--radius-md);
 }
 
-.emptyState p {
+.emptyStateInner {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  max-width: 560px;
+}
+
+.emptyStateHeadline {
   margin: 0;
   font-size: var(--text-body-sm);
+  font-weight: var(--weight-semibold);
+  color: var(--text-secondary);
+}
+
+.emptyStateBody {
+  margin: 0;
+  font-size: var(--text-caption);
+  color: var(--text-disabled);
+  line-height: 1.65;
 }

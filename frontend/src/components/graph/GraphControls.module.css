@@ -1,58 +1,69 @@
+/* ── GraphControls: Bloomberg-style filter bar ─────────── */
+
 .controls {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: var(--space-sm);
+  gap: var(--space-xs);
   padding: var(--space-md) 0;
 }
 
 .searchInput {
-  padding: 6px 14px;
-  border-radius: 20px;
+  padding: 5px 12px;
+  border-radius: var(--radius-sm);
   border: 1px solid var(--border-subtle);
   background: var(--bg-card);
   color: var(--text-primary);
-  font-size: var(--text-caption);
-  width: 200px;
+  font-family: var(--font-body);
+  font-size: var(--text-caption-sm);
+  width: 180px;
   outline: none;
-  transition: border-color var(--transition-fast);
+  transition:
+    border-color var(--transition-fast),
+    box-shadow var(--transition-fast);
 }
 
 .searchInput::placeholder {
-  color: var(--text-disabled);
+  color: var(--text-muted);
+  font-style: italic;
 }
 
 .searchInput:focus {
   border-color: var(--accent-teal);
+  box-shadow: var(--shadow-focus);
 }
 
 .separator {
   width: 1px;
-  height: 20px;
+  height: 16px;
   background: var(--border-subtle);
+  margin: 0 var(--space-xs);
 }
 
 .modeLabel {
-  font-size: var(--text-caption-sm);
-  color: var(--text-disabled);
+  font-family: var(--font-body);
+  font-size: var(--text-micro);
+  font-weight: var(--weight-semibold);
+  color: var(--text-muted);
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.06em;
 }
+
+/* ── Overlay panel ─────────────────────────────────────── */
 
 .overlay {
   position: absolute;
   top: var(--space-sm);
   right: var(--space-sm);
-  z-index: 10;
+  z-index: var(--z-sticky);
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  background: var(--bg-card);
-  background: color-mix(in srgb, var(--bg-card) 90%, transparent);
+  gap: 3px;
+  background: rgba(10, 14, 20, 0.88);
   backdrop-filter: blur(8px);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-md);
-  padding: 6px 10px;
+  padding: var(--space-sm) var(--space-md);
 }
 
 .overlayRow {
@@ -63,10 +74,12 @@
 }
 
 .overlayLabel {
+  font-family: var(--font-body);
   font-size: 9px;
-  color: var(--text-disabled);
+  font-weight: var(--weight-medium);
+  color: var(--text-muted);
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.06em;
   width: 36px;
   flex-shrink: 0;
 }
