@@ -7,8 +7,10 @@ import { useEffect, useState, useRef, useMemo } from 'react';
  */
 export function useGraphLayout(nodes, edges, options = {}) {
   const {
-    iterations = 300,
+    iterations = 400,
     enabled = true,
+    width = 1200,
+    height = 700,
   } = options;
 
   const [layout, setLayout] = useState({ nodes: nodes || [], edges: edges || [] });
@@ -69,7 +71,7 @@ export function useGraphLayout(nodes, edges, options = {}) {
     setError(null);
 
     // Send work to worker
-    worker.postMessage({ nodes, edges, iterations });
+    worker.postMessage({ nodes, edges, width, height, iterations });
 
     // Handle worker response
     const handleMessage = (e) => {

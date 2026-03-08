@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { NODE_CFG } from '../../data/constants';
 import { FilterChip } from '../shared/FilterChip';
+import { GraphSearchDropdown } from './GraphSearchDropdown';
 import styles from './GraphControls.module.css';
 
 const NODE_TYPES = Object.entries(NODE_CFG).map(([key, cfg]) => ({
@@ -68,6 +69,8 @@ export function GraphOverlayControls({
   onOpportunityFilterChange,
   search = '',
   onSearchChange,
+  nodes = [],
+  onFocusNode,
 }) {
   const [collapsed, setCollapsed] = useState(false);
   const activePreset = STAKEHOLDER_PRESETS.find((p) => matchesPreset(nodeFilters, p));
@@ -104,13 +107,27 @@ export function GraphOverlayControls({
 
       {/* Search input */}
       <div className={styles.overlayRow}>
-        <input
-          className={styles.searchInput}
-          type="text"
-          placeholder="Search nodes…"
-          value={search}
-          onChange={(e) => onSearchChange(e.target.value)}
-        />
+        <div style={{ position: 'relative', width: '100%' }}>
+          <input
+            className={styles.searchInput}
+            type="text"
+            placeholder="Search nodes…"
+            value={search}
+            onChange={(e) => onSearchChange(e.target.value)}
+            style={{ width: '100%' }}
+          />
+          {search && nodes.length > 0 && (
+            <GraphSearchDropdown
+              nodes={nodes}
+              searchTerm={search}
+              onSelect={(nodeId) => {
+                onFocusNode?.(nodeId);
+                onSearchChange('');
+              }}
+              onClose={() => onSearchChange('')}
+            />
+          )}
+        </div>
       </div>
 
       {/* View presets */}

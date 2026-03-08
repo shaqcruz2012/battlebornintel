@@ -30,6 +30,7 @@ export function GraphView() {
   const [selectedNode, setSelectedNode] = useState(null);
   const [showOpportunities, setShowOpportunities] = useState(false);
   const [opportunityFilter, setOpportunityFilter] = useState('all');
+  const [focusNodeId, setFocusNodeId] = useState(null);
 
   // FIX 7a: Wrap in useCallback so GraphOverlayControls gets a stable reference
   // and doesn't re-render on every parent state change.
@@ -42,6 +43,19 @@ export function GraphView() {
   const handleSelectNode = useCallback((id) => setSelectedNode(id), []);
   const handleCloseNode = useCallback(() => setSelectedNode(null), []);
   const handleToggleOpportunities = useCallback(() => setShowOpportunities((v) => !v), []);
+
+  // Select the node and trigger pan/zoom to it in the canvas.
+  const handleFocusNode = useCallback((nodeId) => {
+    setSelectedNode(nodeId);   // also select the node
+    setFocusNodeId(nodeId);    // trigger pan/zoom in canvas
+  }, []);
+
+  // Reset focusNodeId after a short delay so re-focusing the same node works again.
+  useEffect(() => {
+    if (!focusNodeId) return;
+    const t = setTimeout(() => setFocusNodeId(null), 300);
+    return () => clearTimeout(t);
+  }, [focusNodeId]);
 
   // Debounce dimensions so D3 layout doesn't recompute on every resize pixel.
   // No controls bar above canvas any more — just header(64) + tabs(40) = 104px overhead.
@@ -63,6 +77,17 @@ export function GraphView() {
     }, 200);
     return () => clearTimeout(debounceRef.current);
   }, [rawW, rawH]);
+
+  // Ref to measure the actual canvas container size after mount.
+  const canvasRef = useRef(null);
+  useEffect(() => {
+    const el = canvasRef.current;
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    if (rect.width > 0 && rect.height > 0) {
+      setDims({ w: rect.width, h: rect.height });
+    }
+  }, []); // run once on mount
 
   // Active node types for API query
   const activeNodeTypes = useMemo(
@@ -107,7 +132,7 @@ export function GraphView() {
     <div className={styles.graphPage}>
       <div className={styles.body}>
         {/* Canvas area — fills all available space */}
-        <div className={styles.canvasOuter}>
+        <div className={styles.canvasOuter} ref={canvasRef}>
           <GraphCanvas
             layout={layout}
             metrics={metrics}
@@ -117,6 +142,7 @@ export function GraphView() {
             searchTerm={search}
             showOpportunities={showOpportunities}
             opportunityFilter={opportunityFilter}
+            focusNodeId={focusNodeId}
           />
           {/* Left overlay: legend (minimizable) */}
           <GraphLegend colorMode={colorMode} nodeFilters={nodeFilters} layout={layout} />
@@ -133,6 +159,8 @@ export function GraphView() {
             onOpportunityFilterChange={setOpportunityFilter}
             search={search}
             onSearchChange={setSearch}
+            nodes={layout.nodes}
+            onFocusNode={handleFocusNode}
           />
         </div>
 
