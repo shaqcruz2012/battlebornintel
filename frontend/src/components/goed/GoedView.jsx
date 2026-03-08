@@ -9,6 +9,7 @@ import { SsbciKpiStrip } from './SsbciKpiStrip';
 import { StakeholderPanel } from './StakeholderPanel';
 import { KnowledgeFundPanel } from './KnowledgeFundPanel';
 import { StakeholderActivitiesDigest } from './StakeholderActivitiesDigest';
+import { StakeholderActivityFeed } from './StakeholderActivityFeed';
 import styles from './GoedView.module.css';
 
 // Regional thesis data — concise descriptions of each metro's innovation identity
@@ -178,7 +179,10 @@ export function GoedView() {
         nodes={graph.nodes}
       />
 
-      {/* ── Live activity feed ───────────────────────────── */}
+      {/* ── Live activity feed (Bloomberg-style) ─────────── */}
+      <StakeholderActivityFeed />
+
+      {/* ── Legacy digest (kept for reference, hidden below) */}
       <StakeholderActivitiesDigest />
 
       {/* ── Methodology footnote ─────────────────────────── */}
