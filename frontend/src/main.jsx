@@ -6,6 +6,7 @@ import './theme/tokens.css'
 import './theme/typography.css'
 import './theme/animations.css'
 import App from './App.jsx'
+import { PasswordGate } from './components/PasswordGate.jsx'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -18,8 +19,10 @@ const queryClient = new QueryClient({
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
-    <QueryClientProvider client={queryClient}>
-      <App />
-    </QueryClientProvider>
+    <PasswordGate>
+      <QueryClientProvider client={queryClient}>
+        <App />
+      </QueryClientProvider>
+    </PasswordGate>
   </StrictMode>,
 )
