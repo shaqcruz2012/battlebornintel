@@ -1,35 +1,52 @@
+/* ── GraphLegend — Economist-style clean data legend ── */
+
 .legend {
   position: absolute;
   top: var(--space-lg);
   left: var(--space-lg);
-  background: rgba(12, 16, 20, 0.9);
+  background: rgba(12, 16, 20, 0.92);
   border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-md);
-  padding: var(--space-md);
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
   z-index: 5;
-  max-width: 180px;
+  min-width: 140px;
+  max-width: 200px;
+  backdrop-filter: blur(12px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 }
 
+/* ── Section title — Economist header typography ── */
+
 .title {
-  font-size: 10px;
+  font-size: 9px;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 1px;
   color: var(--text-disabled);
-  margin-bottom: var(--space-sm);
+  font-family: var(--font-body);
+  font-weight: var(--weight-semibold);
+  margin-bottom: 10px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 }
+
+/* ── Node type items ── */
 
 .items {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 5px;
 }
 
 .item {
   display: flex;
   align-items: center;
-  gap: var(--space-sm);
-  font-size: var(--text-caption-sm);
+  gap: 8px;
+  font-size: 11px;
   color: var(--text-secondary);
+  font-family: var(--font-body);
+  font-weight: var(--weight-regular);
+  letter-spacing: 0.15px;
+  line-height: 1;
 }
 
 .dot {
@@ -37,4 +54,107 @@
   height: 8px;
   border-radius: 50%;
   flex-shrink: 0;
+  box-shadow: 0 0 3px rgba(255, 255, 255, 0.08);
+}
+
+/* ── Separator between node types and edge types ── */
+
+.separator {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.06);
+  margin: 10px 0;
+}
+
+/* ── Edge type section ── */
+
+.edgeTitle {
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--text-disabled);
+  font-family: var(--font-body);
+  font-weight: var(--weight-semibold);
+  margin-bottom: 8px;
+}
+
+.edgeItems {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.edgeItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  color: var(--text-secondary);
+  font-family: var(--font-body);
+  letter-spacing: 0.15px;
+  line-height: 1;
+}
+
+.edgeLine {
+  width: 20px;
+  height: 2px;
+  flex-shrink: 0;
+  border-radius: 1px;
+}
+
+.edgeLineSolid {
+  composes: edgeLine;
+  background: var(--text-disabled);
+}
+
+.edgeLineDashed {
+  composes: edgeLine;
+  background: repeating-linear-gradient(
+    90deg,
+    var(--text-disabled) 0px,
+    var(--text-disabled) 4px,
+    transparent 4px,
+    transparent 7px
+  );
+}
+
+.edgeLineOpportunity {
+  composes: edgeLine;
+  background: repeating-linear-gradient(
+    90deg,
+    #22C55E 0px,
+    #22C55E 5px,
+    transparent 5px,
+    transparent 9px
+  );
+}
+
+/* ── Stats footer ── */
+
+.stats {
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  display: flex;
+  justify-content: space-between;
+}
+
+.stat {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.statLabel {
+  font-size: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--text-disabled);
+  font-family: var(--font-body);
+}
+
+.statValue {
+  font-family: 'SF Mono', 'Cascadia Code', 'Consolas', monospace;
+  font-size: 11px;
+  font-weight: var(--weight-semibold);
+  color: var(--text-primary);
 }

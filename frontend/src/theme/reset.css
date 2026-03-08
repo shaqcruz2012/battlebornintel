@@ -10,6 +10,8 @@ html {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
+  font-feature-settings: 'kern' 1, 'liga' 1;
+  text-size-adjust: 100%;
 }
 
 body {
@@ -17,8 +19,9 @@ body {
   font-size: var(--text-body);
   color: var(--text-primary);
   background: var(--bg-root);
-  line-height: 1.5;
+  line-height: var(--leading-normal);
   min-height: 100vh;
+  overflow-x: hidden;
 }
 
 img, svg {
@@ -32,6 +35,7 @@ button {
   cursor: pointer;
   border: none;
   background: none;
+  -webkit-tap-highlight-color: transparent;
 }
 
 input, select, textarea {
@@ -50,11 +54,21 @@ ul, ol {
 
 table {
   border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
 }
 
+/* ── Selection styling ──────────────────────────────────── */
+
+::selection {
+  background: rgba(69, 215, 198, 0.2);
+  color: var(--text-primary);
+}
+
+/* ── Scrollbar (Bloomberg-thin) ─────────────────────────── */
+
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
 }
 
 ::-webkit-scrollbar-track {
@@ -62,10 +76,29 @@ table {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--text-disabled);
+  background: rgba(255, 255, 255, 0.08);
   border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--text-secondary);
+  background: rgba(255, 255, 255, 0.15);
+}
+
+/* ── Firefox scrollbar ──────────────────────────────────── */
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.08) transparent;
+}
+
+/* ── Focus styles ───────────────────────────────────────── */
+
+:focus-visible {
+  outline: 2px solid rgba(69, 215, 198, 0.4);
+  outline-offset: 2px;
+}
+
+button:focus-visible {
+  box-shadow: var(--shadow-focus);
+  outline: none;
 }

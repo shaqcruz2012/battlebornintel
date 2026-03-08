@@ -1,7 +1,56 @@
-import { useMemo } from 'react';
+import { useMemo, useState, useCallback } from 'react';
 import { NODE_CFG, REL_CFG } from '../../data/constants';
 import { fmt, stageLabel } from '../../engine/formatters';
 import styles from './NodeDetail.module.css';
+
+/* ── Collapsible section wrapper ── */
+
+function CollapsibleSection({ label, count, defaultOpen = true, children }) {
+  const [open, setOpen] = useState(defaultOpen);
+
+  const handleToggle = useCallback(() => {
+    setOpen((prev) => !prev);
+  }, []);
+
+  return (
+    <div className={styles.section}>
+      <div className={styles.sectionHeader} onClick={handleToggle}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <span className={styles.sectionLabel}>{label}</span>
+          {count !== undefined && (
+            <span className={styles.sectionCount}>{count}</span>
+          )}
+        </div>
+        <span className={`${styles.sectionChevron} ${open ? styles.sectionChevronOpen : ''}`}>
+          &#x25BE;
+        </span>
+      </div>
+      {open && children}
+    </div>
+  );
+}
+
+/* ── Score bar for metric visualization ── */
+
+function ScoreBar({ label, value, max = 100, color }) {
+  const pct = Math.min(100, Math.max(0, (value / max) * 100));
+  const barColor = color || (
+    pct >= 70 ? 'var(--accent-teal)' : pct >= 40 ? 'var(--accent-gold)' : 'var(--status-risk)'
+  );
+
+  return (
+    <div className={styles.scoreBar}>
+      <span className={styles.metricLabel}>{label}</span>
+      <span className={styles.metricValue}>{typeof value === 'number' ? value.toFixed(2) : value}</span>
+      <div className={styles.scoreBarTrack}>
+        <div
+          className={styles.scoreBarFill}
+          style={{ width: `${pct}%`, background: barColor }}
+        />
+      </div>
+    </div>
+  );
+}
 
 export function NodeDetail({ nodeId, layout, metrics, onClose }) {
   const { nodes, edges } = layout;
@@ -24,16 +73,34 @@ export function NodeDetail({ nodeId, layout, metrics, onClose }) {
         const targetId = typeof e.target === 'object' ? e.target.id : e.target;
         const otherId = sourceId === nodeId ? targetId : sourceId;
         const other = nodes.find((n) => n.id === otherId);
-        return { rel: e.rel, node: other, note: e.note };
+        return { rel: e.rel, node: other, note: e.note, edgeCategory: e.edge_category };
       })
       .filter((c) => c.node);
   }, [edges, nodes, nodeId]);
+
+  // Group connections by edge category for organized display
+  const groupedConnections = useMemo(() => {
+    const historical = [];
+    const opportunities = [];
+    connections.forEach((c) => {
+      const isOpp = c.edgeCategory === 'opportunity' || c.rel === 'qualifies_for' || c.rel === 'fund_opportunity' || c.rel === 'potential_lp';
+      if (isOpp) {
+        opportunities.push(c);
+      } else {
+        historical.push(c);
+      }
+    });
+    return { historical, opportunities };
+  }, [connections]);
 
   if (!nodeId || !node) {
     return (
       <div className={styles.drawer}>
         <div className={styles.placeholder}>
-          Click a node to see details
+          <div className={styles.placeholderIcon}>&#x25C9;</div>
+          <div className={styles.placeholderText}>
+            Select a node on the graph to view detailed intelligence
+          </div>
         </div>
       </div>
     );
@@ -46,6 +113,7 @@ export function NodeDetail({ nodeId, layout, metrics, onClose }) {
 
   return (
     <div className={styles.drawer}>
+      {/* Header */}
       <div className={styles.header}>
         <div>
           <div className={styles.nodeName}>{node.label}</div>
@@ -53,70 +121,78 @@ export function NodeDetail({ nodeId, layout, metrics, onClose }) {
             {cfg.icon} {cfg.label || node.type}
           </div>
         </div>
-        <button className={styles.closeBtn} onClick={onClose} type="button">
-          ✕
+        <button className={styles.closeBtn} onClick={onClose} type="button" title="Close panel">
+          &#x2715;
         </button>
       </div>
 
       <div className={styles.body}>
-        {/* Node-specific metrics */}
-        <div className={styles.metricGrid}>
-          {node.type === 'company' && (
-            <>
+        {/* Key Metrics Section */}
+        <CollapsibleSection label="Key Metrics" defaultOpen={true}>
+          <div className={styles.metricGrid}>
+            {node.type === 'company' && (
+              <>
+                <div className={styles.metricBox}>
+                  <span className={styles.metricLabel}>Stage</span>
+                  <span className={styles.metricValue}>{stageLabel(node.stage)}</span>
+                </div>
+                <div className={styles.metricBox}>
+                  <span className={styles.metricLabel}>Funding</span>
+                  <span className={styles.metricValue}>{fmt(node.funding)}</span>
+                </div>
+                <div className={styles.metricBox}>
+                  <span className={styles.metricLabel}>Employees</span>
+                  <span className={styles.metricValue}>{node.employees || '\u2014'}</span>
+                </div>
+                <div className={styles.metricBox}>
+                  <span className={styles.metricLabel}>Momentum</span>
+                  <span className={styles.metricValue}>{node.momentum || '\u2014'}</span>
+                </div>
+              </>
+            )}
+            {comm !== undefined && (
               <div className={styles.metricBox}>
-                <span className={styles.metricLabel}>Stage</span>
-                <span className={styles.metricValue}>{stageLabel(node.stage)}</span>
+                <span className={styles.metricLabel}>Community</span>
+                <span className={styles.metricValue}>#{comm}</span>
               </div>
-              <div className={styles.metricBox}>
-                <span className={styles.metricLabel}>Funding</span>
-                <span className={styles.metricValue}>{fmt(node.funding)}</span>
-              </div>
-              <div className={styles.metricBox}>
-                <span className={styles.metricLabel}>Employees</span>
-                <span className={styles.metricValue}>{node.employees || '—'}</span>
-              </div>
-              <div className={styles.metricBox}>
-                <span className={styles.metricLabel}>Momentum</span>
-                <span className={styles.metricValue}>{node.momentum || '—'}</span>
-              </div>
-            </>
-          )}
-          {pr !== undefined && (
+            )}
             <div className={styles.metricBox}>
-              <span className={styles.metricLabel}>PageRank</span>
-              <span className={styles.metricValue}>{pr}</span>
+              <span className={styles.metricLabel}>Connections</span>
+              <span className={styles.metricValue}>{connections.length}</span>
             </div>
-          )}
-          {bc !== undefined && (
-            <div className={styles.metricBox}>
-              <span className={styles.metricLabel}>Betweenness</span>
-              <span className={styles.metricValue}>{bc}</span>
-            </div>
-          )}
-          {comm !== undefined && (
-            <div className={styles.metricBox}>
-              <span className={styles.metricLabel}>Community</span>
-              <span className={styles.metricValue}>#{comm}</span>
-            </div>
-          )}
-          <div className={styles.metricBox}>
-            <span className={styles.metricLabel}>Connections</span>
-            <span className={styles.metricValue}>{connections.length}</span>
           </div>
-        </div>
+        </CollapsibleSection>
 
-        {node.description && (
-          <p className={styles.description}>{node.description}</p>
+        {/* Graph Centrality Section — with score bars */}
+        {(pr !== undefined || bc !== undefined) && (
+          <CollapsibleSection label="Graph Centrality" defaultOpen={true}>
+            <div className={styles.metricGrid}>
+              {pr !== undefined && (
+                <ScoreBar label="PageRank" value={pr} max={Math.max(pr * 2, 0.01)} color="var(--accent-teal)" />
+              )}
+              {bc !== undefined && (
+                <ScoreBar label="Betweenness" value={bc} max={Math.max(bc * 2, 0.01)} color="var(--accent-gold)" />
+              )}
+            </div>
+          </CollapsibleSection>
         )}
 
-        {/* Connections list */}
-        {connections.length > 0 && (
-          <>
-            <span className={styles.sectionLabel}>
-              Connections ({connections.length})
-            </span>
+        {/* Description */}
+        {node.description && (
+          <div className={styles.section}>
+            <p className={styles.description}>{node.description}</p>
+          </div>
+        )}
+
+        {/* Historical Connections */}
+        {groupedConnections.historical.length > 0 && (
+          <CollapsibleSection
+            label="Connections"
+            count={groupedConnections.historical.length}
+            defaultOpen={true}
+          >
             <div className={styles.connectionList}>
-              {connections.slice(0, 20).map((c, i) => {
+              {groupedConnections.historical.slice(0, 20).map((c, i) => {
                 const rc = REL_CFG[c.rel] || {};
                 return (
                   <div key={i} className={styles.connection}>
@@ -124,18 +200,76 @@ export function NodeDetail({ nodeId, layout, metrics, onClose }) {
                       className={styles.connectionDot}
                       style={{ background: NODE_CFG[c.node.type]?.color || '#666' }}
                     />
-                    <span>{c.node.label}</span>
-                    <span className={styles.connectionRel}>{rc.label || c.rel}</span>
+                    <span className={styles.connectionName}>{c.node.label}</span>
+                    <span
+                      className={styles.connectionRel}
+                      style={rc.color ? {
+                        color: rc.color,
+                        background: `${rc.color}12`,
+                      } : undefined}
+                    >
+                      {rc.label || c.rel}
+                    </span>
                   </div>
                 );
               })}
-              {connections.length > 20 && (
-                <span className={styles.connectionRel}>
-                  +{connections.length - 20} more
-                </span>
+              {groupedConnections.historical.length > 20 && (
+                <div className={styles.moreCount}>
+                  +{groupedConnections.historical.length - 20} more
+                </div>
               )}
             </div>
-          </>
+          </CollapsibleSection>
+        )}
+
+        {/* Opportunity Connections */}
+        {groupedConnections.opportunities.length > 0 && (
+          <CollapsibleSection
+            label="Opportunities"
+            count={groupedConnections.opportunities.length}
+            defaultOpen={true}
+          >
+            <div className={styles.connectionList}>
+              {groupedConnections.opportunities.slice(0, 15).map((c, i) => {
+                const rc = REL_CFG[c.rel] || {};
+                return (
+                  <div key={i}>
+                    <div className={styles.connection}>
+                      <span
+                        className={styles.connectionDot}
+                        style={{ background: NODE_CFG[c.node.type]?.color || '#666' }}
+                      />
+                      <span className={styles.connectionName}>{c.node.label}</span>
+                      <span
+                        className={styles.connectionRel}
+                        style={rc.color ? {
+                          color: rc.color,
+                          background: `${rc.color}12`,
+                        } : undefined}
+                      >
+                        {rc.label || c.rel}
+                      </span>
+                    </div>
+                    {c.note && (
+                      <div className={styles.connectionNote}>{c.note}</div>
+                    )}
+                  </div>
+                );
+              })}
+              {groupedConnections.opportunities.length > 15 && (
+                <div className={styles.moreCount}>
+                  +{groupedConnections.opportunities.length - 15} more
+                </div>
+              )}
+            </div>
+          </CollapsibleSection>
+        )}
+
+        {/* Empty connections state */}
+        {connections.length === 0 && (
+          <div className={styles.section}>
+            <div className={styles.emptyConnections}>No connections found</div>
+          </div>
         )}
       </div>
     </div>

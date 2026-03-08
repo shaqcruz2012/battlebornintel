@@ -4,11 +4,11 @@ import { Sparkline } from '../shared/Sparkline';
 import { Tooltip } from '../shared/Tooltip';
 import styles from './KpiCard.module.css';
 
-// Data quality visual constants
+// Data quality visual constants (Bloomberg-style source indicators)
 const QUALITY_BADGE = {
-  verified: '✓',
+  verified: 'V',
   inferred: '~',
-  calculated: '=',
+  calculated: 'C',
 };
 
 const QUALITY_LABEL = {
@@ -61,9 +61,10 @@ const CardContent = memo(function CardContent({
         {sparkData && (
           <Sparkline
             data={sparkData}
-            width={72}
-            height={24}
+            width={64}
+            height={22}
             color={sparkColor || 'var(--accent-teal)'}
+            strokeWidth={1.5}
           />
         )}
       </div>

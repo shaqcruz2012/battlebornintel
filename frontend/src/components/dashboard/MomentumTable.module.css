@@ -1,3 +1,5 @@
+/* ── MomentumTable: Bloomberg-style data grid ──────────── */
+
 .wrapper {
   grid-column: 1 / span 8;
   background: var(--bg-card);
@@ -10,31 +12,48 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: var(--space-lg) var(--space-xl);
-  border-bottom: 1px solid var(--border-subtle);
+  padding: var(--space-md) var(--space-xl);
+  border-bottom: 1px solid var(--border-medium);
+  background: var(--bg-subtle);
 }
 
 .title {
   font-family: var(--font-heading);
-  font-size: var(--text-h2);
+  font-size: var(--text-h3);
+  font-weight: var(--weight-semibold);
   color: var(--text-primary);
+  letter-spacing: -0.01em;
 }
+
+/* ── Sort controls (segmented toggle) ──────────────────── */
 
 .sortControls {
   display: flex;
-  gap: var(--space-xs);
+  gap: 1px;
+  background: var(--bg-root);
+  border-radius: var(--radius-sm);
+  padding: 2px;
+  border: 1px solid var(--border-subtle);
 }
 
 .sortBtn {
-  padding: 4px 12px;
-  font-size: var(--text-caption-sm);
-  border-radius: var(--radius-sm);
+  padding: 4px 10px;
+  font-family: var(--font-body);
+  font-size: var(--text-micro);
+  font-weight: var(--weight-medium);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-radius: var(--radius-xs);
   color: var(--text-disabled);
-  transition: all var(--transition-fast);
+  transition: all var(--transition-instant);
+  border: none;
+  background: transparent;
+  cursor: pointer;
 }
 
 .sortBtn:hover {
   color: var(--text-secondary);
+  background: rgba(255, 255, 255, 0.03);
 }
 
 .sortActive {
@@ -42,36 +61,102 @@
   background: rgba(69, 215, 198, 0.08);
 }
 
+/* ── Column headers (sticky Bloomberg-style) ───────────── */
+
 .colHeaders {
   display: grid;
-  grid-template-columns: 2.5fr 1fr 1fr 1fr 1fr 48px;
-  padding: var(--space-sm) var(--space-lg);
-  border-bottom: 1px solid var(--border-subtle);
-  font-size: 10px;
+  grid-template-columns: 2.5fr 1fr 1fr 1fr 1fr 40px;
+  padding: var(--space-xs) var(--space-lg);
+  border-bottom: 2px solid var(--border-medium);
+  background: var(--bg-subtle);
+  font-family: var(--font-body);
+  font-size: 9px;
+  font-weight: var(--weight-semibold);
   text-transform: uppercase;
-  letter-spacing: 0.5px;
-  color: var(--text-disabled);
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  position: sticky;
+  top: 0;
+  z-index: 2;
 }
 
 .colHeaders span {
   text-align: right;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+  padding: var(--space-xs) 0;
 }
 
 .colHeaders span:first-child {
   text-align: left;
+  justify-content: flex-start;
 }
+
+.sortIndicator {
+  display: inline-block;
+  font-size: 7px;
+  color: var(--accent-teal);
+  line-height: 1;
+}
+
+.headerWithTip {
+  cursor: help;
+  border-bottom: 1px dotted var(--text-muted);
+  padding-bottom: 1px;
+}
+
+/* ── Virtual scroll container ──────────────────────────── */
+
+.virtualContainer {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.06) transparent;
+}
+
+.virtualContainer::-webkit-scrollbar {
+  width: 4px;
+}
+
+.virtualContainer::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.virtualContainer::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 2px;
+}
+
+.virtualContainer::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+/* ── Empty state ───────────────────────────────────────── */
 
 .empty {
   padding: var(--space-3xl);
   text-align: center;
   color: var(--text-disabled);
   font-size: var(--text-body-sm);
+  font-family: var(--font-body);
+  font-style: italic;
 }
 
-.headerWithTip {
-  cursor: help;
-  border-bottom: 1px dotted var(--text-disabled);
+/* ── Result count footer ───────────────────────────────── */
+
+.resultCount {
+  padding: var(--space-xs) var(--space-lg);
+  font-family: var(--font-mono);
+  font-size: var(--text-micro);
+  color: var(--text-muted);
+  text-align: right;
+  border-top: 1px solid var(--border-subtle);
+  background: var(--bg-subtle);
+  letter-spacing: 0.02em;
+  font-variant-numeric: tabular-nums;
 }
+
+/* ── Responsive ────────────────────────────────────────── */
 
 @media (max-width: 1200px) {
   .wrapper {
@@ -81,9 +166,12 @@
 
 @media (max-width: 768px) {
   .colHeaders {
-    grid-template-columns: 2fr 1fr 48px;
+    grid-template-columns: 2fr 1fr 40px;
   }
   .hideMobile {
     display: none;
+  }
+  .header {
+    padding: var(--space-md) var(--space-lg);
   }
 }

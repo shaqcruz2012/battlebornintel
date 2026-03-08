@@ -1,76 +1,118 @@
 :root {
-  /* Backgrounds */
-  --bg-root: #050609;
-  --bg-card: #0C1014;
-  --bg-elevated: #131820;
-  --bg-hover: #1A2029;
+  /* ── Backgrounds ─────────────────────────────────────── */
+  --bg-root: #030508;
+  --bg-card: #0A0E14;
+  --bg-elevated: #10151D;
+  --bg-hover: #151B25;
+  --bg-subtle: #0D1118;
+  --bg-row-alt: rgba(255, 255, 255, 0.015);
+  --bg-active-row: rgba(69, 215, 198, 0.03);
 
-  /* Text */
-  --text-primary: #F5F7FA;
-  --text-secondary: #9BA1B3;
-  --text-disabled: #5B6170;
+  /* ── Text ────────────────────────────────────────────── */
+  --text-primary: #E8ECF2;
+  --text-secondary: #8B92A5;
+  --text-disabled: #4E556A;
+  --text-muted: #3A4055;
 
-  /* Accents */
+  /* ── Accents ─────────────────────────────────────────── */
   --accent-teal: #45D7C6;
   --accent-gold: #F5C76C;
+  --accent-blue: #5B8DEF;
+  --accent-purple: #9B72CF;
 
-  /* Status */
-  --status-success: #45D7C6;
-  --status-warning: #F5C76C;
-  --status-risk: #F8615A;
+  /* ── Status ──────────────────────────────────────────── */
+  --status-success: #34C9A8;
+  --status-warning: #E5B654;
+  --status-risk: #E8534C;
+  --status-info: #5B8DEF;
 
-  /* Borders */
-  --border-subtle: rgba(255, 255, 255, 0.06);
+  /* ── Delta indicators ────────────────────────────────── */
+  --delta-up: #34C9A8;
+  --delta-down: #E8534C;
+  --delta-neutral: #8B92A5;
+
+  /* ── Borders ─────────────────────────────────────────── */
+  --border-subtle: rgba(255, 255, 255, 0.05);
+  --border-medium: rgba(255, 255, 255, 0.08);
   --border-hover: rgba(255, 255, 255, 0.12);
-  --border-active: rgba(69, 215, 198, 0.4);
+  --border-active: rgba(69, 215, 198, 0.35);
+  --border-grid: rgba(255, 255, 255, 0.03);
 
-  /* Typography */
+  /* ── Typography ──────────────────────────────────────── */
   --font-heading: 'Georgia', 'Charter', 'Times New Roman', serif;
   --font-body: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', 'SF Mono', 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
 
-  /* Type scale */
-  --text-h1: 28px;
-  --text-h2: 22px;
+  /* ── Type scale ──────────────────────────────────────── */
+  --text-h1: 26px;
+  --text-h2: 20px;
+  --text-h3: 16px;
   --text-card-numeric: 28px;
-  --text-body: 15px;
-  --text-body-sm: 14px;
-  --text-caption: 13px;
-  --text-caption-sm: 12px;
+  --text-card-numeric-sm: 22px;
+  --text-body: 14px;
+  --text-body-sm: 13px;
+  --text-caption: 12px;
+  --text-caption-sm: 11px;
+  --text-micro: 10px;
+  --text-label: 10px;
 
-  /* Weights */
+  /* ── Weights ─────────────────────────────────────────── */
   --weight-regular: 400;
   --weight-medium: 500;
   --weight-semibold: 600;
   --weight-bold: 700;
 
-  /* Spacing */
+  /* ── Line heights ────────────────────────────────────── */
+  --leading-tight: 1.1;
+  --leading-snug: 1.25;
+  --leading-normal: 1.5;
+  --leading-relaxed: 1.6;
+
+  /* ── Spacing ─────────────────────────────────────────── */
+  --space-2xs: 2px;
   --space-xs: 4px;
   --space-sm: 8px;
   --space-md: 12px;
   --space-lg: 16px;
-  --space-xl: 24px;
-  --space-2xl: 32px;
-  --space-3xl: 48px;
+  --space-xl: 20px;
+  --space-2xl: 28px;
+  --space-3xl: 40px;
+  --space-4xl: 56px;
 
-  /* Grid */
+  /* ── Grid ─────────────────────────────────────────────── */
   --grid-columns: 12;
-  --grid-gutter: 24px;
+  --grid-gutter: 20px;
   --grid-margin: 32px;
 
-  /* Radii */
+  /* ── Radii ───────────────────────────────────────────── */
+  --radius-xs: 2px;
   --radius-sm: 4px;
-  --radius-md: 8px;
-  --radius-lg: 12px;
+  --radius-md: 6px;
+  --radius-lg: 10px;
 
-  /* Transitions */
+  /* ── Transitions ─────────────────────────────────────── */
+  --transition-instant: 80ms ease;
   --transition-fast: 150ms ease;
-  --transition-normal: 300ms ease;
+  --transition-normal: 250ms ease;
+  --transition-slow: 400ms ease-out;
 
-  /* Shadows */
-  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.3);
-  --shadow-elevated: 0 4px 12px rgba(0, 0, 0, 0.4);
+  /* ── Shadows ─────────────────────────────────────────── */
+  --shadow-inset: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(255, 255, 255, 0.03);
+  --shadow-elevated: 0 4px 16px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(255, 255, 255, 0.04);
+  --shadow-focus: 0 0 0 2px rgba(69, 215, 198, 0.25);
 
-  /* Header */
-  --header-height: 72px;
-  --kpi-strip-height: 200px;
+  /* ── Layout ──────────────────────────────────────────── */
+  --header-height: 64px;
+  --kpi-strip-height: auto;
+  --sidebar-width: 320px;
+  --max-content-width: 1440px;
+
+  /* ── Z-index ─────────────────────────────────────────── */
+  --z-base: 0;
+  --z-card: 1;
+  --z-sticky: 10;
+  --z-dropdown: 50;
+  --z-tooltip: 100;
+  --z-modal: 200;
 }

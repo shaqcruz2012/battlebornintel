@@ -7,6 +7,54 @@ import { MomentumTable } from './MomentumTable';
 import { NarrativePanel } from './NarrativePanel';
 import { RiskAlerts } from './RiskAlerts';
 
+function LoadingSkeleton() {
+  return (
+    <MainGrid>
+      <div
+        style={{
+          gridColumn: '1 / -1',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 'var(--space-lg)',
+          padding: 'var(--space-2xl) 0',
+        }}
+      >
+        {/* KPI strip skeleton */}
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(5, 1fr)',
+            gap: '1px',
+            background: 'var(--border-grid)',
+            borderRadius: 'var(--radius-md)',
+            overflow: 'hidden',
+            border: '1px solid var(--border-subtle)',
+          }}
+        >
+          {[1, 2, 3, 4, 5].map((i) => (
+            <div
+              key={i}
+              className="skeleton"
+              style={{
+                height: '96px',
+                background: 'var(--bg-card)',
+              }}
+            />
+          ))}
+        </div>
+        {/* Table skeleton */}
+        <div
+          className="skeleton"
+          style={{
+            height: '400px',
+            borderRadius: 'var(--radius-md)',
+          }}
+        />
+      </div>
+    </MainGrid>
+  );
+}
+
 export function ExecutiveDashboard() {
   const { filters, setSortBy, setSector } = useFilters();
 
@@ -30,13 +78,7 @@ export function ExecutiveDashboard() {
   const isLoading = loadingCompanies || loadingKpis || loadingSectors;
 
   if (isLoading) {
-    return (
-      <MainGrid>
-        <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-secondary)' }}>
-          Loading dashboard...
-        </div>
-      </MainGrid>
-    );
+    return <LoadingSkeleton />;
   }
 
   return (

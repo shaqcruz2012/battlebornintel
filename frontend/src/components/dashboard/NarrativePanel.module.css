@@ -1,3 +1,5 @@
+/* ── NarrativePanel: Economist editorial sidebar ───────── */
+
 .panel {
   grid-column: 9 / -1;
   display: flex;
@@ -10,50 +12,66 @@
   font-size: var(--text-body);
   font-weight: var(--weight-bold);
   color: var(--text-primary);
-  margin-bottom: var(--space-sm);
+  margin-bottom: var(--space-xs);
   display: flex;
   align-items: center;
   gap: var(--space-sm);
+  letter-spacing: -0.01em;
 }
 
 .aiBadge {
-  font-size: 10px;
+  font-family: var(--font-mono);
+  font-size: 9px;
   font-weight: var(--weight-bold);
   color: var(--accent-teal);
-  background: color-mix(in srgb, var(--accent-teal) 15%, transparent);
+  background: rgba(69, 215, 198, 0.08);
   padding: 2px 6px;
-  border-radius: var(--radius-sm);
-  letter-spacing: 0.5px;
+  border-radius: var(--radius-xs);
+  border: 1px solid rgba(69, 215, 198, 0.2);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
 }
 
 .headline {
+  font-family: var(--font-heading);
   font-size: var(--text-caption);
   color: var(--accent-teal);
   font-weight: var(--weight-semibold);
   margin-bottom: var(--space-md);
   line-height: 1.4;
+  font-style: italic;
+  letter-spacing: -0.01em;
 }
+
+/* ── Dimension list ────────────────────────────────────── */
 
 .dimList {
   display: flex;
   flex-direction: column;
-  gap: var(--space-md);
+  gap: var(--space-sm);
 }
 
 .dimItem {
   display: flex;
   gap: var(--space-md);
   align-items: flex-start;
+  padding: var(--space-sm) 0;
+  border-bottom: 1px solid var(--border-grid);
+  transition: background var(--transition-instant);
+}
+
+.dimItem:last-child {
+  border-bottom: none;
 }
 
 .dimIcon {
-  width: 32px;
-  height: 32px;
-  border-radius: var(--radius-sm);
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-xs);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 14px;
+  font-size: 13px;
   flex-shrink: 0;
   color: var(--text-primary);
 }
@@ -64,17 +82,24 @@
 }
 
 .dimName {
-  font-size: var(--text-caption);
+  font-family: var(--font-body);
+  font-size: var(--text-caption-sm);
   font-weight: var(--weight-semibold);
   color: var(--text-primary);
   display: block;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 2px;
 }
 
 .dimDesc {
+  font-family: var(--font-body);
   font-size: var(--text-caption-sm);
   color: var(--text-secondary);
-  line-height: 1.4;
+  line-height: 1.5;
 }
+
+/* ── Responsive ────────────────────────────────────────── */
 
 @media (max-width: 1200px) {
   .panel {

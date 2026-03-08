@@ -1,3 +1,5 @@
+/* ── Tooltip: Palantir-style contextual info panel ─────── */
+
 .wrapper {
   position: relative;
   display: inline-flex;
@@ -15,20 +17,22 @@
   border: 1px solid var(--border-active);
   border-radius: var(--radius-md);
   padding: var(--space-md) var(--space-lg);
+  font-family: var(--font-body);
   font-size: var(--text-caption);
   color: var(--text-secondary);
-  line-height: 1.6;
+  line-height: var(--leading-relaxed);
   white-space: normal;
   text-transform: none;
   letter-spacing: normal;
   text-align: left;
-  width: 320px;
+  width: 300px;
   max-width: 90vw;
-  z-index: 100;
+  z-index: var(--z-tooltip);
   box-shadow: var(--shadow-elevated);
   pointer-events: none;
   opacity: 0;
   transition: opacity var(--transition-fast);
+  backdrop-filter: blur(8px);
 }
 
 .wrapper:hover .bubble,
@@ -36,26 +40,29 @@
   opacity: 1;
 }
 
+/* Arrow */
 .bubble::after {
   content: '';
   position: absolute;
   top: 100%;
   left: 50%;
   transform: translateX(-50%);
-  border: 6px solid transparent;
+  border: 5px solid transparent;
   border-top-color: var(--border-active);
 }
 
 .title {
   display: block;
-  font-weight: 600;
+  font-family: var(--font-heading);
+  font-weight: var(--weight-semibold);
   color: var(--text-primary);
   margin-bottom: 4px;
   font-size: var(--text-caption);
-  letter-spacing: 0.02em;
+  letter-spacing: -0.01em;
 }
 
-/* Position below when near top of viewport */
+/* ── Below position ────────────────────────────────────── */
+
 .below {
   bottom: auto;
   top: calc(100% + 8px);

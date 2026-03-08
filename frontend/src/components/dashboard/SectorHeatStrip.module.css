@@ -1,59 +1,76 @@
+/* ── SectorHeatStrip: Bloomberg-style sector nav ───────── */
+
 .wrapper {
   grid-column: 1 / -1;
 }
 
 .label {
-  font-size: var(--text-caption);
-  font-weight: var(--weight-medium);
-  color: var(--text-disabled);
+  font-family: var(--font-body);
+  font-size: var(--text-label);
+  font-weight: var(--weight-semibold);
+  color: var(--text-muted);
   text-transform: uppercase;
-  letter-spacing: 1px;
-  margin-bottom: var(--space-sm);
+  letter-spacing: 0.08em;
+  margin-bottom: var(--space-xs);
 }
 
 .strip {
   display: flex;
-  gap: var(--space-sm);
+  gap: var(--space-xs);
   overflow-x: auto;
   padding-bottom: var(--space-xs);
   scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.05) transparent;
 }
 
 .chip {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 6px 14px;
-  border-radius: 20px;
+  gap: 5px;
+  padding: 4px 12px;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-body);
   font-size: var(--text-caption-sm);
   font-weight: var(--weight-medium);
   white-space: nowrap;
   cursor: pointer;
   border: 1px solid var(--border-subtle);
-  background: var(--bg-card);
-  color: var(--text-secondary);
-  transition: all var(--transition-fast);
+  background: transparent;
+  color: var(--text-disabled);
+  transition: all var(--transition-instant);
 }
 
 .chip:hover {
   border-color: var(--border-hover);
-  color: var(--text-primary);
+  color: var(--text-secondary);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.chip:active {
+  transform: scale(0.97);
+  transition-duration: 50ms;
 }
 
 .activeChip {
-  border-color: var(--accent-teal);
-  background: rgba(69, 215, 198, 0.08);
+  border-color: rgba(69, 215, 198, 0.3);
+  background: rgba(69, 215, 198, 0.06);
   color: var(--accent-teal);
 }
 
+.activeChip:hover {
+  background: rgba(69, 215, 198, 0.1);
+}
+
 .heatDot {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
   border-radius: 50%;
   flex-shrink: 0;
 }
 
 .count {
-  opacity: 0.6;
-  font-size: 11px;
+  font-family: var(--font-mono);
+  font-size: var(--text-micro);
+  opacity: 0.5;
+  font-variant-numeric: tabular-nums;
 }

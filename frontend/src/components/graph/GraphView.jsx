@@ -108,7 +108,7 @@ export function GraphView() {
               showOpportunities={showOpportunities}
               opportunityFilter={opportunityFilter}
             />
-            <GraphLegend colorMode={colorMode} nodeFilters={nodeFilters} />
+            <GraphLegend colorMode={colorMode} nodeFilters={nodeFilters} layout={layout} />
             <GraphOverlayControls
               nodeFilters={nodeFilters}
               onToggleNode={toggleNode}
