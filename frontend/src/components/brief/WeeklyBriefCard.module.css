@@ -1,10 +1,12 @@
+/* ── WeeklyBriefCard: Economist editorial card ─────────── */
+
 .card {
   background: var(--bg-card);
   border: 1px solid var(--border-subtle);
-  border-radius: 8px;
-  padding: var(--space-lg);
+  border-radius: var(--radius-md);
+  padding: var(--space-xl);
   margin-bottom: var(--space-lg);
-  transition: all 0.2s ease;
+  transition: all var(--transition-fast);
   position: relative;
 }
 
@@ -14,12 +16,13 @@
 }
 
 .card.current {
-  border-color: var(--accent-primary);
-  background: linear-gradient(135deg, var(--bg-card) 0%, rgba(59, 130, 246, 0.05) 100%);
-  box-shadow: 0 0 20px rgba(59, 130, 246, 0.1);
+  border-color: var(--accent-teal);
+  background: linear-gradient(135deg, var(--bg-card) 0%, rgba(69, 215, 198, 0.03) 100%);
+  box-shadow: 0 0 20px rgba(69, 215, 198, 0.05);
 }
 
-/* Header section */
+/* ── Header ────────────────────────────────────────────── */
+
 .header {
   display: flex;
   justify-content: space-between;
@@ -27,6 +30,8 @@
   margin-bottom: var(--space-lg);
   padding-bottom: var(--space-md);
   border-bottom: 1px solid var(--border-subtle);
+  flex-wrap: wrap;
+  gap: var(--space-sm);
 }
 
 .titleBlock {
@@ -36,80 +41,123 @@
 }
 
 .title {
+  font-family: var(--font-heading);
   font-size: var(--text-h3);
-  font-weight: 600;
+  font-weight: var(--weight-semibold);
   color: var(--text-primary);
   margin: 0;
 }
 
 .badge {
   display: inline-block;
-  background: var(--accent-primary);
-  color: white;
+  background: var(--accent-teal);
+  color: var(--bg-root);
   padding: 2px 8px;
-  border-radius: 4px;
-  font-size: var(--text-small);
-  font-weight: 600;
+  border-radius: var(--radius-xs);
+  font-family: var(--font-mono);
+  font-size: var(--text-micro);
+  font-weight: var(--weight-bold);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.headerMeta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+}
+
+/* Reading time indicator (feature 5) */
+.readingTime {
+  font-family: var(--font-mono);
+  font-size: var(--text-caption-sm);
+  color: var(--accent-teal);
+  font-weight: var(--weight-medium);
+  opacity: 0.8;
+  letter-spacing: 0.02em;
 }
 
 .dateRange {
-  font-size: var(--text-small);
-  color: var(--text-secondary);
-  font-family: 'Monaco', 'Menlo', monospace;
+  font-family: var(--font-mono);
+  font-size: var(--text-caption-sm);
+  color: var(--text-disabled);
+  font-variant-numeric: tabular-nums;
 }
 
-/* Summary section */
+/* ── Summary ───────────────────────────────────────────── */
+
 .summary {
   margin-bottom: var(--space-lg);
 }
 
 .headline {
-  font-size: var(--text-h4);
-  font-weight: 600;
+  font-family: var(--font-heading);
+  font-size: var(--text-body);
+  font-weight: var(--weight-semibold);
   color: var(--text-primary);
   margin: 0 0 var(--space-sm) 0;
+  letter-spacing: -0.01em;
 }
 
 .summaryText {
-  font-size: var(--text-body);
+  font-size: var(--text-body-sm);
   color: var(--text-secondary);
-  line-height: 1.6;
+  line-height: var(--leading-relaxed);
   margin: 0;
 }
 
-/* MIT REAP Metrics Grid */
+/* ── REAP Metrics Grid ─────────────────────────────────── */
+
 .reapGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-  gap: var(--space-md);
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 1px;
+  background: var(--border-grid);
   margin-bottom: var(--space-lg);
-  padding: var(--space-md);
-  background: var(--bg-elevated);
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  border: 1px solid var(--border-subtle);
 }
 
 .reapCard {
   padding: var(--space-md);
-  border-left: 3px solid var(--accent-primary);
-  background: var(--bg-card);
-  border-radius: 4px;
+  background: var(--bg-elevated);
   text-align: center;
 }
 
 .reapHeadline {
-  font-size: var(--text-small);
-  color: var(--text-secondary);
-  margin-bottom: var(--space-sm);
-  font-weight: 500;
+  font-family: var(--font-body);
+  font-size: var(--text-micro);
+  font-weight: var(--weight-semibold);
+  color: var(--text-disabled);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: var(--space-xs);
 }
 
 .reapCount {
+  font-family: var(--font-mono);
   font-size: var(--text-h3);
-  font-weight: 700;
-  color: var(--accent-primary);
+  font-weight: var(--weight-bold);
+  color: var(--accent-teal);
+  font-variant-numeric: tabular-nums;
+  margin-bottom: var(--space-xs);
 }
 
-/* Events Section */
+/* REAP narrative interpretation (feature 6) */
+.reapNarrative {
+  font-size: var(--text-micro);
+  color: var(--text-disabled);
+  line-height: 1.45;
+  text-align: left;
+  padding-top: var(--space-xs);
+  border-top: 1px solid var(--border-grid);
+  margin-top: var(--space-xs);
+  font-style: italic;
+}
+
+/* ── Events Section ────────────────────────────────────── */
+
 .eventsSection {
   margin-bottom: var(--space-lg);
 }
@@ -122,62 +170,78 @@
 }
 
 .eventsTitle {
-  font-size: var(--text-h4);
-  font-weight: 600;
+  font-family: var(--font-heading);
+  font-size: var(--text-body-sm);
+  font-weight: var(--weight-semibold);
   color: var(--text-primary);
 }
 
 .eventTypeBreakdown {
   display: flex;
-  gap: var(--space-sm);
+  gap: var(--space-xs);
 }
 
 .typeTag {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 28px;
-  height: 28px;
-  border-radius: 4px;
-  font-size: var(--text-small);
-  font-weight: 600;
-  color: white;
+  min-width: 24px;
+  height: 24px;
+  border-radius: var(--radius-xs);
+  font-family: var(--font-mono);
+  font-size: var(--text-micro);
+  font-weight: var(--weight-bold);
+  color: var(--text-primary);
   cursor: help;
 }
 
-/* Events List */
+/* Event narrative summary (feature 3) */
+.eventNarrative {
+  font-size: var(--text-caption);
+  color: var(--text-secondary);
+  line-height: var(--leading-relaxed);
+  margin: 0 0 var(--space-md) 0;
+  padding: var(--space-sm) var(--space-md);
+  background: rgba(69, 215, 198, 0.04);
+  border-left: 2px solid rgba(69, 215, 198, 0.35);
+  border-radius: 0 var(--radius-xs) var(--radius-xs) 0;
+  font-style: italic;
+}
+
+/* ── Events List ───────────────────────────────────────── */
+
 .eventsList {
   display: flex;
   flex-direction: column;
-  gap: var(--space-md);
-  margin-bottom: var(--space-md);
+  gap: var(--space-xs);
+  margin-bottom: var(--space-sm);
 }
 
 .eventRow {
   display: flex;
   gap: var(--space-md);
-  padding: var(--space-md);
+  padding: var(--space-sm) var(--space-md);
   background: var(--bg-elevated);
-  border-radius: 6px;
-  border-left: 3px solid var(--border-subtle);
-  transition: all 0.2s ease;
+  border-radius: var(--radius-sm);
+  border-left: 2px solid var(--border-subtle);
+  transition: all var(--transition-instant);
 }
 
 .eventRow:hover {
-  background: rgba(59, 130, 246, 0.05);
-  border-left-color: var(--accent-primary);
+  background: var(--bg-hover);
+  border-left-color: var(--accent-teal);
 }
 
 .eventIcon {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
-  border-radius: 4px;
-  color: white;
-  font-size: 14px;
-  font-weight: 600;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-xs);
+  color: var(--text-primary);
+  font-size: 12px;
+  font-weight: var(--weight-bold);
   flex-shrink: 0;
 }
 
@@ -186,17 +250,45 @@
   min-width: 0;
 }
 
-.eventCompany {
-  font-size: var(--text-body);
-  font-weight: 600;
-  color: var(--text-primary);
+.eventMeta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
   margin-bottom: 2px;
+  flex-wrap: wrap;
+}
+
+.eventCompany {
+  font-size: var(--text-body-sm);
+  font-weight: var(--weight-semibold);
+  color: var(--text-primary);
+}
+
+/* Taxonomy label badge (feature 4) */
+.taxonomyBadge {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: var(--weight-bold);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 1px 5px;
+  border-radius: var(--radius-xs);
+  border: 1px solid currentColor;
+  opacity: 0.75;
+  cursor: help;
+  transition: opacity var(--transition-instant);
+  flex-shrink: 0;
+}
+
+.taxonomyBadge:hover {
+  opacity: 1;
 }
 
 .eventDetail {
-  font-size: var(--text-small);
+  font-size: var(--text-caption-sm);
   color: var(--text-secondary);
-  line-height: 1.5;
+  line-height: 1.4;
   overflow: hidden;
   text-overflow: ellipsis;
   display: -webkit-box;
@@ -207,20 +299,22 @@
 .noEvents {
   padding: var(--space-lg);
   text-align: center;
-  color: var(--text-secondary);
+  color: var(--text-disabled);
   font-style: italic;
+  font-size: var(--text-caption);
 }
 
 .moreEvents {
-  font-size: var(--text-small);
-  color: var(--text-secondary);
+  font-size: var(--text-caption-sm);
+  color: var(--text-disabled);
   text-align: center;
-  padding: var(--space-md);
-  border-top: 1px solid var(--border-subtle);
-  font-weight: 500;
+  padding: var(--space-sm);
+  border-top: 1px solid var(--border-grid);
+  font-weight: var(--weight-medium);
 }
 
-/* Highlights */
+/* ── Highlights ────────────────────────────────────────── */
+
 .highlights {
   padding-top: var(--space-md);
   border-top: 1px solid var(--border-subtle);
@@ -228,33 +322,28 @@
 
 .highlightsList {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: var(--space-sm);
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: var(--space-xs);
   list-style: none;
   margin: 0;
   padding: 0;
 }
 
 .highlightItem {
-  font-size: var(--text-small);
+  font-size: var(--text-caption-sm);
   color: var(--text-secondary);
   padding: var(--space-sm);
   background: var(--bg-elevated);
-  border-radius: 4px;
-  border-left: 2px solid var(--accent-primary);
+  border-radius: var(--radius-sm);
+  border-left: 2px solid var(--accent-teal);
+  line-height: 1.4;
 }
 
-.highlightItem::before {
-  content: '✓ ';
-  color: var(--accent-primary);
-  font-weight: 600;
-  margin-right: 4px;
-}
+/* ── Responsive ────────────────────────────────────────── */
 
-/* Responsive */
 @media (max-width: 768px) {
   .card {
-    padding: var(--space-md);
+    padding: var(--space-lg);
     margin-bottom: var(--space-md);
   }
 
@@ -262,10 +351,6 @@
     flex-direction: column;
     align-items: flex-start;
     gap: var(--space-sm);
-  }
-
-  .dateRange {
-    font-size: var(--text-small);
   }
 
   .reapGrid {
@@ -291,8 +376,8 @@
   }
 
   .eventIcon {
-    width: 28px;
-    height: 28px;
-    font-size: 12px;
+    width: 24px;
+    height: 24px;
+    font-size: 11px;
   }
 }

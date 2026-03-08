@@ -8,3 +8,185 @@
   font-size: var(--text-body-sm);
   font-style: italic;
 }
+
+/* ── GOED View: View header ────────────────────────────── */
+
+.viewHeader {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  padding-bottom: var(--space-md);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.viewTitle {
+  font-family: var(--font-heading);
+  font-size: var(--text-h1);
+  font-weight: var(--weight-bold);
+  color: var(--text-primary);
+  margin: 0;
+  letter-spacing: -0.02em;
+}
+
+.viewTagline {
+  font-size: var(--text-body-sm);
+  color: var(--text-secondary);
+  margin: 0;
+  line-height: 1.5;
+}
+
+/* ── GOED View: SSBCI context blurb ───────────────────── */
+
+.ssbciContext {
+  grid-column: 1 / -1;
+  display: flex;
+  gap: var(--space-md);
+  align-items: flex-start;
+  padding: var(--space-md) var(--space-lg);
+  background: color-mix(in srgb, var(--accent-teal) 5%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent-teal) 20%, transparent);
+  border-left: 3px solid var(--accent-teal);
+  border-radius: var(--radius-md);
+}
+
+.ssbciContextIcon {
+  font-size: 1.1rem;
+  flex-shrink: 0;
+  margin-top: 2px;
+  color: var(--accent-teal);
+}
+
+.ssbciContextText {
+  font-size: var(--text-body-sm);
+  color: var(--text-secondary);
+  margin: 0;
+  line-height: 1.65;
+}
+
+.ssbciContextText strong {
+  color: var(--text-primary);
+  font-weight: var(--weight-semibold);
+}
+
+/* ── GOED View: Regional analysis callout ─────────────── */
+
+.regionCallout {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1px;
+  background: var(--border-grid);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.regionCalloutHeader {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  padding: var(--space-md) var(--space-lg);
+  background: var(--bg-elevated);
+}
+
+.regionCalloutTitle {
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin: 0;
+}
+
+.regionCalloutBadge {
+  font-size: var(--text-xs);
+  color: var(--accent-gold);
+  background: color-mix(in srgb, var(--accent-gold) 12%, transparent);
+  padding: 2px 8px;
+  border-radius: 4px;
+  letter-spacing: 0.04em;
+}
+
+.regionCard {
+  padding: var(--space-lg);
+  background: var(--bg-card);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.regionName {
+  font-size: var(--text-body);
+  font-weight: var(--weight-bold);
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.regionThesis {
+  font-size: var(--text-body-sm);
+  color: var(--text-secondary);
+  margin: 0;
+  line-height: 1.6;
+}
+
+.regionSectors {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-xs);
+  margin-top: var(--space-xs);
+}
+
+.regionSectorTag {
+  font-size: var(--text-xs);
+  color: var(--accent-teal);
+  background: color-mix(in srgb, var(--accent-teal) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent-teal) 25%, transparent);
+  padding: 2px 7px;
+  border-radius: 3px;
+  letter-spacing: 0.03em;
+}
+
+.regionActiveHighlight {
+  border-left: 3px solid var(--accent-teal);
+}
+
+/* ── GOED View: Methodology note ──────────────────────── */
+
+.methodologyNote {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-sm);
+  padding: var(--space-md) var(--space-lg);
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+}
+
+.methodologyIcon {
+  font-size: 0.85rem;
+  flex-shrink: 0;
+  color: var(--text-disabled);
+  margin-top: 1px;
+}
+
+.methodologyText {
+  font-size: var(--text-xs);
+  color: var(--text-disabled);
+  margin: 0;
+  line-height: 1.6;
+  letter-spacing: 0.01em;
+}
+
+.methodologyText strong {
+  color: var(--text-secondary);
+  font-weight: var(--weight-medium);
+}
+
+@media (max-width: 768px) {
+  .regionCallout {
+    grid-template-columns: 1fr;
+  }
+}
