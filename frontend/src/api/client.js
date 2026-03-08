@@ -25,8 +25,8 @@ export const api = {
     fetchJSON(`${BASE}/companies/${id}`).then((r) => r.data),
 
   // Funds
-  getFunds: () =>
-    fetchJSON(`${BASE}/funds`).then((r) => r.data),
+  getFunds: (filters = {}) =>
+    fetchJSON(`${BASE}/funds`, filters).then((r) => r.data),
 
   getFund: (id) =>
     fetchJSON(`${BASE}/funds/${id}`).then((r) => r.data),

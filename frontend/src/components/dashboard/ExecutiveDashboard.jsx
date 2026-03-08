@@ -73,7 +73,9 @@ export function ExecutiveDashboard() {
   });
 
   const { data: sectorStats = [], isLoading: loadingSectors } = useSectorStats();
-  const { data: funds = [] } = useFunds();
+  const { data: funds = [] } = useFunds(
+    filters.region && filters.region !== 'all' ? { region: filters.region } : {}
+  );
 
   const isLoading = loadingCompanies || loadingKpis || loadingSectors;
 
