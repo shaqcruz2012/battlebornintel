@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { api } from '../../api/client.js';
 import styles from './ViewTabs.module.css';
@@ -13,8 +13,6 @@ const VIEWS = [
   { id: 'graph', label: 'Graph Intelligence' },
 ];
 
-// Default node types that GraphView uses on first mount.
-// Kept in sync with DEFAULT_NODE_FILTERS in GraphView.jsx.
 const GRAPH_DEFAULT_NODE_TYPES = [
   'company', 'fund', 'person', 'external', 'accelerator', 'ecosystem',
 ];
@@ -22,9 +20,8 @@ const GRAPH_YEAR_MAX = 2026;
 
 export function ViewTabs({ active, onChange }) {
   const queryClient = useQueryClient();
+  const tabsRef = useRef(null);
 
-  // Prefetch graph data and metrics when the user hovers the Graph tab.
-  // By the time they click, the data is already in the cache.
   const handleGraphTabHover = useCallback(() => {
     queryClient.prefetchQuery({
       queryKey: ['graph', GRAPH_DEFAULT_NODE_TYPES, GRAPH_YEAR_MAX, undefined],
@@ -38,8 +35,43 @@ export function ViewTabs({ active, onChange }) {
     });
   }, [queryClient]);
 
+  const handleKeyDown = useCallback(
+    (e) => {
+      const currentIdx = VIEWS.findIndex((v) => v.id === active);
+      let nextIdx = currentIdx;
+
+      if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+        e.preventDefault();
+        nextIdx = (currentIdx + 1) % VIEWS.length;
+      } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+        e.preventDefault();
+        nextIdx = (currentIdx - 1 + VIEWS.length) % VIEWS.length;
+      } else if (e.key === 'Home') {
+        e.preventDefault();
+        nextIdx = 0;
+      } else if (e.key === 'End') {
+        e.preventDefault();
+        nextIdx = VIEWS.length - 1;
+      } else {
+        return;
+      }
+
+      onChange(VIEWS[nextIdx].id);
+      // Focus the newly activated tab
+      const tabs = tabsRef.current?.querySelectorAll('[role="tab"]');
+      tabs?.[nextIdx]?.focus();
+    },
+    [active, onChange],
+  );
+
   return (
-    <nav className={styles.tabs}>
+    <nav
+      className={styles.tabs}
+      role="tablist"
+      aria-label="Dashboard views"
+      ref={tabsRef}
+      onKeyDown={handleKeyDown}
+    >
       {VIEWS.map((v) => (
         <button
           key={v.id}
@@ -47,6 +79,9 @@ export function ViewTabs({ active, onChange }) {
           onClick={() => onChange(v.id)}
           onMouseEnter={v.id === 'graph' ? handleGraphTabHover : undefined}
           type="button"
+          role="tab"
+          aria-selected={active === v.id}
+          tabIndex={active === v.id ? 0 : -1}
         >
           {v.label}
         </button>

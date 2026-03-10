@@ -247,7 +247,7 @@ const NodeCircle = memo(function NodeCircle({
           cursor: 'pointer',
           transition: 'stroke-width 200ms ease, stroke 200ms ease',
         }}
-        onClick={onSelect}
+        onClick={() => onSelect(node.id)}
         onMouseEnter={onHover}
         onMouseLeave={onLeave}
       />
@@ -477,15 +477,14 @@ export function GraphCanvas({
     return { connectedIds: cIds, highlightedEdges: hEdges };
   }, [selectedNode, edges]);
 
-  // FIX 1: Stable per-node callbacks via a map keyed by node.id so React.memo works.
-  // We memoize the maps on every nodes array change (which only happens when layout changes).
-  const selectCallbacks = useMemo(() => {
-    const map = {};
-    nodes.forEach((n) => {
-      map[n.id] = () => onSelectNode?.(n.id === selectedNode ? null : n.id);
-    });
-    return map;
-  }, [nodes, selectedNode, onSelectNode]);
+  // FIX 1: Single stable callback instead of per-node map.
+  // NodeCircle calls onSelect(nodeId) and this handler toggles selection.
+  // Only depends on selectedNode and onSelectNode — not nodes — so it stays
+  // stable across D3 layout frames and preserves React.memo on 710+ nodes.
+  const handleNodeSelect = useCallback(
+    (nodeId) => onSelectNode?.(nodeId === selectedNode ? null : nodeId),
+    [selectedNode, onSelectNode],
+  );
 
   const hoverCallbacks = useMemo(() => {
     const map = {};
@@ -668,7 +667,7 @@ export function GraphCanvas({
                 isConnected={isConnected}
                 hasSelection={!!selectedNode}
                 dim={dim}
-                onSelect={selectCallbacks[n.id]}
+                onSelect={handleNodeSelect}
                 onHover={hoverCallbacks[n.id]}
                 onLeave={hideTooltip}
                 baseOpacity={baseOpacity}

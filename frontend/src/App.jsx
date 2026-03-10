@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, lazy, Suspense } from 'react';
 import { FilterProvider } from './hooks/useFilters';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { AppShell } from './components/layout/AppShell';
 import { Header } from './components/layout/Header';
 import { ViewTabs } from './components/layout/ViewTabs';
@@ -40,28 +41,32 @@ export default function App() {
   }, []);
 
   return (
-    <FilterProvider>
-      <AppShell>
-        <Header activeView={view} onViewChange={setView} />
-        <ViewTabs active={view} onChange={setView} />
-        <SearchOverlay
-          isOpen={searchOpen}
-          onClose={() => setSearchOpen(false)}
-          onViewChange={handleSearchViewChange}
-        />
+    <ErrorBoundary>
+      <FilterProvider>
+        <AppShell>
+          <Header activeView={view} onViewChange={setView} />
+          <ViewTabs active={view} onChange={setView} />
+          <SearchOverlay
+            isOpen={searchOpen}
+            onClose={() => setSearchOpen(false)}
+            onViewChange={handleSearchViewChange}
+          />
 
-        <div className="fade-in" key={view}>
-          {view === 'executive' && <ExecutiveDashboard onViewChange={setView} />}
-          <Suspense fallback={<TabFallback />}>
-            {view === 'brief' && <WeeklyBriefView />}
-            {view === 'companies' && <CompaniesView />}
-            {view === 'funds' && <FundsView />}
-            {view === 'goed' && <GoedView />}
-            {view === 'feed' && <StakeholderFeedView />}
-            {view === 'graph' && <GraphView />}
-          </Suspense>
-        </div>
-      </AppShell>
-    </FilterProvider>
+          <ErrorBoundary key={view}>
+            <div className="fade-in">
+              {view === 'executive' && <ExecutiveDashboard onViewChange={setView} />}
+              <Suspense fallback={<TabFallback />}>
+                {view === 'brief' && <WeeklyBriefView />}
+                {view === 'companies' && <CompaniesView />}
+                {view === 'funds' && <FundsView />}
+                {view === 'goed' && <GoedView />}
+                {view === 'feed' && <StakeholderFeedView />}
+                {view === 'graph' && <GraphView />}
+              </Suspense>
+            </div>
+          </ErrorBoundary>
+        </AppShell>
+      </FilterProvider>
+    </ErrorBoundary>
   );
 }

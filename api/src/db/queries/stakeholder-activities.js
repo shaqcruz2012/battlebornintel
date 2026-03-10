@@ -192,16 +192,19 @@ export async function getStakeholderActivities(filters = {}) {
     }
   }
 
-  sql += ` ORDER BY date DESC`;
+  // Wrap the filtered query with COUNT(*) OVER() so we get the total
+  // matching rows and paginated data in a single round-trip.
+  let finalSql = `SELECT *, COUNT(*) OVER() AS _total_count FROM (${sql}) _filtered ORDER BY date DESC`;
 
   if (limit != null) {
-    sql += ` LIMIT $${paramIndex}`;
+    finalSql += ` LIMIT $${paramIndex}`;
     params.push(limit);
   }
 
   try {
-    const { rows } = await pool.query(sql, params);
-    return rows.map((row) => ({
+    const { rows } = await pool.query(finalSql, params);
+    const totalCount = rows.length > 0 ? parseInt(rows[0]._total_count, 10) : 0;
+    const mappedRows = rows.map((row) => ({
       id: row.id,
       date: row.date,
       activity_type: row.activity_type,
@@ -212,6 +215,7 @@ export async function getStakeholderActivities(filters = {}) {
       verified: row.verified,
       stakeholder_type: row.stakeholder_type,
     }));
+    return { rows: mappedRows, totalCount };
   } catch (error) {
     console.error('Error fetching stakeholder activities:', error);
     throw error;

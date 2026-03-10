@@ -62,11 +62,11 @@ router.get('/', async (req, res, next) => {
       stakeholderType: stakeholder_type,
     };
 
-    // Fetch paginated data and total count in parallel
-    const [data, totalCount] = await Promise.all([
-      getStakeholderActivities({ ...filterParams, limit: parsedLimit }),
-      getStakeholderActivities({ ...filterParams, limit: null, countOnly: true }),
-    ]);
+    // Fetch paginated data with total count in a single query
+    const { rows: data, totalCount } = await getStakeholderActivities({
+      ...filterParams,
+      limit: parsedLimit,
+    });
 
     if (data.length === 0) {
       console.warn(

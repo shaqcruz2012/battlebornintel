@@ -1,6 +1,12 @@
 const BASE = '/api';
 
-async function fetchJSON(path, params = {}) {
+/**
+ * Fetch JSON from the API with optional AbortSignal support.
+ * @param {string} path  - API path (e.g., '/api/companies')
+ * @param {Object} params - Query parameters (falsy values are excluded)
+ * @param {Object} [opts] - Options (signal for AbortController)
+ */
+async function fetchJSON(path, params = {}, { signal } = {}) {
   const url = new URL(path, window.location.origin);
   for (const [key, val] of Object.entries(params)) {
     if (val !== undefined && val !== null && val !== '' && val !== 'all') {
@@ -8,7 +14,7 @@ async function fetchJSON(path, params = {}) {
     }
   }
 
-  const res = await fetch(url.toString());
+  const res = await fetch(url.toString(), { signal });
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
     throw new Error(body.error || `API error ${res.status}`);
@@ -81,4 +87,8 @@ export const api = {
   // Stakeholder Activities
   getStakeholderActivities: (params = {}) =>
     fetchJSON(`${BASE}/stakeholder-activities`, params).then((r) => r.data),
+
+  // GOED Summary
+  getGoedSummary: () =>
+    fetchJSON(`${BASE}/goed/summary`).then((r) => r.data),
 };
