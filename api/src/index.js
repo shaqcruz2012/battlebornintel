@@ -65,16 +65,24 @@ app.get('/api/cache-stats', (req, res) => {
 });
 
 // Routes with per-route caching + rate limiting on public routes
-// Standard GET endpoints: browser cache 1 hour (public, max-age=3600)
-app.use('/api/companies',             publicLimit, cacheMiddleware('companies', 300000, { cacheControl: 'public, max-age=3600' }), companiesRouter);
-app.use('/api/funds',                 publicLimit, cacheMiddleware('funds', 300000, { cacheControl: 'public, max-age=3600' }), fundsRouter);
-app.use('/api/graph',                 publicLimit, cacheMiddleware('graph', 300000, { cacheControl: 'public, max-age=3600' }), graphRouter);
-app.use('/api/kpis',                  publicLimit, cacheMiddleware('kpis', 300000, { cacheControl: 'public, max-age=3600' }), kpisRouter);
-app.use('/api/timeline',              publicLimit, cacheMiddleware('timeline', 300000, { cacheControl: 'public, max-age=3600' }), timelineRouter);
-app.use('/api/constants',             publicLimit, cacheMiddleware('constants', 600000, { cacheControl: 'public, max-age=3600' }), constantsRouter);
-app.use('/api/analysis',              publicLimit, cacheMiddleware('analysis', 300000, { cacheControl: 'public, max-age=3600' }), analysisRouter);
-app.use('/api/stakeholder-activities',publicLimit, cacheMiddleware('stakeholderActivities', 300000, { cacheControl: 'public, max-age=3600' }), stakeholderActivitiesRouter);
-app.use('/api/opportunities',         publicLimit, cacheMiddleware('opportunities', 300000, { cacheControl: 'public, max-age=3600' }), opportunitiesRouter);
+//
+// TTL reference (server-side in-memory cache):
+//   60s  — activity feed, analysis/brief, analysis/risks  (data changes moderately often)
+//   120s — timeline, kpis/sectors                         (data changes rarely)
+//   300s — companies, funds, graph, constants, opportunities (very stable data)
+//
+// Cache-Control header strategy:
+//   private — user-specific or frequently changing data (activity feed, analysis)
+//   public  — shared, stable data safe for CDN/proxy caching
+app.use('/api/companies',              publicLimit, cacheMiddleware('companies',             300_000, { cacheControl: 'public, max-age=3600' }),  companiesRouter);
+app.use('/api/funds',                  publicLimit, cacheMiddleware('funds',                 300_000, { cacheControl: 'public, max-age=3600' }),  fundsRouter);
+app.use('/api/graph',                  publicLimit, cacheMiddleware('graph',                 300_000, { cacheControl: 'public, max-age=3600' }),  graphRouter);
+app.use('/api/kpis',                   publicLimit, cacheMiddleware('kpis',                  120_000, { cacheControl: 'public, max-age=120' }),   kpisRouter);
+app.use('/api/timeline',               publicLimit, cacheMiddleware('timeline',              120_000, { cacheControl: 'public, max-age=120' }),   timelineRouter);
+app.use('/api/constants',              publicLimit, cacheMiddleware('constants',             600_000, { cacheControl: 'public, max-age=3600' }),  constantsRouter);
+app.use('/api/analysis',               publicLimit, cacheMiddleware('analysis',               60_000, { cacheControl: 'private, max-age=60' }),   analysisRouter);
+app.use('/api/stakeholder-activities', publicLimit, cacheMiddleware('stakeholderActivities',  60_000, { cacheControl: 'private, max-age=60' }),   stakeholderActivitiesRouter);
+app.use('/api/opportunities',          publicLimit, cacheMiddleware('opportunities',         300_000, { cacheControl: 'public, max-age=3600' }),  opportunitiesRouter);
 // Admin routes: key-gated + strict rate limit
 app.use('/api/admin', adminLimit, requireAdminKey, adminRouter);
 

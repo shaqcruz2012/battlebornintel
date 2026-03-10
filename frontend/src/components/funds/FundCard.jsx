@@ -53,7 +53,8 @@ function PortfolioTable({ portfolio }) {
   if (portfolio.length === 0) {
     return (
       <div className={styles.emptyPortfolio}>
-        No eligible companies
+        <p>No portfolio companies currently linked to this fund.</p>
+        <p className={styles.emptyHint}>Company eligibility is determined by stage, sector, and fund criteria.</p>
       </div>
     );
   }
@@ -106,6 +107,7 @@ function PortfolioTable({ portfolio }) {
 export const FundCard = memo(function FundCard({
   fund,
   portfolio,
+  portfolioCount,
   isExpanded,
   onToggle,
 }) {
@@ -156,7 +158,7 @@ export const FundCard = memo(function FundCard({
           </span>
         )}
         <span className={styles.companyCount}>
-          {fund.companies} {fund.companies === 1 ? 'company' : 'companies'}
+          {portfolioCount} {portfolioCount === 1 ? 'company' : 'companies'}
         </span>
       </div>
 

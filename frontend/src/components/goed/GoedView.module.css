@@ -185,6 +185,12 @@
   font-weight: var(--weight-medium);
 }
 
+/* ── GOED View: Activity feed full-width span ──────────── */
+
+.activityFeedWrapper {
+  grid-column: 1 / -1;
+}
+
 @media (max-width: 768px) {
   .regionCallout {
     grid-template-columns: 1fr;

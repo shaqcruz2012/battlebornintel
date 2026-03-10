@@ -2,6 +2,7 @@
 
 /* Container */
 .feed {
+  grid-column: 1 / -1;
   display: flex;
   flex-direction: column;
   background: #030508;
@@ -192,7 +193,7 @@
 .searchInputWrapper {
   position: relative;
   flex: 1;
-  max-width: 400px;
+  max-width: 100%;
 }
 
 .searchInput {
@@ -268,7 +269,8 @@
 .feedBody {
   display: flex;
   flex-direction: column;
-  max-height: 900px;
+  max-height: calc(100vh - 400px);
+  min-height: 400px;
   overflow-y: auto;
   scrollbar-width: thin;
   scrollbar-color: #1a2236 transparent;
@@ -322,10 +324,11 @@
   flex-shrink: 0;
   transition: transform var(--transition-fast);
   display: inline-block;
+  transform: rotate(90deg);
 }
 
 .sectionChevron.collapsed {
-  transform: rotate(-90deg);
+  transform: rotate(0deg);
 }
 
 .sectionIcon {
@@ -416,9 +419,10 @@
   color: #e8ecf2;
   margin: 0;
   line-height: 1.3;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .cardCompany {
@@ -695,4 +699,26 @@
   font-size: var(--text-body-sm);
   color: #4e556a;
   margin: 0;
+}
+
+.retryButton {
+  margin-top: var(--space-md);
+  padding: var(--space-xs) var(--space-lg);
+  background: transparent;
+  border: 1px solid #e8534c;
+  border-radius: var(--radius-sm);
+  color: #e8534c;
+  font-family: var(--font-mono);
+  font-size: var(--text-micro);
+  font-weight: var(--weight-semibold);
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.retryButton:hover {
+  background: rgba(232, 83, 76, 0.1);
+  color: #ff6b63;
+  border-color: #ff6b63;
 }

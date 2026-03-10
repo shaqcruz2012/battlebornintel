@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { TIMELINE_EVENTS } from '../data/timeline';
+import { useTimeline } from '../api/hooks';
 import {
   getWeekEnd,
   isDateInWeek,
@@ -7,7 +7,36 @@ import {
   formatWeekLabel,
   formatDate,
   compareDates,
+  parseDateLocal,
 } from '../utils/weeks';
+
+/**
+ * Map of event type keys to human-readable plural labels.
+ * Includes both Title Case (new data) and lowercase (legacy) variants.
+ */
+const typeLabels = {
+  Funding: 'Funding',
+  Partnership: 'Partnerships',
+  Hiring: 'Hiring',
+  Launch: 'Launches',
+  Award: 'Awards',
+  Grant: 'Grants',
+  Patent: 'Patents',
+  Milestone: 'Milestones',
+  Founding: 'Founding',
+  Expansion: 'Expansion',
+  Acquisition: 'Acquisitions',
+  // Keep lowercase for backward compat
+  funding: 'Funding',
+  partnership: 'Partnerships',
+  hiring: 'Hiring',
+  launch: 'Launches',
+  award: 'Awards',
+  grant: 'Grants',
+  patent: 'Patents',
+  milestone: 'Milestones',
+  momentum: 'Momentum',
+};
 
 /**
  * Generates AI-style summary (in real impl, would call Claude API)
@@ -27,29 +56,26 @@ function generateWeekSummary(events) {
     types[e.type] = (types[e.type] || 0) + 1;
   });
 
-  const topType = Object.entries(types).sort((a, b) => b[1] - a[1])[0]?.[0];
-  const typeLabels = {
-    funding: 'Funding',
-    partnership: 'Partnerships',
-    hiring: 'Hiring',
-    launch: 'Launches',
-    award: 'Awards',
-    grant: 'Grants',
-    patent: 'Patents',
-    momentum: 'Momentum',
-  };
+  const sortedTypes = Object.entries(types).sort((a, b) => b[1] - a[1]);
+  const topType = sortedTypes[0]?.[0];
+  const topLabel = typeLabels[topType] || topType || 'Activity';
 
-  const headline = `${typeLabels[topType] || 'Activity'} Surge: ${events.length} Events`;
-  const summary = `${events.length} significant events tracked. Top categories: ${Object.entries(types)
-    .sort((a, b) => b[1] - a[1])
+  const headline =
+    events.length >= 10
+      ? `${topLabel} Surge: ${events.length} Events`
+      : `${events.length} Events Led by ${topLabel}`;
+
+  const summary = `${events.length} significant events tracked. Top categories: ${sortedTypes
     .slice(0, 3)
-    .map(([type, count]) => `${typeLabels[type]} (${count})`)
+    .map(([type, count]) => `${typeLabels[type] || type} (${count})`)
     .join(', ')}.`;
 
   // Top companies and activities
   const companies = {};
   events.forEach((e) => {
-    companies[e.company] = (companies[e.company] || 0) + 1;
+    if (e.company) {
+      companies[e.company] = (companies[e.company] || 0) + 1;
+    }
   });
 
   const topCompanies = Object.entries(companies)
@@ -58,7 +84,7 @@ function generateWeekSummary(events) {
     .map(([name]) => name);
 
   const highlights = [
-    `${events.length} tracked events`,
+    `${events.length} tracked events across ${sortedTypes.length} categories`,
     ...topCompanies.map((c) => `${c} (${companies[c]} events)`),
   ];
 
@@ -74,7 +100,7 @@ function generateWeekSummary(events) {
  */
 function aggregateWeekData(weekStart, allEvents) {
   const weekEnd = getWeekEnd(weekStart);
-  const weekEvents = allEvents.filter((e) => isDateInWeek(new Date(e.date), weekStart));
+  const weekEvents = allEvents.filter((e) => isDateInWeek(parseDateLocal(e.date), weekStart));
 
   // Sort by date (newest first for display)
   weekEvents.sort((a, b) => compareDates(b.date, a.date));
@@ -93,46 +119,66 @@ function aggregateWeekData(weekStart, allEvents) {
     events: weekEvents.slice(0, 10), // Top 10 for display
     eventsByType,
     summary: generateWeekSummary(weekEvents),
-    // MIT REAP framework data (would be enriched from API)
+    // MIT REAP framework data (handle both Title Case and lowercase keys)
     reap: {
       inputs: {
         headline: 'Capital Deployment',
-        count: eventsByType.funding?.length || 0,
+        count:
+          (eventsByType.Funding?.length || eventsByType.funding?.length || 0) +
+          (eventsByType.Grant?.length || eventsByType.grant?.length || 0),
       },
       capacities: {
         headline: 'Team & Infrastructure',
-        count: (eventsByType.hiring?.length || 0) + (eventsByType.partnership?.length || 0),
+        count:
+          (eventsByType.Hiring?.length || eventsByType.hiring?.length || 0) +
+          (eventsByType.Partnership?.length || eventsByType.partnership?.length || 0),
       },
       outputs: {
         headline: 'Products & Growth',
-        count: (eventsByType.launch?.length || 0) + (eventsByType.momentum?.length || 0),
+        count:
+          (eventsByType.Launch?.length || eventsByType.launch?.length || 0) +
+          (eventsByType.Patent?.length || eventsByType.patent?.length || 0) +
+          (eventsByType.Milestone?.length || eventsByType.milestone?.length || 0),
       },
       impact: {
         headline: 'Recognition & Outcomes',
-        count: (eventsByType.award?.length || 0) + (eventsByType.grant?.length || 0),
+        count:
+          (eventsByType.Award?.length || eventsByType.award?.length || 0) +
+          (eventsByType.Expansion?.length || 0) +
+          (eventsByType.Acquisition?.length || 0),
       },
     },
   };
 }
 
 /**
- * Hook: Load and aggregate weekly brief data
- * Returns array of week objects with events, summaries, metrics
+ * Hook: Load and aggregate weekly brief data from the timeline API
+ * Dynamically spans from oldest event to today so no data is missed.
  */
 export function useWeeklyBriefs(weeksBack = 52) {
-  const allEvents = TIMELINE_EVENTS;
+  const { data: allEvents, isLoading, error } = useTimeline({ limit: 1000 });
 
   const weeks = useMemo(() => {
-    const today = new Date();
-    const mondays = getWeekMondays(today, weeksBack);
+    if (!allEvents || allEvents.length === 0) return [];
 
-    return mondays.map((monday) => aggregateWeekData(monday, allEvents)).filter((w) => w.eventCount > 0);
-  }, [weeksBack]);
+    // Find the oldest event date and compute how many weeks back we actually need
+    const dates = allEvents.map((e) => parseDateLocal(e.date).getTime());
+    const oldest = new Date(Math.min(...dates));
+    const today = new Date();
+    const msPerWeek = 7 * 24 * 60 * 60 * 1000;
+    const actualWeeksBack = Math.max(weeksBack, Math.ceil((today - oldest) / msPerWeek) + 2);
+
+    const mondays = getWeekMondays(today, actualWeeksBack);
+
+    return mondays
+      .map((monday) => aggregateWeekData(monday, allEvents))
+      .filter((w) => w.eventCount > 0);
+  }, [allEvents, weeksBack]);
 
   return {
     weeks,
-    isLoading: false,
-    error: null,
+    isLoading,
+    error: error || null,
   };
 }
 
@@ -140,16 +186,16 @@ export function useWeeklyBriefs(weeksBack = 52) {
  * Hook: Load single week data
  */
 export function useWeeklyBrief(weekStart) {
-  const allEvents = TIMELINE_EVENTS;
+  const { data: allEvents, isLoading, error } = useTimeline({ limit: 1000 });
 
   const week = useMemo(() => {
-    if (!weekStart) return null;
-    return aggregateWeekData(new Date(weekStart), allEvents);
-  }, [weekStart]);
+    if (!weekStart || !allEvents) return null;
+    return aggregateWeekData(parseDateLocal(weekStart), allEvents);
+  }, [weekStart, allEvents]);
 
   return {
     week,
-    isLoading: false,
-    error: null,
+    isLoading,
+    error: error || null,
   };
 }

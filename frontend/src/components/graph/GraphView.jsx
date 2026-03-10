@@ -19,6 +19,7 @@ const DEFAULT_NODE_FILTERS = {
   exchange: false,
   accelerator: true,
   ecosystem: true,
+  program: false,
 };
 
 export function GraphView() {
@@ -96,13 +97,15 @@ export function GraphView() {
   );
 
   // Fetch graph data from API with region filtering
-  const { data: graphData, isLoading: loadingGraph } = useGraph(activeNodeTypes, 2026, filters.region);
-  const { data: metricsData, isLoading: loadingMetrics } = useGraphMetrics(activeNodeTypes);
+  const { data: graphData, isLoading: loadingGraph, error: graphError } = useGraph(activeNodeTypes, 2026, filters.region);
+  const { data: metricsData, isLoading: loadingMetrics, error: metricsError } = useGraphMetrics(activeNodeTypes);
 
   // Compute D3 layout in Web Worker to keep UI responsive
   const rawNodes = graphData?.nodes || [];
   const rawEdges = graphData?.edges || [];
-  const { layout: workerLayout, isLoading: layoutLoading } = useGraphLayout(rawNodes, rawEdges, { width: dims.w, height: dims.h });
+  // layoutLoading is intentionally not used as a render gate — the worker
+  // streams interim frames so the canvas renders progressively.
+  const { layout: workerLayout } = useGraphLayout(rawNodes, rawEdges, { width: dims.w, height: dims.h });
 
   // Resolve edge source/target from string IDs to node objects (required by GraphCanvas)
   const layout = useMemo(() => {
@@ -118,11 +121,42 @@ export function GraphView() {
 
   const metrics = metricsData || { pagerank: {}, betweenness: {}, communities: {}, watchlist: [] };
 
-  if (loadingGraph || loadingMetrics || layoutLoading) {
+  // Error state — show message with retry button
+  if (graphError || metricsError) {
+    return (
+      <div className={styles.graphPage}>
+        <div className={styles.errorState}>
+          <h3>Graph data unavailable</h3>
+          <p>{graphError?.message || metricsError?.message || 'An unexpected error occurred.'}</p>
+          <button onClick={() => window.location.reload()}>Retry</button>
+        </div>
+      </div>
+    );
+  }
+
+  // Block render only while raw graph data is being fetched from the API.
+  // D3 layout streams interim frames so the canvas renders progressively.
+  if (loadingGraph || loadingMetrics) {
     return (
       <div className={styles.graphPage}>
         <div className={styles.loadingCenter}>
           Loading graph...
+        </div>
+      </div>
+    );
+  }
+
+  // Empty state — data loaded but no visible nodes
+  if (rawNodes.length === 0) {
+    return (
+      <div className={styles.graphPage}>
+        <div className={styles.emptyState}>
+          <h3>No graph data available</h3>
+          <p>
+            The knowledge graph has {rawEdges.length} edge{rawEdges.length !== 1 ? 's' : ''} but
+            no visible nodes with current filters.
+          </p>
+          <p>Try adjusting node type filters to show more data.</p>
         </div>
       </div>
     );

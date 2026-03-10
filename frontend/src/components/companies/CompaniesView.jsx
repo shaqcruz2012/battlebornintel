@@ -5,6 +5,7 @@ import { MainGrid } from '../layout/AppShell';
 import { FilterChip } from '../shared/FilterChip';
 import { Card } from '../shared/Card';
 import { CompanyRow } from './CompanyRow';
+import { CompanyDetailDrawer } from './CompanyDetailDrawer';
 import styles from './CompaniesView.module.css';
 
 const STAGE_OPTIONS = [
@@ -107,6 +108,7 @@ export function CompaniesView() {
   const [sortKey, setSortKey] = useState('irs');
   const [sortDir, setSortDir] = useState('desc');
   const [expandedId, setExpandedId] = useState(null);
+  const [detailId, setDetailId] = useState(null);
 
   const handleSort = useCallback((key) => {
     setSortKey((prev) => {
@@ -279,6 +281,7 @@ export function CompaniesView() {
                     company={company}
                     isExpanded={expandedId === (company.id || company.slug)}
                     onToggle={() => handleToggleRow(company.id || company.slug)}
+                    onViewDetail={setDetailId}
                   />
                 ))}
               </tbody>
@@ -307,6 +310,14 @@ export function CompaniesView() {
           </span>
         </div>
       </div>
+
+      {/* ── Company detail drawer ─────────────────────────── */}
+      {detailId && (
+        <CompanyDetailDrawer
+          companyId={detailId}
+          onClose={() => setDetailId(null)}
+        />
+      )}
     </MainGrid>
   );
 }

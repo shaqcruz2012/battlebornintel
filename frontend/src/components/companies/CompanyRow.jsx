@@ -130,7 +130,7 @@ const ExpandedDetail = memo(function ExpandedDetail({ company }) {
   );
 });
 
-export const CompanyRow = memo(function CompanyRow({ company, isExpanded, onToggle }) {
+export const CompanyRow = memo(function CompanyRow({ company, isExpanded, onToggle, onViewDetail }) {
   const c = company;
 
   const gradeClass = useMemo(() => getGradeClass(c.grade), [c.grade]);
@@ -192,10 +192,25 @@ export const CompanyRow = memo(function CompanyRow({ company, isExpanded, onTogg
             ))}
           </div>
         </td>
-        <td className={styles.td} style={{ width: 28, textAlign: 'center' }}>
-          <span className={`${styles.chevron} ${isExpanded ? styles.chevronOpen : ''}`}>
-            &#x25BE;
-          </span>
+        <td className={styles.td} style={{ width: 72, textAlign: 'center' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+            {onViewDetail && (
+              <button
+                className={styles.viewBtn}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onViewDetail(company.id || company.slug);
+                }}
+                type="button"
+                title="View detail"
+              >
+                View
+              </button>
+            )}
+            <span className={`${styles.chevron} ${isExpanded ? styles.chevronOpen : ''}`}>
+              &#x25BE;
+            </span>
+          </div>
         </td>
       </tr>
       {isExpanded && <ExpandedDetail company={c} />}

@@ -17,7 +17,7 @@ const router = Router();
  *  - location: Nevada region (las_vegas, reno, henderson, carson_city, etc.)
  *  - since: ISO date string (e.g., 2025-01-01)
  *  - until: ISO date string (e.g., 2025-12-31)
- *  - limit: number of activities (default: 50, max: 200)
+ *  - limit: number of activities (default: 100, max: 500)
  *  - type: activity type filter (funding, partnership, award, etc.)
  *  - stakeholder_type: stakeholder category filter (gov_policy, university, corporate, risk_capital, ecosystem)
  */
@@ -27,13 +27,16 @@ router.get('/', async (req, res, next) => {
       location = 'all',
       since,
       until,
-      limit = 50,
+      limit = 100,
       type,
       stakeholder_type,
+      stakeholderType: stakeholderTypeCamel,
     } = req.query;
+    // Support both snake_case and camelCase param names
+    const resolvedStakeholderType = stakeholder_type || stakeholderTypeCamel;
 
     // Validate and sanitize inputs
-    const parsedLimit = Math.min(parseInt(limit, 10) || 50, 200);
+    const parsedLimit = Math.min(parseInt(limit, 10) || 100, 500);
     const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
     if (since && !ISO_DATE.test(since)) {
       return res.status(400).json({ error: 'since must be ISO date format YYYY-MM-DD' });
@@ -43,40 +46,61 @@ router.get('/', async (req, res, next) => {
     }
 
     const VALID_STAKEHOLDER_TYPES = new Set([
-      'gov_policy', 'university', 'corporate', 'risk_capital', 'ecosystem',
+      'gov_policy', 'gov', 'university', 'corporate', 'risk_capital', 'capital', 'ecosystem',
     ]);
-    if (stakeholder_type && stakeholder_type !== 'all' && !VALID_STAKEHOLDER_TYPES.has(stakeholder_type)) {
+    if (resolvedStakeholderType && resolvedStakeholderType !== 'all' && !VALID_STAKEHOLDER_TYPES.has(resolvedStakeholderType)) {
       return res.status(400).json({
         error: `stakeholder_type must be one of: ${[...VALID_STAKEHOLDER_TYPES].join(', ')}`,
       });
     }
 
-    const data = await getStakeholderActivities({
+    const filterParams = {
       location,
       since,
       until,
-      limit: parsedLimit,
       type,
       stakeholderType: stakeholder_type,
-    });
+    };
+
+    // Fetch paginated data and total count in parallel
+    const [data, totalCount] = await Promise.all([
+      getStakeholderActivities({ ...filterParams, limit: parsedLimit }),
+      getStakeholderActivities({ ...filterParams, limit: null, countOnly: true }),
+    ]);
+
+    if (data.length === 0) {
+      console.warn(
+        '[stakeholder-activities] Empty results for filters:',
+        JSON.stringify(filterParams),
+      );
+    }
+
+    const activeFilters = {
+      location: location !== 'all' ? location : null,
+      since: since || null,
+      until: until || null,
+      type: type || null,
+      stakeholder_type: (stakeholder_type && stakeholder_type !== 'all') ? stakeholder_type : null,
+    };
 
     res.json({
       success: true,
       data,
       meta: {
         count: data.length,
+        total: totalCount,
         limit: parsedLimit,
-        filters: {
-          location: location !== 'all' ? location : null,
-          since: since || null,
-          until: until || null,
-          type: type || null,
-          stakeholder_type: (stakeholder_type && stakeholder_type !== 'all') ? stakeholder_type : null,
-        },
+        hasMore: totalCount > parsedLimit,
+        filters: activeFilters,
       },
     });
   } catch (err) {
-    next(err);
+    console.error('[stakeholder-activities] GET / failed:', err.message);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch stakeholder activities',
+      message: process.env.NODE_ENV !== 'production' ? err.message : undefined,
+    });
   }
 });
 
@@ -89,17 +113,32 @@ router.get('/company/:companyId', async (req, res, next) => {
     const { companyId } = req.params;
     const { limit = 20 } = req.query;
 
+    const parsedCompanyId = parseInt(companyId, 10);
+    if (Number.isNaN(parsedCompanyId)) {
+      return res.status(400).json({ error: 'companyId must be a number' });
+    }
+
     const data = await getCompanyActivities(
-      parseInt(companyId, 10),
-      parseInt(limit, 10)
+      parsedCompanyId,
+      parseInt(limit, 10) || 20
     );
+
+    if (data.length === 0) {
+      console.warn(`[stakeholder-activities] No activities found for company ${parsedCompanyId}`);
+    }
 
     res.json({
       success: true,
       data,
+      meta: { count: data.length },
     });
   } catch (err) {
-    next(err);
+    console.error('[stakeholder-activities] GET /company/:companyId failed:', err.message);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch company activities',
+      message: process.env.NODE_ENV !== 'production' ? err.message : undefined,
+    });
   }
 });
 
@@ -120,6 +159,12 @@ router.get('/location/:location', async (req, res, next) => {
 
     const data = await getActivitiesByLocationAndDateRange(location, startDate, endDate);
 
+    if (data.length === 0) {
+      console.warn(
+        `[stakeholder-activities] No activities for location="${location}" between ${startDate} and ${endDate}`,
+      );
+    }
+
     res.json({
       success: true,
       data,
@@ -133,7 +178,12 @@ router.get('/location/:location', async (req, res, next) => {
       },
     });
   } catch (err) {
-    next(err);
+    console.error('[stakeholder-activities] GET /location/:location failed:', err.message);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch activities by location',
+      message: process.env.NODE_ENV !== 'production' ? err.message : undefined,
+    });
   }
 });
 

@@ -8,7 +8,6 @@ import { StakeholderSelector } from './StakeholderSelector';
 import { SsbciKpiStrip } from './SsbciKpiStrip';
 import { StakeholderPanel } from './StakeholderPanel';
 import { KnowledgeFundPanel } from './KnowledgeFundPanel';
-import { StakeholderActivitiesDigest } from './StakeholderActivitiesDigest';
 import { StakeholderActivityFeed } from './StakeholderActivityFeed';
 import styles from './GoedView.module.css';
 
@@ -180,10 +179,10 @@ export function GoedView() {
       />
 
       {/* ── Live activity feed (Bloomberg-style) ─────────── */}
-      <StakeholderActivityFeed />
+      <div className={styles.activityFeedWrapper}>
+        <StakeholderActivityFeed />
+      </div>
 
-      {/* ── Legacy digest (kept for reference, hidden below) */}
-      <StakeholderActivitiesDigest />
 
       {/* ── Methodology footnote ─────────────────────────── */}
       <div className={styles.methodologyNote}>

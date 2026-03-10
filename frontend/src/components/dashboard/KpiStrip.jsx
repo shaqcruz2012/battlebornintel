@@ -25,7 +25,7 @@ function formatTimestamp() {
   return `${month} ${day}  ${h}:${m}:${s} PST`;
 }
 
-export function KpiStrip({ kpis, activeSortBy, onSortChange }) {
+export function KpiStrip({ kpis, activeSortBy, onSortChange, onKpiClick, activeKpi }) {
   const [timestamp, setTimestamp] = useState(formatTimestamp);
 
   // Update timestamp every 30 seconds for a "live" feel
@@ -42,6 +42,14 @@ export function KpiStrip({ kpis, activeSortBy, onSortChange }) {
   const sparkLeverage = useMemo(() => [2, 3.5, 4, 5, 6, kpis?.privateLeverage?.value || 0], [kpis?.privateLeverage?.value]);
   const sparkCapacity = useMemo(() => [800, 1200, 1600, 2000, kpis?.ecosystemCapacity?.value || 0], [kpis?.ecosystemCapacity?.value]);
   const sparkMomentum = useMemo(() => [40, 50, 55, 60, kpis?.innovationIndex?.value || 0], [kpis?.innovationIndex?.value]);
+
+  const handleKpiCardClick = (sortKey, kpiKey) => {
+    onSortChange(sortKey);
+    if (onKpiClick) {
+      // Toggle: clicking the active KPI closes the panel
+      onKpiClick(activeKpi === kpiKey ? null : kpiKey);
+    }
+  };
 
   if (!kpis) return null;
 
@@ -64,7 +72,7 @@ export function KpiStrip({ kpis, activeSortBy, onSortChange }) {
           secondary={kpis.capitalDeployed?.secondary || ''}
           sparkData={sparkCapital}
           active={activeSortBy === 'funding'}
-          onClick={() => onSortChange('funding')}
+          onClick={() => handleKpiCardClick('funding', 'capitalDeployed')}
           tooltip={TOOLTIPS.capitalDeployed}
           quality={kpis.capitalDeployed?.quality}
           dataQualityNote={kpis.capitalDeployed?.dataQualityNote}
@@ -79,7 +87,7 @@ export function KpiStrip({ kpis, activeSortBy, onSortChange }) {
           sparkData={sparkSsbciCapital}
           sparkColor="var(--accent-blue)"
           active={activeSortBy === 'ssbci'}
-          onClick={() => onSortChange('ssbci')}
+          onClick={() => handleKpiCardClick('ssbci', 'ssbciCapitalDeployed')}
           tooltip={TOOLTIPS.ssbciCapitalDeployed}
           quality={kpis.ssbciCapitalDeployed?.quality}
           dataQualityNote={kpis.ssbciCapitalDeployed?.dataQualityNote}
@@ -93,7 +101,7 @@ export function KpiStrip({ kpis, activeSortBy, onSortChange }) {
           sparkData={sparkLeverage}
           sparkColor="var(--accent-gold)"
           active={activeSortBy === 'leverage'}
-          onClick={() => onSortChange('irs')}
+          onClick={() => handleKpiCardClick('leverage', 'privateLeverage')}
           tooltip={TOOLTIPS.privateLeverage}
           quality={kpis.privateLeverage?.quality}
           dataQualityNote={kpis.privateLeverage?.dataQualityNote}
@@ -104,7 +112,7 @@ export function KpiStrip({ kpis, activeSortBy, onSortChange }) {
           secondary={kpis.ecosystemCapacity?.secondary || ''}
           sparkData={sparkCapacity}
           active={activeSortBy === 'employees'}
-          onClick={() => onSortChange('momentum')}
+          onClick={() => handleKpiCardClick('employees', 'ecosystemCapacity')}
           tooltip={TOOLTIPS.ecosystemCapacity}
           quality={kpis.ecosystemCapacity?.quality}
           dataQualityNote={kpis.ecosystemCapacity?.dataQualityNote}
@@ -116,7 +124,7 @@ export function KpiStrip({ kpis, activeSortBy, onSortChange }) {
           sparkData={sparkMomentum}
           sparkColor="var(--status-success)"
           active={activeSortBy === 'momentum'}
-          onClick={() => onSortChange('irs')}
+          onClick={() => handleKpiCardClick('momentum', 'innovationIndex')}
           tooltip={TOOLTIPS.innovationIndex}
           quality={kpis.innovationIndex?.quality}
           dataQualityNote={kpis.innovationIndex?.dataQualityNote}

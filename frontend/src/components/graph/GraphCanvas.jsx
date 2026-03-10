@@ -7,7 +7,12 @@ import styles from './GraphCanvas.module.css';
 const MIN_R = 3;
 const MAX_R = 11;
 
+// Hub node IDs that anchor the galactic core — boosted radius + glow prominence
+const HUB_NODE_IDS = new Set(['f_bbv', 'goed', 'eco_goed', 'bbv', 'f_dfv', 'dfv']);
+
 function nodeRadius(node, pagerank) {
+  // Galactic core anchors: BBV fund and GOED ecosystem get boosted radii
+  if (HUB_NODE_IDS.has(node.id)) return 13;
   if (node.type === 'fund' || node.type === 'accelerator') return 8;
   if (node.type === 'sector' || node.type === 'ecosystem' || node.type === 'region') return 6;
   if (node.type === 'company') {
@@ -19,6 +24,8 @@ function nodeRadius(node, pagerank) {
     }
     return Math.min(MAX_R, 4 + Math.sqrt(Math.max(0, node.funding || 0)) * 0.15);
   }
+  // External nodes: 20% smaller than default to reduce visual dominance of the cloud
+  if (node.type === 'external') return 4;
   return 5;
 }
 
@@ -50,6 +57,18 @@ function edgeValue(e) {
   return '';
 }
 
+/* ── Radial opacity: nodes near the canvas centroid appear brighter ── */
+// Returns an opacity in [0.68, 1.0] — center nodes full opacity, outer nodes 0.68.
+// We compute the centroid lazily from the node array passed in.
+function radialOpacity(node, centroidX, centroidY, maxDist) {
+  if (!maxDist) return 1;
+  const dx = (node.x || 0) - centroidX;
+  const dy = (node.y || 0) - centroidY;
+  const dist = Math.sqrt(dx * dx + dy * dy);
+  // Linear falloff: center=1.0, edge=0.68
+  return 1.0 - 0.32 * Math.min(dist / maxDist, 1);
+}
+
 /* ── SVG filter definitions for glow effects ── */
 
 const GlowFilters = memo(function GlowFilters() {
@@ -63,6 +82,11 @@ const GlowFilters = memo(function GlowFilters() {
       {/* Selected node stronger glow */}
       <filter id="nodeGlowStrong" x="-60%" y="-60%" width="220%" height="220%">
         <feGaussianBlur in="SourceGraphic" stdDeviation="5" result="blur" />
+        <feComposite in="SourceGraphic" in2="blur" operator="over" />
+      </filter>
+      {/* Hub node (BBV/GOED) persistent glow — wider, warmer blur */}
+      <filter id="nodeGlowHub" x="-80%" y="-80%" width="260%" height="260%">
+        <feGaussianBlur in="SourceGraphic" stdDeviation="7" result="blur" />
         <feComposite in="SourceGraphic" in2="blur" operator="over" />
       </filter>
       {/* Edge anti-aliasing enhancement */}
@@ -143,11 +167,19 @@ const EdgeLabel = memo(function EdgeLabel({ sx, sy, tx, ty, label, val, relColor
 const NodeCircle = memo(function NodeCircle({
   node, r, fill, isSelected, isConnected, hasSelection, dim,
   onSelect, onHover, onLeave,
+  baseOpacity,  // radial galactic-core opacity (0.68–1.0), applied when not dim/selected
+  isHub,        // true for BBV/GOED hub nodes — always full opacity + persistent glow
 }) {
   const showLabel = r >= 10 || isSelected || (isConnected && hasSelection);
 
+  // Hub nodes are always fully visible; selection states take precedence over radial fade
+  const groupOpacity = dim ? 0.1
+    : isHub ? 1
+    : isSelected || isConnected ? 1
+    : (baseOpacity ?? 1);
+
   return (
-    <g opacity={dim ? 0.1 : 1} style={{ transition: 'opacity 300ms ease' }}>
+    <g opacity={groupOpacity} style={{ transition: 'opacity 300ms ease' }}>
       {/* Soft outer glow for connected nodes */}
       {isConnected && !isSelected && hasSelection && (
         <>
@@ -176,18 +208,41 @@ const NodeCircle = memo(function NodeCircle({
           />
         </>
       )}
+      {/* Hub node (BBV/GOED) persistent ambient glow rings — galactic core effect */}
+      {isHub && !isSelected && (
+        <>
+          <circle
+            cx={node.x} cy={node.y} r={r + 14}
+            fill={fill} fillOpacity={0.04}
+            pointerEvents="none"
+          />
+          <circle
+            cx={node.x} cy={node.y} r={r + 8}
+            fill={fill} fillOpacity={0.08}
+            pointerEvents="none"
+          />
+          <circle
+            cx={node.x} cy={node.y} r={r + 3}
+            fill="none" stroke={fill}
+            strokeWidth={1} opacity={0.3}
+            pointerEvents="none"
+          />
+        </>
+      )}
       {/* Main node circle — glow filter is applied by the parent wrapper, not here */}
       <circle
         cx={node.x} cy={node.y} r={r}
         fill={fill}
         stroke={
-          isSelected
-            ? '#fff'
-            : isConnected && hasSelection
-              ? 'var(--accent-teal)'
-              : 'rgba(0,0,0,0.25)'
+          isHub && !isSelected
+            ? 'rgba(255,255,255,0.35)'
+            : isSelected
+              ? '#fff'
+              : isConnected && hasSelection
+                ? 'var(--accent-teal)'
+                : 'rgba(0,0,0,0.25)'
         }
-        strokeWidth={isSelected ? 1.5 : isConnected && hasSelection ? 1 : 0.4}
+        strokeWidth={isHub && !isSelected ? 1 : isSelected ? 1.5 : isConnected && hasSelection ? 1 : 0.4}
         style={{
           cursor: 'pointer',
           transition: 'stroke-width 200ms ease, stroke 200ms ease',
@@ -445,6 +500,24 @@ export function GraphCanvas({
   const tooManyForEdgeLabels = nodeCount > 150;   // skip edge labels entirely
   const tooManyForFullOpacity = nodeCount > 300;  // reduce non-selected edge opacity
 
+  // Galactic core: compute centroid + max-distance for radial opacity falloff.
+  // Only active when graph is large enough to have a meaningful core/halo structure.
+  const { centroidX, centroidY, maxDist } = useMemo(() => {
+    if (nodeCount < 50) return { centroidX: 0, centroidY: 0, maxDist: 0 };
+    let sumX = 0, sumY = 0;
+    nodes.forEach((n) => { sumX += n.x || 0; sumY += n.y || 0; });
+    const cx = sumX / nodeCount;
+    const cy = sumY / nodeCount;
+    let maxD = 0;
+    nodes.forEach((n) => {
+      const dx = (n.x || 0) - cx;
+      const dy = (n.y || 0) - cy;
+      const d = Math.sqrt(dx * dx + dy * dy);
+      if (d > maxD) maxD = d;
+    });
+    return { centroidX: cx, centroidY: cy, maxDist: maxD };
+  }, [nodes, nodeCount]);
+
   // FIX 3: Count opportunity edges to gate dash animation.
   const opportunityEdgeCount = useMemo(() => {
     if (!showOpportunities) return 0;
@@ -510,12 +583,24 @@ export function GraphCanvas({
             const edgeColor = e.edge_color || (isHighlighted ? (rc?.color || 'var(--accent-teal)') : (rc?.color || '#333'));
             const edgeDash = e.edge_style ?? (rc?.dash || '');
 
-            // FIX 4: At > 300 nodes, collapse non-selected edge opacity to 0.15 to reduce
-            // GPU overdraw from hundreds of semi-transparent overlapping strokes.
-            const baseNonSelectedOpacity = tooManyForFullOpacity ? 0.15 : 0.35;
+            // Edge category-aware base opacity for galactic aesthetic clarity:
+            //   historical  → 0.25  (older structural edges, subdued)
+            //   operational → 0.35  (active relationships, moderate weight)
+            //   opportunity → 0.15  (speculative, very light — handled separately below)
+            // At > 300 nodes we further tighten to prevent GPU overdraw.
+            const category = e.edge_category || 'operational';
+            let categoryOpacity;
+            if (category === 'historical') {
+              categoryOpacity = tooManyForFullOpacity ? 0.18 : 0.25;
+            } else if (category === 'opportunity') {
+              categoryOpacity = 0.15;
+            } else {
+              // operational / untagged
+              categoryOpacity = tooManyForFullOpacity ? 0.22 : 0.35;
+            }
             const edgeOpacity = isOpportunity
               ? (e.edge_opacity ?? (dimEdge ? 0.05 : 0.5))
-              : (dimEdge ? 0.06 : isHighlighted ? 0.85 : baseNonSelectedOpacity);
+              : (dimEdge ? 0.06 : isHighlighted ? 0.85 : categoryOpacity);
             const edgeWidth = isOpportunity ? (isHighlighted ? 1.5 : 0.5) : (isHighlighted ? 2 : 0.5);
 
             return (
@@ -563,12 +648,16 @@ export function GraphCanvas({
             const dimBySearch = searchTerm && !matchesSearch(n);
             const dimBySelection = selectedNode && !isSelected && !isConnected;
             const dim = dimBySearch || dimBySelection;
+            const isHub = HUB_NODE_IDS.has(n.id);
+
+            // Galactic core radial opacity — only computed when graph is large enough
+            // and the node is not already highlighted/dimmed by selection/search.
+            const baseOpacity = (!dim && !isSelected && !isConnected && maxDist > 0)
+              ? radialOpacity(n, centroidX, centroidY, maxDist)
+              : 1;
 
             // FIX 5: Glow filter applied as a <g> wrapper ONLY on the selected node.
-            // Previously `filter: url(#nodeGlowStrong)` was an inline style prop on
-            // every NodeCircle's inner <circle>, causing the filter string to be part
-            // of the memo comparison on every render and applying the blur shader to
-            // ALL nodes that have any selection state.
+            // Hub nodes get a separate persistent glow filter wrapper.
             const inner = (
               <NodeCircle
                 key={n.id}
@@ -582,12 +671,14 @@ export function GraphCanvas({
                 onSelect={selectCallbacks[n.id]}
                 onHover={hoverCallbacks[n.id]}
                 onLeave={hideTooltip}
+                baseOpacity={baseOpacity}
+                isHub={isHub}
               />
             );
 
-            return isSelected
-              ? <g key={n.id} filter="url(#nodeGlowStrong)">{inner}</g>
-              : inner;
+            if (isSelected) return <g key={n.id} filter="url(#nodeGlowStrong)">{inner}</g>;
+            if (isHub && !isSelected) return <g key={n.id} filter="url(#nodeGlowHub)">{inner}</g>;
+            return inner;
           })}
         </g>
       </svg>

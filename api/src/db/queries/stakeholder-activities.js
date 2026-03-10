@@ -6,18 +6,20 @@ import pool from '../pool.js';
  * - location: Nevada region (las_vegas, reno, henderson, carson_city, etc.)
  * - since: ISO date string (e.g., 2025-01-01)
  * - until: ISO date string (e.g., 2025-12-31)
- * - limit: number of activities to return (default: 50)
+ * - limit: number of activities to return (default: 100, null for no limit)
  * - type: activity type filter
  * - stakeholderType: stakeholder category filter (gov_policy, university, corporate, risk_capital, ecosystem)
+ * - countOnly: if true, returns just the total count (number) instead of rows
  */
 export async function getStakeholderActivities(filters = {}) {
   const {
     location,
     since,
     until,
-    limit = 50,
+    limit = 100,
     type,
     stakeholderType,
+    countOnly = false,
   } = filters;
 
   let sql = `
@@ -33,7 +35,13 @@ export async function getStakeholderActivities(filters = {}) {
         true as verified,
         c.city,
         c.region,
-        NULL::varchar as stakeholder_type
+        CASE
+          WHEN t.event_type IN ('funding', 'investment') THEN 'risk_capital'
+          WHEN t.event_type IN ('grant', 'legislation', 'policy') THEN 'gov_policy'
+          WHEN t.event_type IN ('research', 'academic') THEN 'university'
+          WHEN t.event_type IN ('partnership', 'expansion') THEN 'corporate'
+          ELSE 'ecosystem'
+        END as stakeholder_type
       FROM timeline_events t
       LEFT JOIN companies c ON LOWER(c.name) = LOWER(t.company_name)
     ),
@@ -42,39 +50,74 @@ export async function getStakeholderActivities(filters = {}) {
         'graph-' || g.id as id,
         (g.event_year::text || '-01-01')::date as date,
         CASE g.rel
-          WHEN 'FUNDING' THEN 'funding'
-          WHEN 'INVESTMENT' THEN 'funding'
-          WHEN 'PARTNERSHIP' THEN 'partnership'
-          WHEN 'ACQUISITION' THEN 'acquisition'
-          ELSE 'partnership'
+          WHEN 'invested_in' THEN 'Funding'
+          WHEN 'funded' THEN 'Funding'
+          WHEN 'funded_by' THEN 'Funding'
+          WHEN 'grants_to' THEN 'Grant'
+          WHEN 'awarded' THEN 'Award'
+          WHEN 'partners_with' THEN 'Partnership'
+          WHEN 'contracts_with' THEN 'Partnership'
+          WHEN 'corporate_partner' THEN 'Partnership'
+          WHEN 'collaborated_with' THEN 'Partnership'
+          WHEN 'research_partnership' THEN 'Partnership'
+          WHEN 'pilots_with' THEN 'Partnership'
+          WHEN 'acquired' THEN 'Acquisition'
+          WHEN 'acquired_by' THEN 'Acquisition'
+          WHEN 'accelerated_by' THEN 'Milestone'
+          WHEN 'won_pitch' THEN 'Milestone'
+          ELSE 'Milestone'
         END as activity_type,
         c.name as company_name,
-        'Partnership: ' || g.note as description,
+        g.note as description,
         c.city || ', ' || c.region as location,
         'graph_edge' as source,
         false as verified,
         c.city,
         c.region,
-        NULL::varchar as stakeholder_type
+        CASE
+          WHEN g.source_type = 'fund' OR g.rel IN ('invested_in', 'funded', 'funded_by') THEN 'risk_capital'
+          WHEN g.source_type = 'external' AND e.entity_type IN ('University', 'University System') THEN 'university'
+          WHEN g.source_type = 'external' AND e.entity_type IN ('Gov Agency', 'Government', 'Federal Agency', 'Federal Program') THEN 'gov_policy'
+          WHEN g.source_type = 'external' AND e.entity_type IN ('Corporation', 'PE Firm', 'Investment Co') THEN 'corporate'
+          WHEN g.rel IN ('accelerated_by', 'won_pitch') THEN 'ecosystem'
+          WHEN g.rel IN ('grants_to', 'awarded') THEN 'gov_policy'
+          ELSE 'ecosystem'
+        END as stakeholder_type
       FROM graph_edges g
-      LEFT JOIN companies c ON c.slug = g.target_id OR c.slug = g.source_id
+      JOIN companies c ON 'c_' || c.id::text = g.target_id OR 'c_' || c.id::text = g.source_id
+      LEFT JOIN externals e ON g.source_type = 'external' AND e.id = g.source_id
       WHERE g.event_year IS NOT NULL
-        AND c.id IS NOT NULL
     ),
     enriched_activities AS (
       SELECT
         'sa-' || sa.id::text as id,
         sa.activity_date as date,
         sa.activity_type,
-        sa.company_id as company_name,
+        COALESCE(c.name, sa.company_id) as company_name,
         sa.description,
         sa.location,
         sa.source,
         (sa.data_quality = 'VERIFIED') as verified,
         split_part(sa.location, ',', 1) as city,
-        split_part(sa.location, ',', 2) as region,
-        sa.stakeholder_type
+        TRIM(split_part(sa.location, ',', 2)) as region,
+        COALESCE(sa.stakeholder_type, CASE
+          WHEN sa.activity_type IN ('Funding') THEN 'risk_capital'
+          WHEN sa.activity_type IN ('Grant', 'Award') THEN 'gov_policy'
+          WHEN sa.activity_type IN ('Partnership', 'Expansion', 'Acquisition') THEN 'corporate'
+          WHEN sa.activity_type IN ('Hiring') THEN 'corporate'
+          WHEN sa.activity_type IN ('Patent', 'Milestone', 'Launch') THEN 'ecosystem'
+          ELSE 'ecosystem'
+        END) as stakeholder_type
       FROM stakeholder_activities sa
+      LEFT JOIN LATERAL (
+        SELECT name FROM companies
+        WHERE slug = sa.company_id
+        UNION ALL
+        SELECT name FROM companies
+        WHERE LOWER(name) = LOWER(sa.company_id)
+          AND slug != sa.company_id
+        LIMIT 1
+      ) c ON true
     ),
     combined_activities AS (
       SELECT * FROM timeline_data
@@ -123,9 +166,9 @@ export async function getStakeholderActivities(filters = {}) {
     paramIndex++;
   }
 
-  // Filter by activity type
+  // Filter by activity type (case-insensitive to handle both Title Case and lowercase inputs)
   if (type && type !== 'all') {
-    sql += ` AND activity_type = $${paramIndex}`;
+    sql += ` AND LOWER(activity_type) = $${paramIndex}`;
     params.push(type.toLowerCase());
     paramIndex++;
   }
@@ -137,8 +180,24 @@ export async function getStakeholderActivities(filters = {}) {
     paramIndex++;
   }
 
-  sql += ` ORDER BY date DESC LIMIT $${paramIndex}`;
-  params.push(limit);
+  // Count-only mode: return just the total matching rows
+  if (countOnly) {
+    const countSql = `SELECT COUNT(*) as total FROM (${sql}) _counted`;
+    try {
+      const { rows } = await pool.query(countSql, params);
+      return parseInt(rows[0].total, 10);
+    } catch (error) {
+      console.error('Error counting stakeholder activities:', error);
+      throw error;
+    }
+  }
+
+  sql += ` ORDER BY date DESC`;
+
+  if (limit != null) {
+    sql += ` LIMIT $${paramIndex}`;
+    params.push(limit);
+  }
 
   try {
     const { rows } = await pool.query(sql, params);

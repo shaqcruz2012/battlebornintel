@@ -76,152 +76,15 @@ const REGION_BADGE_COLORS = {
   default: { bg: 'rgba(139, 146, 165, 0.12)', text: '#8B92A5' },
 };
 
-// ── Mock fallback data ─────────────────────────────────────────────────────────
-
-const MOCK_ACTIVITIES = [
-  {
-    id: 'mock-1',
-    date: '2026-03-05',
-    location: 'las_vegas',
-    location_label: 'LAS VEGAS',
-    activity_type: 'grant_award',
-    activity_type_label: 'GRANT AWARD',
-    company_name: 'GOED Awards $2.1M SBIR Matching Grants',
-    description:
-      'Nevada GOED announced a new cohort of SBIR matching grants targeting defense tech and cleantech startups across Southern Nevada. Fifteen companies selected from 60+ applicants.',
-    amount: '$2.1M',
-    stakeholder_type: 'gov',
-    stakeholder_type_label: 'Gov/Policy',
-    company_count: 15,
-    source: 'GOED',
-    verified: true,
-  },
-  {
-    id: 'mock-2',
-    date: '2026-03-04',
-    location: 'reno',
-    location_label: 'RENO',
-    activity_type: 'funding',
-    activity_type_label: 'FUNDING ROUND',
-    company_name: 'Redwood Materials closes $1.4B Series D',
-    description:
-      'Battery recycling pioneer Redwood Materials raised a $1.4B Series D to expand its Tahoe-Reno Industrial Center campus, targeting 1,500 new jobs in Northern Nevada.',
-    amount: '$1.4B',
-    stakeholder_type: 'capital',
-    stakeholder_type_label: 'Capital',
-    company_count: 1,
-    source: 'Crunchbase',
-    verified: true,
-  },
-  {
-    id: 'mock-3',
-    date: '2026-03-03',
-    location: 'carson_city',
-    location_label: 'CARSON CITY',
-    activity_type: 'legislation',
-    activity_type_label: 'LEGISLATION',
-    company_name: 'Nevada SB 312 — CVC Tax Credit Expansion',
-    description:
-      'State Senate passed SB 312 expanding the Corporate Venture Capital tax credit program, increasing the annual cap from $10M to $25M and broadening eligible sectors to include defense and biotech.',
-    amount: '$25M cap',
-    stakeholder_type: 'gov',
-    stakeholder_type_label: 'Gov/Policy',
-    company_count: null,
-    source: 'Nevada Legislature',
-    verified: true,
-  },
-  {
-    id: 'mock-4',
-    date: '2026-03-03',
-    location: 'reno',
-    location_label: 'RENO',
-    activity_type: 'partnership',
-    activity_type_label: 'PARTNERSHIP',
-    company_name: 'UNR–Switch Data Center Research Pact',
-    description:
-      'University of Nevada Reno and Switch signed a 5-year joint research agreement to develop next-generation cooling technology for hyperscale data centers, backed by $8M in Knowledge Fund support.',
-    amount: '$8M',
-    stakeholder_type: 'university',
-    stakeholder_type_label: 'Universities',
-    company_count: 2,
-    source: 'UNR',
-    verified: true,
-  },
-  {
-    id: 'mock-5',
-    date: '2026-03-01',
-    location: 'las_vegas',
-    location_label: 'LAS VEGAS',
-    activity_type: 'milestone',
-    activity_type_label: 'MILESTONE',
-    company_name: 'Allegiant Travel Labs — 50th AI patent granted',
-    description:
-      "Allegiant's internal technology arm received its 50th US patent in AI-driven revenue management, reinforcing Las Vegas hospitality tech credentials ahead of a planned $120M Series B.",
-    amount: null,
-    stakeholder_type: 'corporate',
-    stakeholder_type_label: 'Corporate',
-    company_count: 1,
-    source: 'USPTO',
-    verified: false,
-  },
-  {
-    id: 'mock-6',
-    date: '2026-02-28',
-    location: 'henderson',
-    location_label: 'HENDERSON',
-    activity_type: 'expansion',
-    activity_type_label: 'EXPANSION',
-    company_name: 'Amentum Henderson Advanced Mfg Campus',
-    description:
-      "Defense contractor Amentum broke ground on a 220,000 sq ft advanced manufacturing facility in Henderson's industrial corridor, creating an estimated 400 direct jobs and 1,200 indirect.",
-    amount: '$95M',
-    stakeholder_type: 'corporate',
-    stakeholder_type_label: 'Corporate',
-    company_count: 1,
-    source: 'GOED',
-    verified: true,
-  },
-  {
-    id: 'mock-7',
-    date: '2026-02-26',
-    location: 'statewide',
-    location_label: 'STATEWIDE',
-    activity_type: 'grant',
-    activity_type_label: 'GRANT',
-    company_name: 'SSBCI Deployment — Q1 2026 Cohort',
-    description:
-      'Nevada GOED deployed $18.3M in SSBCI capital across 7 approved funds in Q1 2026, generating a 4.2x leverage ratio and $76M in total capital committed to Nevada small businesses.',
-    amount: '$18.3M',
-    stakeholder_type: 'gov',
-    stakeholder_type_label: 'Gov/Policy',
-    company_count: 7,
-    source: 'GOED',
-    verified: true,
-  },
-  {
-    id: 'mock-8',
-    date: '2026-02-24',
-    location: 'reno',
-    location_label: 'RENO',
-    activity_type: 'funding',
-    activity_type_label: 'FUNDING ROUND',
-    company_name: 'Aqua-Pure Ventures — $22M Series A',
-    description:
-      'Water tech startup Aqua-Pure Ventures raised $22M led by Prelude Ventures to scale its closed-loop water recycling system for data centers in Nevada and Arizona.',
-    amount: '$22M',
-    stakeholder_type: 'capital',
-    stakeholder_type_label: 'Capital',
-    company_count: 1,
-    source: 'Crunchbase',
-    verified: true,
-  },
-];
 
 // ── Utility functions ──────────────────────────────────────────────────────────
 
 function formatFeedDate(dateStr) {
   if (!dateStr) return '';
-  const d = new Date(dateStr + 'T00:00:00');
+  // Handle both ISO timestamps (2026-01-20T08:00:00.000Z) and date-only strings (2026-01-20)
+  const datePart = String(dateStr).split('T')[0];
+  const d = new Date(datePart + 'T00:00:00');
+  if (isNaN(d.getTime())) return '';
   return d.toLocaleDateString('en-US', {
     month: 'short',
     day: 'numeric',
@@ -288,7 +151,9 @@ function matchesDateRange(activity, rangeId) {
   if (rangeId === 'all') return true;
   const bounds = getDateRangeBounds(rangeId);
   if (!bounds.since) return true;
-  return activity.date >= bounds.since;
+  // Compare date-only portion to handle ISO timestamps
+  const activityDate = String(activity.date).split('T')[0];
+  return activityDate >= bounds.since;
 }
 
 function matchesSearch(activity, query) {
@@ -528,7 +393,7 @@ export function StakeholderFeedView() {
   const [region, setRegion] = useState('all');
   const [stakeholderType, setStakeholderType] = useState('all');
   const [eventType, setEventType] = useState('all');
-  const [dateRange, setDateRange] = useState('week');
+  const [dateRange, setDateRange] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
 
   const apiParams = useMemo(() => {
@@ -538,16 +403,14 @@ export function StakeholderFeedView() {
       type: eventType !== 'all' ? eventType : undefined,
       stakeholderType: stakeholderType !== 'all' ? stakeholderType : undefined,
       ...bounds,
-      limit: 100,
+      limit: 200,
     };
   }, [region, eventType, stakeholderType, dateRange]);
 
   const { data: apiActivities, isLoading, error } = useStakeholderActivities(apiParams);
 
-  // Prefer real API data; fall back to mock when API returns empty or errors
   const baseActivities = useMemo(() => {
-    if (apiActivities && apiActivities.length > 0) return apiActivities;
-    return MOCK_ACTIVITIES;
+    return apiActivities ?? [];
   }, [apiActivities]);
 
   const filtered = useMemo(() => {
@@ -568,7 +431,7 @@ export function StakeholderFeedView() {
     region !== 'all' ||
     stakeholderType !== 'all' ||
     eventType !== 'all' ||
-    dateRange !== 'week' ||
+    dateRange !== 'all' ||
     !!searchQuery.trim();
 
   const weekLabel = getCurrentWeekLabel();
@@ -654,18 +517,7 @@ export function StakeholderFeedView() {
             ) : error ? (
               <div className={styles.errorState}>
                 <p className={styles.errorTitle}>Error loading activities</p>
-                <p className={styles.errorBody}>
-                  Showing sample data. {error.message}
-                </p>
-                {MOCK_ACTIVITIES.filter((a) =>
-                  matchesRegion(a, region) &&
-                  matchesStakeholderType(a, stakeholderType) &&
-                  matchesEventType(a, eventType) &&
-                  matchesDateRange(a, dateRange) &&
-                  matchesSearch(a, searchQuery)
-                ).map((activity) => (
-                  <FeedCard key={activity.id} activity={activity} />
-                ))}
+                <p className={styles.errorBody}>{error.message}</p>
               </div>
             ) : filtered.length === 0 ? (
               <EmptyState hasFilters={hasFilters} />
@@ -684,7 +536,7 @@ export function StakeholderFeedView() {
                         setRegion('all');
                         setStakeholderType('all');
                         setEventType('all');
-                        setDateRange('week');
+                        setDateRange('all');
                         setSearchQuery('');
                       }}
                     >

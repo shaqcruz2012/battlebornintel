@@ -13,7 +13,13 @@
       "runtimeExecutable": "node",
       "runtimeArgs": ["--watch", "src/index.js"],
       "cwd": "api",
-      "port": 3001
+      "port": 3001,
+      "autoPort": false,
+      "env": {
+        "DATABASE_URL": "postgresql://bbi:bbi_dev_password@localhost:5433/battlebornintel",
+        "API_PORT": "3001",
+        "NODE_ENV": "development"
+      }
     }
   ]
 }

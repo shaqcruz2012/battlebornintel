@@ -13,7 +13,10 @@ export function useGraphLayout(nodes, edges, options = {}) {
     height = 700,
   } = options;
 
-  const [layout, setLayout] = useState({ nodes: nodes || [], edges: edges || [] });
+  // Start with an empty layout so that GraphCanvas's hasFitRef doesn't trigger
+  // fitAll on raw un-positioned API nodes. The canvas will remain empty until
+  // the first interim frame from the worker arrives with valid x/y coordinates.
+  const [layout, setLayout] = useState({ nodes: [], edges: [] });
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
   const workerRef = useRef(null);
@@ -56,7 +59,10 @@ export function useGraphLayout(nodes, edges, options = {}) {
   // Compute layout when nodes/edges change
   useEffect(() => {
     if (!enabled || !nodes || nodes.length === 0) {
-      setLayout({ nodes: nodes || [], edges: edges || [] });
+      // Reset to empty layout so hasFitRef in GraphCanvas resets for the next
+      // data load, allowing fitAll to fire on the first valid interim frame.
+      setLayout({ nodes: [], edges: [] });
+      setIsLoading(false);
       return;
     }
 
@@ -73,19 +79,28 @@ export function useGraphLayout(nodes, edges, options = {}) {
     // Send work to worker
     worker.postMessage({ nodes, edges, width, height, iterations });
 
-    // Handle worker response
+    // Handle worker response — supports progressive rendering via interim frames.
+    // The worker sends multiple messages with `interim: true` for quick initial
+    // display, followed by a final message with `interim: false` (or undefined)
+    // that signals the simulation is complete.
     const handleMessage = (e) => {
-      const { success, nodes: layoutNodes, error: workerError } = e.data;
+      const { success, nodes: layoutNodes, error: workerError, interim } = e.data;
 
       if (success) {
+        // Update positions on every frame (interim and final) so the graph
+        // progressively refines in place rather than blinking in all at once.
         setLayout({ nodes: layoutNodes, edges });
         setError(null);
+
+        if (!interim) {
+          // Only mark layout as finished on the terminal message.
+          setIsLoading(false);
+        }
       } else {
         setError(workerError);
         setLayout({ nodes, edges }); // Fallback to original positions
+        setIsLoading(false);
       }
-
-      setIsLoading(false);
     };
 
     const handleError = (err) => {

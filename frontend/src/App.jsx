@@ -1,9 +1,10 @@
-import { useState, lazy, Suspense } from 'react';
+import { useState, useEffect, useCallback, lazy, Suspense } from 'react';
 import { FilterProvider } from './hooks/useFilters';
 import { AppShell } from './components/layout/AppShell';
 import { Header } from './components/layout/Header';
 import { ViewTabs } from './components/layout/ViewTabs';
 import { ExecutiveDashboard } from './components/dashboard/ExecutiveDashboard';
+import { SearchOverlay } from './components/search/SearchOverlay';
 
 const WeeklyBriefView = lazy(() => import('./components/brief/WeeklyBriefView').then(m => ({ default: m.WeeklyBriefView })));
 const GoedView = lazy(() => import('./components/goed/GoedView').then(m => ({ default: m.GoedView })));
@@ -20,15 +21,37 @@ const TabFallback = () => (
 
 export default function App() {
   const [view, setView] = useState('executive');
+  const [searchOpen, setSearchOpen] = useState(false);
+
+  // Global Cmd+K / Ctrl+K listener — opens the overlay
+  useEffect(() => {
+    function handleKeydown(e) {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        setSearchOpen((prev) => !prev);
+      }
+    }
+    window.addEventListener('keydown', handleKeydown);
+    return () => window.removeEventListener('keydown', handleKeydown);
+  }, []);
+
+  const handleSearchViewChange = useCallback((viewId) => {
+    setView(viewId);
+  }, []);
 
   return (
     <FilterProvider>
       <AppShell>
         <Header activeView={view} onViewChange={setView} />
         <ViewTabs active={view} onChange={setView} />
+        <SearchOverlay
+          isOpen={searchOpen}
+          onClose={() => setSearchOpen(false)}
+          onViewChange={handleSearchViewChange}
+        />
 
         <div className="fade-in" key={view}>
-          {view === 'executive' && <ExecutiveDashboard />}
+          {view === 'executive' && <ExecutiveDashboard onViewChange={setView} />}
           <Suspense fallback={<TabFallback />}>
             {view === 'brief' && <WeeklyBriefView />}
             {view === 'companies' && <CompaniesView />}

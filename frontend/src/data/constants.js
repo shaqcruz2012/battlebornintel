@@ -16,6 +16,7 @@ export const NODE_CFG = {
   exchange:{color:GP.pink,label:"Exchanges",icon:"\u25E7"},
   accelerator:{color:GP.lime,label:"Accelerators",icon:"\u25B2"},
   ecosystem:{color:"#7986CB",label:"Ecosystem Orgs",icon:"\u2295"},
+  program:{color:GP.teal,label:"Programs",icon:"\u25A1"},
 };
 
 export const REL_CFG = {

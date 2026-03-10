@@ -34,8 +34,17 @@ router.get('/metrics', async (req, res, next) => {
       const nodeTypes = req.query.nodeTypes
         ? req.query.nodeTypes.split(',')
         : undefined;
-      const live = await computeAndReturnMetrics(nodeTypes);
-      return res.json({ data: live, source: 'computed' });
+      try {
+        const live = await computeAndReturnMetrics(nodeTypes);
+        return res.json({ data: live, source: 'computed' });
+      } catch (computeErr) {
+        console.error('[graph/metrics] Live computation failed:', computeErr.message);
+        // Return empty metrics rather than crashing — the graph still renders
+        return res.json({
+          data: { pagerank: {}, betweenness: {}, communities: {}, watchlist: [], numCommunities: 0 },
+          source: 'empty',
+        });
+      }
     }
     res.json({ data: cached, source: 'cache' });
   } catch (err) {

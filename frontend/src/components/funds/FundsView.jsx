@@ -63,7 +63,7 @@ export function FundsView() {
   const aggregates = useMemo(() => {
     const totalAllocated = funds.reduce((sum, f) => sum + (f.allocated || 0), 0);
     const totalDeployed = funds.reduce((sum, f) => sum + (f.deployed || 0), 0);
-    const totalCompanies = funds.reduce((sum, f) => sum + (f.companies || 0), 0);
+    const totalCompanies = Object.values(portfolioMap).reduce((sum, arr) => sum + arr.length, 0);
 
     const fundsWithLeverage = funds.filter((f) => f.leverage != null && f.deployed > 0);
     const weightedLeverage = fundsWithLeverage.reduce(
@@ -79,7 +79,7 @@ export function FundsView() {
       : 0;
 
     return { totalAllocated, totalDeployed, avgLeverage, totalCompanies };
-  }, [funds]);
+  }, [funds, portfolioMap]);
 
   // Sort funds
   const sortedFunds = useMemo(() => {
@@ -89,7 +89,7 @@ export function FundsView() {
         sorted.sort((a, b) => (b.deployed || 0) - (a.deployed || 0));
         break;
       case 'companies':
-        sorted.sort((a, b) => (b.companies || 0) - (a.companies || 0));
+        sorted.sort((a, b) => (portfolioMap[b.id] || []).length - (portfolioMap[a.id] || []).length);
         break;
       case 'name':
         sorted.sort((a, b) => a.name.localeCompare(b.name));
@@ -98,7 +98,7 @@ export function FundsView() {
         break;
     }
     return sorted;
-  }, [funds, sortBy]);
+  }, [funds, sortBy, portfolioMap]);
 
   const handleToggle = (fundId) => {
     setExpandedId((prev) => (prev === fundId ? null : fundId));
@@ -160,6 +160,7 @@ export function FundsView() {
               key={fund.id}
               fund={fund}
               portfolio={portfolioMap[fund.id] || []}
+              portfolioCount={(portfolioMap[fund.id] || []).length}
               isExpanded={expandedId === fund.id}
               onToggle={() => handleToggle(fund.id)}
             />

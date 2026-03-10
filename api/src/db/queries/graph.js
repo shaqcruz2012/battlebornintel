@@ -11,37 +11,58 @@ export async function getGraphData({ nodeTypes = [], yearMax = 2026, region } = 
     }
   };
 
-  // Load companies once — reused for nodes, sectors, regions, and derived edges
+  // Determine which tables are needed up-front so all queries run in a single
+  // parallel batch (eliminates sequential round-trips to the database).
   const needCompanies = ['company', 'sector', 'region'].some(t => nodeTypes.includes(t))
     || (nodeTypes.includes('fund') || nodeTypes.includes('exchange'));
+  const needPeople = nodeTypes.includes('person');
+  const needPrograms = nodeTypes.includes('program');
+
+  // Build conditional SQL strings before launching the parallel batch
+  const regionFilter = region && region !== 'all';
+
   let companySql = `SELECT id, name, stage, funding_m, momentum, employees, city, region, sectors, eligible, founded FROM companies`;
   const companyParams = [];
-  if (needCompanies && region && region !== 'all') {
+  if (needCompanies && regionFilter) {
     companySql += ` WHERE region = $1`;
     companyParams.push(region);
   }
-  const companyRows = needCompanies
-    ? (await pool.query(companySql, companyParams)).rows
-    : [];
 
-  // Load people once — reused for nodes and founder edges
-  // note column excluded: free-text blob not needed for graph visualization
-  const needPeople = nodeTypes.includes('person');
-  const peopleRows = needPeople
-    ? (await pool.query(`SELECT id, name, role, company_id FROM people`)).rows
-    : [];
-
-  // Parallel fetch for independent tables
-  // note columns excluded from accelerators and ecosystem_orgs — free-text not
-  // needed for graph visualization and adds unnecessary payload weight
   const accelSql = nodeTypes.includes('accelerator')
-    ? `SELECT id, name, accel_type, city, region, founded FROM accelerators${region && region !== 'all' ? ` WHERE region = $1` : ''}`
+    ? `SELECT id, name, accel_type, city, region, founded FROM accelerators${regionFilter ? ` WHERE region = $1` : ''}`
     : null;
   const ecoSql = nodeTypes.includes('ecosystem')
-    ? `SELECT id, name, entity_type, city, region FROM ecosystem_orgs${region && region !== 'all' ? ` WHERE region = $1` : ''}`
+    ? `SELECT id, name, entity_type, city, region FROM ecosystem_orgs${regionFilter ? ` WHERE region = $1` : ''}`
     : null;
 
-  const [fundRows, externalRows, accelRows, ecoRows, edgeRows, listingRows, exchangeRows] = await Promise.all([
+  // All DB queries run in parallel — no sequential awaits
+  // note column excluded from graph_edges: free-text not used by the renderer
+  // event_year IS NULL check removed: all rows have an event_year value so the
+  // simpler predicate event_year <= $1 enables the covering index path.
+  const [
+    companyRows,
+    peopleRows,
+    programRows,
+    fundRows,
+    externalRows,
+    accelRows,
+    ecoRows,
+    edgeRows,
+    listingRows,
+    exchangeRows,
+  ] = await Promise.all([
+    needCompanies
+      ? pool.query(companySql, companyParams).then(r => r.rows)
+      : [],
+    // note column excluded: free-text blob not needed for graph visualization
+    needPeople
+      ? pool.query(`SELECT id, name, role, company_id FROM people`).then(r => r.rows)
+      : [],
+    // Programs always loaded when requested so qualifies_for / fund_opportunity
+    // edges resolve to named nodes instead of 'unknown'.
+    needPrograms
+      ? pool.query(`SELECT id, slug, name, program_type FROM programs ORDER BY id`).then(r => r.rows)
+      : [],
     nodeTypes.includes('fund')
       ? pool.query(`SELECT id, name, fund_type FROM graph_funds`).then(r => r.rows)
       : [],
@@ -49,14 +70,16 @@ export async function getGraphData({ nodeTypes = [], yearMax = 2026, region } = 
     nodeTypes.includes('external')
       ? pool.query(`SELECT id, name, entity_type FROM externals`).then(r => r.rows)
       : [],
+    // note columns excluded from accelerators and ecosystem_orgs — free-text
+    // not needed for graph visualization and adds unnecessary payload weight
     accelSql
-      ? pool.query(accelSql, region && region !== 'all' ? [region] : []).then(r => r.rows)
+      ? pool.query(accelSql, regionFilter ? [region] : []).then(r => r.rows)
       : [],
     ecoSql
-      ? pool.query(ecoSql, region && region !== 'all' ? [region] : []).then(r => r.rows)
+      ? pool.query(ecoSql, regionFilter ? [region] : []).then(r => r.rows)
       : [],
     pool.query(
-      `SELECT source_id, target_id, rel, note, event_year, edge_category, edge_style, edge_color, edge_opacity FROM graph_edges WHERE (event_year IS NULL OR event_year <= $1)`,
+      `SELECT source_id, target_id, rel, event_year, edge_category, edge_style, edge_color, edge_opacity FROM graph_edges WHERE event_year <= $1`,
       [yearMax]
     ).then(r => r.rows),
     nodeTypes.includes('exchange')
@@ -102,6 +125,15 @@ export async function getGraphData({ nodeTypes = [], yearMax = 2026, region } = 
   if (nodeTypes.includes('external')) {
     for (const x of externalRows) {
       add(x.id, x.name, 'external', { etype: x.entity_type });
+    }
+  }
+
+  if (nodeTypes.includes('program')) {
+    for (const p of programRows) {
+      add(`p_${p.id}`, p.name, 'program', {
+        slug: p.slug,
+        programType: p.program_type,
+      });
     }
   }
 
@@ -162,25 +194,85 @@ export async function getGraphData({ nodeTypes = [], yearMax = 2026, region } = 
     }
   }
 
-  // Explicit edges (from graph_edges table)
-  const edges = [];
-  for (const e of edgeRows) {
-    if (nodeSet.has(e.source_id) && nodeSet.has(e.target_id)) {
-      const edge = {
-        source: e.source_id,
-        target: e.target_id,
-        rel: e.rel,
-        y: e.event_year,
-      };
-      // Include visual metadata only when present to keep payload lean
-      if (e.edge_category && e.edge_category !== 'historical') {
-        edge.category = e.edge_category;
-      }
-      if (e.edge_style) edge.style = e.edge_style;
-      if (e.edge_color) edge.color = e.edge_color;
-      if (e.edge_opacity != null) edge.opacity = e.edge_opacity;
-      edges.push(edge);
+  // Map ID prefix → node type so we can decide whether a missing endpoint
+  // belongs to a type that was simply not requested (in which case we drop
+  // the edge cleanly) vs. a genuinely unknown node (in which case we add a
+  // placeholder so the renderer can still draw the dangling edge).
+  //
+  // Prefixes used in graph_edges:
+  //   c_  → company      f_  → fund         p_  → program
+  //   a_  → accelerator  e_  → ecosystem     x_  → external
+  //   i_  → external     u_  → external      v_  → external
+  //   gov_→ external     s_  → sector        r_  → region
+  //   ex_ → exchange
+  const nodeTypeSet = new Set(nodeTypes);
+  const typeFromId = (id) => {
+    const pfx = id.split('_')[0];
+    switch (pfx) {
+      case 'c':   return 'company';
+      case 'f':   return 'fund';
+      // p_ prefix is shared: p_<digit> = program node, p_<alpha> = person node
+      case 'p':   return /^p_\d/.test(id) ? 'program' : 'person';
+      case 'a':   return 'accelerator';
+      case 'e':   return 'ecosystem';
+      case 'x':
+      case 'i':
+      case 'u':
+      case 'v':
+      case 'gov': return 'external';
+      case 's':   return 'sector';
+      case 'r':   return 'region';
+      case 'ex':  return 'exchange';
+      default:    return null;   // truly unknown prefix
     }
+  };
+
+  // Explicit edges (from graph_edges table)
+  // Include an edge when at least one endpoint is already loaded.
+  // If the other endpoint is missing:
+  //   • and its type is known but was not requested → drop the edge silently
+  //     (avoids "unknown" placeholder nodes for excluded node types)
+  //   • and its type is genuinely unknown → add a minimal placeholder so the
+  //     renderer can still draw the dangling edge
+  const edges = [];
+  let placeholderCount = 0;
+  for (const e of edgeRows) {
+    const hasSource = nodeSet.has(e.source_id);
+    const hasTarget = nodeSet.has(e.target_id);
+    if (!hasSource && !hasTarget) continue;
+
+    // Determine whether each missing side should produce a placeholder or
+    // cause the entire edge to be skipped.
+    if (!hasSource) {
+      const inferredType = typeFromId(e.source_id);
+      if (inferredType !== null && !nodeTypeSet.has(inferredType)) continue; // excluded type — drop edge
+      add(e.source_id, e.source_id, 'unknown');
+      placeholderCount++;
+    }
+    if (!hasTarget) {
+      const inferredType = typeFromId(e.target_id);
+      if (inferredType !== null && !nodeTypeSet.has(inferredType)) continue; // excluded type — drop edge
+      add(e.target_id, e.target_id, 'unknown');
+      placeholderCount++;
+    }
+
+    const edge = {
+      source: e.source_id,
+      target: e.target_id,
+      rel: e.rel,
+      y: e.event_year,
+    };
+    // Include visual metadata only when present to keep payload lean
+    if (e.edge_category && e.edge_category !== 'historical') {
+      edge.category = e.edge_category;
+    }
+    if (e.edge_style) edge.style = e.edge_style;
+    if (e.edge_color) edge.color = e.edge_color;
+    if (e.edge_opacity != null) edge.opacity = e.edge_opacity;
+    edges.push(edge);
+  }
+  if (placeholderCount > 0) {
+    console.log(`[graph] Added ${placeholderCount} placeholder nodes for edges with missing endpoints`);
   }
 
   // Derived edges — all from already-loaded data, no extra queries
@@ -232,11 +324,24 @@ export async function getGraphData({ nodeTypes = [], yearMax = 2026, region } = 
 }
 
 export async function getGraphMetrics() {
-  const { rows } = await pool.query(
-    `SELECT node_id, pagerank, betweenness, community_id
-     FROM graph_metrics_cache
-     WHERE computed_at = (SELECT MAX(computed_at) FROM graph_metrics_cache)`
-  );
+  let rows;
+  try {
+    const result = await pool.query(
+      `SELECT node_id, pagerank, betweenness, community_id
+       FROM graph_metrics_cache
+       WHERE computed_at = (SELECT MAX(computed_at) FROM graph_metrics_cache)`
+    );
+    rows = result.rows;
+  } catch (err) {
+    // Table may not exist or be empty — return empty metrics so the
+    // caller can fall back to live computation gracefully.
+    console.error('[graph] graph_metrics_cache query failed:', err.message);
+    return { pagerank: {}, betweenness: {}, communities: {} };
+  }
+
+  if (!rows || rows.length === 0) {
+    return { pagerank: {}, betweenness: {}, communities: {} };
+  }
 
   const pagerank = {};
   const betweenness = {};

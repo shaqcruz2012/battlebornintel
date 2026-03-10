@@ -1,8 +1,11 @@
+import { useState } from 'react';
 import { useFilters } from '../../hooks/useFilters';
 import { useCompanies, useKpis, useSectorStats, useFunds } from '../../api/hooks';
 import { MainGrid } from '../layout/AppShell';
 import { KpiStrip } from './KpiStrip';
+import { KpiDetailPanel } from './KpiDetailPanel';
 import { SectorHeatStrip } from './SectorHeatStrip';
+import { SectorDetailDrawer } from './SectorDetailDrawer';
 import { MomentumTable } from './MomentumTable';
 import { NarrativePanel } from './NarrativePanel';
 import { RiskAlerts } from './RiskAlerts';
@@ -55,8 +58,10 @@ function LoadingSkeleton() {
   );
 }
 
-export function ExecutiveDashboard() {
+export function ExecutiveDashboard({ onViewChange }) {
   const { filters, setSortBy, setSector } = useFilters();
+  const [selectedSector, setSelectedSector] = useState(null);
+  const [activeKpi, setActiveKpi] = useState(null);
 
   const { data: companies = [], isLoading: loadingCompanies } = useCompanies({
     stage: filters.stage,
@@ -83,6 +88,12 @@ export function ExecutiveDashboard() {
     return <LoadingSkeleton />;
   }
 
+  const handleViewAllCompanies = (sector) => {
+    if (sector) setSector(sector);
+    if (onViewChange) onViewChange('companies');
+    setSelectedSector(null);
+  };
+
   return (
     <MainGrid>
       <KpiStrip
@@ -90,11 +101,24 @@ export function ExecutiveDashboard() {
         funds={funds}
         activeSortBy={filters.sortBy}
         onSortChange={setSortBy}
+        onKpiClick={setActiveKpi}
+        activeKpi={activeKpi}
       />
+      {activeKpi && (
+        <KpiDetailPanel
+          activeKpi={activeKpi}
+          kpis={kpis}
+          funds={funds}
+          companies={companies}
+          sectorStats={sectorStats}
+          onClose={() => setActiveKpi(null)}
+        />
+      )}
       <SectorHeatStrip
         sectors={sectorStats}
         activeSector={filters.sector}
         onSectorChange={setSector}
+        onSectorClick={setSelectedSector}
       />
       <MomentumTable
         companies={companies}
@@ -103,6 +127,15 @@ export function ExecutiveDashboard() {
       />
       <NarrativePanel companies={companies} funds={funds} />
       <RiskAlerts companies={companies} funds={funds} />
+      {selectedSector && (
+        <SectorDetailDrawer
+          sector={selectedSector}
+          companies={companies}
+          sectorStats={sectorStats}
+          onClose={() => setSelectedSector(null)}
+          onViewAll={() => handleViewAllCompanies(selectedSector)}
+        />
+      )}
     </MainGrid>
   );
 }

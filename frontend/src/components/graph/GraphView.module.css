@@ -35,3 +35,82 @@
   font-family: var(--font-body);
   font-size: var(--text-caption);
 }
+
+/* Error state */
+.errorState {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: var(--text-secondary);
+  font-family: var(--font-body);
+  text-align: center;
+  padding: 32px;
+}
+
+.errorState h3 {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: var(--text-body);
+}
+
+.errorState p {
+  margin: 0;
+  font-size: var(--text-caption);
+  max-width: 420px;
+}
+
+.errorState button {
+  margin-top: 8px;
+  padding: 6px 16px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  font-size: var(--text-caption);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.errorState button:hover {
+  background: var(--surface-hover, var(--border));
+}
+
+/* Empty state — data loaded but nothing to show */
+.emptyState {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: var(--text-secondary);
+  font-family: var(--font-body);
+  text-align: center;
+  padding: 32px;
+}
+
+.emptyState h3 {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: var(--text-body);
+}
+
+.emptyState p {
+  margin: 0;
+  font-size: var(--text-caption);
+  max-width: 420px;
+}
+
+@media (max-width: 1200px) {
+  .body {
+    flex-direction: column;
+  }
+
+  .canvasOuter {
+    min-height: 400px;
+  }
+}

@@ -2,7 +2,10 @@ import pool from '../pool.js';
 
 export async function getAllFunds() {
   const { rows } = await pool.query(
-    `SELECT * FROM funds ORDER BY deployed_m DESC`
+    `SELECT f.*,
+       (SELECT COUNT(*) FROM companies c WHERE f.id = ANY(c.eligible)) AS company_count
+     FROM funds f
+     ORDER BY f.deployed_m DESC`
   );
   return rows.map(formatFund);
 }

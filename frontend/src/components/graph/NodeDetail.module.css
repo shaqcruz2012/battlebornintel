@@ -345,4 +345,9 @@
     border-left: none;
     border-top: 2px solid rgba(69, 215, 198, 0.15);
   }
+
+  /* Hide the placeholder on narrow screens so the canvas gets full space */
+  .placeholder {
+    display: none;
+  }
 }

@@ -40,7 +40,7 @@ function clusterTarget(node, width, height) {
     HUB_IDS.has(node.id) ||
     (node.type === 'fund' && (node.label || '').toLowerCase().includes('battle born'))
   ) {
-    return { x: cx, y: cy, strength: 0.6 };
+    return { x: cx, y: cy, strength: 0.8 };
   }
 
   switch (node.type) {
@@ -49,7 +49,7 @@ function clusterTarget(node, width, height) {
       return {
         x: cx + (Math.random() - 0.5) * width * 0.15,
         y: cy + (Math.random() - 0.5) * height * 0.15,
-        strength: 0.25,
+        strength: 0.30,
       };
 
     case 'company': {
@@ -66,7 +66,7 @@ function clusterTarget(node, width, height) {
         statewide:       { x: cx,                y: cy + height * 0.30 },  // lower-center
       };
       const zone = regionZones[node.region] || { x: cx, y: cy + height * 0.20 };
-      return { ...zone, strength: 0.18 };
+      return { ...zone, strength: 0.12 };
     }
 
     case 'person':
@@ -139,9 +139,9 @@ class ForceSimulation {
       .filter(Boolean);
 
     this.alpha = 1;
-    this.alphaDecay = 0.04;   // faster convergence than D3 default (0.0228)
+    this.alphaDecay = 0.018;  // slower cooldown = more motion/settling
     this.alphaMin = 0.008;    // stop earlier than D3 default (0.001)
-    this.velocityDecay = 0.35;
+    this.velocityDecay = 0.30;
   }
 
   /**
@@ -149,7 +149,7 @@ class ForceSimulation {
    * Strength -55 gives more breathing room than the old -30.
    */
   applyRepulsion() {
-    const strength = -55;
+    const strength = -22;
     for (let i = 0; i < this.nodes.length; ++i) {
       const a = this.nodes[i];
       for (let j = i + 1; j < this.nodes.length; ++j) {
@@ -179,7 +179,7 @@ class ForceSimulation {
    * a minimum center-to-center distance.
    */
   applyCollision() {
-    const minDist = 14;
+    const minDist = 5;
     for (let i = 0; i < this.nodes.length; ++i) {
       for (let j = i + 1; j < this.nodes.length; ++j) {
         const a = this.nodes[i];
@@ -188,7 +188,7 @@ class ForceSimulation {
         const dy = b.y - a.y || 0.01;
         const dist = Math.sqrt(dx * dx + dy * dy);
         if (dist < minDist) {
-          const overlap = ((minDist - dist) / dist) * 0.5;
+          const overlap = ((minDist - dist) / dist) * 0.10;
           a.vx -= dx * overlap;
           a.vy -= dy * overlap;
           b.vx += dx * overlap;
@@ -242,12 +242,12 @@ class ForceSimulation {
     const margin = 40;
     for (const node of this.nodes) {
       if (node.fx == null) {
-        if (node.x < margin)               node.vx += (margin - node.x) * 0.1;
-        if (node.x > this.width - margin)  node.vx += (this.width - margin - node.x) * 0.1;
+        if (node.x < margin)               node.vx += (margin - node.x) * 0.06;
+        if (node.x > this.width - margin)  node.vx += (this.width - margin - node.x) * 0.06;
       }
       if (node.fy == null) {
-        if (node.y < margin)               node.vy += (margin - node.y) * 0.1;
-        if (node.y > this.height - margin) node.vy += (this.height - margin - node.y) * 0.1;
+        if (node.y < margin)               node.vy += (margin - node.y) * 0.06;
+        if (node.y > this.height - margin) node.vy += (this.height - margin - node.y) * 0.06;
       }
     }
   }
@@ -281,10 +281,22 @@ class ForceSimulation {
     this.alpha += (this.alphaMin - this.alpha) * this.alphaDecay;
   }
 
-  run(iterations = 400) {
+  /**
+   * Run the simulation for up to `iterations` ticks.
+   * If `onInterim` is provided it is called every `interimEvery` ticks with
+   * the current node array so the caller can stream progressive results.
+   *
+   * @param {number}   iterations  - maximum tick count
+   * @param {Function} [onInterim] - callback(nodes) fired every interimEvery ticks
+   * @param {number}   [interimEvery=60] - interval between interim callbacks
+   */
+  run(iterations = 600, onInterim = null, interimEvery = 60) {
     for (let i = 0; i < iterations; ++i) {
       this.tick();
       if (this.alpha < this.alphaMin) break;
+      if (onInterim && (i + 1) % interimEvery === 0) {
+        onInterim(this.nodes);
+      }
     }
     return this.nodes;
   }
@@ -303,6 +315,25 @@ function marginRand(dim) {
 }
 
 // ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * Serialize only the fields consumers need, stripping internal simulation
+ * state (vx, vy, fx, fy, index, _clusterTarget) to keep message size lean.
+ */
+function serializeNodes(nodes) {
+  return nodes.map(({ id, type, label, x, y, ...rest }) => ({
+    id,
+    type,
+    label,
+    ...rest,
+    x,
+    y,
+  }));
+}
+
+// ---------------------------------------------------------------------------
 // Message handler
 // ---------------------------------------------------------------------------
 self.addEventListener('message', (e) => {
@@ -311,7 +342,7 @@ self.addEventListener('message', (e) => {
     edges,
     width = 1200,
     height = 700,
-    iterations = 400,
+    iterations = 600,
   } = e.data;
 
   try {
@@ -323,19 +354,47 @@ self.addEventListener('message', (e) => {
     }));
 
     const sim = new ForceSimulation(initializedNodes, edges, width, height);
-    const result = sim.run(iterations);
 
+    // ── Pass 1: quick layout (150 ticks) ──────────────────────────────────
+    // Post an interim frame every 60 ticks so the canvas can render a rough
+    // layout within ~1-2 seconds instead of waiting for all 600 ticks.
+    const PASS1_TICKS = 150;
+    const INTERIM_EVERY = 60;
+
+    sim.run(PASS1_TICKS, (currentNodes) => {
+      self.postMessage({
+        success: true,
+        interim: true,
+        nodes: serializeNodes(currentNodes),
+      });
+    }, INTERIM_EVERY);
+
+    // Guarantee at least one interim frame after the first pass even if
+    // PASS1_TICKS is not a multiple of INTERIM_EVERY.
     self.postMessage({
       success: true,
-      // Return only the fields consumers need; strip internal simulation state
-      nodes: result.map(({ id, type, label, x, y, ...rest }) => ({
-        id,
-        type,
-        label,
-        ...rest,
-        x,
-        y,
-      })),
+      interim: true,
+      nodes: serializeNodes(sim.nodes),
+    });
+
+    // ── Pass 2: refinement (remaining iterations) ─────────────────────────
+    // Continue the simulation from where it left off, posting interim frames
+    // every 60 ticks until the alpha cools or we exhaust the budget.
+    const remainingTicks = Math.max(0, iterations - PASS1_TICKS);
+
+    sim.run(remainingTicks, (currentNodes) => {
+      self.postMessage({
+        success: true,
+        interim: true,
+        nodes: serializeNodes(currentNodes),
+      });
+    }, INTERIM_EVERY);
+
+    // ── Final frame ────────────────────────────────────────────────────────
+    self.postMessage({
+      success: true,
+      interim: false,
+      nodes: serializeNodes(sim.nodes),
     });
   } catch (error) {
     self.postMessage({ success: false, error: error.message });

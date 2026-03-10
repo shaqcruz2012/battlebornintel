@@ -7,14 +7,25 @@ function heatColor(heat) {
   return 'var(--text-disabled)';
 }
 
-export function SectorHeatStrip({ sectors = [], activeSector, onSectorChange }) {
+export function SectorHeatStrip({ sectors = [], activeSector, onSectorChange, onSectorClick }) {
+  const handleSectorClick = (sector) => {
+    onSectorChange(sector);
+    if (onSectorClick) {
+      // Toggle: clicking the already-selected sector closes the drawer
+      onSectorClick((prev) => (prev === sector ? null : sector));
+    }
+  };
+
   return (
     <div className={styles.wrapper}>
       <div className={styles.label}>Sector Heat</div>
       <div className={styles.strip}>
         <button
           className={`${styles.chip} ${activeSector === 'all' ? styles.activeChip : ''}`}
-          onClick={() => onSectorChange('all')}
+          onClick={() => {
+            onSectorChange('all');
+            if (onSectorClick) onSectorClick(null);
+          }}
           type="button"
         >
           All
@@ -23,7 +34,7 @@ export function SectorHeatStrip({ sectors = [], activeSector, onSectorChange }) 
           <button
             key={s.sector}
             className={`${styles.chip} ${activeSector === s.sector ? styles.activeChip : ''}`}
-            onClick={() => onSectorChange(s.sector)}
+            onClick={() => handleSectorClick(s.sector)}
             type="button"
           >
             <span

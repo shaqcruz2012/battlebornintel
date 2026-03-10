@@ -446,6 +446,40 @@
   color: var(--text-muted);
 }
 
+/* ── View button ──────────────────────────────────────────── */
+
+.viewBtn {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: var(--radius-xs);
+  border: 1px solid var(--border-subtle);
+  background: transparent;
+  color: var(--text-muted);
+  font-family: var(--font-body);
+  font-size: 9px;
+  font-weight: var(--weight-semibold);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  cursor: pointer;
+  opacity: 0;
+  transition:
+    opacity var(--transition-fast),
+    color var(--transition-fast),
+    border-color var(--transition-fast),
+    background var(--transition-fast);
+}
+
+.tr:hover .viewBtn {
+  opacity: 1;
+}
+
+.viewBtn:hover {
+  color: var(--accent-teal);
+  border-color: rgba(69, 215, 198, 0.35);
+  background: rgba(69, 215, 198, 0.06);
+}
+
 /* ── Chevron ──────────────────────────────────────────────── */
 
 .chevron {

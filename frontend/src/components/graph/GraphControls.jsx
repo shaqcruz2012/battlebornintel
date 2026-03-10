@@ -18,27 +18,27 @@ const STAKEHOLDER_PRESETS = [
   {
     id: 'all',
     label: 'All',
-    nodes: { company: true, fund: true, sector: false, region: false, person: true, external: true, exchange: false, accelerator: true, ecosystem: true },
+    nodes: { company: true, fund: true, sector: false, region: false, person: true, external: true, exchange: false, accelerator: true, ecosystem: true, program: false },
   },
   {
     id: 'government',
     label: 'Government',
-    nodes: { company: true, fund: false, sector: false, region: false, person: false, external: true, exchange: false, accelerator: false, ecosystem: true },
+    nodes: { company: true, fund: false, sector: false, region: false, person: false, external: true, exchange: false, accelerator: false, ecosystem: true, program: false },
   },
   {
     id: 'universities',
     label: 'Universities',
-    nodes: { company: true, fund: false, sector: false, region: false, person: false, external: false, exchange: false, accelerator: true, ecosystem: true },
+    nodes: { company: true, fund: false, sector: false, region: false, person: false, external: false, exchange: false, accelerator: true, ecosystem: true, program: false },
   },
   {
     id: 'corporate',
     label: 'Corporate',
-    nodes: { company: true, fund: true, sector: false, region: false, person: false, external: true, exchange: false, accelerator: false, ecosystem: false },
+    nodes: { company: true, fund: true, sector: false, region: false, person: false, external: true, exchange: false, accelerator: false, ecosystem: false, program: false },
   },
   {
     id: 'risk_capital',
     label: 'Risk Capital',
-    nodes: { company: true, fund: true, sector: false, region: false, person: false, external: false, exchange: false, accelerator: true, ecosystem: false },
+    nodes: { company: true, fund: true, sector: false, region: false, person: false, external: false, exchange: false, accelerator: true, ecosystem: false, program: false },
   },
 ];
 

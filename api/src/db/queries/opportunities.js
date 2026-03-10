@@ -61,10 +61,18 @@ export async function getOpportunities(filters = {}) {
   const where = conditions.join(' AND ');
   const order = { score: 'ge.matching_score DESC', company: 'c.name ASC', recent: 'ge.created_at DESC' }[sortBy] || 'ge.matching_score DESC';
 
+  // Guard the CAST for programs: only cast when target_id actually starts with 'p_'
+  // to avoid "invalid input syntax for type integer" when target_id is 'c_N' for
+  // fund_opportunity edges.  Same guard applied in getCompanyOpportunities and
+  // getOpportunityStats / topCompanies sub-query.
+  const programJoin = `LEFT JOIN programs p ON ge.rel='qualifies_for'
+      AND ge.target_id LIKE 'p_%'
+      AND p.id = CAST(SUBSTRING(ge.target_id FROM 3) AS INTEGER)`;
+
   const [countRes, dataRes] = await Promise.all([
     pool.query(`SELECT COUNT(*) FROM graph_edges ge
       JOIN companies c ON c.id = CAST(REPLACE(CASE WHEN ge.rel='fund_opportunity' THEN ge.target_id ELSE ge.source_id END, 'c_', '') AS INTEGER)
-      LEFT JOIN programs p ON ge.rel='qualifies_for' AND p.id = CAST(REPLACE(ge.target_id, 'p_', '') AS INTEGER)
+      ${programJoin}
       LEFT JOIN funds f ON ge.rel='fund_opportunity' AND f.id = REPLACE(ge.source_id, 'f_', '')
       WHERE ${where}`, params),
     pool.query(`SELECT ge.id AS edge_id, ge.source_id, ge.target_id, ge.rel,
@@ -75,7 +83,7 @@ export async function getOpportunities(filters = {}) {
       ge.eligible_since, ge.eligible_until, ge.created_at
       FROM graph_edges ge
       JOIN companies c ON c.id = CAST(REPLACE(CASE WHEN ge.rel='fund_opportunity' THEN ge.target_id ELSE ge.source_id END, 'c_', '') AS INTEGER)
-      LEFT JOIN programs p ON ge.rel='qualifies_for' AND p.id = CAST(REPLACE(ge.target_id, 'p_', '') AS INTEGER)
+      ${programJoin}
       LEFT JOIN funds f ON ge.rel='fund_opportunity' AND f.id = REPLACE(ge.source_id, 'f_', '')
       WHERE ${where}
       ORDER BY ${order}
@@ -99,7 +107,9 @@ export async function getCompanyOpportunities(companyId) {
       ge.eligible_since, ge.eligible_until, ge.created_at
     FROM graph_edges ge
     JOIN companies c ON c.id = $1
-    LEFT JOIN programs p ON ge.rel='qualifies_for' AND p.id = CAST(REPLACE(ge.target_id, 'p_', '') AS INTEGER)
+    LEFT JOIN programs p ON ge.rel='qualifies_for'
+      AND ge.target_id LIKE 'p_%'
+      AND p.id = CAST(SUBSTRING(ge.target_id FROM 3) AS INTEGER)
     LEFT JOIN funds f ON ge.rel='fund_opportunity' AND f.id = REPLACE(ge.source_id, 'f_', '')
     WHERE ge.edge_category = 'opportunity'
       AND (
@@ -138,6 +148,7 @@ export async function getOpportunityStats() {
       FROM graph_edges ge
       JOIN companies c ON c.id = CAST(REPLACE(
         CASE WHEN ge.rel='fund_opportunity' THEN ge.target_id ELSE ge.source_id END, 'c_', '') AS INTEGER)
+      -- no programs join needed here — only company aggregation
       WHERE ge.edge_category = 'opportunity'
       GROUP BY c.name, c.stage, c.region
       HAVING COUNT(*) >= 3

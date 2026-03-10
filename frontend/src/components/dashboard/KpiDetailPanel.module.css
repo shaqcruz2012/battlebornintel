@@ -1,0 +1,577 @@
+/* ── KpiDetailPanel: Expandable detail below KPI strip ── */
+
+.panelWrapper {
+  grid-column: 1 / -1;
+  overflow: hidden;
+  animation: slideDown 300ms ease-out forwards;
+}
+
+@keyframes slideDown {
+  from {
+    max-height: 0;
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    max-height: 800px;
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.panel {
+  background: rgba(10, 14, 20, 0.85);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--border-active);
+  border-radius: var(--radius-md);
+  padding: var(--space-xl);
+  max-height: 560px;
+  overflow-y: auto;
+  box-shadow:
+    0 4px 24px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(69, 215, 198, 0.06);
+}
+
+/* Scrollbar styling */
+.panel::-webkit-scrollbar {
+  width: 4px;
+}
+
+.panel::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.panel::-webkit-scrollbar-thumb {
+  background: rgba(69, 215, 198, 0.2);
+  border-radius: 2px;
+}
+
+.panel::-webkit-scrollbar-thumb:hover {
+  background: rgba(69, 215, 198, 0.35);
+}
+
+/* ── Header ──────────────────────────────────────────── */
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-lg);
+  padding-bottom: var(--space-md);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.headerLeft {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.headerIcon {
+  font-size: 14px;
+  color: var(--accent-teal);
+  line-height: 1;
+}
+
+.headerTitle {
+  font-family: var(--font-heading);
+  font-size: var(--text-h3);
+  font-weight: var(--weight-bold);
+  color: var(--text-primary);
+  letter-spacing: -0.02em;
+}
+
+.headerBadge {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: var(--weight-bold);
+  color: var(--accent-teal);
+  background: rgba(69, 215, 198, 0.08);
+  padding: 2px 6px;
+  border-radius: var(--radius-xs);
+  border: 1px solid rgba(69, 215, 198, 0.2);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.closeBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-disabled);
+  font-size: 12px;
+  cursor: pointer;
+  transition:
+    color var(--transition-fast),
+    border-color var(--transition-fast),
+    background var(--transition-fast);
+  flex-shrink: 0;
+}
+
+.closeBtn:hover {
+  color: var(--text-primary);
+  border-color: var(--border-hover);
+  background: var(--bg-hover);
+}
+
+/* ── Detail content area ─────────────────────────────── */
+
+.detailContent {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+/* ── Section titles ──────────────────────────────────── */
+
+.sectionTitle {
+  font-family: var(--font-body);
+  font-size: var(--text-label);
+  font-weight: var(--weight-bold);
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: var(--space-xs);
+}
+
+.sectionDivider {
+  height: 1px;
+  background: var(--border-grid);
+  margin: var(--space-md) 0;
+}
+
+/* ── Horizontal bar chart ────────────────────────────── */
+
+.barChart {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.barRow {
+  display: grid;
+  grid-template-columns: 140px 1fr 60px;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.barLabel {
+  font-family: var(--font-body);
+  font-size: var(--text-caption-sm);
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.barTrack {
+  height: 6px;
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 3px;
+  overflow: hidden;
+  position: relative;
+}
+
+.barFill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 600ms ease-out;
+  min-width: 2px;
+}
+
+.barValue {
+  font-family: var(--font-mono);
+  font-size: var(--text-caption-sm);
+  font-weight: var(--weight-semibold);
+  color: var(--text-primary);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── SSBCI fund rows (stacked label + bar) ───────────── */
+
+.ssbciFundRow {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2xs);
+  padding: var(--space-sm) 0;
+}
+
+.ssbciFundRow + .ssbciFundRow {
+  border-top: 1px solid var(--border-grid);
+}
+
+.ssbciFundHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-md);
+}
+
+/* ── Stat rows ───────────────────────────────────────── */
+
+.statRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-xs) 0;
+}
+
+.statLabel {
+  font-family: var(--font-body);
+  font-size: var(--text-caption-sm);
+  color: var(--text-secondary);
+}
+
+.statValue {
+  font-family: var(--font-mono);
+  font-size: var(--text-caption);
+  font-weight: var(--weight-semibold);
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+.statAccent {
+  color: var(--accent-teal);
+}
+
+/* ── Mini table (ranked list) ────────────────────────── */
+
+.miniTable {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  background: var(--border-grid);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.miniRow {
+  display: grid;
+  grid-template-columns: auto 1fr auto auto;
+  align-items: center;
+  gap: var(--space-md);
+  padding: var(--space-sm) var(--space-md);
+  background: var(--bg-card);
+  transition: background var(--transition-instant);
+}
+
+.miniRow:hover {
+  background: var(--bg-elevated);
+}
+
+.miniRank {
+  font-family: var(--font-mono);
+  font-size: var(--text-micro);
+  color: var(--text-disabled);
+  width: 16px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.miniName {
+  font-family: var(--font-body);
+  font-size: var(--text-caption-sm);
+  color: var(--text-primary);
+  font-weight: var(--weight-medium);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.miniValue {
+  font-family: var(--font-mono);
+  font-size: var(--text-caption-sm);
+  font-weight: var(--weight-semibold);
+  color: var(--accent-teal);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.miniMeta {
+  font-family: var(--font-body);
+  font-size: var(--text-micro);
+  color: var(--text-disabled);
+  white-space: nowrap;
+}
+
+/* ── Trend badges ────────────────────────────────────── */
+
+.trendRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-xs) 0;
+}
+
+.trendLabel {
+  font-family: var(--font-body);
+  font-size: var(--text-caption-sm);
+  color: var(--text-secondary);
+}
+
+.trendBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-family: var(--font-mono);
+  font-size: var(--text-micro);
+  font-weight: var(--weight-semibold);
+  padding: 2px 8px;
+  border-radius: var(--radius-xs);
+  letter-spacing: 0.02em;
+}
+
+.trendUp {
+  color: var(--delta-up);
+  background: rgba(52, 201, 168, 0.08);
+  border: 1px solid rgba(52, 201, 168, 0.2);
+}
+
+.trendDown {
+  color: var(--delta-down);
+  background: rgba(232, 83, 76, 0.08);
+  border: 1px solid rgba(232, 83, 76, 0.2);
+}
+
+.trendArrow {
+  font-size: 8px;
+  line-height: 1;
+}
+
+/* ── Risk flag ───────────────────────────────────────── */
+
+.riskFlag {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-sm);
+  padding: var(--space-sm) var(--space-md);
+  background: rgba(232, 83, 76, 0.06);
+  border-left: 2px solid var(--status-risk);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  margin-top: var(--space-sm);
+}
+
+.riskIcon {
+  color: var(--status-risk);
+  font-weight: var(--weight-bold);
+  font-size: var(--text-caption);
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.riskText {
+  font-family: var(--font-body);
+  font-size: var(--text-caption-sm);
+  color: var(--text-secondary);
+  line-height: var(--leading-normal);
+}
+
+/* ── Compliance badge ────────────────────────────────── */
+
+.complianceRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-xs) 0;
+}
+
+.complianceBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-family: var(--font-mono);
+  font-size: var(--text-micro);
+  font-weight: var(--weight-bold);
+  padding: 2px 8px;
+  border-radius: var(--radius-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.complianceOk {
+  color: var(--status-success);
+  background: rgba(52, 201, 168, 0.08);
+  border: 1px solid rgba(52, 201, 168, 0.2);
+}
+
+.complianceWarn {
+  color: var(--status-warning);
+  background: rgba(229, 182, 84, 0.08);
+  border: 1px solid rgba(229, 182, 84, 0.2);
+}
+
+/* ── Target line (leverage) ──────────────────────────── */
+
+.targetLine {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-xs) 0;
+  border-top: 1px dashed rgba(245, 199, 108, 0.3);
+  margin-top: var(--space-xs);
+}
+
+.targetLabel {
+  font-family: var(--font-body);
+  font-size: var(--text-micro);
+  color: var(--accent-gold);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.targetValue {
+  font-family: var(--font-mono);
+  font-size: var(--text-caption-sm);
+  font-weight: var(--weight-bold);
+  color: var(--accent-gold);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Formula block (leverage weighted calc) ──────────── */
+
+.formulaBlock {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-md);
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--border-grid);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-mono);
+  font-size: var(--text-caption-sm);
+  color: var(--text-secondary);
+  line-height: var(--leading-relaxed);
+}
+
+.formulaText {
+  font-family: var(--font-mono);
+  font-size: var(--text-micro);
+  color: var(--text-secondary);
+}
+
+.formulaDivider {
+  color: var(--text-disabled);
+  font-size: var(--text-caption);
+}
+
+.formulaResult {
+  font-family: var(--font-mono);
+  font-size: var(--text-caption);
+  font-weight: var(--weight-bold);
+  color: var(--accent-teal);
+  margin-left: auto;
+}
+
+/* ── Formula grid (momentum breakdown) ───────────────── */
+
+.formulaGrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1px;
+  background: var(--border-grid);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.formulaCard {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2xs);
+  padding: var(--space-md);
+  background: var(--bg-card);
+}
+
+.formulaTotal {
+  background: rgba(69, 215, 198, 0.04);
+}
+
+.formulaWeight {
+  font-family: var(--font-mono);
+  font-size: var(--text-micro);
+  font-weight: var(--weight-bold);
+  color: var(--accent-teal);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.formulaLabel {
+  font-family: var(--font-body);
+  font-size: var(--text-micro);
+  color: var(--text-disabled);
+  text-align: center;
+  white-space: nowrap;
+}
+
+.formulaScore {
+  font-family: var(--font-mono);
+  font-size: var(--text-h3);
+  font-weight: var(--weight-semibold);
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Responsive ──────────────────────────────────────── */
+
+@media (max-width: 1200px) {
+  .barRow {
+    grid-template-columns: 110px 1fr 50px;
+  }
+
+  .formulaGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .panel {
+    padding: var(--space-lg);
+  }
+
+  .barRow {
+    grid-template-columns: 90px 1fr 45px;
+    gap: var(--space-xs);
+  }
+
+  .miniRow {
+    grid-template-columns: 1fr auto;
+    gap: var(--space-sm);
+  }
+
+  .miniRank,
+  .miniMeta {
+    display: none;
+  }
+
+  .formulaGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .formulaBlock {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
+@media (max-width: 480px) {
+  .barRow {
+    grid-template-columns: 1fr 50px;
+  }
+
+  .barLabel {
+    grid-column: 1 / -1;
+    margin-bottom: -4px;
+  }
+
+  .formulaGrid {
+    grid-template-columns: 1fr 1fr;
+  }
+}

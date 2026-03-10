@@ -1,4 +1,5 @@
-import { useState, useMemo, memo } from 'react';
+import { useState, useMemo, useCallback, memo } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { useStakeholderActivities } from '../../api/hooks';
 import styles from './StakeholderActivityFeed.module.css';
 
@@ -429,14 +430,21 @@ export function StakeholderActivityFeed() {
   const [selectedRegion, setSelectedRegion] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
 
+  const queryClient = useQueryClient();
   const { data: rawActivities = [], isLoading, error } = useStakeholderActivities();
+
+  const handleRetry = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: ['stakeholderActivities'] });
+  }, [queryClient]);
 
   // Normalize: the existing API may return items with `date` instead of `event_date`
   // and `activity_type` instead of `event_type`. Map both to the expected shape.
+  // Also generate a stable key for each activity if `id` is missing.
   const activities = useMemo(
     () =>
-      rawActivities.map((a) => ({
+      rawActivities.map((a, idx) => ({
         ...a,
+        id: a.id || `activity-${idx}-${(a.title || a.company_name || '').slice(0, 20)}`,
         event_type: a.event_type || a.activity_type,
         event_date: a.event_date || a.date,
         region: a.region || a.location,
@@ -560,6 +568,13 @@ export function StakeholderActivityFeed() {
             <p className={styles.errorMessage}>
               {error.message || 'Unable to load stakeholder activities.'}
             </p>
+            <button
+              className={styles.retryButton}
+              onClick={handleRetry}
+              type="button"
+            >
+              Retry
+            </button>
           </div>
         )}
 
