@@ -304,6 +304,7 @@ export function GraphCanvas({
   showOpportunities = false,
   opportunityFilter = 'all', // 'all' | 'programs' | 'funds'
   focusNodeId = null,
+  layoutSettled = false,
 }) {
   const containerRef = useRef(null);
   const { width: winW, height: winH } = useWindowSize();
@@ -332,25 +333,28 @@ export function GraphCanvas({
     const padX = 60, padY = 60;
     const fitW = Math.max(maxX - minX, 1);
     const fitH = Math.max(maxY - minY, 1);
-    const s = Math.min((w - padX * 2) / fitW, (h - padY * 2) / fitH, 2);
+    // Clamp minimum zoom to 0.15 — prevents near-zero scale when positions are extreme
+    const s = Math.max(0.15, Math.min((w - padX * 2) / fitW, (h - padY * 2) / fitH, 2));
     const cx = (minX + maxX) / 2;
     const cy = (minY + maxY) / 2;
     setZoom(s);
     setPan({ x: w / 2 - cx * s, y: h / 2 - cy * s });
   }, [layout, w, h]);
 
+  // Auto-fit: wait for the D3 worker to finish (layoutSettled) before fitting.
+  // Fitting on early interim frames produces near-zero zoom because node positions
+  // are still exploding outward from the force simulation's initial state.
   const hasFitRef = useRef(false);
   useEffect(() => {
     if (layout.nodes.length === 0) {
       hasFitRef.current = false;
+      return;
     }
-    if (layout.nodes.length > 0 && !hasFitRef.current) {
+    if (layout.nodes.length > 0 && !hasFitRef.current && layoutSettled) {
       hasFitRef.current = true;
-      // Small delay allows SVG to render first
-      const t = setTimeout(fitAll, 50);
-      return () => clearTimeout(t);
+      requestAnimationFrame(fitAll);
     }
-  }, [layout.nodes.length, fitAll]);
+  }, [layout.nodes.length, layoutSettled, fitAll]);
 
   useEffect(() => {
     if (!focusNodeId) return;

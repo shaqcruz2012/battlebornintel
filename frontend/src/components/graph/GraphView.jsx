@@ -103,9 +103,8 @@ export function GraphView() {
   // Compute D3 layout in Web Worker to keep UI responsive
   const rawNodes = graphData?.nodes || [];
   const rawEdges = graphData?.edges || [];
-  // layoutLoading is intentionally not used as a render gate — the worker
-  // streams interim frames so the canvas renders progressively.
-  const { layout: workerLayout } = useGraphLayout(rawNodes, rawEdges, { width: dims.w, height: dims.h });
+  // isLoading stays true until the worker's final frame — used to gate fitAll.
+  const { layout: workerLayout, isLoading: layoutLoading } = useGraphLayout(rawNodes, rawEdges, { width: dims.w, height: dims.h });
 
   // Resolve edge source/target from string IDs to node objects (required by GraphCanvas)
   const layout = useMemo(() => {
@@ -177,6 +176,7 @@ export function GraphView() {
             showOpportunities={showOpportunities}
             opportunityFilter={opportunityFilter}
             focusNodeId={focusNodeId}
+            layoutSettled={!layoutLoading}
           />
           {/* Left overlay: legend (minimizable) */}
           <GraphLegend colorMode={colorMode} nodeFilters={nodeFilters} layout={layout} />
