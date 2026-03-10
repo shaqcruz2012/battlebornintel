@@ -6,9 +6,17 @@
   gap: 0;
   margin: var(--space-lg) 0 var(--space-sm);
   border-bottom: 1px solid var(--border-medium);
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;          /* Firefox */
+}
+
+.tabs::-webkit-scrollbar {
+  display: none;                  /* Chrome/Safari */
 }
 
 .tab {
+  flex-shrink: 0;                 /* prevent tabs from squishing */
   position: relative;
   padding: var(--space-sm) var(--space-xl);
   font-family: var(--font-body);

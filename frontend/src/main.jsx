@@ -12,6 +12,8 @@ const queryClient = new QueryClient({
     queries: {
       retry: 1,
       refetchOnWindowFocus: false,
+      staleTime: 300_000,   // 5 min — matches server cache TTL
+      gcTime: 600_000,      // 10 min — evict unused entries from memory
     },
   },
 })

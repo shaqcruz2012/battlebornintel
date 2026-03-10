@@ -273,9 +273,7 @@ function FeedCard({ activity }) {
               </span>
             )}
           </div>
-          <button className={styles.cardReadMore} type="button">
-            READ MORE &#x2192;
-          </button>
+          {/* READ MORE removed — no detail route exists yet */}
         </div>
       </div>
     </div>

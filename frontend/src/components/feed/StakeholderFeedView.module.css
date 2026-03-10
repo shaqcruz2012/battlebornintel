@@ -456,25 +456,6 @@
   border-radius: var(--radius-xs);
 }
 
-.cardReadMore {
-  font-family: var(--font-mono);
-  font-size: var(--text-caption);
-  font-weight: var(--weight-semibold);
-  color: var(--accent-teal);
-  background: none;
-  border: none;
-  cursor: pointer;
-  padding: 0;
-  letter-spacing: 0.04em;
-  white-space: nowrap;
-  flex-shrink: 0;
-  transition: opacity var(--transition-fast);
-  opacity: 0.8;
-}
-
-.cardReadMore:hover {
-  opacity: 1;
-}
 
 /* ── Sidebar ──────────────────────────────────────────────────────────────── */
 

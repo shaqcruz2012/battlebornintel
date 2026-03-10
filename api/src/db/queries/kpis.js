@@ -36,10 +36,14 @@ export async function getKpis({ stage, region, sector } = {}) {
 
   if (conditions.length) companySql += ' WHERE ' + conditions.join(' AND ');
 
-  const { rows: companies } = await pool.query(companySql, params);
-
-  // Get all funds first
-  const { rows: allFunds } = await pool.query(`SELECT * FROM funds`);
+  // Fire all three independent queries in parallel
+  const [{ rows: companies }, { rows: allFunds }, { rows: constRows }] =
+    await Promise.all([
+      pool.query(companySql, params),
+      pool.query(`SELECT * FROM funds`),
+      pool.query(`SELECT value FROM constants WHERE key = 'sector_heat'`),
+    ]);
+  const sectorHeat = constRows[0]?.value || {};
 
   // Filter funds to those that have invested in the filtered companies.
   // When a region (or other filter) is active we must always scope funds to
@@ -73,12 +77,6 @@ export async function getKpis({ stage, region, sector } = {}) {
     // No filter active → statewide totals use all funds
     funds = allFunds;
   }
-
-  // Load sector heat from constants
-  const { rows: constRows } = await pool.query(
-    `SELECT value FROM constants WHERE key = 'sector_heat'`
-  );
-  const sectorHeat = constRows[0]?.value || {};
 
   // Capital Deployed - sum of all funds investing in filtered companies
   const ssbciFunds = funds.filter((f) => f.fund_type === 'SSBCI');
@@ -199,11 +197,12 @@ export async function getSectorStats({ region } = {}) {
     sectorSql += ` WHERE region = $1`;
     sectorParams.push(region);
   }
-  const { rows: companies } = await pool.query(sectorSql, sectorParams);
-  const { rows: constRows } = await pool.query(
-    `SELECT value FROM constants WHERE key = 'sector_heat'`
-  );
-  const sectorHeat = constRows[0]?.value || {};
+  // Fire both queries in parallel
+  const [{ rows: companies }, { rows: heatRows }] = await Promise.all([
+    pool.query(sectorSql, sectorParams),
+    pool.query(`SELECT value FROM constants WHERE key = 'sector_heat'`),
+  ]);
+  const sectorHeat = heatRows[0]?.value || {};
 
   const map = {};
   for (const c of companies) {
