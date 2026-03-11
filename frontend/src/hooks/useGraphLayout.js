@@ -80,25 +80,40 @@ export function useGraphLayout(nodes, edges, options = {}) {
     worker.postMessage({ nodes, edges, width, height, iterations });
 
     // Handle worker response — supports progressive rendering via interim frames.
-    // The worker sends multiple messages with `interim: true` for quick initial
-    // display, followed by a final message with `interim: false` (or undefined)
-    // that signals the simulation is complete.
+    // Interim frames are throttled with requestAnimationFrame to avoid flooding
+    // React with re-renders faster than the browser can paint.
+    let pendingInterim = null;
+    let rafId = null;
+
+    const flushInterim = () => {
+      if (pendingInterim) {
+        setLayout({ nodes: pendingInterim, edges });
+        setError(null);
+        pendingInterim = null;
+      }
+      rafId = null;
+    };
+
     const handleMessage = (e) => {
       const { success, nodes: layoutNodes, error: workerError, interim } = e.data;
 
       if (success) {
-        // Update positions on every frame (interim and final) so the graph
-        // progressively refines in place rather than blinking in all at once.
-        setLayout({ nodes: layoutNodes, edges });
-        setError(null);
-
-        if (!interim) {
-          // Only mark layout as finished on the terminal message.
+        if (interim) {
+          // Buffer interim frames and flush at display refresh rate
+          pendingInterim = layoutNodes;
+          if (!rafId) {
+            rafId = requestAnimationFrame(flushInterim);
+          }
+        } else {
+          // Final frame — apply immediately and mark complete
+          if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
+          setLayout({ nodes: layoutNodes, edges });
+          setError(null);
           setIsLoading(false);
         }
       } else {
         setError(workerError);
-        setLayout({ nodes, edges }); // Fallback to original positions
+        setLayout({ nodes, edges });
         setIsLoading(false);
       }
     };
@@ -113,6 +128,7 @@ export function useGraphLayout(nodes, edges, options = {}) {
     worker.addEventListener('error', handleError);
 
     return () => {
+      if (rafId) cancelAnimationFrame(rafId);
       worker.removeEventListener('message', handleMessage);
       worker.removeEventListener('error', handleError);
     };

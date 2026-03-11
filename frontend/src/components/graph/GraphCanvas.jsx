@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useMemo, useEffect, memo } from 'react';
+import { useState, useRef, useCallback, useMemo, useEffect, useLayoutEffect, memo } from 'react';
 import { NODE_CFG, REL_CFG, COMM_COLORS } from '../../data/constants';
 import { useWindowSize } from '../../hooks/useWindowSize';
 import { fmt } from '../../engine/formatters';
@@ -6,6 +6,7 @@ import styles from './GraphCanvas.module.css';
 
 const MIN_R = 3;
 const MAX_R = 11;
+const DPR = typeof window !== 'undefined' ? (window.devicePixelRatio || 1) : 1;
 
 // Hub node IDs that anchor the galactic core — boosted radius + glow prominence
 const HUB_NODE_IDS = new Set(['f_bbv', 'goed', 'eco_goed', 'bbv', 'f_dfv', 'dfv']);
@@ -83,14 +84,10 @@ const GlowFilters = memo(function GlowFilters() {
         <feGaussianBlur in="SourceGraphic" stdDeviation="5" result="blur" />
         <feComposite in="SourceGraphic" in2="blur" operator="over" />
       </filter>
-      {/* Hub node (BBV/GOED) persistent glow — wider, warmer blur */}
-      <filter id="nodeGlowHub" x="-80%" y="-80%" width="260%" height="260%">
-        <feGaussianBlur in="SourceGraphic" stdDeviation="7" result="blur" />
+      {/* Hub node (BBV/GOED) persistent glow — reduced blur for performance */}
+      <filter id="nodeGlowHub" x="-60%" y="-60%" width="220%" height="220%">
+        <feGaussianBlur in="SourceGraphic" stdDeviation="4" result="blur" />
         <feComposite in="SourceGraphic" in2="blur" operator="over" />
-      </filter>
-      {/* Edge anti-aliasing enhancement */}
-      <filter id="edgeSmooth">
-        <feGaussianBlur in="SourceGraphic" stdDeviation="0.3" />
       </filter>
     </defs>
   );
@@ -291,6 +288,94 @@ const NodeCircle = memo(function NodeCircle({
   );
 });
 
+/* ── Canvas edge renderer — draws all edges in one GPU-friendly pass ── */
+
+function useEdgeCanvas(canvasRef, edges, zoom, pan, w, h, {
+  selectedNode, highlightedEdges, showOpportunities, opportunityFilter,
+  tooManyForFullOpacity,
+}) {
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas || !edges.length) return;
+
+    // Size canvas to match container (HiDPI-aware)
+    canvas.width = w * DPR;
+    canvas.height = h * DPR;
+    canvas.style.width = `${w}px`;
+    canvas.style.height = `${h}px`;
+
+    const ctx = canvas.getContext('2d');
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    ctx.clearRect(0, 0, w, h);
+    ctx.save();
+    ctx.translate(pan.x, pan.y);
+    ctx.scale(zoom, zoom);
+
+    // Batch edges by color+opacity to minimize context state changes
+    const batches = new Map();
+
+    for (let i = 0; i < edges.length; i++) {
+      const e = edges[i];
+      const sx = e.source?.x ?? e.source ?? 0;
+      const sy = e.source?.y ?? e.source ?? 0;
+      const tx = e.target?.x ?? e.target ?? 0;
+      const ty = e.target?.y ?? e.target ?? 0;
+
+      // Skip edges with no valid positions
+      if (sx === 0 && sy === 0 && tx === 0 && ty === 0) continue;
+
+      const isOpportunity = e.category === 'opportunity' || e.rel === 'qualifies_for' || e.rel === 'fund_opportunity' || e.rel === 'potential_lp';
+      if (isOpportunity && !showOpportunities) continue;
+      if (isOpportunity && opportunityFilter === 'programs' && e.rel !== 'qualifies_for') continue;
+      if (isOpportunity && opportunityFilter === 'funds' && e.rel !== 'fund_opportunity') continue;
+
+      const rc = REL_CFG[e.rel];
+      const isHighlighted = highlightedEdges.has(i);
+      const dimEdge = selectedNode && !isHighlighted;
+
+      const category = e.category || 'operational';
+      let categoryOpacity;
+      if (category === 'historical') {
+        categoryOpacity = tooManyForFullOpacity ? 0.18 : 0.25;
+      } else if (category === 'opportunity') {
+        categoryOpacity = 0.15;
+      } else {
+        categoryOpacity = tooManyForFullOpacity ? 0.22 : 0.35;
+      }
+
+      const edgeOpacity = isOpportunity
+        ? (e.opacity ?? (dimEdge ? 0.05 : 0.5))
+        : (dimEdge ? 0.06 : isHighlighted ? 0.85 : categoryOpacity);
+      const edgeWidth = isOpportunity ? (isHighlighted ? 1.5 : 0.5) : (isHighlighted ? 2 : 0.5);
+      const edgeColor = e.color || (isHighlighted ? (rc?.color || '#45D7C6') : (rc?.color || '#333'));
+
+      // Batch key: color + opacity + width (rounded)
+      const key = `${edgeColor}|${edgeOpacity.toFixed(2)}|${edgeWidth}`;
+      if (!batches.has(key)) {
+        batches.set(key, { color: edgeColor, opacity: edgeOpacity, width: edgeWidth, lines: [] });
+      }
+      batches.get(key).lines.push(sx, sy, tx, ty);
+    }
+
+    // Draw each batch in a single path
+    for (const [, batch] of batches) {
+      ctx.globalAlpha = batch.opacity;
+      ctx.strokeStyle = batch.color;
+      ctx.lineWidth = batch.width;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      const lines = batch.lines;
+      for (let j = 0; j < lines.length; j += 4) {
+        ctx.moveTo(lines[j], lines[j + 1]);
+        ctx.lineTo(lines[j + 2], lines[j + 3]);
+      }
+      ctx.stroke();
+    }
+
+    ctx.restore();
+  }, [canvasRef, edges, zoom, pan, w, h, selectedNode, highlightedEdges, showOpportunities, opportunityFilter, tooManyForFullOpacity]);
+}
+
 /* ── Main canvas ── */
 
 export function GraphCanvas({
@@ -307,6 +392,7 @@ export function GraphCanvas({
   layoutSettled = false,
 }) {
   const containerRef = useRef(null);
+  const edgeCanvasRef = useRef(null);
   const { width: winW, height: winH } = useWindowSize();
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
@@ -400,6 +486,25 @@ export function GraphCanvas({
   const handleMouseUp = useCallback(() => {
     setDragging(false);
     setDragStart(null);
+  }, []);
+
+  // Double-click zoom — zooms in 2x centered on cursor position
+  const handleDoubleClick = useCallback((e) => {
+    // Don't zoom when double-clicking on nodes
+    if (e.target.tagName === 'circle' || e.target.tagName === 'text') return;
+    const rect = containerRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    const cx = e.clientX - rect.left;
+    const cy = e.clientY - rect.top;
+    setZoom((z) => {
+      const newZ = Math.min(3, z * 1.8);
+      const factor = newZ / z;
+      setPan((p) => ({
+        x: cx - (cx - p.x) * factor,
+        y: cy - (cy - p.y) * factor,
+      }));
+      return newZ;
+    });
   }, []);
 
   useEffect(() => {
@@ -532,6 +637,25 @@ export function GraphCanvas({
 
   const animateDash = showOpportunities && opportunityEdgeCount < 50;
 
+  // Pre-compute edge dollar values once when edges change (avoids regex per render per edge)
+  const edgeValueMap = useMemo(() => {
+    const map = new Map();
+    edges.forEach((e, i) => {
+      const val = edgeValue(e);
+      if (val) map.set(i, val);
+    });
+    return map;
+  }, [edges]);
+
+  // Canvas edge renderer — replaces 5000+ SVG <line> elements with one draw call
+  useEdgeCanvas(edgeCanvasRef, edges, zoom, pan, w, h, {
+    selectedNode,
+    highlightedEdges,
+    showOpportunities,
+    opportunityFilter,
+    tooManyForFullOpacity,
+  });
+
   if (!nodes || nodes.length === 0) {
     return (
       <div className={styles.canvasWrap} ref={containerRef}>
@@ -550,6 +674,7 @@ export function GraphCanvas({
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
       onMouseLeave={handleMouseUp}
+      onDoubleClick={handleDoubleClick}
       style={{ cursor: dragging ? 'grabbing' : 'grab' }}
     >
       {/* Status indicator — real-time Bloomberg feel */}
@@ -557,6 +682,13 @@ export function GraphCanvas({
         <span className={styles.statusDot} />
         <span>{nodes.length} nodes &middot; {edges.length} edges</span>
       </div>
+
+      {/* Canvas layer for edges — one draw call replaces 5000+ SVG elements */}
+      <canvas
+        ref={edgeCanvasRef}
+        className={styles.edgeCanvas}
+        style={{ position: 'absolute', top: 0, left: 0, pointerEvents: 'none' }}
+      />
 
       <svg
         className={styles.svg}
@@ -566,69 +698,13 @@ export function GraphCanvas({
         <GlowFilters />
 
         <g transform={`translate(${pan.x},${pan.y}) scale(${zoom})`}>
-          {/* Edges — base layer with anti-aliased strokes */}
-          {edges.map((e, i) => {
-            const sx = e.source.x || 0;
-            const sy = e.source.y || 0;
-            const tx = e.target.x || 0;
-            const ty = e.target.y || 0;
-            const rc = REL_CFG[e.rel];
-            const isHighlighted = highlightedEdges.has(i);
-            const dimEdge = selectedNode && !isHighlighted;
-
-            // Opportunity edge handling
-            const isOpportunity = e.category === 'opportunity' || e.rel === 'qualifies_for' || e.rel === 'fund_opportunity' || e.rel === 'potential_lp';
-            if (isOpportunity && !showOpportunities) return null;
-            if (isOpportunity && opportunityFilter === 'programs' && e.rel !== 'qualifies_for') return null;
-            if (isOpportunity && opportunityFilter === 'funds' && e.rel !== 'fund_opportunity') return null;
-
-            // Use per-edge visual overrides from DB, fall back to REL_CFG
-            const edgeColor = e.color || (isHighlighted ? (rc?.color || 'var(--accent-teal)') : (rc?.color || '#333'));
-            const edgeDash = e.style ?? (rc?.dash || '');
-
-            // Edge category-aware base opacity for galactic aesthetic clarity:
-            //   historical  → 0.25  (older structural edges, subdued)
-            //   operational → 0.35  (active relationships, moderate weight)
-            //   opportunity → 0.15  (speculative, very light — handled separately below)
-            // At > 300 nodes we further tighten to prevent GPU overdraw.
-            const category = e.category || 'operational';
-            let categoryOpacity;
-            if (category === 'historical') {
-              categoryOpacity = tooManyForFullOpacity ? 0.18 : 0.25;
-            } else if (category === 'opportunity') {
-              categoryOpacity = 0.15;
-            } else {
-              // operational / untagged
-              categoryOpacity = tooManyForFullOpacity ? 0.22 : 0.35;
-            }
-            const edgeOpacity = isOpportunity
-              ? (e.opacity ?? (dimEdge ? 0.05 : 0.5))
-              : (dimEdge ? 0.06 : isHighlighted ? 0.85 : categoryOpacity);
-            const edgeWidth = isOpportunity ? (isHighlighted ? 1.5 : 0.5) : (isHighlighted ? 2 : 0.5);
-
-            return (
-              <EdgeLine
-                key={i}
-                sx={sx} sy={sy} tx={tx} ty={ty}
-                color={edgeColor}
-                strokeWidth={edgeWidth}
-                dash={edgeDash}
-                opacity={edgeOpacity}
-                isOpportunity={isOpportunity}
-                isHighlighted={isHighlighted}
-                animateDash={animateDash}
-              />
-            );
-          })}
 
           {/* Edge labels — show for selected node connections, or all edges with $ values when showValues is on */}
           {(!tooManyForEdgeLabels || showValues) && (selectedNode || showValues) &&
             edges.map((e, i) => {
               const isHighlighted = highlightedEdges.has(i);
-              // When a node is selected, show labels only for its connections
-              // When showValues is on (no selection), show labels for edges with dollar amounts
               if (selectedNode && !isHighlighted) return null;
-              const val = edgeValue(e);
+              const val = edgeValueMap.get(i) || '';
               if (!selectedNode && showValues && !val) return null;
               const sx = e.source.x || 0;
               const sy = e.source.y || 0;
