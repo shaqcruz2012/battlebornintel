@@ -624,7 +624,7 @@ export function GraphCanvas({
           })}
 
           {/* Edge labels — show for selected node connections, or all edges with $ values when showValues is on */}
-          {!tooManyForEdgeLabels && (selectedNode || showValues) &&
+          {(!tooManyForEdgeLabels || showValues) && (selectedNode || showValues) &&
             edges.map((e, i) => {
               const isHighlighted = highlightedEdges.has(i);
               // When a node is selected, show labels only for its connections
