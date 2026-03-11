@@ -53,8 +53,6 @@ function edgeValue(e) {
     const match = e.note.match(/\$[\d,.]+[BMK]?/);
     if (match) return match[0];
   }
-  // event_year is mapped as 'y' in the API response
-  if (e.y) return String(e.y);
   return '';
 }
 

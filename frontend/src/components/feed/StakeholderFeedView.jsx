@@ -273,7 +273,24 @@ function FeedCard({ activity }) {
               </span>
             )}
           </div>
-          {/* READ MORE removed — no detail route exists yet */}
+          <div className={styles.cardFooterRight}>
+            {activity.source_url && (
+              <a
+                href={activity.source_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={styles.sourceLink}
+                title={activity.source || 'Source'}
+              >
+                {activity.source && !activity.source.startsWith('http')
+                  ? activity.source
+                  : 'Source'} &#8599;
+              </a>
+            )}
+            {!activity.source_url && activity.source && (
+              <span className={styles.sourceLabel}>{activity.source}</span>
+            )}
+          </div>
         </div>
       </div>
     </div>
