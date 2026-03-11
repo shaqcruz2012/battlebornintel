@@ -67,6 +67,8 @@ export function GraphOverlayControls({
   onToggleOpportunities,
   opportunityFilter = 'all',
   onOpportunityFilterChange,
+  showValues = false,
+  onToggleValues,
   search = '',
   onSearchChange,
   nodes = [],
@@ -175,6 +177,12 @@ export function GraphOverlayControls({
       {/* Edge controls */}
       <div className={styles.overlayRow}>
         <span className={styles.overlayLabel}>Edges</span>
+        <FilterChip
+          label="$ Values"
+          active={showValues}
+          onClick={onToggleValues}
+          small
+        />
         <FilterChip
           label="Opportunities"
           active={showOpportunities}

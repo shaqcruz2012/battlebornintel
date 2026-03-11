@@ -53,7 +53,8 @@ function edgeValue(e) {
     const match = e.note.match(/\$[\d,.]+[BMK]?/);
     if (match) return match[0];
   }
-  if (e.event_year) return String(e.event_year);
+  // event_year is mapped as 'y' in the API response
+  if (e.y) return String(e.y);
   return '';
 }
 
@@ -303,6 +304,7 @@ export function GraphCanvas({
   searchTerm = '',
   showOpportunities = false,
   opportunityFilter = 'all', // 'all' | 'programs' | 'funds'
+  showValues = false,
   focusNodeId = null,
   layoutSettled = false,
 }) {
@@ -525,7 +527,7 @@ export function GraphCanvas({
   const opportunityEdgeCount = useMemo(() => {
     if (!showOpportunities) return 0;
     return edges.filter(e =>
-      e.edge_category === 'opportunity' || e.rel === 'qualifies_for' ||
+      e.category === 'opportunity' || e.rel === 'qualifies_for' ||
       e.rel === 'fund_opportunity' || e.rel === 'potential_lp'
     ).length;
   }, [edges, showOpportunities]);
@@ -577,21 +579,21 @@ export function GraphCanvas({
             const dimEdge = selectedNode && !isHighlighted;
 
             // Opportunity edge handling
-            const isOpportunity = e.edge_category === 'opportunity' || e.rel === 'qualifies_for' || e.rel === 'fund_opportunity' || e.rel === 'potential_lp';
+            const isOpportunity = e.category === 'opportunity' || e.rel === 'qualifies_for' || e.rel === 'fund_opportunity' || e.rel === 'potential_lp';
             if (isOpportunity && !showOpportunities) return null;
             if (isOpportunity && opportunityFilter === 'programs' && e.rel !== 'qualifies_for') return null;
             if (isOpportunity && opportunityFilter === 'funds' && e.rel !== 'fund_opportunity') return null;
 
             // Use per-edge visual overrides from DB, fall back to REL_CFG
-            const edgeColor = e.edge_color || (isHighlighted ? (rc?.color || 'var(--accent-teal)') : (rc?.color || '#333'));
-            const edgeDash = e.edge_style ?? (rc?.dash || '');
+            const edgeColor = e.color || (isHighlighted ? (rc?.color || 'var(--accent-teal)') : (rc?.color || '#333'));
+            const edgeDash = e.style ?? (rc?.dash || '');
 
             // Edge category-aware base opacity for galactic aesthetic clarity:
             //   historical  → 0.25  (older structural edges, subdued)
             //   operational → 0.35  (active relationships, moderate weight)
             //   opportunity → 0.15  (speculative, very light — handled separately below)
             // At > 300 nodes we further tighten to prevent GPU overdraw.
-            const category = e.edge_category || 'operational';
+            const category = e.category || 'operational';
             let categoryOpacity;
             if (category === 'historical') {
               categoryOpacity = tooManyForFullOpacity ? 0.18 : 0.25;
@@ -602,7 +604,7 @@ export function GraphCanvas({
               categoryOpacity = tooManyForFullOpacity ? 0.22 : 0.35;
             }
             const edgeOpacity = isOpportunity
-              ? (e.edge_opacity ?? (dimEdge ? 0.05 : 0.5))
+              ? (e.opacity ?? (dimEdge ? 0.05 : 0.5))
               : (dimEdge ? 0.06 : isHighlighted ? 0.85 : categoryOpacity);
             const edgeWidth = isOpportunity ? (isHighlighted ? 1.5 : 0.5) : (isHighlighted ? 2 : 0.5);
 
@@ -621,10 +623,15 @@ export function GraphCanvas({
             );
           })}
 
-          {/* FIX 4: Edge labels — skip entirely when node count > 150 (unreadable anyway) */}
-          {selectedNode && !tooManyForEdgeLabels &&
+          {/* Edge labels — show for selected node connections, or all edges with $ values when showValues is on */}
+          {!tooManyForEdgeLabels && (selectedNode || showValues) &&
             edges.map((e, i) => {
-              if (!highlightedEdges.has(i)) return null;
+              const isHighlighted = highlightedEdges.has(i);
+              // When a node is selected, show labels only for its connections
+              // When showValues is on (no selection), show labels for edges with dollar amounts
+              if (selectedNode && !isHighlighted) return null;
+              const val = edgeValue(e);
+              if (!selectedNode && showValues && !val) return null;
               const sx = e.source.x || 0;
               const sy = e.source.y || 0;
               const tx = e.target.x || 0;
@@ -635,8 +642,8 @@ export function GraphCanvas({
                 <EdgeLabel
                   key={`label-${i}`}
                   sx={sx} sy={sy} tx={tx} ty={ty}
-                  label={edgeLabelText(e)}
-                  val={edgeValue(e)}
+                  label={selectedNode ? edgeLabelText(e) : ''}
+                  val={val}
                   relColor={rc?.color}
                 />
               );

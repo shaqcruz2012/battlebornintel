@@ -73,7 +73,7 @@ export function NodeDetail({ nodeId, layout, metrics, onClose }) {
         const targetId = typeof e.target === 'object' ? e.target.id : e.target;
         const otherId = sourceId === nodeId ? targetId : sourceId;
         const other = nodes.find((n) => n.id === otherId);
-        return { rel: e.rel, node: other, note: e.note, edgeCategory: e.edge_category };
+        return { rel: e.rel, node: other, note: e.note, edgeCategory: e.category, matchScore: e.matching_score };
       })
       .filter((c) => c.node);
   }, [edges, nodes, nodeId]);
@@ -194,22 +194,31 @@ export function NodeDetail({ nodeId, layout, metrics, onClose }) {
             <div className={styles.connectionList}>
               {groupedConnections.historical.slice(0, 20).map((c, i) => {
                 const rc = REL_CFG[c.rel] || {};
+                const dollarMatch = c.note?.match(/\$[\d,.]+[BMK]?/);
+                const dollarAmt = dollarMatch ? dollarMatch[0] : null;
                 return (
-                  <div key={i} className={styles.connection}>
-                    <span
-                      className={styles.connectionDot}
-                      style={{ background: NODE_CFG[c.node.type]?.color || '#666' }}
-                    />
-                    <span className={styles.connectionName}>{c.node.label}</span>
-                    <span
-                      className={styles.connectionRel}
-                      style={rc.color ? {
-                        color: rc.color,
-                        background: `${rc.color}12`,
-                      } : undefined}
-                    >
-                      {rc.label || c.rel}
-                    </span>
+                  <div key={i}>
+                    <div className={styles.connection}>
+                      <span
+                        className={styles.connectionDot}
+                        style={{ background: NODE_CFG[c.node.type]?.color || '#666' }}
+                      />
+                      <span className={styles.connectionName}>{c.node.label}</span>
+                      {dollarAmt && (
+                        <span className={styles.oppAmount} style={{ margin: 0, fontSize: '9px', padding: '1px 4px' }}>
+                          {dollarAmt}
+                        </span>
+                      )}
+                      <span
+                        className={styles.connectionRel}
+                        style={rc.color ? {
+                          color: rc.color,
+                          background: `${rc.color}12`,
+                        } : undefined}
+                      >
+                        {rc.label || c.rel}
+                      </span>
+                    </div>
                   </div>
                 );
               })}
@@ -222,7 +231,7 @@ export function NodeDetail({ nodeId, layout, metrics, onClose }) {
           </CollapsibleSection>
         )}
 
-        {/* Opportunity Connections */}
+        {/* Opportunity Connections — enhanced with match scores and dollar amounts */}
         {groupedConnections.opportunities.length > 0 && (
           <CollapsibleSection
             label="Opportunities"
@@ -232,8 +241,10 @@ export function NodeDetail({ nodeId, layout, metrics, onClose }) {
             <div className={styles.connectionList}>
               {groupedConnections.opportunities.slice(0, 15).map((c, i) => {
                 const rc = REL_CFG[c.rel] || {};
+                const dollarMatch = c.note?.match(/\$[\d,.]+[BMK]?/);
+                const dollarAmt = dollarMatch ? dollarMatch[0] : null;
                 return (
-                  <div key={i}>
+                  <div key={i} className={styles.oppCard}>
                     <div className={styles.connection}>
                       <span
                         className={styles.connectionDot}
@@ -250,6 +261,30 @@ export function NodeDetail({ nodeId, layout, metrics, onClose }) {
                         {rc.label || c.rel}
                       </span>
                     </div>
+                    {/* Dollar amount badge */}
+                    {dollarAmt && (
+                      <div className={styles.oppAmount}>{dollarAmt}</div>
+                    )}
+                    {/* Match score bar */}
+                    {c.matchScore > 0 && (
+                      <div className={styles.oppScoreRow}>
+                        <span className={styles.oppScoreLabel}>Match</span>
+                        <div className={styles.oppScoreTrack}>
+                          <div
+                            className={styles.oppScoreFill}
+                            style={{
+                              width: `${Math.round(c.matchScore * 100)}%`,
+                              background: c.matchScore >= 0.85 ? '#22C55E'
+                                : c.matchScore >= 0.70 ? '#F59E0B'
+                                : '#6B7280',
+                            }}
+                          />
+                        </div>
+                        <span className={styles.oppScoreValue}>
+                          {Math.round(c.matchScore * 100)}%
+                        </span>
+                      </div>
+                    )}
                     {c.note && (
                       <div className={styles.connectionNote}>{c.note}</div>
                     )}

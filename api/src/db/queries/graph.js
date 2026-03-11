@@ -36,7 +36,7 @@ export async function getGraphData({ nodeTypes = [], yearMax = 2026, region } = 
     : null;
 
   // All DB queries run in parallel — no sequential awaits
-  // note column excluded from graph_edges: free-text not used by the renderer
+  // note column included: contains dollar amounts for edge labels
   // event_year IS NULL check removed: all rows have an event_year value so the
   // simpler predicate event_year <= $1 enables the covering index path.
   const [
@@ -79,7 +79,7 @@ export async function getGraphData({ nodeTypes = [], yearMax = 2026, region } = 
       ? pool.query(ecoSql, regionFilter ? [region] : []).then(r => r.rows)
       : [],
     pool.query(
-      `SELECT source_id, target_id, rel, event_year, edge_category, edge_style, edge_color, edge_opacity FROM graph_edges WHERE event_year <= $1`,
+      `SELECT source_id, target_id, rel, event_year, note, matching_score, edge_category, edge_style, edge_color, edge_opacity FROM graph_edges WHERE event_year <= $1`,
       [yearMax]
     ).then(r => r.rows),
     nodeTypes.includes('exchange')
@@ -262,6 +262,10 @@ export async function getGraphData({ nodeTypes = [], yearMax = 2026, region } = 
       rel: e.rel,
       y: e.event_year,
     };
+    // Include note when present (contains dollar amounts and context for edge labels)
+    if (e.note) edge.note = e.note;
+    // Include matching score for opportunity edges
+    if (e.matching_score != null) edge.matching_score = parseFloat(e.matching_score);
     // Include visual metadata only when present to keep payload lean
     if (e.edge_category && e.edge_category !== 'historical') {
       edge.category = e.edge_category;

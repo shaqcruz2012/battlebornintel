@@ -31,6 +31,7 @@ export function GraphView() {
   const [selectedNode, setSelectedNode] = useState(null);
   const [showOpportunities, setShowOpportunities] = useState(false);
   const [opportunityFilter, setOpportunityFilter] = useState('all');
+  const [showValues, setShowValues] = useState(false);
   const [focusNodeId, setFocusNodeId] = useState(null);
 
   // FIX 7a: Wrap in useCallback so GraphOverlayControls gets a stable reference
@@ -44,6 +45,7 @@ export function GraphView() {
   const handleSelectNode = useCallback((id) => setSelectedNode(id), []);
   const handleCloseNode = useCallback(() => setSelectedNode(null), []);
   const handleToggleOpportunities = useCallback(() => setShowOpportunities((v) => !v), []);
+  const handleToggleValues = useCallback(() => setShowValues((v) => !v), []);
 
   // Select the node and trigger pan/zoom to it in the canvas.
   const handleFocusNode = useCallback((nodeId) => {
@@ -175,6 +177,7 @@ export function GraphView() {
             searchTerm={search}
             showOpportunities={showOpportunities}
             opportunityFilter={opportunityFilter}
+            showValues={showValues}
             focusNodeId={focusNodeId}
             layoutSettled={!layoutLoading}
           />
@@ -191,6 +194,8 @@ export function GraphView() {
             onToggleOpportunities={handleToggleOpportunities}
             opportunityFilter={opportunityFilter}
             onOpportunityFilterChange={setOpportunityFilter}
+            showValues={showValues}
+            onToggleValues={handleToggleValues}
             search={search}
             onSearchChange={setSearch}
             nodes={layout.nodes}
