@@ -1,5 +1,5 @@
 export const FUNDS = [
-  { id:"bbv",    name:"Battle Born Venture", type:"SSBCI",         allocated:36,   deployed:14.8, leverage:3.2, companies:12, thesis:"Co-invest alongside private lead investors in NV tech startups via SSBCI match" },
+  { id:"bbv",    name:"Battle Born Venture", type:"SSBCI",         allocated:36,   deployed:14.0, leverage:3.2, companies:88, thesis:"Co-invest alongside private lead investors in NV tech startups via SSBCI match. Tranche I deployed. US Treasury approved next tranche." },
   { id:"fundnv", name:"FundNV",              type:"SSBCI",         allocated:3,    deployed:2.4,  leverage:2.8, companies:18, thesis:"Pre-seed fund writing $50K checks to StartUpNV accelerator graduates. SSBCI 1:1 match" },
   { id:"1864",   name:"1864 Fund",           type:"SSBCI",         allocated:10,   deployed:1.2,  leverage:4.1, companies:5,  thesis:"Seed capital for the forgotten middle of America — intermountain states to Mississippi" },
   { id:"angelnv",name:"AngelNV",             type:"Angel",         allocated:null, deployed:5.5,  leverage:null,companies:22, thesis:"Southern Nevada angel investor bootcamp. 40 accredited investors per cohort, $200K team investments" },

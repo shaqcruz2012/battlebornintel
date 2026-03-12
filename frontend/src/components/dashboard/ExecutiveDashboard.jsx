@@ -8,7 +8,6 @@ import { SectorHeatStrip } from './SectorHeatStrip';
 import { SectorDetailDrawer } from './SectorDetailDrawer';
 import { MomentumTable } from './MomentumTable';
 import { NarrativePanel } from './NarrativePanel';
-import { RiskAlerts } from './RiskAlerts';
 
 function LoadingSkeleton() {
   return (
@@ -125,8 +124,7 @@ export function ExecutiveDashboard({ onViewChange }) {
         sortBy={filters.sortBy}
         onSortChange={setSortBy}
       />
-      <NarrativePanel companies={companies} funds={funds} />
-      <RiskAlerts companies={companies} funds={funds} />
+      <NarrativePanel companies={companies} funds={funds} activeSector={filters.sector} sectorStats={sectorStats} />
       {selectedSector && (
         <SectorDetailDrawer
           sector={selectedSector}

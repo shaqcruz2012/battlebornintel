@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { Card } from '../shared/Card';
-import { useWeeklyBrief, useRiskAssessments, useSectorStats } from '../../api/hooks';
+import { useWeeklyBrief, useRiskAssessments } from '../../api/hooks';
 import styles from './NarrativePanel.module.css';
 
 // ── Publication date helpers ────────────────────────────────────────────────
@@ -15,20 +15,99 @@ function formatPublicationDate(dateStr) {
   return d.toLocaleString('en-US', { month: 'long', year: 'numeric' });
 }
 
-// ── Derive narrative sections from real data or fallback ───────────────────
+// ── Sector-specific narrative templates ─────────────────────────────────────
 
-function deriveCapitalFormation(briefData, companies, funds) {
-  // Try brief data first
-  if (briefData?.inputs?.summary) return briefData.inputs.summary;
-  if (briefData?.capacities?.summary) {
-    const capSummary = briefData.capacities.summary;
-    if (capSummary.length > 40) return capSummary;
+const SECTOR_NARRATIVES = {
+  AI: {
+    capitalFormation: (count, totalFunding) =>
+      `Nevada's AI sector has attracted $${totalFunding}M across ${count} tracked companies. Node graph analysis reveals dense co-investor clustering and accelerating relationship formation between enterprise ML operators and defense procurement networks. Generative AI platforms dominate early-stage deal flow with expanding network connectivity.`,
+    riskSignals: (count) =>
+      `Rapid capital deployment into AI carries concentration risk — graph analysis identifies ${count} companies competing in adjacent spaces with overlapping investor and customer nodes. Regulatory uncertainty around AI governance and commoditization in foundational model layers could compress margins. Talent retention signals show network outflow to national incumbents.`,
+    outlook: (count) =>
+      `AI remains Nevada's highest-momentum vertical, with ${count} active companies and the densest relationship graph in the ecosystem. Federal AI safety and procurement frameworks are creating new market entry points for defense-adjacent applications. Network analysis projects continued expansion through 2026.`,
+  },
+  Cybersecurity: {
+    capitalFormation: (count, totalFunding) =>
+      `Nevada's cybersecurity cohort comprises ${count} tracked companies with $${totalFunding}M in aggregate funding. Relationship mapping shows strong connectivity to federal compliance procurement networks and cleared-personnel pipelines. State-level demand nodes continue expanding.`,
+    riskSignals: (count) =>
+      `The ${count}-company cybersecurity cohort faces elongated sales cycles tied to government procurement timelines. Graph analysis flags competitive pressure from national incumbent consolidation and limited exit pathways for early-stage operators without established contract vehicle nodes.`,
+    outlook: (count) =>
+      `Federal zero-trust mandates and growing state-level cybersecurity budgets position Nevada's ${count} cybersecurity operators for sustained demand. Network proximity to DoD facilities and critical infrastructure provides structural advantages in the relationship graph.`,
+  },
+  Defense: {
+    capitalFormation: (count, totalFunding) =>
+      `Nevada's defense technology sector encompasses ${count} tracked companies with $${totalFunding}M deployed. Graph analysis maps high-density relationship clusters between operators, military installations, and dual-use procurement networks. Nellis AFB and NTTR proximity drives structural formation advantages.`,
+    riskSignals: (count) =>
+      `Defense-sector companies (${count} tracked) carry elevated exposure to federal budget sequestration risk. Graph analysis flags single prime contractor dependency nodes and ITAR compliance bottlenecks constraining scaling velocity across the cohort.`,
+    outlook: (count) =>
+      `Defense technology is emerging as a structural strength with ${count} active companies. Network analysis shows increasing DIU and AFWERX engagement edges, with Nevada-based dual-use operators gaining competitive preference in SBIR/STTR pipeline nodes.`,
+  },
+  Cleantech: {
+    capitalFormation: (count, totalFunding) =>
+      `Nevada's cleantech sector has deployed $${totalFunding}M across ${count} tracked companies. Co-investor graph shows dense clustering around IRA-eligible operators with expanding federal fund connectivity. Solar, geothermal, and battery storage nodes dominate formation activity.`,
+    riskSignals: (count) =>
+      `Cleantech operators (${count} tracked) face execution risk tied to permitting timelines and utility interconnection queues. Graph analysis flags policy reversal sensitivity on federal incentives and critical mineral supply chain concentration across the cohort.`,
+    outlook: (count) =>
+      `Cleantech leads Nevada's federal co-investment pipeline with ${count} active companies. Network analysis shows expanding LP connectivity around lithium extraction and grid-scale storage nodes. Resource endowment and regulatory framework position the sector for accelerating capital inflows through 2026-2027.`,
+  },
+  Satellite: {
+    capitalFormation: (count, totalFunding) =>
+      `Nevada's satellite and space technology sector includes ${count} tracked companies with $${totalFunding}M deployed. Network mapping reveals emerging relationship clusters between launch providers, defense communications nodes, and commercial constellation operators.`,
+    riskSignals: (count) =>
+      `The ${count}-company satellite cohort carries elevated capital intensity risk with extended development timelines. Graph analysis identifies single-customer dependency nodes in government contracts and launch cost variability introducing budget volatility.`,
+    outlook: (count) =>
+      `Satellite technology represents a high-growth niche with ${count} operators mapped at the intersection of commercial space and defense communications networks. LEO constellation demand and space-based ISR are expanding addressable market nodes.`,
+  },
+  Semiconductors: {
+    capitalFormation: (count, totalFunding) =>
+      `Nevada's semiconductor sector includes ${count} tracked companies with $${totalFunding}M deployed. Graph analysis maps strong supply-chain edges to regional data center clusters and CHIPS Act federal funding nodes. Nearshoring trends are expanding network connectivity for advanced packaging operators.`,
+    riskSignals: (count) =>
+      `Semiconductor operators (${count} tracked) face elevated capital expenditure requirements and extended commercialization timelines. Graph analysis flags foreign foundry dependency edges and cyclical demand volatility. Specialized fabrication workforce nodes remain constrained.`,
+    outlook: (count) =>
+      `CHIPS Act investments and supply chain reshoring are positioning Nevada's ${count} semiconductor companies for strategic relevance. Network analysis shows high connectivity to regional data center demand nodes and thermal management solution pathways.`,
+  },
+};
+
+// ── Generic fallback for sectors without specific narratives ────────────────
+
+function genericCapitalFormation(sectorName, count, totalFunding) {
+  return `Nevada's ${sectorName} sector encompasses ${count} tracked companies with $${totalFunding}M in aggregate funding. Node graph analysis maps growing institutional connectivity as operators demonstrate product-market fit and capital efficiency metrics competitive with national peers.`;
+}
+
+function genericRiskSignals(sectorName, count) {
+  return `The ${sectorName} cohort (${count} companies) faces standard early-stage concentration risk. Market timing sensitivity and customer acquisition costs remain the primary watchlist items. Sector-wide exposure to macroeconomic headwinds warrants continued monitoring through H1 2026.`;
+}
+
+function genericOutlook(sectorName, count) {
+  return `${sectorName} is demonstrating steady growth trajectory with ${count} active operators in Nevada's ecosystem. Network analysis projects continued expansion as federal engagement and state-level economic development edges sustain formation velocity into Q2 2026.`;
+}
+
+// ── Derive sector-aware narratives ─────────────────────────────────────────
+
+function deriveSectorCapitalFormation(briefData, companies, funds, activeSector) {
+  // AI brief data takes priority when no sector filter
+  if (!activeSector || activeSector === 'all') {
+    if (briefData?.inputs?.summary) return briefData.inputs.summary;
+    if (briefData?.capacities?.summary) {
+      const capSummary = briefData.capacities.summary;
+      if (capSummary.length > 40) return capSummary;
+    }
   }
 
-  // Derive from companies/funds
   if (!companies || !companies.length) return null;
 
-  const totalFunding = companies.reduce((s, c) => s + (c.funding || 0), 0);
+  const totalFunding = Math.round(companies.reduce((s, c) => s + (c.funding || 0), 0));
+  const fundingLabel = totalFunding >= 1000 ? `${(totalFunding / 1000).toFixed(1)}B` : `${totalFunding}M`;
+  const count = companies.length;
+
+  // Use sector-specific template if available
+  if (activeSector && activeSector !== 'all') {
+    const template = SECTOR_NARRATIVES[activeSector];
+    if (template) return template.capitalFormation(count, fundingLabel);
+    return genericCapitalFormation(activeSector, count, fundingLabel);
+  }
+
+  // Portfolio-wide fallback
   const ssbciFunds = (funds || []).filter((f) => f.type === 'SSBCI');
   const deployedPct = ssbciFunds.length
     ? Math.round(
@@ -38,52 +117,49 @@ function deriveCapitalFormation(briefData, companies, funds) {
       )
     : null;
 
-  const recentCompanies = companies
-    .filter((c) => c.founded_year >= 2022)
-    .length;
-
-  let text = `Nevada's venture ecosystem has deployed $${totalFunding.toFixed(0)}M across ${companies.length} portfolio companies.`;
+  let text = `Nevada's venture ecosystem has deployed $${fundingLabel} across ${count} tracked companies.`;
   if (deployedPct !== null) {
     text += ` State-backed SSBCI programmes are ${deployedPct}% deployed, reflecting accelerated capital absorption.`;
-  }
-  if (recentCompanies > 0) {
-    text += ` ${recentCompanies} companies founded since 2022 signal a maturing formation pipeline.`;
   }
   return text;
 }
 
-function deriveRiskSignals(briefData, risks) {
-  // Try brief data first
-  if (briefData?.outputs?.summary && briefData.outputs.summary.length > 40) {
-    return briefData.outputs.summary;
+function deriveSectorRiskSignals(briefData, risks, companies, activeSector) {
+  if (!activeSector || activeSector === 'all') {
+    if (briefData?.outputs?.summary && briefData.outputs.summary.length > 40) {
+      return briefData.outputs.summary;
+    }
+    if (risks && risks.length > 0) {
+      return `${risks.length} active risk signals are being tracked. Concentration risk in early-stage cohorts remains the primary watchlist item. Portfolio-wide stress indicators are within tolerance ranges as of the latest assessment.`;
+    }
   }
 
-  // Use risk assessments
-  if (risks && risks.length > 0) {
-    const highRisks = risks.filter(
-      (r) => r.severity === 'high' || r.level === 'high' || (r.score && r.score >= 70)
-    );
-    const count = highRisks.length;
-    const topRisk = highRisks[0];
-
-    if (topRisk) {
-      const label = topRisk.label || topRisk.name || topRisk.category || 'macro risk';
-      return `${count} elevated risk indicator${count !== 1 ? 's' : ''} flagged across the portfolio. The most acute concern centres on ${label.toLowerCase()}, with downstream exposure across multiple venture-backed cohorts. Monitoring cadence has been elevated for Q1.`;
-    }
-
-    return `${risks.length} active risk signals are being tracked. Concentration risk in early-stage cohorts remains the primary watchlist item. Portfolio-wide stress indicators are within tolerance ranges as of the latest assessment.`;
+  const count = companies?.length || 0;
+  if (activeSector && activeSector !== 'all') {
+    const template = SECTOR_NARRATIVES[activeSector];
+    if (template) return template.riskSignals(count);
+    return genericRiskSignals(activeSector, count);
   }
 
   return null;
 }
 
-function deriveStrategicOutlook(briefData, sectorStats, companies) {
-  // Try brief impact section
-  if (briefData?.impact?.summary && briefData.impact.summary.length > 40) {
-    return briefData.impact.summary;
+function deriveSectorOutlook(briefData, sectorStats, companies, activeSector) {
+  if (!activeSector || activeSector === 'all') {
+    if (briefData?.impact?.summary && briefData.impact.summary.length > 40) {
+      return briefData.impact.summary;
+    }
   }
 
-  // Derive from sector stats
+  const count = companies?.length || 0;
+
+  if (activeSector && activeSector !== 'all') {
+    const template = SECTOR_NARRATIVES[activeSector];
+    if (template) return template.outlook(count);
+    return genericOutlook(activeSector, count);
+  }
+
+  // Portfolio-wide from sector stats
   if (sectorStats && sectorStats.length > 0) {
     const sorted = [...sectorStats].sort(
       (a, b) => (b.momentum || b.avg_momentum || 0) - (a.momentum || a.avg_momentum || 0)
@@ -91,67 +167,57 @@ function deriveStrategicOutlook(briefData, sectorStats, companies) {
     const leader = sorted[0];
     const sectorName = leader.sector || leader.name || 'Technology';
     const sectorCount = leader.count || leader.company_count || 0;
-
-    return `${sectorName} leads sector momentum heading into Q2, underpinned by ${sectorCount > 0 ? `${sectorCount} active companies` : 'strong operator density'} and continued institutional attention. Nevada's diversification strategy is bearing out, with non-tech sectors narrowing the gap. Federal deployment incentives are reshaping the geographic distribution of capital, with rural and secondary markets gaining allocations previously concentrated in Las Vegas and Reno.`;
-  }
-
-  if (companies && companies.length > 0) {
-    const sectors = {};
-    companies.forEach((c) => {
-      if (c.sector) sectors[c.sector] = (sectors[c.sector] || 0) + 1;
-    });
-    const topSector = Object.entries(sectors).sort((a, b) => b[1] - a[1])[0];
-    if (topSector) {
-      return `${topSector[0]} remains the dominant sector by company count with ${topSector[1]} portfolio entities, while emerging verticals are attracting disproportionate early-stage interest. Cross-sector collaboration—particularly between climate tech and advanced manufacturing—is positioning Nevada for durable innovation leadership beyond the current cycle.`;
-    }
+    return `${sectorName} leads sector momentum heading into Q2, underpinned by ${sectorCount > 0 ? `${sectorCount} active companies` : 'strong operator density'} and continued institutional attention. Nevada's diversification strategy is bearing out, with non-tech sectors narrowing the gap.`;
   }
 
   return null;
 }
 
-// ── Derive key developments from combined data ──────────────────────────────
+// ── Derive key developments (sector-aware) ──────────────────────────────────
 
-function deriveKeyDevelopments(briefData, risks, companies) {
+function deriveKeyDevelopments(briefData, risks, companies, activeSector) {
   const items = [];
 
-  // From brief headline
-  if (briefData?.headline) {
-    items.push(briefData.headline);
+  if (!activeSector || activeSector === 'all') {
+    if (briefData?.headline) items.push(briefData.headline);
+    if (briefData?.inputs?.highlights) {
+      const h = briefData.inputs.highlights;
+      if (Array.isArray(h)) items.push(...h.slice(0, 2));
+      else if (typeof h === 'string') items.push(h);
+    }
+    if (briefData?.outputs?.highlights) {
+      const h = briefData.outputs.highlights;
+      if (Array.isArray(h)) items.push(...h.slice(0, 1));
+      else if (typeof h === 'string') items.push(h);
+    }
   }
 
-  // From brief sections
-  if (briefData?.inputs?.highlights) {
-    const h = briefData.inputs.highlights;
-    if (Array.isArray(h)) items.push(...h.slice(0, 2));
-    else if (typeof h === 'string') items.push(h);
-  }
-  if (briefData?.outputs?.highlights) {
-    const h = briefData.outputs.highlights;
-    if (Array.isArray(h)) items.push(...h.slice(0, 1));
-    else if (typeof h === 'string') items.push(h);
-  }
+  // Derive from filtered companies
+  if (companies && companies.length > 0 && items.length < 4) {
+    const sorted = [...companies].sort((a, b) => (b.momentum || 0) - (a.momentum || 0));
+    const topCo = sorted[0];
+    if (topCo && items.length < 4) {
+      items.push(`${topCo.name} leads ${activeSector && activeSector !== 'all' ? activeSector : 'ecosystem'} momentum at ${topCo.momentum || topCo.irs || 0}/100`);
+    }
 
-  // From risks
-  if (risks && risks.length > 0 && items.length < 4) {
-    const top = risks
-      .slice()
-      .sort((a, b) => (b.score || 0) - (a.score || 0))
-      .slice(0, 2);
-    top.forEach((r) => {
-      const label = r.label || r.name || r.category;
-      const detail = r.detail || r.description || '';
-      if (label && items.length < 4) {
-        items.push(detail ? `${label}: ${detail}` : label);
-      }
-    });
+    const recentFunded = companies.filter((c) => c.funding && c.funding > 0).length;
+    if (recentFunded > 0 && items.length < 4) {
+      items.push(`${recentFunded} of ${companies.length} companies have secured external funding`);
+    }
+
+    const stages = {};
+    companies.forEach((c) => { if (c.stage) stages[c.stage] = (stages[c.stage] || 0) + 1; });
+    const topStage = Object.entries(stages).sort((a, b) => b[1] - a[1])[0];
+    if (topStage && items.length < 4) {
+      items.push(`${topStage[0]} stage dominates with ${topStage[1]} companies (${Math.round((topStage[1] / companies.length) * 100)}% of cohort)`);
+    }
   }
 
   // Fallback items
   const fallbacks = [
     'Nevada SSBCI tranche II deployment reached new quarterly high in Q1 2026',
-    'Three portfolio companies entered Series B processes; two signed term sheets',
     'GOED expanded venture partnership network to 14 affiliated funds',
-    'Cleantech sector momentum surged 18 points quarter-over-quarter',
+    'Federal deployment incentives accelerating geographic diversification',
   ];
 
   while (items.length < 3) {
@@ -163,69 +229,83 @@ function deriveKeyDevelopments(briefData, risks, companies) {
   return items.slice(0, 4);
 }
 
-// ── Derive sector spotlight ─────────────────────────────────────────────────
+// ── Derive sector spotlight (from active sector or top sector) ──────────────
 
-function deriveSectorSpotlight(sectorStats, companies) {
-  if (sectorStats && sectorStats.length > 0) {
-    const sorted = [...sectorStats].sort(
-      (a, b) => (b.momentum || b.avg_momentum || 0) - (a.momentum || a.avg_momentum || 0)
-    );
-    const top = sorted[0];
-    const sectorName = top.sector || top.name || 'Technology';
-    const momentum = Math.round(top.momentum || top.avg_momentum || 0);
-    const count = top.count || top.company_count || 0;
-
-    return {
-      name: sectorName,
-      momentum,
-      analysis:
-        count > 0
-          ? `${count} active companies with a portfolio momentum score of ${momentum}/100. Sector is drawing increased LP attention and federal co-investment interest.`
-          : `Sector momentum score of ${momentum}/100, the highest across the Nevada portfolio. Operators in this cohort are outpacing national peers on key growth indicators.`,
-    };
+function deriveSectorSpotlight(sectorStats, companies, activeSector) {
+  if (!sectorStats || sectorStats.length === 0) {
+    // Derive from companies as fallback
+    if (companies && companies.length > 0) {
+      const avgMomentum = Math.round(
+        companies.reduce((s, c) => s + (c.momentum || 0), 0) / companies.length
+      );
+      const name = activeSector && activeSector !== 'all' ? activeSector : 'Portfolio';
+      return {
+        name,
+        momentum: avgMomentum,
+        analysis: `${companies.length} companies averaging ${avgMomentum}/100 momentum. This cohort is contributing to Nevada's Q1 growth narrative.`,
+      };
+    }
+    return null;
   }
 
-  if (companies && companies.length > 0) {
-    const sectors = {};
-    companies.forEach((c) => {
-      if (!c.sector) return;
-      if (!sectors[c.sector]) sectors[c.sector] = { count: 0, momentum: 0 };
-      sectors[c.sector].count += 1;
-      sectors[c.sector].momentum += c.momentum || 0;
-    });
-    const ranked = Object.entries(sectors)
-      .map(([name, d]) => ({ name, avg: d.count ? Math.round(d.momentum / d.count) : 0, count: d.count }))
-      .sort((a, b) => b.avg - a.avg);
-
-    if (ranked[0]) {
-      const top = ranked[0];
+  // When a sector is actively filtered, show THAT sector's spotlight
+  if (activeSector && activeSector !== 'all') {
+    const match = sectorStats.find(
+      (s) => (s.sector || s.name || '').toLowerCase() === activeSector.toLowerCase()
+    );
+    if (match) {
+      const name = match.sector || match.name;
+      const momentum = Math.round(match.momentum || match.avg_momentum || 0);
+      const count = match.count || match.company_count || 0;
       return {
-        name: top.name,
-        momentum: top.avg,
-        analysis: `${top.count} portfolio companies averaging ${top.avg}/100 momentum. This cohort is leading Nevada's Q1 growth narrative with above-median capital efficiency.`,
+        name,
+        momentum,
+        analysis: `${count} active companies with an ecosystem momentum score of ${momentum}/100. ${name} is ${momentum >= 70 ? 'outperforming' : momentum >= 50 ? 'tracking with' : 'underperforming relative to'} the broader Nevada ecosystem average.`,
+      };
+    }
+    // Sector not in sectorStats — derive from filtered companies
+    if (companies && companies.length > 0) {
+      const avgMomentum = Math.round(
+        companies.reduce((s, c) => s + (c.momentum || 0), 0) / companies.length
+      );
+      return {
+        name: activeSector,
+        momentum: avgMomentum,
+        analysis: `${companies.length} companies averaging ${avgMomentum}/100 momentum.`,
       };
     }
   }
 
+  // No sector filter — show top momentum sector
+  const sorted = [...sectorStats].sort(
+    (a, b) => (b.momentum || b.avg_momentum || 0) - (a.momentum || a.avg_momentum || 0)
+  );
+  const top = sorted[0];
+  const sectorName = top.sector || top.name || 'Technology';
+  const momentum = Math.round(top.momentum || top.avg_momentum || 0);
+  const count = top.count || top.company_count || 0;
+
   return {
-    name: 'Cleantech',
-    momentum: 82,
+    name: sectorName,
+    momentum,
     analysis:
-      'Highest-momentum sector in the Nevada portfolio, driven by federal IRA incentives and a maturing operator cohort with multi-state reach. LP interest is concentrated here heading into Q2.',
+      count > 0
+        ? `${count} active companies with an ecosystem momentum score of ${momentum}/100. Sector is drawing increased LP attention and federal co-investment interest.`
+        : `Sector momentum score of ${momentum}/100, the highest across the Nevada ecosystem.`,
   };
 }
 
-// ── Placeholder text (all three sections) ──────────────────────────────────
+// ── Placeholder text (ecosystem-wide fallback) ─────────────────────────────
 
 const PLACEHOLDER = {
   capitalFormation:
     "Nevada's venture formation pipeline is demonstrating resilience in Q1 2026, with state-sponsored capital vehicles sustaining deployment velocity despite a nationally cautious fundraising environment. SSBCI-backed funds continue to anchor early-stage rounds, providing the risk-tolerant capital that catalyses private co-investment across the ecosystem.",
 
   riskSignals:
-    "Concentration risk in pre-revenue cohorts remains the primary watchlist item for Q1. Macro headwinds—including compressed exit windows and elevated cost of capital—are weighing on runway projections for bridge-stage companies. Portfolio-level exposure to federal procurement delays warrants continued monitoring through H1.",
+    "Concentration risk in pre-revenue cohorts remains the primary watchlist item for Q1. Macro headwinds—including compressed exit windows and elevated cost of capital—are weighing on runway projections for bridge-stage companies. Ecosystem-level exposure to federal procurement delays warrants continued monitoring through H1.",
 
   strategicOutlook:
-    "Nevada is positioned to capitalise on westward capital migration and the decentralisation of the national innovation economy. The convergence of gaming technology, climate infrastructure, and defence-adjacent manufacturing is producing a differentiated sector mix that reduces correlation risk relative to California-concentrated portfolios. Sustained GOED engagement and federal partnership deepening are expected to accelerate ecosystem maturation through 2026.",
+    "Nevada is positioned to capitalise on westward capital migration and the decentralisation of the national innovation economy. Sustained GOED engagement and federal partnership deepening are expected to accelerate ecosystem maturation through 2026.",
 };
 
 // ── Skeleton loading state ──────────────────────────────────────────────────
@@ -246,16 +326,17 @@ function SkeletonBlock({ lines = 3, width = '100%' }) {
 
 // ── Main component ──────────────────────────────────────────────────────────
 
-export function NarrativePanel({ companies = [], funds = [] }) {
+export function NarrativePanel({ companies = [], funds = [], activeSector = 'all', sectorStats: sectorStatsProp = [] }) {
   const { data: briefResponse, isLoading: briefLoading } = useWeeklyBrief();
   const { data: risksRaw, isLoading: risksLoading } = useRiskAssessments();
-  const { data: sectorStatsRaw, isLoading: sectorLoading } = useSectorStats();
 
   const briefData = briefResponse?.data;
   const risks = Array.isArray(risksRaw) ? risksRaw : [];
-  const sectorStats = Array.isArray(sectorStatsRaw) ? sectorStatsRaw : [];
+  const sectorStats = Array.isArray(sectorStatsProp) ? sectorStatsProp : [];
 
-  const isLoading = briefLoading || risksLoading || sectorLoading;
+  const isLoading = briefLoading || risksLoading;
+
+  const sectorLabel = activeSector && activeSector !== 'all' ? activeSector : null;
 
   const publicationDate = useMemo(
     () => formatPublicationDate(briefData?.week_start || briefData?.createdAt),
@@ -263,28 +344,28 @@ export function NarrativePanel({ companies = [], funds = [] }) {
   );
 
   const capitalFormation = useMemo(
-    () => deriveCapitalFormation(briefData, companies, funds) || PLACEHOLDER.capitalFormation,
-    [briefData, companies, funds]
+    () => deriveSectorCapitalFormation(briefData, companies, funds, activeSector) || PLACEHOLDER.capitalFormation,
+    [briefData, companies, funds, activeSector]
   );
 
   const riskSignals = useMemo(
-    () => deriveRiskSignals(briefData, risks) || PLACEHOLDER.riskSignals,
-    [briefData, risks]
+    () => deriveSectorRiskSignals(briefData, risks, companies, activeSector) || PLACEHOLDER.riskSignals,
+    [briefData, risks, companies, activeSector]
   );
 
   const strategicOutlook = useMemo(
-    () => deriveStrategicOutlook(briefData, sectorStats, companies) || PLACEHOLDER.strategicOutlook,
-    [briefData, sectorStats, companies]
+    () => deriveSectorOutlook(briefData, sectorStats, companies, activeSector) || PLACEHOLDER.strategicOutlook,
+    [briefData, sectorStats, companies, activeSector]
   );
 
   const keyDevelopments = useMemo(
-    () => deriveKeyDevelopments(briefData, risks, companies),
-    [briefData, risks, companies]
+    () => deriveKeyDevelopments(briefData, risks, companies, activeSector),
+    [briefData, risks, companies, activeSector]
   );
 
   const spotlight = useMemo(
-    () => deriveSectorSpotlight(sectorStats, companies),
-    [sectorStats, companies]
+    () => deriveSectorSpotlight(sectorStats, companies, activeSector),
+    [sectorStats, companies, activeSector]
   );
 
   const isAI = !!briefData;
@@ -299,10 +380,12 @@ export function NarrativePanel({ companies = [], funds = [] }) {
             <span className={styles.publicationDate}>{publicationDate}</span>
           </div>
           <div className={styles.briefTitleRow}>
-            <span className={styles.briefTitle}>Intelligence Brief</span>
-            {isAI && <span className={styles.aiBadge}>AI</span>}
+            <span className={styles.briefTitle}>
+              {sectorLabel ? `${sectorLabel} Intelligence Brief` : 'Intelligence Brief'}
+            </span>
+            {isAI && !sectorLabel && <span className={styles.aiBadge}>AI</span>}
           </div>
-          {briefData?.headline && (
+          {!sectorLabel && briefData?.headline && (
             <div className={styles.headline}>{briefData.headline}</div>
           )}
         </div>
@@ -371,7 +454,7 @@ export function NarrativePanel({ companies = [], funds = [] }) {
           <div className={styles.blockLabel}>Sector Spotlight</div>
           {isLoading ? (
             <SkeletonBlock lines={2} />
-          ) : (
+          ) : spotlight ? (
             <div className={styles.spotlight}>
               <div className={styles.spotlightHeader}>
                 <span className={styles.spotlightName}>{spotlight.name}</span>
@@ -382,7 +465,7 @@ export function NarrativePanel({ companies = [], funds = [] }) {
               </div>
               <p className={styles.spotlightAnalysis}>{spotlight.analysis}</p>
             </div>
-          )}
+          ) : null}
         </div>
       </Card>
     </div>

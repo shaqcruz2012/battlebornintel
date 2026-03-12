@@ -4,15 +4,15 @@ import styles from './KpiStrip.module.css';
 
 const TOOLTIPS = {
   capitalDeployed:
-    'Sum of deployed capital across all 8 ecosystem funds — BBV, FundNV, 1864 Fund, AngelNV, Sierra Angels, DCVC, Stripes, and StartUpNV. Includes both SSBCI-backed and private venture funds active in the Nevada ecosystem.',
+    'Total capital deployed across ecosystem funds into tracked Nevada companies. Includes both SSBCI-backed and private venture funds. Click to see fund-level deployment matrix and GOED action items.',
   ssbciCapitalDeployed:
-    'Sum of deployed capital specifically from the 3 SSBCI-backed funds (BBV, FundNV, 1864 Fund). Represents the total Small Business Subcontractor Capital Initiative capital deployed into the ecosystem.',
+    'Federal SSBCI Tranche II capital deployed through certified fund managers. This is the primary metric for Treasury compliance reporting. Click for compliance status by fund.',
   privateLeverage:
-    'Weighted average private leverage across the 3 SSBCI-backed funds (BBV, FundNV, 1864), weighted by each fund\'s deployed amount. Measures how many private dollars each SSBCI dollar mobilized — the core metric Treasury uses to evaluate program effectiveness.',
+    'Private co-investment dollars mobilized per SSBCI dollar — the core metric Treasury uses to evaluate program effectiveness. Treasury minimum target is 2.0x. Click for benchmarks vs. national average.',
   ecosystemCapacity:
-    'Total headcount across all tracked portfolio companies. Serves as a proxy for the ecosystem\'s absorptive capacity and direct economic footprint. Filters apply — if you\'ve narrowed by stage or sector, this reflects that subset.',
+    'Total employment across tracked ecosystem companies. Serves as a proxy for direct economic impact and job creation — a key metric for GOED legislative reporting.',
   innovationIndex:
-    'Composite index: 40% average momentum score across companies + 30% share of companies with momentum >= 75 (top performers) + 30% share of companies in sectors with heat score >= 80 (hot sectors). Designed to capture both breadth and depth of ecosystem momentum.',
+    'Composite ecosystem health index: 40% average momentum + 30% top-performer density + 30% hot-sector exposure. Captures breadth and depth of innovation activity for federal partnership narratives.',
 };
 
 function formatTimestamp() {

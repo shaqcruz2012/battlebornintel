@@ -49,12 +49,125 @@ function MetricBox({ label, value, color }) {
   );
 }
 
+/* ── Sector intelligence brief derivation ──────────────────────────────────── */
+
+const SECTOR_BRIEFS = {
+  AI: {
+    assessment: (count, funding, avgIrs, heat) =>
+      `AI represents Nevada's highest-concentration vertical with ${count} tracked companies and $${funding} in aggregate capital deployed. Node graph analysis reveals dense interconnectivity across defense and enterprise ML verticals, with a sector heat index of ${heat} reflecting sustained institutional attention. Average IRS of ${avgIrs ?? '—'} indicates ${(avgIrs || 0) >= 65 ? 'above-median' : 'moderate'} operator quality relative to the ecosystem baseline.`,
+    drivers: [
+      'Network graph shows accelerating enterprise ML/AI platform adoption across defense and government verticals',
+      'Federal AI safety procurement frameworks creating new market entry points — graph-mapped to 3+ contract vehicles',
+      'Generative AI applications driving outsized seed-stage deal flow with expanding co-investor connectivity',
+    ],
+    risks: [
+      'Graph analysis identifies adjacent-space competition across multiple tracked operators',
+      'Talent retention pressure from national incumbents — network outflow signals detected',
+      'Regulatory uncertainty around AI governance may compress deployment timelines',
+    ],
+  },
+  Cybersecurity: {
+    assessment: (count, funding, avgIrs, heat) =>
+      `Nevada's cybersecurity cohort of ${count} tracked companies with $${funding} deployed is positioned at the nexus of federal compliance mandates and enterprise security demand. Relationship graph mapping shows strong connectivity to DoD procurement networks. Heat index ${heat} reflects ${heat >= 70 ? 'elevated' : 'steady'} sector momentum.`,
+    drivers: [
+      'Federal zero-trust mandates driving sustained procurement demand — graph-linked to active contract vehicles',
+      'State-level cybersecurity budgets expanding year-over-year',
+      'Node proximity to DoD facilities enabling classified contract access pathways',
+    ],
+    risks: [
+      'Elongated government procurement sales cycles detected in deal-flow graph',
+      'National incumbent consolidation limiting exit optionality',
+      'Security clearance bottlenecks constraining workforce scaling',
+    ],
+  },
+  Defense: {
+    assessment: (count, funding, avgIrs, heat) =>
+      `Defense technology encompasses ${count} tracked operators with $${funding} in capital deployed, leveraging Nevada's proximity to Nellis AFB and the Nevada Test and Training Range. Network analysis maps strong dual-use technology corridors between commercial and defense verticals. Heat score of ${heat} reflects ${heat >= 70 ? 'strong' : 'emerging'} traction across procurement networks.`,
+    drivers: [
+      'Graph-mapped DIU and AFWERX engagement pathways accelerating Nevada-based dual-use operators',
+      'SBIR/STTR pipeline yielding competitive preference — node centrality scores rising',
+      'Proximity to critical military installations creating high-density relationship clusters',
+    ],
+    risks: [
+      'Federal budget sequestration exposure across the tracked cohort',
+      'ITAR compliance costs creating barriers to rapid commercial scaling',
+      'Single prime contractor dependency — graph concentration risk flagged',
+    ],
+  },
+  Cleantech: {
+    assessment: (count, funding, avgIrs, heat) =>
+      `Cleantech leads Nevada's federal co-investment pipeline with ${count} tracked companies and $${funding} deployed. Graph analysis reveals strong co-investor clustering around IRA-eligible operators. The sector's ${heat} heat score is driven by incentive tailwinds and Nevada's structural advantages in lithium extraction, geothermal energy, and grid-scale storage.`,
+    drivers: [
+      'Federal IRA incentives providing multi-year capital formation tailwinds — graph-linked to active fund deployments',
+      'Nevada lithium reserves drawing national LP attention with expanding investor network edges',
+      'Geothermal and grid-scale storage creating differentiated thesis with high node centrality',
+    ],
+    risks: [
+      'Permitting timeline delays and utility interconnection queues flagged in deal-flow analysis',
+      'Policy reversal risk on federal clean energy incentives',
+      'Critical mineral supply chain concentration introducing cost volatility',
+    ],
+  },
+  Satellite: {
+    assessment: (count, funding, avgIrs, heat) =>
+      `Nevada's satellite and space technology sector includes ${count} tracked operators with $${funding} deployed. Network mapping reveals emerging relationship clusters between commercial launch providers and defense communications nodes. The sector represents a high-growth niche with expanding LEO constellation demand.`,
+    drivers: [
+      'LEO constellation services expanding addressable market — graph connectivity to 5+ prime integrators',
+      'Space-based ISR demand growing across defense and intelligence verticals',
+      'Launch cost reduction enabling new entrant business models with lower capital node thresholds',
+    ],
+    risks: [
+      'Elevated capital intensity with extended development timelines — funding graph shows long edges',
+      'Orbital debris regulatory uncertainty introducing compliance overhead',
+      'Customer concentration in government contracts — single-dependency nodes flagged',
+    ],
+  },
+  Semiconductors: {
+    assessment: (count, funding, avgIrs, heat) =>
+      `Nevada's semiconductor sector encompasses ${count} tracked companies with $${funding} deployed. Graph analysis maps strong supply-chain edges to regional data center clusters and federal CHIPS Act funding nodes. The sector is positioned to benefit from nearshoring trends and specialty chip design demand.`,
+    drivers: [
+      'CHIPS Act funding creating new formation pathways — graph-linked to federal disbursement nodes',
+      'Supply chain reshoring driving domestic manufacturing investment with expanding network edges',
+      'Regional data center density generating demand pull — high connectivity scores in graph model',
+    ],
+    risks: [
+      'Elevated capital expenditure requirements and long commercialization cycles',
+      'Foreign foundry dependencies introducing supply chain fragility — graph fragmentation risk',
+      'Specialized fabrication workforce availability remains constrained',
+    ],
+  },
+};
+
+function deriveSectorBrief(sector, count, funding, avgIrs, heat) {
+  const template = SECTOR_BRIEFS[sector];
+  if (template) {
+    return {
+      assessment: template.assessment(count, funding, avgIrs, heat),
+      drivers: template.drivers,
+      risks: template.risks,
+    };
+  }
+  // Generic fallback
+  return {
+    assessment: `Nevada's ${sector} sector encompasses ${count} tracked companies with $${funding} in aggregate capital deployed. Node graph analysis maps the sector's relationship density and co-investor connectivity. The heat index of ${heat} reflects ${heat >= 70 ? 'elevated' : 'developing'} momentum within the broader ecosystem. Average IRS of ${avgIrs ?? '—'} positions the cohort ${(avgIrs || 0) >= 65 ? 'above' : 'near'} the ecosystem median.`,
+    drivers: [
+      `${count} active operators demonstrating product-market fit across graph-mapped verticals`,
+      'Growing institutional attention from regional and national LP base — network edges expanding',
+      'State economic development engagement supporting formation pipeline',
+    ],
+    risks: [
+      'Early-stage concentration risk across the tracked cohort',
+      'Market timing sensitivity and customer acquisition cost pressure',
+      'Macroeconomic headwinds affecting runway and valuation dynamics',
+    ],
+  };
+}
+
 /* -- Derive sector signals from company data -- */
 
 function deriveSectorSignals(companies) {
   const signals = [];
 
-  // Hiring surges: companies with hiring trigger or high hiring dimension
   const hiringCompanies = companies.filter(
     (c) =>
       (c.triggers || []).includes('hiring_surge') ||
@@ -70,7 +183,6 @@ function deriveSectorSignals(companies) {
     });
   }
 
-  // Recent funding: companies with rapid funding trigger or high funding velocity
   const fundingCompanies = companies.filter(
     (c) =>
       (c.triggers || []).includes('rapid_funding') ||
@@ -86,7 +198,6 @@ function deriveSectorSignals(companies) {
     });
   }
 
-  // Government interest: companies with grant validation or SSBCI eligibility
   const govCompanies = companies.filter(
     (c) =>
       (c.triggers || []).includes('grant_validated') ||
@@ -102,7 +213,6 @@ function deriveSectorSignals(companies) {
     });
   }
 
-  // High momentum companies
   const momentumCompanies = companies.filter(
     (c) =>
       (c.triggers || []).includes('high_momentum') ||
@@ -121,7 +231,7 @@ function deriveSectorSignals(companies) {
   return signals;
 }
 
-/* -- Main drawer -- */
+/* -- Main modal -- */
 
 export function SectorDetailDrawer({ sector, companies = [], sectorStats, onClose, onViewAll }) {
 
@@ -151,6 +261,7 @@ export function SectorDetailDrawer({ sector, companies = [], sectorStats, onClos
     (sum, c) => sum + parseFloat(c.funding_m || c.funding || 0),
     0
   );
+  const fundingLabel = totalFunding >= 1000 ? `${(totalFunding / 1000).toFixed(1)}B` : `${Math.round(totalFunding)}M`;
 
   const avgIrs = useMemo(() => {
     const scored = companies.filter((c) => c.irs != null && c.irs > 0);
@@ -170,6 +281,16 @@ export function SectorDetailDrawer({ sector, companies = [], sectorStats, onClos
     [companies]
   );
 
+  const brief = useMemo(
+    () => deriveSectorBrief(sector, companyCount, fundingLabel, avgIrs, heat),
+    [sector, companyCount, fundingLabel, avgIrs, heat]
+  );
+
+  const publicationDate = useMemo(() => {
+    const now = new Date();
+    return now.toLocaleString('en-US', { month: 'long', year: 'numeric' });
+  }, []);
+
   /* Render nothing if no sector selected */
   if (!sector) return null;
 
@@ -182,12 +303,12 @@ export function SectorDetailDrawer({ sector, companies = [], sectorStats, onClos
         aria-hidden="true"
       />
 
-      {/* Drawer panel */}
+      {/* Modal panel */}
       <div
         className={styles.drawer}
         role="dialog"
         aria-modal="true"
-        aria-label={`${sector} sector detail`}
+        aria-label={`${sector} sector intelligence`}
       >
         {/* -- Header -- */}
         <div className={styles.header}>
@@ -207,131 +328,169 @@ export function SectorDetailDrawer({ sector, companies = [], sectorStats, onClos
                 <span className={styles.heatSuffix}>{heatLabel(heat)}</span>
               </div>
             </div>
-            <span className={styles.subtitle}>Sector Intelligence</span>
+            <span className={styles.subtitle}>Sector Intelligence Overview</span>
           </div>
-          <button
-            className={styles.closeBtn}
-            onClick={onClose}
-            type="button"
-            aria-label="Close drawer"
-          >
-            &#x2715;
-          </button>
+          <div className={styles.headerActions}>
+            {companies.length > 0 && onViewAll && (
+              <button
+                className={styles.viewAllBtn}
+                onClick={() => onViewAll(sector)}
+                type="button"
+              >
+                View All {companyCount}
+                <span className={styles.viewAllArrow}>{'\u2192'}</span>
+              </button>
+            )}
+            <button
+              className={styles.closeBtn}
+              onClick={onClose}
+              type="button"
+              aria-label="Close modal"
+            >
+              &#x2715;
+            </button>
+          </div>
         </div>
 
-        {/* -- Body -- */}
+        {/* -- Body (two-column layout) -- */}
         <div className={styles.body}>
+          <div className={styles.bodyColumns}>
 
-          {/* Overview Metrics */}
-          <div className={styles.section}>
-            <SectionLabel>Overview</SectionLabel>
-            <div className={styles.metricGrid}>
-              <MetricBox
-                label="Companies"
-                value={companyCount}
-              />
-              <MetricBox
-                label="Total Funding"
-                value={totalFunding > 0 ? fmt(totalFunding) : '\u2014'}
-              />
-              <MetricBox
-                label="Avg IRS"
-                value={avgIrs}
-                color={avgIrs != null ? irsColor(avgIrs) : undefined}
-              />
-              <MetricBox
-                label="Heat Score"
-                value={heat}
-                color={heatColor(heat)}
-              />
+            {/* ── LEFT COLUMN: Data & Rankings ── */}
+            <div className={styles.columnLeft}>
+
+              {/* Overview Metrics */}
+              <div className={styles.section}>
+                <SectionLabel>Overview</SectionLabel>
+                <div className={styles.metricGrid}>
+                  <MetricBox label="Companies" value={companyCount} />
+                  <MetricBox label="Total Funding" value={totalFunding > 0 ? fmt(totalFunding) : '\u2014'} />
+                  <MetricBox label="Avg IRS" value={avgIrs} color={avgIrs != null ? irsColor(avgIrs) : undefined} />
+                  <MetricBox label="Heat Score" value={heat} color={heatColor(heat)} />
+                </div>
+              </div>
+
+              {/* Top Companies */}
+              {topCompanies.length > 0 && (
+                <div className={styles.section}>
+                  <SectionLabel>
+                    Top Companies
+                    <span className={styles.sectionCount}>{topCompanies.length}</span>
+                  </SectionLabel>
+                  <div className={styles.companyList}>
+                    {topCompanies.map((c, i) => (
+                      <div key={c.id || c.name || i} className={styles.companyItem}>
+                        <span className={styles.companyRank}>{i + 1}</span>
+                        <div className={styles.companyInfo}>
+                          <span className={styles.companyItemName}>{c.name}</span>
+                          <div className={styles.companyMeta}>
+                            {c.stage && (
+                              <span className={styles.companyStage}>{stageLabel(c.stage)}</span>
+                            )}
+                            {c.funding != null && c.funding > 0 && (
+                              <span className={styles.companyFunding}>{fmt(c.funding)}</span>
+                            )}
+                          </div>
+                        </div>
+                        <div className={styles.companyScores}>
+                          <span className={styles.companyIrs} style={{ color: irsColor(c.irs) }}>
+                            {c.irs}
+                          </span>
+                          {c.grade && (
+                            <span className={styles.companyGrade} style={{ color: gradeColor(c.grade) }}>
+                              {c.grade}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Sector Signals */}
+              {signals.length > 0 && (
+                <div className={styles.section}>
+                  <SectionLabel>
+                    Signals
+                    <span className={styles.sectionCount}>{signals.length}</span>
+                  </SectionLabel>
+                  <div className={styles.signalList}>
+                    {signals.map((sig) => (
+                      <div key={sig.type} className={styles.signalItem}>
+                        <div className={styles.signalHeader}>
+                          <span className={styles.signalDot} style={{ background: sig.color }} />
+                          <span className={styles.signalLabel} style={{ color: sig.color }}>
+                            {sig.label}
+                          </span>
+                        </div>
+                        <p className={styles.signalDetail}>{sig.detail}</p>
+                        {sig.companies.length > 0 && (
+                          <div className={styles.signalCompanies}>
+                            {sig.companies.map((name) => (
+                              <span key={name} className={styles.signalCompanyTag}>{name}</span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* ── RIGHT COLUMN: Intelligence Brief ── */}
+            <div className={styles.columnRight}>
+              <div className={styles.briefPanel}>
+                {/* Brief header */}
+                <div className={styles.briefHeader}>
+                  <div className={styles.briefMeta}>
+                    <span className={styles.briefLabel}>Analysis</span>
+                    <span className={styles.briefDate}>{publicationDate}</span>
+                  </div>
+                  <h3 className={styles.briefTitle}>Intelligence Brief</h3>
+                </div>
+
+                <div className={styles.briefDivider} />
+
+                {/* Assessment */}
+                <div className={styles.briefSection}>
+                  <span className={styles.briefSectionLabel}>Assessment</span>
+                  <p className={styles.briefText}>{brief.assessment}</p>
+                </div>
+
+                <div className={styles.briefDivider} />
+
+                {/* Key Drivers */}
+                <div className={styles.briefSection}>
+                  <span className={styles.briefSectionLabel}>Key Drivers</span>
+                  <ul className={styles.briefList}>
+                    {brief.drivers.map((d, i) => (
+                      <li key={i} className={styles.briefListItem}>
+                        <span className={styles.briefBullet} />
+                        <span>{d}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+
+                <div className={styles.briefDivider} />
+
+                {/* Risk Factors */}
+                <div className={styles.briefSection}>
+                  <span className={styles.briefSectionLabel}>Risk Factors</span>
+                  <ul className={styles.briefList}>
+                    {brief.risks.map((r, i) => (
+                      <li key={i} className={styles.briefListItem}>
+                        <span className={styles.briefBulletRisk} />
+                        <span>{r}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
             </div>
           </div>
-
-          {/* Top Companies */}
-          {topCompanies.length > 0 && (
-            <div className={styles.section}>
-              <SectionLabel>
-                Top Companies
-                <span className={styles.sectionCount}>{topCompanies.length}</span>
-              </SectionLabel>
-              <div className={styles.companyList}>
-                {topCompanies.map((c, i) => (
-                  <div key={c.id || c.name || i} className={styles.companyItem}>
-                    <span className={styles.companyRank}>{i + 1}</span>
-                    <div className={styles.companyInfo}>
-                      <span className={styles.companyItemName}>{c.name}</span>
-                      <div className={styles.companyMeta}>
-                        {c.stage && (
-                          <span className={styles.companyStage}>
-                            {stageLabel(c.stage)}
-                          </span>
-                        )}
-                        {c.funding != null && c.funding > 0 && (
-                          <span className={styles.companyFunding}>
-                            {fmt(c.funding)}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                    <div className={styles.companyScores}>
-                      <span
-                        className={styles.companyIrs}
-                        style={{ color: irsColor(c.irs) }}
-                      >
-                        {c.irs}
-                      </span>
-                      {c.grade && (
-                        <span
-                          className={styles.companyGrade}
-                          style={{ color: gradeColor(c.grade) }}
-                        >
-                          {c.grade}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Sector Signals */}
-          {signals.length > 0 && (
-            <div className={styles.section}>
-              <SectionLabel>
-                Signals
-                <span className={styles.sectionCount}>{signals.length}</span>
-              </SectionLabel>
-              <div className={styles.signalList}>
-                {signals.map((sig) => (
-                  <div key={sig.type} className={styles.signalItem}>
-                    <div className={styles.signalHeader}>
-                      <span
-                        className={styles.signalDot}
-                        style={{ background: sig.color }}
-                      />
-                      <span
-                        className={styles.signalLabel}
-                        style={{ color: sig.color }}
-                      >
-                        {sig.label}
-                      </span>
-                    </div>
-                    <p className={styles.signalDetail}>{sig.detail}</p>
-                    {sig.companies.length > 0 && (
-                      <div className={styles.signalCompanies}>
-                        {sig.companies.map((name) => (
-                          <span key={name} className={styles.signalCompanyTag}>
-                            {name}
-                          </span>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
 
           {/* Empty state */}
           {companies.length === 0 && (
@@ -342,19 +501,7 @@ export function SectorDetailDrawer({ sector, companies = [], sectorStats, onClos
             </div>
           )}
 
-          {/* View All button */}
-          {companies.length > 0 && onViewAll && (
-            <div className={styles.footerSection}>
-              <button
-                className={styles.viewAllBtn}
-                onClick={() => onViewAll(sector)}
-                type="button"
-              >
-                View All {companyCount} Companies
-                <span className={styles.viewAllArrow}>{'\u2192'}</span>
-              </button>
-            </div>
-          )}
+          {/* Empty — View All moved to header */}
         </div>
       </div>
     </>

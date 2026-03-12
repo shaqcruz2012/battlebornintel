@@ -50,21 +50,21 @@ export function computeKPIs(companies, funds) {
       label: 'Capital Deployed',
       secondary: `${fs.length} active funds`,
       quality: DATA_QUALITY.VERIFIED,
-      dataQualityNote: 'Verified from fund deployment records and SEC filings',
+      dataQualityNote: 'Verified from fund deployment records and SEC filings. Covers all active ecosystem funds.',
     },
     ssbciCapitalDeployed: {
       value: ssbciDeployed,
       label: 'SSBCI Capital Deployed',
       secondary: `${ssbciFunds.length} SSBCI funds`,
       quality: DATA_QUALITY.VERIFIED,
-      dataQualityNote: 'Verified from SSBCI program certification documents',
+      dataQualityNote: 'Verified from SSBCI program certification documents and Treasury records',
     },
     privateLeverage: {
       value: privateLeverage,
       label: 'Private Leverage',
       secondary: `${ssbciFunds.length} SSBCI funds`,
       quality: DATA_QUALITY.CALCULATED,
-      dataQualityNote: 'Calculated from verified deployment amounts and inferred leverage ratios',
+      dataQualityNote: 'Calculated ratio: Sum(deployed × leverage) / Sum(deployed). Deployment amounts verified; leverage ratios estimated.',
       breakdown: {
         deployed: DATA_QUALITY.VERIFIED,
         leverage: DATA_QUALITY.INFERRED,
@@ -75,7 +75,7 @@ export function computeKPIs(companies, funds) {
       label: 'Ecosystem Capacity',
       secondary: `${cs.length} companies tracked`,
       quality: DATA_QUALITY.INFERRED,
-      dataQualityNote: `Based on ${companiesWithVerifiedEmployees}/${cs.length} companies with reported employee counts. Others estimated from funding stage.`,
+      dataQualityNote: `${companiesWithVerifiedEmployees} of ${cs.length} companies have reported employee counts. Remaining estimates based on funding stage and industry benchmarks.`,
       verificationPercentage: Math.round((companiesWithVerifiedEmployees / cs.length) * 100),
     },
     innovationIndex: {
@@ -83,7 +83,7 @@ export function computeKPIs(companies, funds) {
       label: 'Innovation Momentum',
       secondary: `${topMomentum} high-momentum cos`,
       quality: DATA_QUALITY.CALCULATED,
-      dataQualityNote: 'Composite index: 40% momentum + 30% top performers + 30% hot sectors',
+      dataQualityNote: 'Composite index: 40% avg momentum score + 30% high performers + 30% hot sectors. All components are inferred metrics.',
       components: {
         momentum: { quality: DATA_QUALITY.INFERRED },
         topPerformers: { quality: DATA_QUALITY.INFERRED },

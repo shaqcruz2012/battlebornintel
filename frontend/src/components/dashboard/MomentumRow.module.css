@@ -76,6 +76,8 @@
   text-align: right;
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.02em;
+  min-width: 3ch;
+  padding-right: var(--space-xs);
 }
 
 .metricLabel {
