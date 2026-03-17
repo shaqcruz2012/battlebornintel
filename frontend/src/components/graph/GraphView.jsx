@@ -147,9 +147,11 @@ export function GraphView() {
     // Filter out isolated nodes (degree 0) — they have no edges and only
     // create visual clutter in the periphery. Always keep hub nodes regardless.
     const HUB_RENDER_IDS = new Set(['f_bbv', 'goed', 'eco_goed', 'bbv', 'f_dfv', 'dfv']);
+    const searchLower = search?.toLowerCase();
     const visibleNodes = nodes.filter((n) => {
       if (HUB_RENDER_IDS.has(n.id)) return true;
       if (selectedNode === n.id) return true;
+      if (searchLower && n.label?.toLowerCase().includes(searchLower)) return true;
       return (nodeDegreeMap[n.id] || 0) >= 1;
     });
     const visibleNodeIds = new Set(visibleNodes.map((n) => n.id));
@@ -161,7 +163,7 @@ export function GraphView() {
       .filter((e) => nodeById[e.source] && nodeById[e.target])
       .map((e) => ({ ...e, source: nodeById[e.source], target: nodeById[e.target] }));
     return { nodes: visibleNodes, edges: resolvedEdges };
-  }, [workerLayout, nodeDegreeMap, selectedNode]);
+  }, [workerLayout, nodeDegreeMap, selectedNode, search]);
 
   const metrics = metricsData || { pagerank: {}, betweenness: {}, communities: {}, watchlist: [] };
 

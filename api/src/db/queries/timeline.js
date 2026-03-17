@@ -12,6 +12,7 @@ export async function getTimeline({ limit = 30, type } = {}) {
       t.company_id,
       t.confidence,
       t.verified,
+      t.source_url,
       c.city,
       c.region,
       c.slug AS company_slug
@@ -42,6 +43,7 @@ export async function getTimeline({ limit = 30, type } = {}) {
     icon: r.icon,
     confidence: r.confidence,
     verified: r.verified,
+    source_url: r.source_url || null,
     city: r.city,
     region: r.region,
   }));
@@ -140,6 +142,7 @@ export async function getTimelineWeek(weekStart) {
       t.company_id,
       t.confidence,
       t.verified,
+      t.source_url,
       c.city,
       c.region,
       c.slug AS company_slug
@@ -161,6 +164,7 @@ export async function getTimelineWeek(weekStart) {
     icon: r.icon,
     confidence: r.confidence,
     verified: r.verified,
+    source_url: r.source_url || null,
     city: r.city,
     region: r.region,
   }));

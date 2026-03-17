@@ -152,6 +152,17 @@ function EventRow({ event }) {
           <div className={styles.eventMeta}>
             <span className={styles.eventCompany}>{event.company}</span>
             <TaxonomyBadge type={event.type} />
+            {event.source_url && (
+              <a
+                href={event.source_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={styles.sourceLink}
+                onClick={(e) => e.stopPropagation()}
+              >
+                Source &#8599;
+              </a>
+            )}
           </div>
           <div className={styles.eventDetail}>{event.detail}</div>
         </Tooltip>

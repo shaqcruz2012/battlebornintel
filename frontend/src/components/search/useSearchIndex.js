@@ -3,7 +3,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useFilters } from '../../hooks/useFilters.jsx';
 import { api } from '../../api/client.js';
 
-const MAX_PER_CATEGORY = 5;
+const MAX_PER_CATEGORY = 15;
 const DEBOUNCE_MS = 300;
 
 /**

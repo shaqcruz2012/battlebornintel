@@ -145,6 +145,14 @@
 
 /* ── Empty state ── */
 
+.resultCount {
+  padding: 4px 12px;
+  font-size: 9px;
+  color: rgba(107, 106, 114, 0.7);
+  text-align: right;
+  user-select: none;
+}
+
 .emptyState {
   padding: 14px 12px;
   font-size: 11px;

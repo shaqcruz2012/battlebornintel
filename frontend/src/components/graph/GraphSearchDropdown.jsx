@@ -71,7 +71,7 @@ function filterAndSortNodes(nodes, searchTerm) {
     return a.label.localeCompare(b.label);
   });
 
-  return matches.slice(0, 14);
+  return matches.slice(0, 50);
 }
 
 /**
@@ -185,6 +185,9 @@ export function GraphSearchDropdown({ nodes, searchTerm, onSelect, onClose }) {
 
   return (
     <div ref={containerRef} className={styles.dropdown} role="listbox" aria-label="Search results">
+      <div className={styles.resultCount}>
+        {filteredNodes.length} match{filteredNodes.length !== 1 ? 'es' : ''}
+      </div>
       {sections.map((section) => (
         <div key={section.sectionKey} className={styles.section}>
           <div className={styles.sectionHeader}>{section.label}</div>

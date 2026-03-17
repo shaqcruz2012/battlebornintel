@@ -94,4 +94,20 @@ app.use(errorHandler);
 
 app.listen(cfg.port, () => {
   console.log(`BBI API listening on port ${cfg.port}`);
+
+  // Pre-warm the graph cache so the first user request hits warm cache
+  setTimeout(async () => {
+    try {
+      const url = `http://localhost:${cfg.port}/api/graph`;
+      console.log('[cache-warm] Pre-warming graph cache...');
+      const res = await fetch(url);
+      if (res.ok) {
+        console.log('[cache-warm] Graph cache warmed successfully');
+      } else {
+        console.warn(`[cache-warm] Graph warm-up returned status ${res.status}`);
+      }
+    } catch (err) {
+      console.warn('[cache-warm] Graph warm-up failed:', err.message);
+    }
+  }, 1000);
 });

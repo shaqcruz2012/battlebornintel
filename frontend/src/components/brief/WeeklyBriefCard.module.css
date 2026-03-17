@@ -285,6 +285,21 @@
   opacity: 1;
 }
 
+.sourceLink {
+  font-size: var(--text-caption-sm, 10px);
+  color: var(--teal, #45d7c6);
+  text-decoration: none;
+  opacity: 0.7;
+  transition: opacity 150ms ease;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.sourceLink:hover {
+  opacity: 1;
+  text-decoration: underline;
+}
+
 .eventDetail {
   font-size: var(--text-caption-sm);
   color: var(--text-secondary);
