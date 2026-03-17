@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { useState, useRef, useCallback, useMemo } from 'react';
 import { MainGrid } from '../layout/AppShell';
 import { useWeeklyBriefs } from '../../hooks/useWeeklyBriefs';
 import { getTodayWeekStart, formatDate, getISOWeekNumber } from '../../utils/weeks';
@@ -162,16 +162,12 @@ function EditorsNote({ note }) {
 
 export function WeeklyBriefView() {
   const { weeks, isLoading } = useWeeklyBriefs(52);
-  const [filteredWeeks, setFilteredWeeks] = useState([]);
   const [filterType, setFilterType] = useState('all');
   const [showScrollTop, setShowScrollTop] = useState(false);
   const scrollContainerRef = useRef(null);
 
-  // Update filtered weeks when weeks or filter changes
-  useEffect(() => {
-    const filtered = filterWeeksByType(weeks, filterType);
-    setFilteredWeeks(filtered);
-  }, [weeks, filterType]);
+  // M-7: Derived state — no useEffect+setState needed
+  const filteredWeeks = useMemo(() => filterWeeksByType(weeks, filterType), [weeks, filterType]);
 
   // Handle scroll to show/hide scroll-to-top button
   const handleScroll = useCallback((e) => {

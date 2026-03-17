@@ -111,12 +111,14 @@ export const FundCard = memo(function FundCard({
   isExpanded,
   onToggle,
 }) {
+  const deployed = fund.deployed ?? 0;
+
   const deployPercent = fund.allocated && fund.allocated > 0
-    ? Math.min((fund.deployed / fund.allocated) * 100, 100)
+    ? Math.min((deployed / fund.allocated) * 100, 100)
     : 0;
 
   const remaining = fund.allocated != null
-    ? Math.max(fund.allocated - fund.deployed, 0)
+    ? Math.max(fund.allocated - deployed, 0)
     : null;
 
   return (
@@ -134,7 +136,7 @@ export const FundCard = memo(function FundCard({
         </span>
       </div>
 
-      <DeploymentBar allocated={fund.allocated} deployed={fund.deployed} />
+      <DeploymentBar allocated={fund.allocated} deployed={deployed} />
 
       <div className={styles.deployStats}>
         <span>

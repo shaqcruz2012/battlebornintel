@@ -10,11 +10,26 @@ export async function getCompanyAnalysis(companyId) {
   return rows[0] || null;
 }
 
-export async function getWeeklyBrief() {
+export async function getWeeklyBrief({ weekStart, weekEnd } = {}) {
+  const params = [];
+  let idx = 1;
+  let where = `WHERE analysis_type = 'weekly_brief'`;
+
+  if (weekStart) {
+    where += ` AND DATE(created_at) >= $${idx}::date`;
+    params.push(weekStart);
+    idx++;
+  }
+
+  if (weekEnd) {
+    where += ` AND DATE(created_at) <= $${idx}::date`;
+    params.push(weekEnd);
+    idx++;
+  }
+
   const { rows } = await pool.query(
-    `SELECT * FROM analysis_results
-     WHERE analysis_type = 'weekly_brief'
-     ORDER BY created_at DESC LIMIT 1`
+    `SELECT * FROM analysis_results ${where} ORDER BY created_at DESC LIMIT 1`,
+    params
   );
   return rows[0] || null;
 }

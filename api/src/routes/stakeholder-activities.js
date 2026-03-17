@@ -59,7 +59,7 @@ router.get('/', async (req, res, next) => {
       since,
       until,
       type,
-      stakeholderType: stakeholder_type,
+      stakeholderType: resolvedStakeholderType,
     };
 
     // Fetch paginated data with total count in a single query

@@ -1,30 +1,58 @@
 /**
- * D3 Layout Web Worker — v2 with clustering, BBV/GOED anchoring, edge fix
+ * D3 Layout Web Worker — v4 Milky Way cigar layout
  * Offloads expensive force-simulation computations from the main thread.
  *
- * Key improvements over v1:
- *  - Builds an id-to-index map so string-ID edges resolve correctly
- *  - Cluster force pulls each node type toward a dedicated canvas zone
- *  - BBV / GOED hub nodes are strongly attracted to canvas center
- *  - Collision avoidance prevents node overlap
- *  - Boundary force keeps nodes within canvas margins
- *  - Node positions initialized across 20-80% of canvas (avoids edge pile-up)
+ * Layout concept: "cigar-shaped side view of the Milky Way"
+ * The galaxy seen edge-on is an elongated ellipse — dense bright core at center,
+ * disk arms extending left/right, sparse halo at the periphery.
+ *
+ * Key improvements:
+ *  - Elliptical coordinate system: aX = width*0.42, aY = height*0.18 (cigar 2-3:1)
+ *  - Companies packed in dense elliptical core, sub-grouped by region
+ *  - Funds form inner disk arms (left/right of core)
+ *  - Accelerators in thin disk band above/below core
+ *  - Ecosystem orgs in outer disk ring
+ *  - Externals scattered in wide halo
+ *  - People at far periphery
+ *  - Stable deterministic jitter via hashFloat (no Math.random() in cluster targets)
+ *  - Company-company links use 35px ideal distance to keep core compact
+ *  - fund→company invested_in edges use strength 0.12 to pull portfolio close
+ *  - velocityDecay = 0.35 so elongated shape forms naturally before cooling
  */
 
-// Hub nodes that should gravitate strongly toward the canvas center
-const HUB_IDS = new Set([
-  'f_bbv',
-  'bbv',
-  'goed',
-  'x_goed',
-  'f_battle-born',
-  'battle-born-ventures',
-]);
+/**
+ * L-5: Deterministic hash of a string to a float in [0, 1).
+ * Used for stable cluster target jitter — layout is identical across re-runs.
+ */
+function hashFloat(str) {
+  let h = 2166136261; // FNV-1a 32-bit offset basis
+  for (let i = 0; i < str.length; i++) {
+    h ^= str.charCodeAt(i);
+    h = (h * 16777619) >>> 0; // FNV prime, keep 32-bit unsigned
+  }
+  return (h >>> 0) / 0x100000000;
+}
+
+const TILT = 15 * Math.PI / 180;
+const cosTilt = Math.cos(TILT);
+const sinTilt = Math.sin(TILT);
+
+function tiltedPos(u, v, cx, cy, aX, aY) {
+  const lx = u * aX;
+  const ly = v * aY;
+  return {
+    x: cx + lx * cosTilt - ly * sinTilt,
+    y: cy + lx * sinTilt + ly * cosTilt,
+  };
+}
 
 /**
  * Returns the cluster target position and attraction strength for a node.
- * Positions are expressed as absolute canvas coordinates derived from
- * fractions of (width, height) centered on (cx, cy).
+ *
+ * Uses an elliptical coordinate system where x range >> y range to produce
+ * a cigar / Milky Way edge-on shape:
+ *   Major axis (horizontal): width * 0.42
+ *   Minor axis (vertical):   height * 0.18
  *
  * @param {object} node  - graph node with at minimum { id, type, region, label }
  * @param {number} width  - canvas width in px
@@ -34,67 +62,117 @@ const HUB_IDS = new Set([
 function clusterTarget(node, width, height) {
   const cx = width / 2;
   const cy = height / 2;
+  const aX = width * 0.42;   // horizontal semi-axis (wide)
+  const aY = height * 0.18;  // vertical semi-axis (narrow) — cigar shape
 
-  // Hub nodes strongly attracted to center
-  if (
-    HUB_IDS.has(node.id) ||
-    (node.type === 'fund' && (node.label || '').toLowerCase().includes('battle born'))
-  ) {
-    return { x: cx, y: cy, strength: 0.8 };
-  }
+  const type = node.type || 'unknown';
+  const id = node.id || '';
 
-  switch (node.type) {
-    case 'fund':
-      // Other funds cluster near center, spread slightly around BBV
-      return {
-        x: cx + (Math.random() - 0.5) * width * 0.15,
-        y: cy + (Math.random() - 0.5) * height * 0.15,
-        strength: 0.30,
-      };
-
+  switch (type) {
     case 'company': {
-      // Portfolio companies cluster by Nevada region around the canvas
-      const regionZones = {
-        las_vegas:       { x: cx + width * 0.28, y: cy + height * 0.10 },  // right
-        henderson:       { x: cx + width * 0.25, y: cy + height * 0.22 },  // lower-right
-        las_vegas_metro: { x: cx + width * 0.22, y: cy + height * 0.05 },
-        reno:            { x: cx - width * 0.28, y: cy - height * 0.10 },  // left
-        washoe:          { x: cx - width * 0.25, y: cy - height * 0.05 },
-        northern_nevada: { x: cx - width * 0.10, y: cy - height * 0.28 },  // upper
-        sparks:          { x: cx - width * 0.20, y: cy - height * 0.08 },
-        elko:            { x: cx + width * 0.05, y: cy - height * 0.32 },  // upper-right
-        statewide:       { x: cx,                y: cy + height * 0.30 },  // lower-center
+      // Core: tight elliptical cluster, sub-grouped by Nevada region.
+      // Stable hashFloat jitter so layout is deterministic across re-runs.
+      const regionOffsets = {
+        las_vegas:       { x: -0.08, y:  0.00 },
+        henderson:       { x: -0.04, y: -0.06 },
+        las_vegas_metro: { x: -0.06, y:  0.04 },
+        reno:            { x:  0.10, y:  0.05 },
+        washoe:          { x:  0.12, y: -0.03 },
+        northern_nevada: { x:  0.14, y:  0.08 },
+        sparks:          { x:  0.16, y: -0.04 },
+        elko:            { x:  0.18, y:  0.10 },
+        statewide:       { x:  0.00, y:  0.00 },
       };
-      const zone = regionZones[node.region] || { x: cx, y: cy + height * 0.20 };
-      return { ...zone, strength: 0.12 };
+      const reg = node.region || 'las_vegas';
+      const off = regionOffsets[reg] || { x: 0, y: 0 };
+      const u = off.x + (hashFloat(id + '_jx') - 0.5) * 0.12;
+      const v = off.y + (hashFloat(id + '_jy') - 0.5) * 0.25;
+      const pos = tiltedPos(u, v, cx, cy, aX, aY);
+      return { ...pos, strength: 0.10 };
     }
 
-    case 'person':
-      // People rely primarily on edge force to stay near their company;
-      // light cluster toward lower-center keeps them from drifting off-canvas
-      return { x: cx, y: cy + height * 0.28, strength: 0.08 };
+    case 'fund': {
+      // Inner disk — funds spread deterministically left and right of core.
+      const fundAngle = hashFloat(id) * Math.PI; // 0..PI maps across full arc
+      const r = 0.55 + hashFloat(id + '_r') * 0.15;
+      const u = Math.cos(fundAngle) * r;
+      const v = Math.sin(fundAngle) * 0.6;
+      const pos = tiltedPos(u, v, cx, cy, aX, aY);
+      return { ...pos, strength: 0.18 };
+    }
 
-    case 'accelerator':
-      // Accelerators — innovation support layer — lower-left
-      return { x: cx - width * 0.30, y: cy + height * 0.25, strength: 0.22 };
+    case 'accelerator': {
+      // Thin disk band above/below core
+      const side = hashFloat(id) > 0.5 ? 1 : -1;
+      const u = (hashFloat(id + '_x') - 0.5) * 1.1;
+      const v = side * 0.75;
+      const pos = tiltedPos(u, v, cx, cy, aX, aY);
+      return { ...pos, strength: 0.12 };
+    }
 
-    case 'ecosystem':
-      // Ecosystem / government / policy — upper-right
-      return { x: cx + width * 0.28, y: cy - height * 0.22, strength: 0.22 };
+    case 'ecosystem': {
+      // Outer disk, sparse wide elliptical band
+      const eAngle = hashFloat(id) * Math.PI * 2;
+      const u = Math.cos(eAngle) * 0.85;
+      const v = Math.sin(eAngle) * 0.9;
+      const pos = tiltedPos(u, v, cx, cy, aX, aY);
+      return { ...pos, strength: 0.10 };
+    }
 
-    case 'external':
-      // National / external players — outer ring right
-      return { x: cx + width * 0.35, y: cy + height * 0.30, strength: 0.15 };
+    case 'external': {
+      // Halo — wide flattened ellipse surrounding the disk
+      const hAngle = hashFloat(id) * Math.PI * 2;
+      const hR = 0.88 + hashFloat(id + '_r') * 0.20;
+      const u = Math.cos(hAngle) * hR;
+      const v = Math.sin(hAngle) * hR;
+      const pos = tiltedPos(u, v, cx, cy, aX, aY);
+      return { ...pos, strength: 0.06 };
+    }
+
+    case 'person': {
+      // Far periphery — outermost sparse ring
+      const pAngle = hashFloat(id) * Math.PI * 2;
+      const u = Math.cos(pAngle) * 1.15;
+      const v = Math.sin(pAngle) * 1.15;
+      const pos = tiltedPos(u, v, cx, cy, aX, aY);
+      return { ...pos, strength: 0.05 };
+    }
 
     case 'sector':
-      return { x: cx - width * 0.35, y: cy + height * 0.30, strength: 0.15 };
-
     case 'region':
-      return { x: cx - width * 0.35, y: cy - height * 0.30, strength: 0.15 };
+    case 'exchange': {
+      // Categorical nodes — mid-disk ring
+      const sAngle = hashFloat(id) * Math.PI * 2;
+      const u = Math.cos(sAngle) * 0.70;
+      const v = Math.sin(sAngle) * 0.70;
+      const pos = tiltedPos(u, v, cx, cy, aX, aY);
+      return { ...pos, strength: 0.12 };
+    }
 
-    default:
-      return { x: cx, y: cy, strength: 0.05 };
+    default: {
+      const dAngle = hashFloat(id) * Math.PI * 2;
+      const u = Math.cos(dAngle) * 0.95;
+      const v = Math.sin(dAngle) * 0.95;
+      const pos = tiltedPos(u, v, cx, cy, aX, aY);
+      return { ...pos, strength: 0.05 };
+    }
   }
+}
+
+// Module-level set so getNodeRadius() doesn't allocate on every call
+const _HUB_RADIUS_IDS = new Set(['f_bbv', 'goed', 'eco_goed', 'bbv', 'f_dfv', 'dfv']);
+
+/**
+ * Returns the visual radius for a node, matching GraphCanvas.nodeRadius().
+ * Used by collision detection so the physics radius matches the rendered size.
+ */
+function getNodeRadius(node) {
+  if (_HUB_RADIUS_IDS.has(node.id)) return 13;
+  if (node.type === 'fund' || node.type === 'accelerator') return 8;
+  if (node.type === 'sector' || node.type === 'ecosystem' || node.type === 'region') return 6;
+  if (node.type === 'company') return 6;  // conservative mid-range for companies
+  if (node.type === 'external') return 4;
+  return 5;
 }
 
 class ForceSimulation {
@@ -107,6 +185,16 @@ class ForceSimulation {
   constructor(nodes, edges, width, height) {
     this.width = width;
     this.height = height;
+
+    // ── Degree map: count how many edges touch each node ID ──────────────────
+    // High-degree nodes repel more strongly and are pushed to the core.
+    const degree = {};
+    edges.forEach((e) => {
+      const s = typeof e.source === 'number' ? String(e.source) : e.source;
+      const t = typeof e.target === 'number' ? String(e.target) : e.target;
+      degree[s] = (degree[s] || 0) + 1;
+      degree[t] = (degree[t] || 0) + 1;
+    });
 
     // Build id-to-index map so string-ID edges resolve to the correct node
     this.idToIndex = {};
@@ -121,48 +209,76 @@ class ForceSimulation {
       vy: 0,
       fx: null,
       fy: null,
+      degree: degree[n.id] || 0,
+      _r: getNodeRadius(n),                        // visual radius for collision
       _clusterTarget: clusterTarget(n, width, height),
     }));
 
     // Resolve edge source/target to numeric indices using the id map.
     // Edges with unresolvable or self-referential endpoints are dropped.
+    // Preserve relationship type and endpoint types for distance/strength scaling.
     this.edges = edges
       .map((e) => {
         const si =
           typeof e.source === 'number' ? e.source : this.idToIndex[e.source];
         const ti =
           typeof e.target === 'number' ? e.target : this.idToIndex[e.target];
-        return si !== undefined && ti !== undefined && si !== ti
-          ? { source: si, target: ti }
-          : null;
+        if (si === undefined || ti === undefined || si === ti) return null;
+        return {
+          source: si,
+          target: ti,
+          rel: e.rel || e.type || '',
+          sourceType: nodes[si] ? nodes[si].type : null,
+          targetType: nodes[ti] ? nodes[ti].type : null,
+        };
       })
       .filter(Boolean);
 
     this.alpha = 1;
-    this.alphaDecay = 0.018;  // slower cooldown = more motion/settling
-    this.alphaMin = 0.008;    // stop earlier than D3 default (0.001)
-    this.velocityDecay = 0.30;
+    this.alphaDecay = 0.015;  // slower cooling — more time to settle into the disk plane
+    this.alphaMin = 0.001;    // cool fully before stopping (D3 default)
+    this.velocityDecay = 0.35; // allows elongated shape to form naturally before cooling
+
+    // Pre-built sets for edge spring classification — avoids re-allocating on
+    // every tick call (applyEdgeAttraction is called hundreds of times).
+    this._tightRels = new Set([
+      'invested_in', 'loaned_to', 'founder_of', 'manages', 'funds',
+      'grants_to', 'acquired',
+    ]);
+    this._mediumRels = new Set([
+      'accelerated_by', 'incubated_by', 'won_pitch', 'partners_with',
+      'contracts_with', 'collaborated_with', 'supports', 'housed_at',
+    ]);
   }
 
   /**
    * Many-body Coulomb repulsion — pushes all node pairs apart.
-   * Strength -55 gives more breathing room than the old -30.
+   * Strength is scaled per-node by degree so high-degree hub nodes push
+   * further outward, naturally forming the galactic core/periphery structure.
+   * Distance is capped at 350px for O(n) locality approximation.
    */
   applyRepulsion() {
-    const strength = -22;
+    const distMax = 350;
+    const distMax2 = distMax * distMax;
     for (let i = 0; i < this.nodes.length; ++i) {
       const a = this.nodes[i];
+      // Degree-scaled repulsion: base -40 plus -10 per connected edge
+      const strengthA = -40 - a.degree * 10;
       for (let j = i + 1; j < this.nodes.length; ++j) {
         const b = this.nodes[j];
         let dx = b.x - a.x || 0.01;
         let dy = b.y - a.y || 0.01;
         const dist2 = dx * dx + dy * dy;
+        // Skip pairs beyond distMax (performance + avoids over-spreading)
+        if (dist2 > distMax2) continue;
         const dist = Math.sqrt(dist2);
-        // Jitter if nodes are stacked on top of each other
+        // Jitter if nodes are stacked exactly on top of each other
         if (dist < 1) {
           dx = Math.random() * 2 - 1;
           dy = Math.random() * 2 - 1;
         }
+        // Average degree-scaled strength between the two nodes
+        const strength = (strengthA + (-40 - b.degree * 10)) * 0.5;
         const f = (strength * this.alpha) / Math.max(dist2, 1);
         const fx = (dx / Math.max(dist, 1)) * f;
         const fy = (dy / Math.max(dist, 1)) * f;
@@ -176,23 +292,34 @@ class ForceSimulation {
 
   /**
    * Collision avoidance — prevents nodes from overlapping by enforcing
-   * a minimum center-to-center distance.
+   * a minimum center-to-center distance equal to the sum of their visual
+   * radii plus a 6px padding gap.
+   *
+   * Applied with strength 0.85 and 3 sub-iterations for fast convergence,
+   * matching D3's forceCollide recommended settings.
    */
   applyCollision() {
-    const minDist = 5;
-    for (let i = 0; i < this.nodes.length; ++i) {
-      for (let j = i + 1; j < this.nodes.length; ++j) {
-        const a = this.nodes[i];
-        const b = this.nodes[j];
-        const dx = b.x - a.x || 0.01;
-        const dy = b.y - a.y || 0.01;
-        const dist = Math.sqrt(dx * dx + dy * dy);
-        if (dist < minDist) {
-          const overlap = ((minDist - dist) / dist) * 0.10;
-          a.vx -= dx * overlap;
-          a.vy -= dy * overlap;
-          b.vx += dx * overlap;
-          b.vy += dy * overlap;
+    const strength = 0.85;
+    const padding = 6;
+    const subIter = 3;
+
+    for (let iter = 0; iter < subIter; iter++) {
+      for (let i = 0; i < this.nodes.length; ++i) {
+        for (let j = i + 1; j < this.nodes.length; ++j) {
+          const a = this.nodes[i];
+          const b = this.nodes[j];
+          const minDist = (a._r || 5) + (b._r || 5) + padding;
+          const dx = b.x - a.x || 0.01;
+          const dy = b.y - a.y || 0.01;
+          const dist = Math.sqrt(dx * dx + dy * dy) || 0.01;
+          if (dist < minDist) {
+            // Push both nodes apart proportionally to overlap
+            const overlap = ((minDist - dist) / dist) * strength * 0.5;
+            a.vx -= dx * overlap;
+            a.vy -= dy * overlap;
+            b.vx += dx * overlap;
+            b.vy += dy * overlap;
+          }
         }
       }
     }
@@ -200,15 +327,47 @@ class ForceSimulation {
 
   /**
    * Edge spring attraction — pulls connected nodes toward an ideal separation.
+   * Ideal length and spring strength vary by relationship type and node types:
+   *
+   *  - Company↔Company edges use idealLength = 35px to keep the core compact
+   *  - fund→company invested_in edges use strength = 0.12 to pull portfolio near fund arm
+   *  - Strong ties (invested_in, founder_of, loaned_to): short distance, strong pull
+   *  - Medium ties (accelerated_by, partners_with, manages): medium distance
+   *  - Weak/categorical ties (operates_in, affiliated_with): long distance, weak pull
+   *
    * Respects fixed (fx/fy) nodes.
    */
   applyEdgeAttraction() {
-    const idealLength = 80;  // target edge length in pixels
-    const strength = 0.04;
     for (const edge of this.edges) {
       const a = this.nodes[edge.source];
       const b = this.nodes[edge.target];
       if (!a || !b) continue;
+
+      let idealLength, strength;
+      const rel = edge.rel;
+      const srcType = edge.sourceType || a.type;
+      const tgtType = edge.targetType || b.type;
+
+      // Company-company edges: very tight to keep the galactic core compact
+      if (srcType === 'company' && tgtType === 'company') {
+        idealLength = 35;
+        strength = 0.06;
+      } else if (this._tightRels.has(rel)) {
+        idealLength = 50;
+        // fund→company invested_in: stronger pull so portfolio clusters near fund arm
+        if (rel === 'invested_in' && (srcType === 'fund' || tgtType === 'fund')) {
+          strength = 0.12;
+        } else {
+          strength = 0.08;
+        }
+      } else if (this._mediumRels.has(rel)) {
+        idealLength = 80;
+        strength = 0.05;
+      } else {
+        idealLength = 110;
+        strength = 0.03;
+      }
+
       const dx = b.x - a.x;
       const dy = b.y - a.y;
       const dist = Math.sqrt(dx * dx + dy * dy) || 1;
@@ -320,16 +479,18 @@ function marginRand(dim) {
 
 /**
  * Serialize only the fields consumers need, stripping internal simulation
- * state (vx, vy, fx, fy, index, _clusterTarget) to keep message size lean.
+ * state (vx, vy, fx, fy, index, degree, _r, _clusterTarget) to keep message
+ * size lean and avoid polluting the node objects received by GraphCanvas.
  */
 function serializeNodes(nodes) {
-  return nodes.map(({ id, type, label, x, y, ...rest }) => ({
+  // eslint-disable-next-line no-unused-vars
+  return nodes.map(({ id, type, label, x, y, vx, vy, fx, fy, index, degree, _r, _clusterTarget, ...rest }) => ({
     id,
     type,
     label,
-    ...rest,
     x,
     y,
+    ...rest,
   }));
 }
 

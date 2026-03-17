@@ -30,6 +30,7 @@ export async function recomputeAndCacheMetrics() {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
+    await client.query('DELETE FROM graph_metrics_cache');
     const nodeIds = Object.keys(pagerank);
     for (const nodeId of nodeIds) {
       await client.query(

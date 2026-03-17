@@ -244,7 +244,7 @@ const NodeCircle = memo(function NodeCircle({
           transition: 'stroke-width 200ms ease, stroke 200ms ease',
         }}
         onClick={() => onSelect(node.id)}
-        onMouseEnter={onHover}
+        onMouseEnter={(e) => onHover(node, e)}
         onMouseLeave={onLeave}
       />
       {/* Node label */}
@@ -390,6 +390,10 @@ export function GraphCanvas({
   showValues = false,
   focusNodeId = null,
   layoutSettled = false,
+  // layoutWidth/layoutHeight must match the dimensions passed to the layout worker
+  // so that node positions (in worker coordinate space) align with the SVG viewBox.
+  layoutWidth,
+  layoutHeight,
 }) {
   const containerRef = useRef(null);
   const edgeCanvasRef = useRef(null);
@@ -404,8 +408,46 @@ export function GraphCanvas({
   const tooltipRef = useRef(null);
   const tooltipActiveRef = useRef(false);
 
-  const w = Math.min(winW - 16, 1800);
-  const h = Math.max(640, winH - 104); // header(64) + tabs(40)
+  // Track the actual rendered container dimensions via ResizeObserver.
+  // This is the authoritative size used for the SVG viewBox and canvas sizing so
+  // that both layers share the same pixel coordinate space.
+  // Seed with layoutWidth/layoutHeight (from the worker) or a window-based estimate
+  // so the initial render is correct before the observer fires.
+  const fallbackW = layoutWidth  ?? Math.min(winW - 16, 1800);
+  const fallbackH = layoutHeight ?? Math.max(640, winH - 104);
+  const [containerSize, setContainerSize] = useState({ w: fallbackW, h: fallbackH });
+
+  useLayoutEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    // Seed from actual DOM size immediately (avoids a flash with wrong dimensions)
+    const rect = el.getBoundingClientRect();
+    if (rect.width > 0 && rect.height > 0) {
+      setContainerSize({ w: rect.width, h: rect.height });
+    }
+    // Keep tracking via ResizeObserver for window resize / sidebar expand
+    const ro = new ResizeObserver((entries) => {
+      const entry = entries[0];
+      if (!entry) return;
+      const { width, height } = entry.contentRect;
+      if (width > 0 && height > 0) {
+        setContainerSize((prev) => {
+          // Only update on meaningful changes to avoid unnecessary re-renders
+          if (Math.abs(width - prev.w) > 2 || Math.abs(height - prev.h) > 2) {
+            return { w: width, h: height };
+          }
+          return prev;
+        });
+      }
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []); // run once — the observer handles subsequent changes
+
+  // w/h are the actual container pixel dimensions. All coordinate math (viewBox,
+  // canvas sizing, fitAll, pan) uses these so the SVG and canvas layers are aligned.
+  const w = containerSize.w;
+  const h = containerSize.h;
 
   const fitAll = useCallback(() => {
     const { nodes } = layout;
@@ -442,17 +484,25 @@ export function GraphCanvas({
     }
   }, [layout.nodes.length, layoutSettled, fitAll]);
 
+  // Focus effect: pan/zoom to a specific node when focusNodeId changes.
+  // zoom is intentionally excluded from the dependency array — we read it
+  // via a ref below to avoid re-firing every time the user scrolls while the
+  // 300 ms focus window is still open (which caused a zoom bounce loop).
+  const zoomRef = useRef(zoom);
+  useEffect(() => { zoomRef.current = zoom; });
+
   useEffect(() => {
     if (!focusNodeId) return;
     const node = layout.nodes.find((n) => n.id === focusNodeId);
     if (!node) return;
-    const targetZoom = Math.max(zoom, 1.8);
+    const targetZoom = Math.max(zoomRef.current, 1.8);
     setZoom(targetZoom);
     setPan({
       x: w / 2 - (node.x || 0) * targetZoom,
       y: h / 2 - (node.y || 0) * targetZoom,
     });
-  }, [focusNodeId]); // eslint-disable-line react-hooks/exhaustive-deps
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focusNodeId, w, h, layout.nodes]);
 
   const searchLower = searchTerm.toLowerCase();
   const matchesSearch = useCallback(
@@ -595,13 +645,15 @@ export function GraphCanvas({
     [selectedNode, onSelectNode],
   );
 
-  const hoverCallbacks = useMemo(() => {
-    const map = {};
-    nodes.forEach((n) => {
-      map[n.id] = (e) => showTooltip(n, e.clientX, e.clientY);
-    });
-    return map;
-  }, [nodes, showTooltip]);
+  // H-6: Store the tooltip function in a ref so the hover handler doesn't need
+  // nodes in its dep array. A single stable handleNodeHover receives the node
+  // object directly from the caller, preserving React.memo on NodeCircle.
+  const showTooltipRef = useRef(showTooltip);
+  useEffect(() => { showTooltipRef.current = showTooltip; }, [showTooltip]);
+
+  const handleNodeHover = useCallback((node, e) => {
+    showTooltipRef.current(node, e.clientX, e.clientY);
+  }, []);
 
   // FIX 3 + FIX 4: Pre-compute display thresholds once.
   const nodeCount = nodes.length;
@@ -693,7 +745,7 @@ export function GraphCanvas({
       <svg
         className={styles.svg}
         viewBox={`0 0 ${w} ${h}`}
-        preserveAspectRatio="xMidYMid meet"
+        preserveAspectRatio="none"
       >
         <GlowFilters />
 
@@ -753,7 +805,7 @@ export function GraphCanvas({
                 hasSelection={!!selectedNode}
                 dim={dim}
                 onSelect={handleNodeSelect}
-                onHover={hoverCallbacks[n.id]}
+                onHover={handleNodeHover}
                 onLeave={hideTooltip}
                 baseOpacity={baseOpacity}
                 isHub={isHub}

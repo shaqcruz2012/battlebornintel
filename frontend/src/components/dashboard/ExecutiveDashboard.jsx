@@ -62,7 +62,7 @@ export function ExecutiveDashboard({ onViewChange }) {
   const [selectedSector, setSelectedSector] = useState(null);
   const [activeKpi, setActiveKpi] = useState(null);
 
-  const { data: companies = [], isLoading: loadingCompanies } = useCompanies({
+  const { data: companies = [], isLoading: loadingCompanies, isFetching: fetchingCompanies } = useCompanies({
     stage: filters.stage,
     region: filters.region,
     sector: filters.sector,
@@ -123,6 +123,7 @@ export function ExecutiveDashboard({ onViewChange }) {
         companies={companies}
         sortBy={filters.sortBy}
         onSortChange={setSortBy}
+        isFetching={fetchingCompanies}
       />
       <NarrativePanel companies={companies} funds={funds} activeSector={filters.sector} sectorStats={sectorStats} />
       {selectedSector && (

@@ -242,7 +242,7 @@ export async function getCompanyActivities(companyId, limit = 20) {
       'timeline_event' as source,
       true as verified
     FROM timeline_events t
-    LEFT JOIN companies c ON c.id = $1
+    LEFT JOIN companies c ON LOWER(c.name) = LOWER(t.company_name)
     WHERE LOWER(t.company_name) = (SELECT LOWER(name) FROM companies WHERE id = $1)
     ORDER BY t.event_date DESC
     LIMIT $2

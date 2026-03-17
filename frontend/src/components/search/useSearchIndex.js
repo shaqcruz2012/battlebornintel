@@ -1,5 +1,6 @@
 import { useCallback, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
+import { useFilters } from '../../hooks/useFilters.jsx';
 import { api } from '../../api/client.js';
 
 const MAX_PER_CATEGORY = 5;
@@ -81,6 +82,8 @@ function scoreNode(node, query) {
  */
 export function useSearchIndex() {
   const queryClient = useQueryClient();
+  const { filters } = useFilters();
+  const region = filters.region === 'all' ? undefined : filters.region;
   const debounceTimer = useRef(null);
 
   /**
@@ -103,12 +106,12 @@ export function useSearchIndex() {
             staleTime: 300_000,
           }),
           queryClient.prefetchQuery({
-            queryKey: ['graph', ['company', 'fund', 'person', 'external', 'accelerator', 'ecosystem'], 2026, undefined],
+            queryKey: ['graph', ['company', 'fund', 'person', 'external', 'accelerator', 'ecosystem'], 2026, region],
             queryFn: () =>
               api.getGraph(
                 ['company', 'fund', 'person', 'external', 'accelerator', 'ecosystem'],
                 2026,
-                undefined
+                region
               ),
             staleTime: 300_000,
           }),
@@ -117,7 +120,7 @@ export function useSearchIndex() {
         // Silently ignore background fetch errors — cached results still shown
       }
     }, DEBOUNCE_MS);
-  }, [queryClient]);
+  }, [queryClient, region]);
 
   /**
    * Read all cached query data and search across companies, funds, and graph nodes.
@@ -166,7 +169,7 @@ export function useSearchIndex() {
         }));
 
       // --- Graph nodes (people + orgs) ---
-      const GRAPH_KEY = ['graph', ['company', 'fund', 'person', 'external', 'accelerator', 'ecosystem'], 2026, undefined];
+      const GRAPH_KEY = ['graph', ['company', 'fund', 'person', 'external', 'accelerator', 'ecosystem'], 2026, region];
       const graphCache = queryClient.getQueryData(GRAPH_KEY) ?? { nodes: [] };
       const graphNodes = graphCache.nodes ?? [];
 
@@ -203,7 +206,7 @@ export function useSearchIndex() {
 
       return { companies, funds, people, organizations };
     },
-    [queryClient, scheduleFetch]
+    [queryClient, scheduleFetch, region]
   );
 
   return { search };

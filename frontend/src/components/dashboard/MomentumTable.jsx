@@ -20,7 +20,7 @@ const GRADE_TOOLTIP =
 const ROW_HEIGHT = 80; // Approximate height of a MomentumRow
 const BUFFER_SIZE = 3; // Extra rows to render above/below visible window
 
-export function MomentumTable({ companies, sortBy, onSortChange }) {
+export function MomentumTable({ companies, sortBy, onSortChange, isFetching }) {
   const containerRef = useRef(null);
   const [visibleRange, setVisibleRange] = useState({ start: 0, end: 15 });
 
@@ -62,7 +62,10 @@ export function MomentumTable({ companies, sortBy, onSortChange }) {
   return (
     <div className={styles.wrapper}>
       <div className={styles.header}>
-        <h2 className={styles.title}>Momentum Rankings</h2>
+        <h2 className={styles.title}>
+          Momentum Rankings
+          {isFetching && <span className={styles.fetchingDot} title="Updating…" />}
+        </h2>
         <div className={styles.sortControls}>
           {SORTS.map((s) => (
             <button

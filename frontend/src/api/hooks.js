@@ -7,6 +7,7 @@ export function useCompanies(filters = {}) {
     queryKey: ['companies', filters],
     queryFn: () => api.getCompanies(filters),
     staleTime: 300_000,
+    placeholderData: (previousData) => previousData,
   });
 }
 

@@ -82,13 +82,21 @@ export function GraphView() {
   }, [rawW, rawH]);
 
   // Ref to measure the actual canvas container size after mount.
+  // Only override dims when the measured size differs by more than 50px from the
+  // current estimate — avoids a spurious layout re-run on the first render when
+  // the CSS-computed size is nearly identical to the window-based estimate.
   const canvasRef = useRef(null);
   useEffect(() => {
     const el = canvasRef.current;
     if (!el) return;
     const rect = el.getBoundingClientRect();
     if (rect.width > 0 && rect.height > 0) {
-      setDims({ w: rect.width, h: rect.height });
+      setDims((prev) => {
+        if (Math.abs(rect.width - prev.w) > 50 || Math.abs(rect.height - prev.h) > 50) {
+          return { w: rect.width, h: rect.height };
+        }
+        return prev;
+      });
     }
   }, []); // run once on mount
 
@@ -108,17 +116,52 @@ export function GraphView() {
   // isLoading stays true until the worker's final frame — used to gate fitAll.
   const { layout: workerLayout, isLoading: layoutLoading } = useGraphLayout(rawNodes, rawEdges, { width: dims.w, height: dims.h });
 
+  // ── Progressive disclosure ────────────────────────────────────────────────
+  // Compute degree from raw edges so we can filter low-degree leaf nodes on
+  // initial render. The worker still runs on ALL nodes so positions are stable.
+  // Hub nodes (degree ≥ 4) and any selected/focused node are always shown.
+  // Isolated nodes (degree 0) are hidden by default — they add visual noise
+  // without contributing to the relationship graph.
+  //
+  // Level 0 (default): degree ≥ 1  — show everything connected
+  // This keeps the graph readable for the current dataset size (~700 nodes)
+  // while hiding true isolates that have no edges at all.
+  const nodeDegreeMap = useMemo(() => {
+    const map = {};
+    rawEdges.forEach((e) => {
+      const s = typeof e.source === 'object' ? e.source.id : e.source;
+      const t = typeof e.target === 'object' ? e.target.id : e.target;
+      map[s] = (map[s] || 0) + 1;
+      map[t] = (map[t] || 0) + 1;
+    });
+    return map;
+  }, [rawEdges]);
+
   // Resolve edge source/target from string IDs to node objects (required by GraphCanvas)
   const layout = useMemo(() => {
     const { nodes, edges } = workerLayout;
     if (!nodes.length) return { nodes: [], edges: [] };
     const nodeById = {};
     nodes.forEach((n) => { nodeById[n.id] = n; });
+
+    // Filter out isolated nodes (degree 0) — they have no edges and only
+    // create visual clutter in the periphery. Always keep hub nodes regardless.
+    const HUB_RENDER_IDS = new Set(['f_bbv', 'goed', 'eco_goed', 'bbv', 'f_dfv', 'dfv']);
+    const visibleNodes = nodes.filter((n) => {
+      if (HUB_RENDER_IDS.has(n.id)) return true;
+      if (selectedNode === n.id) return true;
+      return (nodeDegreeMap[n.id] || 0) >= 1;
+    });
+    const visibleNodeIds = new Set(visibleNodes.map((n) => n.id));
+
+    // At this stage edges from the worker have string IDs for source/target.
+    // Only keep edges where both endpoints are visible and resolvable.
     const resolvedEdges = edges
+      .filter((e) => visibleNodeIds.has(e.source) && visibleNodeIds.has(e.target))
       .filter((e) => nodeById[e.source] && nodeById[e.target])
       .map((e) => ({ ...e, source: nodeById[e.source], target: nodeById[e.target] }));
-    return { nodes, edges: resolvedEdges };
-  }, [workerLayout]);
+    return { nodes: visibleNodes, edges: resolvedEdges };
+  }, [workerLayout, nodeDegreeMap, selectedNode]);
 
   const metrics = metricsData || { pagerank: {}, betweenness: {}, communities: {}, watchlist: [] };
 
@@ -180,6 +223,8 @@ export function GraphView() {
             showValues={showValues}
             focusNodeId={focusNodeId}
             layoutSettled={!layoutLoading}
+            layoutWidth={dims.w}
+            layoutHeight={dims.h}
           />
           {/* Left overlay: legend (minimizable) */}
           <GraphLegend colorMode={colorMode} nodeFilters={nodeFilters} layout={layout} />

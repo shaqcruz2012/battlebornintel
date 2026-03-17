@@ -43,8 +43,8 @@ const adminLimit  = makeRateLimiter({ windowMs: 60_000, max: 10, message: 'Admin
 // ── Admin API key guard ─────────────────────────────────────────────────────
 function requireAdminKey(req, res, next) {
   const key = req.headers['x-admin-key'];
-  if (cfg.adminApiKey && key !== cfg.adminApiKey) {
-    return res.status(401).json({ error: 'Unauthorized' });
+  if (!cfg.adminApiKey || key !== cfg.adminApiKey) {
+    return res.status(403).json({ error: 'Forbidden' });
   }
   next();
 }
@@ -59,8 +59,8 @@ app.get('/api/health', async (req, res) => {
   }
 });
 
-// Cache stats endpoint (for monitoring)
-app.get('/api/cache-stats', (req, res) => {
+// Cache stats endpoint (admin-only)
+app.get('/api/cache-stats', adminLimit, requireAdminKey, (req, res) => {
   res.json(getCacheStats());
 });
 

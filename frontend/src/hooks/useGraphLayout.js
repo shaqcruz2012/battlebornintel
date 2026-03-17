@@ -132,8 +132,11 @@ export function useGraphLayout(nodes, edges, options = {}) {
       worker.removeEventListener('message', handleMessage);
       worker.removeEventListener('error', handleError);
     };
+  // width and height are included so that a significant canvas resize (>50 px,
+  // gated by the debounce in GraphView) triggers a fresh layout in the new
+  // coordinate space — keeping node positions consistent with the viewBox.
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [nodesKey, edgesKey, iterations, enabled]);
+  }, [nodesKey, edgesKey, iterations, enabled, width, height]);
 
   return { layout, isLoading, error };
 }

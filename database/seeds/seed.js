@@ -56,10 +56,13 @@ async function seed() {
 
     await client.query('BEGIN');
 
-    // Truncate all tables (order matters for FK)
+    // Truncate all tables except externals (order matters for FK).
+    // externals is NOT truncated here because migrations 046-060 add rows that
+    // must survive re-seeding. The externals INSERT below uses ON CONFLICT DO UPDATE
+    // so seed data is refreshed without wiping migration-added rows.
     await client.query(`
       TRUNCATE graph_metrics_cache, computed_scores, analysis_results, agent_runs,
-               listings, timeline_events, graph_edges, people, externals,
+               listings, timeline_events, graph_edges, people,
                accelerators, ecosystem_orgs, graph_funds, funds, companies, constants
       CASCADE
     `);
@@ -133,11 +136,17 @@ async function seed() {
     }
     console.log(`  people: ${PEOPLE.length} rows`);
 
-    // 5. Externals
+    // 5. Externals — use UPSERT so migration-added rows (046-060) survive re-seeding.
+    // We do NOT truncate externals above; instead we update name/entity_type/note for
+    // any row that already exists and insert new ones.
     for (const x of EXTERNALS) {
       await client.query(
         `INSERT INTO externals (id, name, entity_type, note)
-         VALUES ($1, $2, $3, $4)`,
+         VALUES ($1, $2, $3, $4)
+         ON CONFLICT (id) DO UPDATE
+           SET name = EXCLUDED.name,
+               entity_type = EXCLUDED.entity_type,
+               note = EXCLUDED.note`,
         [x.id, x.name, x.etype, x.note || null]
       );
     }

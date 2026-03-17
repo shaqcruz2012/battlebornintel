@@ -1,15 +1,8 @@
 import { Router } from 'express';
 import { getGraphData, getGraphMetrics } from '../db/queries/graph.js';
 import { computeAndReturnMetrics } from '../services/graphService.js';
-import { cacheMiddleware } from '../middleware/cache.js';
 
 const router = Router();
-
-// Cache graph data for 5 minutes. The graph changes infrequently (new edges/nodes
-// added via admin, not real-time writes), so a 5-minute TTL is safe. Cache key
-// is derived from nodeTypes + yearMax + region query params so each unique filter
-// combination is cached independently.
-router.use(cacheMiddleware('graph', 300000, { cacheControl: 'public, max-age=300' }));
 
 router.get('/', async (req, res, next) => {
   try {

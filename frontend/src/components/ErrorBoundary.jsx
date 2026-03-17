@@ -1,4 +1,5 @@
 import { Component } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 
 /**
  * React Error Boundary — catches render errors in child components
@@ -20,6 +21,7 @@ export class ErrorBoundary extends Component {
 
   handleReset = () => {
     this.setState({ hasError: false, error: null });
+    this.props.onReset?.();
   };
 
   render() {
@@ -65,4 +67,16 @@ export class ErrorBoundary extends Component {
 
     return this.props.children;
   }
+}
+
+/**
+ * L-3: Functional wrapper that resets React Query error state on retry.
+ * Use this instead of ErrorBoundary directly when React Query is in scope.
+ */
+export function ErrorBoundaryWithReset(props) {
+  const queryClient = useQueryClient();
+  function handleReset() {
+    queryClient.resetQueries();
+  }
+  return <ErrorBoundary {...props} onReset={handleReset} />;
 }

@@ -3,9 +3,9 @@ import pool from '../pool.js';
 export async function getAllFunds() {
   const { rows } = await pool.query(
     `SELECT f.*,
-       (SELECT COUNT(*) FROM companies c WHERE f.id = ANY(c.eligible)) AS company_count
+       (SELECT COUNT(*) FROM companies c WHERE f.id = ANY(c.eligible)) AS live_company_count
      FROM funds f
-     ORDER BY f.deployed_m DESC`
+     ORDER BY f.deployed_m DESC NULLS LAST`
   );
   return rows.map(formatFund);
 }
@@ -44,10 +44,10 @@ function formatFund(row) {
     id: row.id,
     name: row.name,
     type: row.fund_type,
-    allocated: row.allocated_m ? parseFloat(row.allocated_m) : null,
-    deployed: parseFloat(row.deployed_m),
-    leverage: row.leverage ? parseFloat(row.leverage) : null,
-    companies: row.company_count,
+    allocated: row.allocated_m != null ? parseFloat(row.allocated_m) : null,
+    deployed: row.deployed_m != null ? parseFloat(row.deployed_m) : null,
+    leverage: row.leverage != null ? parseFloat(row.leverage) : null,
+    companies: parseInt(row.live_company_count ?? row.company_count, 10) || 0,
     thesis: row.thesis,
   };
 }

@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, lazy, Suspense } from 'react';
 import { FilterProvider } from './hooks/useFilters';
-import { ErrorBoundary } from './components/ErrorBoundary';
+import { ErrorBoundary, ErrorBoundaryWithReset } from './components/ErrorBoundary';
 import { AppShell } from './components/layout/AppShell';
 import { Header } from './components/layout/Header';
 import { ViewTabs } from './components/layout/ViewTabs';
@@ -52,7 +52,7 @@ export default function App() {
             onViewChange={handleSearchViewChange}
           />
 
-          <ErrorBoundary key={view}>
+          <ErrorBoundaryWithReset key={view}>
             <div className="fade-in">
               {view === 'executive' && <ExecutiveDashboard onViewChange={setView} />}
               <Suspense fallback={<TabFallback />}>
@@ -64,7 +64,7 @@ export default function App() {
                 {view === 'graph' && <GraphView />}
               </Suspense>
             </div>
-          </ErrorBoundary>
+          </ErrorBoundaryWithReset>
         </AppShell>
       </FilterProvider>
     </ErrorBoundary>

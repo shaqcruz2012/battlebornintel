@@ -53,6 +53,7 @@ export async function recomputeAllScores() {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
+    await client.query('DELETE FROM computed_scores');
     for (const row of rows) {
       const company = formatRow(row);
       const { irs, grade, triggers, dims } = computeIRS(company, sectorHeat, stageNorms);

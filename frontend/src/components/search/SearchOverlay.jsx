@@ -170,21 +170,6 @@ export function SearchOverlay({ isOpen, onClose, onViewChange }) {
     }
   }, [isOpen]);
 
-  // Global Cmd+K / Ctrl+K shortcut — toggle open/close
-  useEffect(() => {
-    function handleKeydown(e) {
-      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
-        e.preventDefault();
-        if (isOpen) {
-          onClose();
-        }
-        // Opening is handled by App.jsx via the same handler
-      }
-    }
-    window.addEventListener('keydown', handleKeydown);
-    return () => window.removeEventListener('keydown', handleKeydown);
-  }, [isOpen, onClose]);
-
   // Keep active index in bounds
   useEffect(() => {
     setActiveIndex(0);

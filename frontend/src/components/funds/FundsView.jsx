@@ -36,7 +36,7 @@ function LoadingSkeleton() {
 }
 
 export function FundsView() {
-  const { data: funds = [], isLoading: loadingFunds } = useFunds();
+  const { data: funds = [], isLoading: loadingFunds, isError: fundsError } = useFunds();
   const { data: companies = [], isLoading: loadingCompanies } = useCompanies();
 
   const [expandedId, setExpandedId] = useState(null);
@@ -61,11 +61,11 @@ export function FundsView() {
 
   // Aggregate KPIs across all funds
   const aggregates = useMemo(() => {
-    const totalAllocated = funds.reduce((sum, f) => sum + (f.allocated || 0), 0);
-    const totalDeployed = funds.reduce((sum, f) => sum + (f.deployed || 0), 0);
+    const totalAllocated = funds.reduce((sum, f) => sum + (f.allocated ?? 0), 0);
+    const totalDeployed = funds.reduce((sum, f) => sum + (f.deployed ?? 0), 0);
     const totalCompanies = Object.values(portfolioMap).reduce((sum, arr) => sum + arr.length, 0);
 
-    const fundsWithLeverage = funds.filter((f) => f.leverage != null && f.deployed > 0);
+    const fundsWithLeverage = funds.filter((f) => f.leverage != null && f.deployed != null && f.deployed > 0);
     const weightedLeverage = fundsWithLeverage.reduce(
       (sum, f) => sum + f.deployed * f.leverage,
       0,
@@ -86,7 +86,7 @@ export function FundsView() {
     const sorted = [...funds];
     switch (sortBy) {
       case 'deployed':
-        sorted.sort((a, b) => (b.deployed || 0) - (a.deployed || 0));
+        sorted.sort((a, b) => (b.deployed ?? 0) - (a.deployed ?? 0));
         break;
       case 'companies':
         sorted.sort((a, b) => (portfolioMap[b.id] || []).length - (portfolioMap[a.id] || []).length);
@@ -106,6 +106,18 @@ export function FundsView() {
 
   if (loadingFunds || loadingCompanies) {
     return <LoadingSkeleton />;
+  }
+
+  if (fundsError) {
+    return (
+      <MainGrid>
+        <div className={styles.loadingWrapper} style={{ alignItems: 'center', justifyContent: 'center', minHeight: '40vh' }}>
+          <p style={{ color: 'var(--text-secondary)', fontFamily: 'var(--font-body)' }}>
+            Failed to load funds data. Please check that the API server is running and try again.
+          </p>
+        </div>
+      </MainGrid>
+    );
   }
 
   return (
@@ -154,18 +166,25 @@ export function FundsView() {
         </div>
 
         {/* Fund cards grid */}
-        <div className={styles.fundsGrid}>
-          {sortedFunds.map((fund) => (
-            <FundCard
-              key={fund.id}
-              fund={fund}
-              portfolio={portfolioMap[fund.id] || []}
-              portfolioCount={(portfolioMap[fund.id] || []).length}
-              isExpanded={expandedId === fund.id}
-              onToggle={() => handleToggle(fund.id)}
-            />
-          ))}
-        </div>
+        {sortedFunds.length === 0 ? (
+          <div className={styles.emptyPortfolio}>
+            <p>No funds found. The database may need to be seeded.</p>
+            <p className={styles.emptyHint}>Run the seed script: <code>cd database/seeds && node seed.js</code></p>
+          </div>
+        ) : (
+          <div className={styles.fundsGrid}>
+            {sortedFunds.map((fund) => (
+              <FundCard
+                key={fund.id}
+                fund={fund}
+                portfolio={portfolioMap[fund.id] || []}
+                portfolioCount={(portfolioMap[fund.id] || []).length}
+                isExpanded={expandedId === fund.id}
+                onToggle={() => handleToggle(fund.id)}
+              />
+            ))}
+          </div>
+        )}
       </div>
     </MainGrid>
   );

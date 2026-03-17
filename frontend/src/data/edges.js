@@ -441,9 +441,9 @@ export const VERIFIED_EDGES = [
   {source:"x_owl_ventures",target:"c_47",rel:"invested_in",note:"Owl Ventures Cloudforce Networks Series A $10M",y:2026},
   {source:"x_m12",target:"c_47",rel:"invested_in",note:"M12 (Microsoft) Cloudforce Series A $10M 2026",y:2026},
   {source:"x_usdepartmentofenergy",target:"c_49",rel:"invested_in",note:"DOE ATVM loan $996M Ioneer Jan 2025",y:2023},
-  {source:"c_sibanyestillwater",target:"c_49",rel:"partners_with",note:"Sibanye-Stillwater Joint venture 50-50 exited Feb 2025",y:2021},
-  {source:"c_ford",target:"c_49",rel:"partners_with",note:"Ford Lithium offtake 7000 tonnes per annum 2022",y:2022},
-  {source:"c_primeplanetsenergy",target:"c_49",rel:"partners_with",note:"Prime Planet (Toyota/Panasonic JV) offtake 4000t/a",y:2022},
+  {source:"x_sibanye",target:"c_49",rel:"partners_with",note:"Sibanye-Stillwater Joint venture 50-50 exited Feb 2025",y:2021},
+  {source:"x_ford",target:"c_49",rel:"partners_with",note:"Ford Lithium offtake 7000 tonnes per annum 2022",y:2022},
+  {source:"x_primeplanet",target:"c_49",rel:"partners_with",note:"Prime Planet (Toyota/Panasonic JV) offtake 4000t/a",y:2022},
 
   // === BATCH 6: COMPANIES 51-60 GOVERNMENT AND DEFENSE ===
   {source:"x_usaf",target:"c_51",rel:"contracts_with",note:"E-4B Doomsday Plane $13B contract 2024",y:2024},
@@ -779,4 +779,53 @@ export const VERIFIED_EDGES = [
   {source:"v_sbir",target:"c_105",rel:"funded_by",note:"SBIR Phase I grant $150K for AI accounting automation.",y:2023},
   {source:"v_sba",target:"c_105",rel:"funded_by",note:"SBA Small Business Grant $100K for automation research.",y:2023},
   {source:"f_bbv",target:"c_105",rel:"invested_in",note:"BBV portfolio company - AutomateLedger. Enterprise finance automation.",y:2023},
+
+  // === ANGELNV PORTFOLIO EDGES ===
+  // AngelNV: Southern Nevada angel investor bootcamp. $200K team investments per cohort.
+  {source:"f_angelnv",target:"c_36",rel:"invested_in",note:"AngelNV 2024 winner — Tilt AI $200K+",y:2024},
+  {source:"f_angelnv",target:"c_63",rel:"invested_in",note:"AngelNV 2025 winner — BuildQ",y:2025},
+  {source:"f_angelnv",target:"c_47",rel:"invested_in",note:"AngelNV portfolio — Cloudforce Networks",y:2023},
+  {source:"f_angelnv",target:"c_30",rel:"invested_in",note:"AngelNV portfolio — Cranel",y:2023},
+  {source:"f_angelnv",target:"c_24",rel:"invested_in",note:"AngelNV portfolio — Fund Duel",y:2023},
+  {source:"f_angelnv",target:"c_37",rel:"invested_in",note:"AngelNV portfolio — Nommi",y:2023},
+  {source:"f_angelnv",target:"c_40",rel:"invested_in",note:"AngelNV portfolio — betJACK",y:2023},
+
+  // === SIERRA ANGELS PORTFOLIO EDGES ===
+  // Sierra Angels: Northern Nevada angel community. Reno/Tahoe-based companies.
+  {source:"f_sierra",target:"c_32",rel:"invested_in",note:"Sierra Angels portfolio — Base Venture",y:2023},
+  {source:"f_sierra",target:"c_59",rel:"invested_in",note:"Sierra Angels portfolio — Talentel",y:2023},
+  {source:"f_sierra",target:"c_57",rel:"invested_in",note:"Sierra Angels portfolio — Now Ads",y:2023},
+  {source:"f_sierra",target:"c_107",rel:"invested_in",note:"Sierra Angels portfolio — Onboarded",y:2023},
+  {source:"f_sierra",target:"c_113",rel:"invested_in",note:"Sierra Angels portfolio — Semi Exact",y:2023},
+
+  // === DCVC PORTFOLIO EDGES ===
+  // DCVC: Deep tech VC — active in NV climate, energy, and materials science.
+  {source:"f_dcvc",target:"c_1",rel:"invested_in",note:"DCVC portfolio — Redwood Materials (deep tech clean energy)",y:2022},
+  {source:"f_dcvc",target:"c_17",rel:"invested_in",note:"DCVC portfolio — Vibrant Planet (climate tech)",y:2022},
+  {source:"f_dcvc",target:"c_4",rel:"invested_in",note:"DCVC portfolio — TensorWave (AI compute)",y:2024},
+  {source:"f_dcvc",target:"c_33",rel:"invested_in",note:"DCVC portfolio — Comstock Mining (materials science)",y:2023},
+
+  // === STRIPES PORTFOLIO EDGES ===
+  // Stripes: Growth equity firm. Led Katalyst Series A.
+  {source:"f_stripes",target:"c_10",rel:"invested_in",note:"Stripes led Katalyst Series A",y:2023},
+
+  // === STARTUPNV PORTFOLIO EDGES ===
+  // StartupNV: NV statewide accelerator + affiliated pre-seed/seed fund investments.
+  {source:"f_startupnv",target:"c_4",rel:"invested_in",note:"StartUpNV SAFE co-investor — TensorWave",y:2024},
+  {source:"f_startupnv",target:"c_14",rel:"invested_in",note:"StartUpNV portfolio — MagicDoor",y:2023},
+  {source:"f_startupnv",target:"c_23",rel:"invested_in",note:"StartUpNV portfolio — Titan Seal",y:2023},
+  {source:"f_startupnv",target:"c_24",rel:"invested_in",note:"StartUpNV portfolio — Fund Duel",y:2023},
+  {source:"f_startupnv",target:"c_25",rel:"invested_in",note:"StartUpNV portfolio — Cognizer AI",y:2023},
+  {source:"f_startupnv",target:"c_26",rel:"invested_in",note:"StartUpNV portfolio — SEE ID",y:2023},
+  {source:"f_startupnv",target:"c_30",rel:"invested_in",note:"StartUpNV portfolio — Cranel",y:2023},
+  {source:"f_startupnv",target:"c_31",rel:"invested_in",note:"StartUpNV portfolio — fibrX",y:2023},
+  {source:"f_startupnv",target:"c_36",rel:"invested_in",note:"StartUpNV portfolio — Tilt AI",y:2023},
+  {source:"f_startupnv",target:"c_37",rel:"invested_in",note:"StartUpNV portfolio — Nommi",y:2023},
+  {source:"f_startupnv",target:"c_40",rel:"invested_in",note:"StartUpNV portfolio — betJACK",y:2023},
+  {source:"f_startupnv",target:"c_41",rel:"invested_in",note:"StartUpNV portfolio — HiBear",y:2023},
+  {source:"f_startupnv",target:"c_43",rel:"invested_in",note:"StartUpNV portfolio — Sapien",y:2023},
+  {source:"f_startupnv",target:"c_45",rel:"invested_in",note:"StartUpNV portfolio — Lucihub",y:2023},
+  {source:"f_startupnv",target:"c_47",rel:"invested_in",note:"StartUpNV portfolio — Cloudforce Networks",y:2023},
+  {source:"f_startupnv",target:"c_62",rel:"invested_in",note:"StartUpNV portfolio — MiOrganics",y:2023},
+  {source:"f_startupnv",target:"c_63",rel:"invested_in",note:"StartUpNV portfolio — BuildQ (AccelerateNV + FundNV2 $200K)",y:2023},
 ];

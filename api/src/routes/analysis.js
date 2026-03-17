@@ -22,9 +22,26 @@ router.get('/company/:id', async (req, res, next) => {
 
 router.get('/brief', async (req, res, next) => {
   try {
-    const data = await getWeeklyBrief();
+    const { weekStart, weekEnd } = req.query;
+    const data = await getWeeklyBrief({ weekStart, weekEnd });
     if (!data)
       return res.json({ data: null, message: 'No brief generated yet' });
+    res.json({ data: data.content, generatedAt: data.created_at });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.get('/brief/:weekStart', async (req, res, next) => {
+  try {
+    const { weekStart } = req.params;
+    const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+    if (!ISO_DATE_RE.test(weekStart)) {
+      return res.status(400).json({ error: 'weekStart must be ISO format YYYY-MM-DD' });
+    }
+    const data = await getWeeklyBrief({ weekStart });
+    if (!data)
+      return res.json({ data: null, message: 'No brief found for that week' });
     res.json({ data: data.content, generatedAt: data.created_at });
   } catch (err) {
     next(err);

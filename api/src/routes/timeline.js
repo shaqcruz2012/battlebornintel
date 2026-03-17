@@ -5,6 +5,12 @@ const router = Router();
 
 const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
+// Known event_type values recorded in timeline_events (matches REAP metrics query in db/queries/timeline.js)
+const VALID_EVENT_TYPES = new Set([
+  'Funding', 'Grant', 'Hiring', 'Partnership', 'Launch', 'Patent',
+  'Milestone', 'Award', 'Expansion', 'Acquisition', 'Founding',
+]);
+
 /**
  * GET /api/timeline
  * Returns the most recent timeline events, optionally filtered by type.
@@ -12,8 +18,13 @@ const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 router.get('/', async (req, res, next) => {
   try {
     const { limit, type } = req.query;
+    if (type && !VALID_EVENT_TYPES.has(type)) {
+      return res.status(400).json({
+        error: `type must be one of: ${[...VALID_EVENT_TYPES].join(', ')}`,
+      });
+    }
     const data = await getTimeline({
-      limit: limit ? parseInt(limit, 10) : 30,
+      limit: limit ? Math.min(parseInt(limit, 10), 500) : 30,
       type,
     });
     res.json({ data });

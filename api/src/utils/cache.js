@@ -1,3 +1,4 @@
+// DEAD CODE — safe to remove
 /**
  * Lightweight in-memory TTL cache for API responses.
  * Keyed by endpoint + query params. Auto-expires stale entries.

@@ -53,9 +53,10 @@ export async function getAllCompanies({ stage, region, sector, search, sortBy } 
 
   const orderMap = {
     irs: 'cs.irs_score DESC NULLS LAST',
-    momentum: 'c.momentum DESC',
-    funding: 'c.funding_m DESC',
+    momentum: 'c.momentum DESC NULLS LAST',
+    funding: 'c.funding_m DESC NULLS LAST',
     name: 'c.name ASC',
+    employees: 'c.employees DESC NULLS LAST',
   };
   sql += ` ORDER BY ${orderMap[sortBy] || orderMap.irs}`;
 
