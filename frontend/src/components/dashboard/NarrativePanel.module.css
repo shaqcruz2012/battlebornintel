@@ -4,7 +4,7 @@
   grid-column: 9 / -1;
   display: flex;
   flex-direction: column;
-  gap: var(--space-lg);
+  gap: var(--space-md);
 }
 
 /* ── Brief header ───────────────────────────────────────── */
@@ -43,12 +43,13 @@
 }
 
 .briefTitle {
-  font-family: var(--font-heading);
+  font-family: var(--font-mono);
   font-size: var(--text-h3);
   font-weight: var(--weight-bold);
   color: var(--text-primary);
-  letter-spacing: -0.02em;
-  line-height: var(--leading-tight);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  line-height: var(--leading-snug);
 }
 
 .aiBadge {
@@ -66,7 +67,7 @@
 }
 
 .headline {
-  font-family: var(--font-heading);
+  font-family: var(--font-body);
   font-size: var(--text-caption);
   color: var(--text-secondary);
   font-weight: var(--weight-regular);
@@ -104,16 +105,17 @@
 }
 
 .sectionHeader {
-  font-family: var(--font-heading);
-  font-size: var(--text-caption);
+  font-family: var(--font-mono);
+  font-size: 10px;
   font-weight: var(--weight-bold);
   color: var(--text-primary);
-  letter-spacing: -0.01em;
+  letter-spacing: 1px;
+  text-transform: uppercase;
   line-height: var(--leading-snug);
 }
 
 .sectionBody {
-  font-family: var(--font-heading);
+  font-family: var(--font-body);
   font-size: var(--text-caption-sm);
   color: var(--text-secondary);
   line-height: var(--leading-relaxed);
@@ -130,12 +132,12 @@
 }
 
 .blockLabel {
-  font-family: var(--font-body);
+  font-family: var(--font-mono);
   font-size: var(--text-label);
   font-weight: var(--weight-bold);
-  color: var(--text-muted);
+  color: var(--text-disabled);
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 2px;
 }
 
 .devList {
@@ -198,11 +200,11 @@
 }
 
 .spotlightName {
-  font-family: var(--font-heading);
+  font-family: var(--font-mono);
   font-size: var(--text-caption);
   font-weight: var(--weight-bold);
   color: var(--text-primary);
-  letter-spacing: -0.01em;
+  letter-spacing: 0.5px;
 }
 
 .spotlightMomentum {
@@ -226,7 +228,7 @@
 }
 
 .spotlightAnalysis {
-  font-family: var(--font-heading);
+  font-family: var(--font-body);
   font-size: var(--text-caption-sm);
   color: var(--text-secondary);
   line-height: var(--leading-relaxed);

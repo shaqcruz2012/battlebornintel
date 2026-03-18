@@ -1,4 +1,4 @@
-/* ── AppShell: Bloomberg-style content container ───────── */
+/* ── AppShell: Terminal-grade content container ──────────── */
 
 .shell {
   display: flex;
@@ -14,26 +14,26 @@
   display: grid;
   grid-template-columns: repeat(var(--grid-columns), 1fr);
   gap: var(--grid-gutter);
-  padding-top: var(--space-lg);
-  padding-bottom: var(--space-3xl);
+  padding-top: var(--space-md);
+  padding-bottom: var(--space-2xl);
 }
 
 @media (max-width: 1200px) {
   .main {
     grid-template-columns: repeat(8, 1fr);
-    gap: var(--space-lg);
+    gap: var(--space-md);
   }
   .shell {
-    padding: 0 var(--space-xl);
+    padding: 0 var(--space-lg);
   }
 }
 
 @media (max-width: 768px) {
   .main {
     grid-template-columns: 1fr;
-    gap: var(--space-md);
+    gap: var(--space-sm);
   }
   .shell {
-    padding: 0 var(--space-lg);
+    padding: 0 var(--space-md);
   }
 }

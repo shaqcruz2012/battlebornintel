@@ -1,10 +1,10 @@
-/* ── ViewTabs: Bloomberg-style top navigation ──────────── */
+/* ── ViewTabs: Palantir-style terminal navigation ────────── */
 
 .tabs {
   display: flex;
   align-items: center;
   gap: 0;
-  margin: var(--space-lg) 0 var(--space-sm);
+  margin: var(--space-sm) 0 var(--space-xs);
   border-bottom: 1px solid var(--border-medium);
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
@@ -16,18 +16,19 @@
 }
 
 .tab {
-  flex-shrink: 0;                 /* prevent tabs from squishing */
+  flex-shrink: 0;
   position: relative;
-  padding: var(--space-sm) var(--space-xl);
-  font-family: var(--font-body);
-  font-size: var(--text-body-sm);
+  padding: 6px 12px;
+  font-family: var(--font-mono);
+  font-size: 9px;
   font-weight: var(--weight-medium);
   color: var(--text-disabled);
   background: none;
   border: none;
   cursor: pointer;
   transition: color var(--transition-instant);
-  letter-spacing: 0.01em;
+  letter-spacing: 1px;
+  text-transform: uppercase;
 }
 
 .tab:hover {
@@ -47,8 +48,8 @@
   content: '';
   position: absolute;
   bottom: -1px;
-  left: var(--space-xl);
-  right: var(--space-xl);
+  left: 0;
+  right: 0;
   height: 2px;
   background: var(--accent-teal);
   border-radius: 1px 1px 0 0;

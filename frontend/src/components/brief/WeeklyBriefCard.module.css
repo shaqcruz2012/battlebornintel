@@ -4,7 +4,7 @@
   background: var(--bg-card);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-md);
-  padding: var(--space-xl);
+  padding: var(--space-md);
   margin-bottom: var(--space-lg);
   transition: all var(--transition-fast);
   position: relative;
@@ -41,10 +41,12 @@
 }
 
 .title {
-  font-family: var(--font-heading);
+  font-family: var(--font-mono);
   font-size: var(--text-h3);
   font-weight: var(--weight-semibold);
   color: var(--text-primary);
+  letter-spacing: 1px;
+  text-transform: uppercase;
   margin: 0;
 }
 
@@ -91,7 +93,7 @@
 }
 
 .headline {
-  font-family: var(--font-heading);
+  font-family: var(--font-body);
   font-size: var(--text-body);
   font-weight: var(--weight-semibold);
   color: var(--text-primary);
@@ -126,12 +128,12 @@
 }
 
 .reapHeadline {
-  font-family: var(--font-body);
-  font-size: var(--text-micro);
+  font-family: var(--font-mono);
+  font-size: 8px;
   font-weight: var(--weight-semibold);
   color: var(--text-disabled);
   text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: 2px;
   margin-bottom: var(--space-xs);
 }
 
@@ -170,8 +172,10 @@
 }
 
 .eventsTitle {
-  font-family: var(--font-heading);
-  font-size: var(--text-body-sm);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
   font-weight: var(--weight-semibold);
   color: var(--text-primary);
 }

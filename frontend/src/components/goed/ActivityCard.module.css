@@ -1,7 +1,7 @@
 .card {
   display: flex;
-  gap: var(--space-lg);
-  padding: var(--space-lg);
+  gap: var(--space-md);
+  padding: var(--space-md);
   background: var(--bg-elevated);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-md);
@@ -43,7 +43,7 @@
 }
 
 .company {
-  font-family: var(--font-heading);
+  font-family: var(--font-mono);
   font-size: var(--text-body);
   font-weight: var(--weight-bold);
   color: var(--text-primary);

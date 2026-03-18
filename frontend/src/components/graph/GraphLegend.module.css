@@ -38,11 +38,11 @@
 /* ── Section title — Economist header typography ── */
 
 .title {
-  font-size: 9px;
+  font-size: 8px;
   text-transform: uppercase;
-  letter-spacing: 1px;
+  letter-spacing: 2px;
   color: var(--text-disabled);
-  font-family: var(--font-body);
+  font-family: var(--font-mono);
   font-weight: var(--weight-semibold);
 }
 
@@ -83,8 +83,8 @@
 .item {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: 11px;
+  gap: 6px;
+  font-size: 10px;
   color: var(--text-secondary);
   font-family: var(--font-body);
   font-weight: var(--weight-regular);
@@ -111,11 +111,11 @@
 /* ── Edge type section ── */
 
 .edgeTitle {
-  font-size: 9px;
+  font-size: 8px;
   text-transform: uppercase;
-  letter-spacing: 1px;
+  letter-spacing: 2px;
   color: var(--text-disabled);
-  font-family: var(--font-body);
+  font-family: var(--font-mono);
   font-weight: var(--weight-semibold);
   margin-bottom: 6px;
 }
@@ -129,8 +129,8 @@
 .edgeItem {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: 11px;
+  gap: 6px;
+  font-size: 10px;
   color: var(--text-secondary);
   font-family: var(--font-body);
   letter-spacing: 0.15px;
@@ -190,13 +190,13 @@
 .statLabel {
   font-size: 8px;
   text-transform: uppercase;
-  letter-spacing: 0.6px;
+  letter-spacing: 2px;
   color: var(--text-disabled);
-  font-family: var(--font-body);
+  font-family: var(--font-mono);
 }
 
 .statValue {
-  font-family: 'SF Mono', 'Cascadia Code', 'Consolas', monospace;
+  font-family: var(--font-mono);
   font-size: 11px;
   font-weight: var(--weight-semibold);
   color: var(--text-primary);

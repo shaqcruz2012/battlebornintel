@@ -1,4 +1,4 @@
-/* ── Header: Economist-style masthead ───────────────────── */
+/* ── Header: Palantir-style compressed masthead ─────────── */
 
 .header {
   display: flex;
@@ -13,25 +13,26 @@
 .brand {
   display: flex;
   align-items: baseline;
-  gap: var(--space-md);
+  gap: var(--space-sm);
 }
 
 .title {
-  font-family: var(--font-heading);
-  font-size: var(--text-h1);
+  font-family: var(--font-mono);
+  font-size: 11px;
   font-weight: var(--weight-bold);
   color: var(--text-primary);
-  letter-spacing: -0.03em;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
   line-height: 1;
 }
 
 .subtitle {
-  font-family: var(--font-body);
-  font-size: var(--text-micro);
-  font-weight: var(--weight-semibold);
-  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 8px;
+  font-weight: var(--weight-medium);
+  color: var(--text-disabled);
   text-transform: uppercase;
-  letter-spacing: 0.12em;
+  letter-spacing: 2px;
 }
 
 /* ── Controls ──────────────────────────────────────────── */
@@ -39,18 +40,18 @@
 .controls {
   display: flex;
   align-items: center;
-  gap: var(--space-xs);
+  gap: 3px;
 }
 
 .searchInput {
-  padding: 5px 12px;
+  padding: 3px 10px;
   border-radius: var(--radius-sm);
   border: 1px solid var(--border-subtle);
   background: var(--bg-card);
   color: var(--text-primary);
-  font-family: var(--font-body);
-  font-size: var(--text-caption-sm);
-  width: 170px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  width: 150px;
   outline: none;
   transition:
     border-color var(--transition-fast),
@@ -69,10 +70,10 @@
 
 .divider {
   width: 1px;
-  height: 16px;
+  height: 14px;
   background: var(--border-subtle);
   flex-shrink: 0;
-  margin: 0 var(--space-xs);
+  margin: 0 3px;
 }
 
 /* ── User Menu ─────────────────────────────────────────── */
@@ -84,14 +85,14 @@
 .userButton {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 3px 8px;
+  gap: 4px;
+  padding: 2px 6px;
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-sm);
   background: var(--bg-card);
   color: var(--text-primary);
-  font-family: var(--font-body);
-  font-size: var(--text-caption-sm);
+  font-family: var(--font-mono);
+  font-size: 10px;
   cursor: pointer;
   transition: border-color var(--transition-fast);
 }
@@ -104,18 +105,18 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 22px;
-  height: 22px;
+  width: 18px;
+  height: 18px;
   border-radius: 50%;
-  background: var(--accent-teal, #2dd4bf);
-  color: #000;
-  font-size: 11px;
+  background: var(--accent-teal);
+  color: #0a0e14;
+  font-size: 9px;
   font-weight: 700;
   flex-shrink: 0;
 }
 
 .userName {
-  max-width: 100px;
+  max-width: 80px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -123,19 +124,19 @@
 
 .dropdown {
   position: absolute;
-  top: calc(100% + 6px);
+  top: calc(100% + 4px);
   right: 0;
-  min-width: 180px;
-  background: var(--bg-card);
+  min-width: 160px;
+  background: var(--bg-elevated);
   border: 1px solid var(--border-medium);
   border-radius: var(--radius-sm);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
   z-index: 100;
   overflow: hidden;
 }
 
 .dropdownHeader {
-  padding: 10px 12px;
+  padding: 8px 10px;
   border-bottom: 1px solid var(--border-subtle);
   display: flex;
   flex-direction: column;
@@ -143,7 +144,7 @@
 }
 
 .dropdownName {
-  font-size: var(--text-caption-sm);
+  font-size: 10px;
   font-weight: var(--weight-semibold);
   color: var(--text-primary);
 }
@@ -157,12 +158,12 @@
 .dropdownItem {
   display: block;
   width: 100%;
-  padding: 8px 12px;
+  padding: 6px 10px;
   border: none;
   background: none;
   color: var(--text-secondary);
   font-family: var(--font-body);
-  font-size: var(--text-caption-sm);
+  font-size: 10px;
   text-align: left;
   cursor: pointer;
   transition: background var(--transition-fast);
@@ -174,13 +175,15 @@
 }
 
 .signInButton {
-  padding: 4px 12px;
+  padding: 3px 10px;
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-sm);
   background: transparent;
   color: var(--text-secondary);
-  font-family: var(--font-body);
-  font-size: var(--text-caption-sm);
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
   cursor: pointer;
   transition: border-color var(--transition-fast), color var(--transition-fast);
 }
@@ -196,13 +199,13 @@
   .header {
     flex-direction: column;
     height: auto;
-    padding: var(--space-lg) 0;
+    padding: var(--space-md) 0;
     gap: var(--space-sm);
     align-items: flex-start;
   }
 
   .title {
-    font-size: 20px;
+    font-size: 10px;
   }
 
   .controls {
@@ -211,6 +214,6 @@
 
   .searchInput {
     width: 100%;
-    max-width: 280px;
+    max-width: 240px;
   }
 }

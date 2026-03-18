@@ -5,15 +5,16 @@
 }
 
 .title {
-  font-family: var(--font-heading);
-  font-size: var(--text-body);
+  font-family: var(--font-mono);
+  font-size: 10px;
   font-weight: var(--weight-bold);
   color: var(--text-primary);
-  margin-bottom: var(--space-md);
+  margin-bottom: var(--space-sm);
   display: flex;
   align-items: center;
   gap: var(--space-sm);
-  letter-spacing: -0.01em;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
 }
 
 .aiBadge {
@@ -39,8 +40,8 @@
 
 .alert {
   display: flex;
-  gap: var(--space-md);
-  padding: var(--space-md) var(--space-lg);
+  gap: var(--space-sm);
+  padding: var(--space-sm) var(--space-md);
   background: var(--bg-card);
   border-radius: var(--radius-md);
   border-left: 2px solid;

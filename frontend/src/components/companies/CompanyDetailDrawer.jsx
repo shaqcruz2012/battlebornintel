@@ -3,6 +3,7 @@ import { useCompany, useCompanyAnalysis } from '../../api/hooks';
 import { fmt, stageLabel } from '../../engine/formatters';
 import { GRADE_COLORS, STAGE_COLORS, REL_CFG } from '../../data/constants';
 import { InvestorMatches } from './InvestorMatches';
+import { Sparkline, generateMomentumTrail } from '../shared/Sparkline';
 import styles from './CompanyDetailDrawer.module.css';
 
 /* ── Grade color coding ── */
@@ -227,15 +228,21 @@ export function CompanyDetailDrawer({ companyId, onClose }) {
                     label="Employees"
                     value={company?.employees}
                   />
-                  <MetricBox
-                    label="Momentum"
-                    value={company?.momentum != null ? company.momentum : null}
-                    color={
-                      company?.momentum != null
-                        ? irsColor(company.momentum)
-                        : undefined
-                    }
-                  />
+                  <div className={styles.metricBox}>
+                    <span className={styles.metricLabel}>Momentum</span>
+                    <span className={styles.metricValue} style={{ display: 'flex', alignItems: 'center', gap: 6, color: company?.momentum != null ? irsColor(company.momentum) : undefined }}>
+                      {company?.momentum != null ? company.momentum : '\u2014'}
+                      {company?.momentum != null && (
+                        <Sparkline
+                          data={generateMomentumTrail(company.id || company.slug || 0, company.momentum)}
+                          width={52}
+                          height={18}
+                          color="auto"
+                          showArea={false}
+                        />
+                      )}
+                    </span>
+                  </div>
                   {company?.founded && (
                     <MetricBox label="Founded" value={company.founded} />
                   )}

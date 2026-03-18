@@ -1,5 +1,43 @@
 import { useMemo } from 'react';
 
+/**
+ * Generate a deterministic 12-point momentum trail from a company's current
+ * momentum score. Uses a hash of the id as seed so sparklines are stable
+ * across renders.
+ */
+export function generateMomentumTrail(companyId, currentMomentum) {
+  const numId = typeof companyId === 'number' ? companyId : hashStr(String(companyId));
+  const seed = (numId * 2654435761) >>> 0;
+  const base = Math.max(10, currentMomentum - 30);
+  const points = [];
+  for (let i = 0; i < 12; i++) {
+    const noise = ((seed * (i + 1) * 16807) % 2147483647) / 2147483647;
+    const progress = i / 11;
+    const value = base + (currentMomentum - base) * progress + (noise - 0.5) * 15;
+    points.push(Math.max(0, Math.min(100, Math.round(value))));
+  }
+  return points;
+}
+
+/** Simple string hash for non-numeric IDs */
+function hashStr(s) {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) {
+    h = ((h << 5) - h + s.charCodeAt(i)) | 0;
+  }
+  return Math.abs(h);
+}
+
+/** Resolve "auto" color to trend-based green/red/gray */
+function resolveColor(color, data) {
+  if (color !== 'auto') return color;
+  const first = data[0];
+  const last = data[data.length - 1];
+  if (last > first) return '#4ADE80';
+  if (last < first) return '#F87171';
+  return '#6B7280';
+}
+
 export function Sparkline({
   data = [],
   width = 64,
@@ -7,7 +45,10 @@ export function Sparkline({
   color = 'var(--accent-teal)',
   strokeWidth = 1.5,
   showArea = true,
+  showDot = true,
 }) {
+  const resolvedColor = useMemo(() => resolveColor(color, data), [color, data]);
+
   const { linePath, areaPath } = useMemo(() => {
     if (data.length < 2) return { linePath: '', areaPath: '' };
 
@@ -47,8 +88,8 @@ export function Sparkline({
     >
       <defs>
         <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor={color} stopOpacity="0.15" />
-          <stop offset="100%" stopColor={color} stopOpacity="0" />
+          <stop offset="0%" stopColor={resolvedColor} stopOpacity="0.15" />
+          <stop offset="100%" stopColor={resolvedColor} stopOpacity="0" />
         </linearGradient>
       </defs>
       {showArea && areaPath && (
@@ -60,18 +101,18 @@ export function Sparkline({
       <path
         d={linePath}
         fill="none"
-        stroke={color}
+        stroke={resolvedColor}
         strokeWidth={strokeWidth}
         strokeLinecap="round"
         strokeLinejoin="round"
       />
       {/* End dot */}
-      {data.length >= 2 && (
+      {showDot && data.length >= 2 && (
         <circle
           cx={width}
           cy={height - ((data[data.length - 1] - Math.min(...data)) / (Math.max(...data) - Math.min(...data) || 1)) * (height - 4) - 2}
           r={2}
-          fill={color}
+          fill={resolvedColor}
         />
       )}
     </svg>

@@ -5,12 +5,12 @@
 }
 
 .label {
-  font-family: var(--font-body);
+  font-family: var(--font-mono);
   font-size: var(--text-label);
   font-weight: var(--weight-semibold);
-  color: var(--text-muted);
+  color: var(--text-disabled);
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 2px;
   margin-bottom: var(--space-xs);
 }
 
@@ -26,11 +26,11 @@
 .chip {
   display: flex;
   align-items: center;
-  gap: 5px;
-  padding: 4px 12px;
-  border-radius: var(--radius-sm);
-  font-family: var(--font-body);
-  font-size: var(--text-caption-sm);
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: var(--radius-xs);
+  font-family: var(--font-mono);
+  font-size: 9px;
   font-weight: var(--weight-medium);
   white-space: nowrap;
   cursor: pointer;

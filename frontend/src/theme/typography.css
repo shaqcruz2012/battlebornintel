@@ -1,32 +1,36 @@
-/* ── Headings ──────────────────────────────────────────── */
+/* ── Headings (IBM Plex Mono, uppercase, terminal style) ── */
 
 h1, .h1 {
-  font-family: var(--font-heading);
+  font-family: var(--font-mono);
   font-size: var(--text-h1);
   font-weight: var(--weight-semibold);
   line-height: var(--leading-snug);
   color: var(--text-primary);
-  letter-spacing: -0.02em;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
 }
 
 h2, .h2 {
-  font-family: var(--font-heading);
+  font-family: var(--font-mono);
   font-size: var(--text-h2);
   font-weight: var(--weight-semibold);
   line-height: var(--leading-snug);
   color: var(--text-primary);
-  letter-spacing: -0.01em;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
 }
 
 h3, .h3 {
-  font-family: var(--font-heading);
+  font-family: var(--font-mono);
   font-size: var(--text-h3);
   font-weight: var(--weight-semibold);
   line-height: var(--leading-snug);
   color: var(--text-primary);
+  letter-spacing: 1px;
+  text-transform: uppercase;
 }
 
-/* ── Numeric display (Bloomberg-style) ────────────────── */
+/* ── Numeric display (Bloomberg terminal numbers) ────────── */
 
 .card-numeric {
   font-family: var(--font-mono);
@@ -50,6 +54,7 @@ h3, .h3 {
 
 .data-value {
   font-family: var(--font-mono);
+  font-size: 12px;
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.01em;
 }
@@ -70,22 +75,23 @@ h3, .h3 {
 
 .caption {
   font-size: var(--text-caption);
-  line-height: 1.4;
+  line-height: 1.35;
   color: var(--text-secondary);
 }
 
 .caption-sm {
   font-size: var(--text-caption-sm);
-  line-height: 1.4;
+  line-height: 1.35;
   color: var(--text-secondary);
 }
 
-/* ── Labels (uppercase micro text) ─────────────────────── */
+/* ── Labels (uppercase micro text, Palantir style) ────────── */
 
 .label {
+  font-family: var(--font-mono);
   font-size: var(--text-label);
   font-weight: var(--weight-semibold);
-  letter-spacing: 0.08em;
+  letter-spacing: 2px;
   text-transform: uppercase;
   color: var(--text-disabled);
 }
@@ -106,14 +112,15 @@ h3, .h3 {
   font-variant-numeric: tabular-nums;
 }
 
-/* ── Section title (Economist editorial style) ─────────── */
+/* ── Section title (terminal uppercase) ───────────────── */
 
 .section-title {
-  font-family: var(--font-heading);
-  font-size: var(--text-body);
+  font-family: var(--font-mono);
+  font-size: 10px;
   font-weight: var(--weight-bold);
   color: var(--text-primary);
-  letter-spacing: -0.01em;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
 }
 
 /* ── Tabular numbers utility ───────────────────────────── */

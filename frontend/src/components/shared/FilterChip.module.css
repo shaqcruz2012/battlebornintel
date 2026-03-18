@@ -1,23 +1,23 @@
-/* ── FilterChip: Bloomberg-style filter toggle ─────────── */
+/* ── FilterChip: Palantir-style compact filter pill ──────── */
 
 .chip {
   display: inline-flex;
   align-items: center;
-  gap: var(--space-xs);
-  padding: 5px 12px;
-  border-radius: var(--radius-sm);
-  font-family: var(--font-body);
-  font-size: var(--text-caption-sm);
+  gap: 3px;
+  padding: 3px 8px;
+  border-radius: var(--radius-xs);
+  font-family: var(--font-mono);
+  font-size: 9px;
   font-weight: var(--weight-medium);
   border: 1px solid var(--border-subtle);
   background: transparent;
   color: var(--text-disabled);
   cursor: pointer;
-  transition:
-    all var(--transition-instant);
+  transition: all var(--transition-instant);
   white-space: nowrap;
   user-select: none;
-  letter-spacing: 0.01em;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
 }
 
 .chip:hover {
@@ -47,8 +47,8 @@
 /* ── Small variant ─────────────────────────────────────── */
 
 .small {
-  padding: 2px 8px;
-  font-size: var(--text-micro);
+  padding: 1px 6px;
+  font-size: 8px;
   border-radius: var(--radius-xs);
 }
 
@@ -56,7 +56,7 @@
 
 .count {
   font-family: var(--font-mono);
-  font-size: var(--text-micro);
+  font-size: 8px;
   opacity: 0.6;
   font-variant-numeric: tabular-nums;
 }

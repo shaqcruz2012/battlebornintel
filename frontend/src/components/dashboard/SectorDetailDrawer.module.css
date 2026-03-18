@@ -97,12 +97,13 @@
 }
 
 .sectorName {
-  font-family: var(--font-heading);
-  font-size: 22px;
+  font-family: var(--font-mono);
+  font-size: 16px;
   font-weight: var(--weight-bold);
   color: var(--text-primary);
-  letter-spacing: -0.4px;
-  line-height: 1.2;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  line-height: 1.3;
   margin: 0;
 }
 
@@ -288,12 +289,12 @@
   display: flex;
   align-items: center;
   gap: var(--space-sm);
-  font-family: var(--font-body);
-  font-size: 10px;
+  font-family: var(--font-mono);
+  font-size: 9px;
   font-weight: var(--weight-semibold);
   color: var(--text-disabled);
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 2px;
 }
 
 .sectionCount {
@@ -329,11 +330,11 @@
 }
 
 .metricLabel {
-  font-size: 9px;
+  font-size: 8px;
   color: var(--text-disabled);
   text-transform: uppercase;
-  letter-spacing: 0.07em;
-  font-family: var(--font-body);
+  letter-spacing: 2px;
+  font-family: var(--font-mono);
   font-weight: var(--weight-medium);
 }
 
@@ -544,12 +545,12 @@
 }
 
 .briefLabel {
-  font-family: var(--font-body);
-  font-size: 9px;
+  font-family: var(--font-mono);
+  font-size: 8px;
   font-weight: var(--weight-semibold);
   color: var(--accent-teal);
   text-transform: uppercase;
-  letter-spacing: 0.1em;
+  letter-spacing: 2px;
 }
 
 .briefDate {
@@ -560,11 +561,11 @@
 }
 
 .briefTitle {
-  font-family: var(--font-heading);
-  font-size: 16px;
+  font-family: var(--font-mono);
+  font-size: 13px;
   font-weight: var(--weight-bold);
   color: var(--text-primary);
-  letter-spacing: -0.3px;
+  letter-spacing: 0.5px;
   margin: 0;
   line-height: 1.3;
 }

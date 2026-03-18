@@ -24,6 +24,23 @@ body {
   overflow-x: hidden;
 }
 
+/* ── CRT scanline overlay (subtle terminal feel) ─────────── */
+
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(255, 255, 255, 0.008) 2px,
+    rgba(255, 255, 255, 0.008) 3px
+  );
+  pointer-events: none;
+  z-index: 99999;
+}
+
 img, svg {
   display: block;
   max-width: 100%;
@@ -64,11 +81,11 @@ table {
   color: var(--text-primary);
 }
 
-/* ── Scrollbar (Bloomberg-thin) ─────────────────────────── */
+/* ── Scrollbar (Palantir ultra-thin teal) ─────────────────── */
 
 ::-webkit-scrollbar {
-  width: 5px;
-  height: 5px;
+  width: 4px;
+  height: 4px;
 }
 
 ::-webkit-scrollbar-track {
@@ -76,26 +93,26 @@ table {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.08);
-  border-radius: 3px;
+  background: rgba(69, 215, 198, 0.2);
+  border-radius: 2px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.15);
+  background: rgba(69, 215, 198, 0.4);
 }
 
 /* ── Firefox scrollbar ──────────────────────────────────── */
 
 * {
   scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.08) transparent;
+  scrollbar-color: rgba(69, 215, 198, 0.2) transparent;
 }
 
 /* ── Focus styles ───────────────────────────────────────── */
 
 :focus-visible {
-  outline: 2px solid rgba(69, 215, 198, 0.4);
-  outline-offset: 2px;
+  outline: 1px solid rgba(69, 215, 198, 0.4);
+  outline-offset: 1px;
 }
 
 button:focus-visible {

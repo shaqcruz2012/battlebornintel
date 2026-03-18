@@ -5,8 +5,8 @@
 .header {
   display: flex;
   align-items: center;
-  gap: var(--space-md);
-  margin-bottom: var(--space-lg);
+  gap: var(--space-sm);
+  margin-bottom: var(--space-md);
 }
 
 .icon {
@@ -48,10 +48,11 @@
 }
 
 .metricLabel {
-  font-size: var(--text-xs);
-  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: 8px;
+  color: var(--text-disabled);
   text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: 2px;
 }
 
 .entityList {

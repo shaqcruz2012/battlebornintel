@@ -1,0 +1,60 @@
+/* ── Analysis Overlay Toggle Bar ── */
+
+.bar {
+  position: absolute;
+  bottom: 60px;            /* above TemporalSlider (~48px height + 8px bottom offset) */
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: var(--z-sticky);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(10, 14, 20, 0.90);
+  backdrop-filter: blur(10px);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  padding: 4px 10px;
+}
+
+.barLabel {
+  font-family: var(--font-body);
+  font-size: 8px;
+  font-weight: var(--weight-semibold);
+  color: var(--text-disabled);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-right: 4px;
+  user-select: none;
+}
+
+.toggle {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: var(--radius-xs);
+  font-family: var(--font-body);
+  font-size: 10px;
+  font-weight: var(--weight-medium);
+  letter-spacing: 0.02em;
+  border: 1px solid var(--border-subtle);
+  background: transparent;
+  color: var(--text-disabled);
+  cursor: pointer;
+  transition: all 120ms ease;
+  white-space: nowrap;
+  user-select: none;
+}
+
+.toggle:hover {
+  border-color: var(--overlay-color, var(--border-hover));
+  color: var(--text-secondary);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.toggle:active {
+  transform: scale(0.97);
+}
+
+.active {
+  /* colors set inline via style prop */
+}

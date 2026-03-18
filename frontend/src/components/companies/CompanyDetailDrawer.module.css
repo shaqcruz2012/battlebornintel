@@ -54,7 +54,7 @@
   align-items: flex-start;
   justify-content: space-between;
   gap: var(--space-md);
-  padding: var(--space-xl) var(--space-xl) var(--space-lg);
+  padding: var(--space-lg) var(--space-lg) var(--space-md);
   border-bottom: 1px solid var(--border-subtle);
   background: linear-gradient(180deg, rgba(69, 215, 198, 0.04) 0%, transparent 100%);
   flex-shrink: 0;

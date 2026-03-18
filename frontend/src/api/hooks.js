@@ -170,6 +170,16 @@ export function useCapitalMagnets(limit = 20) {
   });
 }
 
+/** Predicted links between nodes */
+export function usePredictedLinks(limit = 30, enabled = false) {
+  return useQuery({
+    queryKey: ['analytics', 'predicted-links', limit],
+    queryFn: () => api.getPredictedLinks(limit),
+    staleTime: 300_000,
+    enabled,
+  });
+}
+
 /** GOED dashboard summary — composes existing queries */
 const GOED_NODE_TYPES = ['company', 'fund', 'person', 'external', 'accelerator', 'ecosystem'];
 

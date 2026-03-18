@@ -1,0 +1,519 @@
+/* ── Bloomberg Terminal 4-Panel Grid ────────────────────── */
+
+.terminalGrid {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+  gap: 1px;
+  background: #1c2733;
+  border: 1px solid #1c2733;
+  border-radius: 4px;
+  overflow: hidden;
+  height: calc(100vh - 120px);
+  min-height: 600px;
+}
+
+/* ── Panel base ────────────────────────────────────────── */
+
+.panel {
+  background: #0a0e14;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-height: 0;
+}
+
+.panelHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 12px;
+  background: rgba(0, 212, 170, 0.06);
+  border-bottom: 1px solid #1c2733;
+  flex-shrink: 0;
+}
+
+.panelTitle {
+  font-family: 'IBM Plex Mono', var(--font-mono), monospace;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: #45d7c6;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.panelTitle::before {
+  content: '\25B8';
+  font-size: 8px;
+  opacity: 0.7;
+}
+
+.panelHeaderRight {
+  font-family: 'IBM Plex Mono', var(--font-mono), monospace;
+  font-size: 8px;
+  color: rgba(255, 255, 255, 0.3);
+  letter-spacing: 1px;
+}
+
+.panelBody {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 10px 12px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(69, 215, 198, 0.15) transparent;
+}
+
+.panelBody::-webkit-scrollbar {
+  width: 4px;
+}
+
+.panelBody::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.panelBody::-webkit-scrollbar-thumb {
+  background: rgba(69, 215, 198, 0.15);
+  border-radius: 2px;
+}
+
+.panelBody::-webkit-scrollbar-thumb:hover {
+  background: rgba(69, 215, 198, 0.3);
+}
+
+/* ── Panel 1: KPI Terminal ─────────────────────────────── */
+
+.kpiLine {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 0;
+  border-bottom: 1px solid rgba(28, 39, 51, 0.6);
+  gap: 8px;
+}
+
+.kpiLine:last-child {
+  border-bottom: none;
+}
+
+.kpiKey {
+  font-family: 'IBM Plex Mono', var(--font-mono), monospace;
+  font-size: 10px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.45);
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.kpiVal {
+  font-family: 'IBM Plex Mono', var(--font-mono), monospace;
+  font-size: 13px;
+  font-weight: 700;
+  color: #e0e6ed;
+  letter-spacing: -0.5px;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.kpiStatus {
+  font-family: 'IBM Plex Mono', var(--font-mono), monospace;
+  font-size: 8px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  padding: 1px 5px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.kpiVerified {
+  color: #34c9a8;
+  background: rgba(52, 201, 168, 0.1);
+}
+
+.kpiInferred {
+  color: #e5b654;
+  background: rgba(229, 182, 84, 0.1);
+}
+
+.kpiCalculated {
+  color: #5b8def;
+  background: rgba(91, 141, 239, 0.1);
+}
+
+.kpiClickable {
+  cursor: pointer;
+  transition: background 0.1s;
+  border-radius: 2px;
+  padding: 4px 4px;
+  margin: 0 -4px;
+}
+
+.kpiClickable:hover {
+  background: rgba(69, 215, 198, 0.06);
+}
+
+.kpiActive {
+  background: rgba(69, 215, 198, 0.08);
+  border-left: 2px solid #45d7c6;
+  padding-left: 6px;
+}
+
+/* Sector heat inside Panel 1 */
+
+.sectorHeatSection {
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid #1c2733;
+}
+
+.sectorHeatLabel {
+  font-family: 'IBM Plex Mono', var(--font-mono), monospace;
+  font-size: 8px;
+  font-weight: 600;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.3);
+  margin-bottom: 6px;
+}
+
+.sectorHeatGrid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.sectorBlock {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: 2px;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: all 0.1s;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.sectorBlock:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+.sectorBlockActive {
+  border-color: rgba(69, 215, 198, 0.3);
+  background: rgba(69, 215, 198, 0.06);
+}
+
+.sectorDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 1px;
+  flex-shrink: 0;
+}
+
+.sectorName {
+  font-family: 'IBM Plex Mono', var(--font-mono), monospace;
+  font-size: 9px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.6);
+  letter-spacing: 0.5px;
+}
+
+.sectorScore {
+  font-family: 'IBM Plex Mono', var(--font-mono), monospace;
+  font-size: 9px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: rgba(255, 255, 255, 0.4);
+}
+
+/* ── Panel 2: Momentum compact overrides ───────────────── */
+
+.momentumCompact {
+  padding: 0;
+}
+
+.momentumCompact .panelBody {
+  padding: 0;
+}
+
+/* ── Panel 3: Live Activity Feed ───────────────────────── */
+
+.activityItem {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 5px 0;
+  border-bottom: 1px solid rgba(28, 39, 51, 0.5);
+  transition: background 0.1s;
+}
+
+.activityItem:hover {
+  background: rgba(69, 215, 198, 0.03);
+}
+
+.activityItem:last-child {
+  border-bottom: none;
+}
+
+.activityTime {
+  font-family: 'IBM Plex Mono', var(--font-mono), monospace;
+  font-size: 9px;
+  color: rgba(255, 255, 255, 0.25);
+  white-space: nowrap;
+  min-width: 36px;
+  text-align: right;
+  flex-shrink: 0;
+  padding-top: 1px;
+  font-variant-numeric: tabular-nums;
+}
+
+.activityDot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  margin-top: 4px;
+}
+
+.activityDotFunding { background: #34c9a8; }
+.activityDotPartnership { background: #5b8def; }
+.activityDotHiring { background: #e5b654; }
+.activityDotProduct { background: #c084fc; }
+.activityDotGrant { background: #f97316; }
+.activityDotDefault { background: rgba(255, 255, 255, 0.25); }
+
+.activityBody {
+  flex: 1;
+  min-width: 0;
+}
+
+.activityCompany {
+  font-family: 'IBM Plex Mono', var(--font-mono), monospace;
+  font-size: 10px;
+  font-weight: 600;
+  color: #e0e6ed;
+  letter-spacing: 0.3px;
+}
+
+.activityDesc {
+  font-family: 'IBM Plex Mono', var(--font-mono), monospace;
+  font-size: 9px;
+  color: rgba(255, 255, 255, 0.4);
+  line-height: 1.4;
+  margin-top: 1px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.activityType {
+  font-family: 'IBM Plex Mono', var(--font-mono), monospace;
+  font-size: 7px;
+  font-weight: 600;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.2);
+  margin-top: 2px;
+}
+
+.activityEmpty {
+  font-family: 'IBM Plex Mono', var(--font-mono), monospace;
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.2);
+  text-align: center;
+  padding: 24px 0;
+}
+
+.activityLoading {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px 0;
+}
+
+.activitySkeleton {
+  height: 28px;
+  background: linear-gradient(
+    90deg,
+    rgba(28, 39, 51, 0.5) 0%,
+    rgba(255, 255, 255, 0.03) 50%,
+    rgba(28, 39, 51, 0.5) 100%
+  );
+  background-size: 200% 100%;
+  border-radius: 2px;
+  animation: shimmer 1.6s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* ── Panel 4: Market Narrative ─────────────────────────── */
+
+.narrativeSection {
+  margin-bottom: 12px;
+}
+
+.narrativeSectionTitle {
+  font-family: 'IBM Plex Mono', var(--font-mono), monospace;
+  font-size: 8px;
+  font-weight: 600;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: #45d7c6;
+  margin-bottom: 4px;
+  opacity: 0.7;
+}
+
+.narrativeText {
+  font-family: 'IBM Plex Mono', var(--font-mono), monospace;
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.55);
+  line-height: 1.6;
+  letter-spacing: 0.2px;
+  margin: 0;
+}
+
+.narrativeDivider {
+  height: 1px;
+  background: rgba(28, 39, 51, 0.8);
+  margin: 8px 0;
+}
+
+.narrativeDevItem {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 3px 0;
+}
+
+.narrativeDevRule {
+  display: block;
+  width: 10px;
+  height: 1px;
+  background: #45d7c6;
+  flex-shrink: 0;
+  margin-top: 6px;
+  opacity: 0.5;
+}
+
+.narrativeDevText {
+  font-family: 'IBM Plex Mono', var(--font-mono), monospace;
+  font-size: 9px;
+  color: rgba(255, 255, 255, 0.45);
+  line-height: 1.5;
+  flex: 1;
+  min-width: 0;
+}
+
+.spotlightBox {
+  padding: 6px 8px;
+  background: rgba(69, 215, 198, 0.04);
+  border-left: 2px solid rgba(69, 215, 198, 0.35);
+  border-radius: 0 2px 2px 0;
+  margin-top: 4px;
+}
+
+.spotlightRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  margin-bottom: 3px;
+}
+
+.spotlightName {
+  font-family: 'IBM Plex Mono', var(--font-mono), monospace;
+  font-size: 10px;
+  font-weight: 600;
+  color: #e0e6ed;
+}
+
+.spotlightScore {
+  font-family: 'IBM Plex Mono', var(--font-mono), monospace;
+  font-size: 9px;
+  font-weight: 700;
+  color: #45d7c6;
+  font-variant-numeric: tabular-nums;
+}
+
+.spotlightAnalysis {
+  font-family: 'IBM Plex Mono', var(--font-mono), monospace;
+  font-size: 9px;
+  color: rgba(255, 255, 255, 0.4);
+  line-height: 1.5;
+  margin: 0;
+}
+
+/* ── Live dot animation ────────────────────────────────── */
+
+.liveDot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #34c9a8;
+  animation: livePulse 2s ease-in-out infinite;
+  flex-shrink: 0;
+}
+
+@keyframes livePulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+/* ── KPI detail panel overlay (keep existing behavior) ── */
+
+.kpiDetailOverlay {
+  grid-column: 1 / -1;
+}
+
+/* ── Sector detail overlay ─────────────────────────────── */
+
+.sectorDetailOverlay {
+  grid-column: 1 / -1;
+}
+
+/* ── Responsive: single column below 1024px ────────────── */
+
+@media (max-width: 1024px) {
+  .terminalGrid {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto auto auto auto;
+    height: auto;
+    min-height: 0;
+  }
+
+  .panel {
+    min-height: 300px;
+    max-height: 500px;
+  }
+}
+
+@media (max-width: 600px) {
+  .panelHeader {
+    padding: 5px 8px;
+  }
+
+  .panelBody {
+    padding: 8px;
+  }
+
+  .kpiKey {
+    font-size: 9px;
+    letter-spacing: 1px;
+  }
+
+  .kpiVal {
+    font-size: 12px;
+  }
+}

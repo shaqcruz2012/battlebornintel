@@ -21,12 +21,13 @@
 }
 
 .viewTitle {
-  font-family: var(--font-heading);
+  font-family: var(--font-mono);
   font-size: var(--text-h1);
   font-weight: var(--weight-bold);
   color: var(--text-primary);
   margin: 0;
-  letter-spacing: -0.02em;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
 }
 
 .viewTagline {

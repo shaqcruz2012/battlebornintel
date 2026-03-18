@@ -16,7 +16,7 @@
   background: var(--bg-elevated);
   border: 1px solid var(--border-active);
   border-radius: var(--radius-md);
-  padding: var(--space-md) var(--space-lg);
+  padding: var(--space-sm) var(--space-md);
   font-family: var(--font-body);
   font-size: var(--text-caption);
   color: var(--text-secondary);
@@ -53,12 +53,13 @@
 
 .title {
   display: block;
-  font-family: var(--font-heading);
+  font-family: var(--font-mono);
   font-weight: var(--weight-semibold);
   color: var(--text-primary);
   margin-bottom: 4px;
-  font-size: var(--text-caption);
-  letter-spacing: -0.01em;
+  font-size: 10px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
 }
 
 /* ── Below position ────────────────────────────────────── */

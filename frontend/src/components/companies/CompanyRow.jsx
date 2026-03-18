@@ -1,6 +1,7 @@
 import { memo, useMemo } from 'react';
 import { fmt, stageLabel } from '../../engine/formatters';
 import { TRIGGER_CFG, GRADE_COLORS, STAGE_COLORS } from '../../data/constants';
+import { Sparkline, generateMomentumTrail } from '../shared/Sparkline';
 import styles from './CompaniesView.module.css';
 
 const DIM_LABELS = {
@@ -141,6 +142,11 @@ export const CompanyRow = memo(function CompanyRow({ company, isExpanded, onTogg
     [c.grade]
   );
 
+  const sparkData = useMemo(
+    () => c.momentum != null ? generateMomentumTrail(c.id || c.slug || 0, c.momentum) : [],
+    [c.id, c.slug, c.momentum]
+  );
+
   const primarySectors = useMemo(() => {
     if (!c.sector) return [];
     return Array.isArray(c.sector) ? c.sector.slice(0, 3) : [c.sector];
@@ -178,7 +184,10 @@ export const CompanyRow = memo(function CompanyRow({ company, isExpanded, onTogg
           {fmt(c.funding)}
         </td>
         <td className={`${styles.td} ${styles.numeric} ${styles.colMomentum}`}>
-          {c.momentum != null ? c.momentum : '\u2014'}
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+            {c.momentum != null ? c.momentum : '\u2014'}
+            <Sparkline data={sparkData} width={40} height={14} color="auto" showArea={false} strokeWidth={1.2} />
+          </span>
         </td>
         <td className={`${styles.td} ${styles.colCity}`}>
           {c.city || '\u2014'}

@@ -15,12 +15,12 @@
 }
 
 .stripTitle {
-  font-family: var(--font-heading);
-  font-size: var(--text-caption);
+  font-family: var(--font-mono);
+  font-size: 8px;
   font-weight: var(--weight-semibold);
   color: var(--text-disabled);
   text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: 2px;
 }
 
 .timestamp {

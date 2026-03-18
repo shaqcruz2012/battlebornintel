@@ -25,7 +25,7 @@
   -webkit-backdrop-filter: blur(20px);
   border: 1px solid var(--border-active);
   border-radius: var(--radius-md);
-  padding: var(--space-xl) var(--space-2xl);
+  padding: var(--space-lg) var(--space-xl);
   max-height: 720px;
   overflow-y: auto;
   box-shadow:
@@ -82,11 +82,12 @@
 }
 
 .headerTitle {
-  font-family: var(--font-heading);
+  font-family: var(--font-mono);
   font-size: var(--text-h3);
   font-weight: var(--weight-bold);
   color: var(--text-primary);
-  letter-spacing: -0.02em;
+  letter-spacing: 1px;
+  text-transform: uppercase;
 }
 
 .headerSubtitle {
@@ -140,12 +141,12 @@
 }
 
 .assessmentLabel {
-  font-family: var(--font-body);
+  font-family: var(--font-mono);
   font-size: var(--text-label);
   font-weight: var(--weight-bold);
   color: var(--accent-teal);
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 2px;
 }
 
 .assessmentText {
@@ -328,12 +329,12 @@
 /* ── Section titles ──────────────────────────────────── */
 
 .sectionTitle {
-  font-family: var(--font-body);
+  font-family: var(--font-mono);
   font-size: var(--text-label);
   font-weight: var(--weight-bold);
-  color: var(--text-muted);
+  color: var(--text-disabled);
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 2px;
   margin-bottom: var(--space-xs);
   margin-top: var(--space-xs);
 }

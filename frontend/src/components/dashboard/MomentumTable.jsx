@@ -17,7 +17,7 @@ const GRADE_TOOLTIP =
   'Letter grade mapped from IRS score: A (≥85), A- (≥78), B+ (≥72), B (≥65), B- (≥58), C+ (≥50), C (≥42), D (<42). Grades are relative to the Nevada ecosystem — a B+ here means strong investment readiness by local standards, not a national benchmark.';
 
 // Virtual window configuration
-const ROW_HEIGHT = 80; // Approximate height of a MomentumRow
+const ROW_HEIGHT = 24; // Compact Bloomberg-style row height
 const BUFFER_SIZE = 3; // Extra rows to render above/below visible window
 
 export function MomentumTable({ companies, sortBy, onSortChange, isFetching }) {
@@ -87,6 +87,7 @@ export function MomentumTable({ companies, sortBy, onSortChange, isFetching }) {
         <Tooltip title="Investment Readiness Score" text={IRS_TOOLTIP} position="below">
           <span className={styles.headerWithTip}>IRS</span>
         </Tooltip>
+        <span>Trend</span>
         <Tooltip title="Grade" text={GRADE_TOOLTIP} position="below">
           <span className={styles.headerWithTip}>Grade</span>
         </Tooltip>
@@ -99,7 +100,7 @@ export function MomentumTable({ companies, sortBy, onSortChange, isFetching }) {
         <div
           ref={containerRef}
           className={styles.virtualContainer}
-          style={{ maxHeight: '600px', overflow: 'auto' }}
+          style={{ flex: 1, overflow: 'auto' }}
         >
           <div style={{ height: `${totalHeight}px`, position: 'relative' }}>
             {/* Top spacer */}

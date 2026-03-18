@@ -11,7 +11,7 @@
 /* ── Terminal header ──────────────────────────────────────────────────────── */
 
 .terminalHeader {
-  padding: var(--space-lg) 0 var(--space-md);
+  padding: var(--space-sm) 0 var(--space-xs);
 }
 
 .terminalHeaderTop {
@@ -25,11 +25,11 @@
 
 .terminalTitle {
   font-family: var(--font-mono);
-  font-size: 15px;
+  font-size: 11px;
   font-weight: var(--weight-bold);
   color: var(--text-primary);
   margin: 0;
-  letter-spacing: 0.12em;
+  letter-spacing: 1.5px;
   text-transform: uppercase;
 }
 
@@ -308,11 +308,11 @@
 
 .cardBody {
   flex: 1;
-  padding: var(--space-md) var(--space-lg);
+  padding: var(--space-sm) var(--space-md);
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: var(--space-sm);
+  gap: var(--space-xs);
 }
 
 /* ── Card meta row ────────────────────────────────────────────────────────── */
@@ -376,9 +376,9 @@
 /* ── Card title ───────────────────────────────────────────────────────────── */
 
 .cardTitle {
-  font-family: var(--font-heading);
-  font-size: 17px;
-  font-weight: var(--weight-bold);
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: var(--weight-semibold);
   color: var(--text-primary);
   margin: 0;
   line-height: var(--leading-snug);
@@ -510,18 +510,19 @@
   background: var(--bg-card);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-md);
-  padding: var(--space-md) var(--space-lg);
+  padding: var(--space-sm) var(--space-md);
   display: flex;
   flex-direction: column;
-  gap: var(--space-md);
+  gap: var(--space-sm);
 }
 
 .sidebarTitle {
   font-family: var(--font-mono);
-  font-size: var(--text-label);
+  font-size: 8px;
   font-weight: var(--weight-semibold);
   color: var(--text-disabled);
-  letter-spacing: 0.1em;
+  letter-spacing: 2px;
+  text-transform: uppercase;
   margin: 0;
   padding-bottom: var(--space-sm);
   border-bottom: 1px solid var(--border-subtle);
@@ -541,7 +542,7 @@
 
 .sidebarStatValue {
   font-family: var(--font-mono);
-  font-size: 22px;
+  font-size: 18px;
   font-weight: var(--weight-bold);
   color: var(--text-primary);
   line-height: 1;

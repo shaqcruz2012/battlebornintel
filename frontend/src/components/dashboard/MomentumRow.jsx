@@ -2,6 +2,7 @@ import { useState, memo, useMemo } from 'react';
 import { fmt, stageLabel } from '../../engine/formatters';
 import { GRADE_COLORS, TRIGGER_CFG } from '../../data/constants';
 import { StatusBadge } from '../shared/StatusBadge';
+import { Sparkline, generateMomentumTrail } from '../shared/Sparkline';
 import styles from './MomentumRow.module.css';
 
 const DIM_LABELS = {
@@ -89,6 +90,11 @@ export const MomentumRow = memo(function MomentumRow({ company, rank }) {
     [c.grade]
   );
 
+  const sparkData = useMemo(
+    () => c.momentum != null ? generateMomentumTrail(c.id || c.slug || rank, c.momentum) : [],
+    [c.id, c.slug, c.momentum, rank]
+  );
+
   return (
     <div className={styles.row}>
       <div className={styles.summary} onClick={() => setOpen(!open)}>
@@ -113,6 +119,10 @@ export const MomentumRow = memo(function MomentumRow({ company, rank }) {
         <div className={styles.metric}>
           <span className={styles.metricLabel}>IRS</span>
           {c.irs || '—'}
+        </div>
+
+        <div className={styles.metric} style={{ display: 'flex', justifyContent: 'center' }}>
+          <Sparkline data={sparkData} width={48} height={16} color="auto" showArea={false} />
         </div>
 
         <span

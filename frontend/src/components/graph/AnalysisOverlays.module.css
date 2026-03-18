@@ -1,0 +1,27 @@
+/* ── Analysis Overlay Animations ── */
+
+/* Capital flow animated dashes — flowing dots along edges */
+.flowDash {
+  animation: capitalFlow 2s linear infinite;
+}
+
+@keyframes capitalFlow {
+  to {
+    stroke-dashoffset: -30;
+  }
+}
+
+/* Bridge node pulsing glow ring */
+.bridgePulse {
+  animation: bridgePulse 2.5s ease-in-out infinite;
+}
+
+@keyframes bridgePulse {
+  0%, 100% {
+    r: inherit;
+    stroke-opacity: 0.1;
+  }
+  50% {
+    stroke-opacity: 0.35;
+  }
+}

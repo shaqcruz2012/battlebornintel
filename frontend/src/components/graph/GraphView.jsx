@@ -1,12 +1,13 @@
 import { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import { useFilters } from '../../hooks/useFilters';
-import { useGraph, useGraphMetrics } from '../../api/hooks';
+import { useGraph, useGraphMetrics, usePredictedLinks } from '../../api/hooks';
 import { useGraphLayout } from '../../hooks/useGraphLayout';
 import { GraphOverlayControls } from './GraphControls';
 import { GraphCanvas } from './GraphCanvas';
 import { GraphLegend } from './GraphLegend';
 import { NodeDetail } from './NodeDetail';
 import { TemporalSlider } from './TemporalSlider';
+import { AnalysisOverlayBar } from './AnalysisOverlayBar';
 import styles from './GraphView.module.css';
 
 const DEFAULT_NODE_FILTERS = {
@@ -34,6 +35,17 @@ export function GraphView() {
   const [focusNodeId, setFocusNodeId] = useState(null);
   const [yearMax, setYearMax] = useState(2026);
   const [debouncedYearMax, setDebouncedYearMax] = useState(2026);
+
+  // Analysis overlay toggles
+  const [overlays, setOverlays] = useState({
+    communities: false,
+    capitalFlows: false,
+    predictedLinks: false,
+    bridges: false,
+  });
+  const toggleOverlay = useCallback((key) => {
+    setOverlays(prev => ({ ...prev, [key]: !prev[key] }));
+  }, []);
 
   // Debounce yearMax by 300ms so scrubbing the slider doesn't flood API requests
   const yearDebounceRef = useRef(null);
@@ -120,6 +132,9 @@ export function GraphView() {
   // Fetch total edge count (yearMax=2026) for the edge count indicator
   const { data: fullGraphData } = useGraph(activeNodeTypes, 2026, filters.region);
   const { data: metricsData, isLoading: loadingMetrics, error: metricsError } = useGraphMetrics(activeNodeTypes);
+
+  // Fetch predicted links only when that overlay is active (lazy load)
+  const { data: predictedLinksData } = usePredictedLinks(30, overlays.predictedLinks);
 
   // Compute D3 layout in Web Worker to keep UI responsive
   const rawNodes = graphData?.nodes || [];
@@ -238,6 +253,8 @@ export function GraphView() {
             layoutSettled={!layoutLoading}
             layoutWidth={dims.w}
             layoutHeight={dims.h}
+            overlays={overlays}
+            predictedLinks={predictedLinksData}
           />
           {/* Left overlay: legend (minimizable) */}
           <GraphLegend colorMode={colorMode} nodeFilters={nodeFilters} layout={layout} />
@@ -259,6 +276,8 @@ export function GraphView() {
             nodes={layout.nodes}
             onFocusNode={handleFocusNode}
           />
+          {/* Analysis overlay toggle bar */}
+          <AnalysisOverlayBar overlays={overlays} onToggle={toggleOverlay} />
           {/* Bottom-dock temporal slider */}
           <TemporalSlider
             min={2015}

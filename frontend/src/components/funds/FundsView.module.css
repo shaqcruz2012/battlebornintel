@@ -4,8 +4,8 @@
   grid-column: 1 / -1;
   display: flex;
   flex-direction: column;
-  gap: var(--space-xl);
-  padding: var(--space-lg) 0;
+  gap: var(--space-md);
+  padding: var(--space-sm) 0;
 }
 
 /* ── KPI Strip: 4-cell Bloomberg terminal grid ─────────── */
@@ -22,7 +22,7 @@
 
 .kpiCell {
   background: var(--bg-elevated);
-  padding: var(--space-lg) var(--space-xl);
+  padding: var(--space-sm) var(--space-md);
   text-align: center;
   display: flex;
   flex-direction: column;
@@ -40,12 +40,12 @@
 }
 
 .kpiLabel {
-  font-family: var(--font-body);
-  font-size: var(--text-micro);
+  font-family: var(--font-mono);
+  font-size: 8px;
   font-weight: var(--weight-semibold);
   color: var(--text-disabled);
   text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: 2px;
 }
 
 /* ── Controls bar ──────────────────────────────────────── */
@@ -97,8 +97,8 @@
 
 .fundsGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
-  gap: var(--space-lg);
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: var(--space-sm);
 }
 
 /* ── Fund card ─────────────────────────────────────────── */
@@ -107,7 +107,7 @@
   background: var(--bg-card);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-md);
-  padding: var(--space-xl);
+  padding: var(--space-md);
   cursor: pointer;
   transition:
     border-color var(--transition-fast),
@@ -138,7 +138,7 @@
 }
 
 .fundName {
-  font-family: var(--font-heading);
+  font-family: var(--font-mono);
   font-size: var(--text-h3);
   font-weight: var(--weight-semibold);
   color: var(--text-primary);
@@ -192,10 +192,10 @@
 
 .deployStatsLabel {
   color: var(--text-disabled);
-  font-family: var(--font-body);
-  font-size: var(--text-micro);
+  font-family: var(--font-mono);
+  font-size: 8px;
   text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: 2px;
   margin-right: var(--space-2xs);
 }
 
@@ -247,14 +247,14 @@
 }
 
 .portfolioTh {
-  font-family: var(--font-body);
-  font-size: var(--text-micro);
+  font-family: var(--font-mono);
+  font-size: 8px;
   font-weight: var(--weight-semibold);
   color: var(--text-disabled);
   text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: 2px;
   text-align: left;
-  padding: var(--space-sm) var(--space-sm);
+  padding: var(--space-xs) var(--space-sm);
   border-bottom: 1px solid var(--border-subtle);
 }
 

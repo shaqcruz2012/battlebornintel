@@ -102,4 +102,7 @@ export const api = {
   getCapitalMagnets: (limit = 20) =>
     fetchJSON(`${BASE}/analytics/capital-magnets`, { limit }).then((r) => r.data),
 
+  getPredictedLinks: (limit = 30) =>
+    fetchJSON(`${BASE}/analytics/predicted-links`, { limit }).then((r) => r.data),
+
 };

@@ -1,4 +1,5 @@
-import { memo } from 'react';
+import { memo, useMemo } from 'react';
+import { Sparkline } from '../shared/Sparkline';
 import styles from './FundsView.module.css';
 
 const FUND_TYPE_COLORS = {
@@ -121,6 +122,22 @@ export const FundCard = memo(function FundCard({
     ? Math.max(fund.allocated - deployed, 0)
     : null;
 
+  // Generate a deterministic deployment trajectory sparkline
+  const deploySparkData = useMemo(() => {
+    if (!fund.allocated || fund.allocated <= 0) return [];
+    const id = typeof fund.id === 'number' ? fund.id : (fund.name || '').length;
+    const seed = (id * 2654435761) >>> 0;
+    const target = deployPercent;
+    const points = [];
+    for (let i = 0; i < 8; i++) {
+      const noise = ((seed * (i + 1) * 16807) % 2147483647) / 2147483647;
+      const progress = i / 7;
+      const value = target * progress + (noise - 0.5) * 10;
+      points.push(Math.max(0, Math.min(100, Math.round(value))));
+    }
+    return points;
+  }, [fund.id, fund.name, fund.allocated, deployPercent]);
+
   return (
     <div
       className={`${styles.fundCard} ${isExpanded ? styles.expanded : ''}`}
@@ -128,12 +145,15 @@ export const FundCard = memo(function FundCard({
     >
       <div className={styles.fundHeader}>
         <span className={styles.fundName}>{fund.name}</span>
-        <span
-          className={styles.typeBadge}
-          style={{ backgroundColor: `${getTypeColor(fund.type)}22`, color: getTypeColor(fund.type) }}
-        >
-          {fund.type}
-        </span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <Sparkline data={deploySparkData} width={48} height={16} color="auto" showArea={false} strokeWidth={1.2} />
+          <span
+            className={styles.typeBadge}
+            style={{ backgroundColor: `${getTypeColor(fund.type)}22`, color: getTypeColor(fund.type) }}
+          >
+            {fund.type}
+          </span>
+        </div>
       </div>
 
       <DeploymentBar allocated={fund.allocated} deployed={deployed} />

@@ -14,8 +14,8 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: var(--space-sm);
-  padding: var(--space-sm) var(--space-lg);
+  gap: var(--space-xs);
+  padding: var(--space-xs) var(--space-md);
   background: var(--bg-elevated);
   border-bottom: 1px solid var(--border-medium);
   position: sticky;
@@ -24,14 +24,14 @@
 }
 
 .searchInput {
-  padding: 5px 12px;
+  padding: 3px 8px;
   border-radius: var(--radius-sm);
   border: 1px solid var(--border-subtle);
   background: transparent;
   color: var(--text-primary);
   font-family: var(--font-mono);
-  font-size: var(--text-caption-sm);
-  width: 200px;
+  font-size: 10px;
+  width: 180px;
   outline: none;
   transition:
     border-color var(--transition-fast),
@@ -55,12 +55,12 @@
 }
 
 .filterLabel {
-  font-family: var(--font-body);
-  font-size: var(--text-micro);
+  font-family: var(--font-mono);
+  font-size: 8px;
   font-weight: var(--weight-semibold);
-  color: var(--text-muted);
+  color: var(--text-disabled);
   text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: 2px;
   flex-shrink: 0;
 }
 
@@ -95,14 +95,14 @@
 
 .th {
   cursor: pointer;
-  padding: 8px 12px;
-  border-bottom: 2px solid var(--border-medium);
-  font-family: var(--font-body);
-  font-size: var(--text-micro);
+  padding: 4px 8px;
+  border-bottom: 1px solid var(--border-medium);
+  font-family: var(--font-mono);
+  font-size: 8px;
   font-weight: var(--weight-semibold);
-  color: var(--text-muted);
+  color: var(--text-disabled);
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 1.5px;
   text-align: left;
   white-space: nowrap;
   user-select: none;
@@ -159,7 +159,7 @@
 }
 
 .td {
-  padding: 6px 12px;
+  padding: 3px 8px;
   vertical-align: middle;
   font-family: var(--font-body);
   font-size: var(--text-caption);
@@ -268,10 +268,10 @@
 }
 
 .expandedInner {
-  padding: var(--space-lg) var(--space-xl);
+  padding: var(--space-md) var(--space-lg);
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: var(--space-lg);
+  gap: var(--space-md);
 }
 
 @keyframes fadeSlide {
@@ -292,12 +292,12 @@
 }
 
 .detailLabel {
-  font-family: var(--font-body);
-  font-size: 9px;
+  font-family: var(--font-mono);
+  font-size: 8px;
   font-weight: var(--weight-semibold);
-  color: var(--text-muted);
+  color: var(--text-disabled);
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 2px;
 }
 
 .description {
@@ -359,12 +359,12 @@
 }
 
 .dimLabel {
-  font-family: var(--font-body);
-  font-size: 9px;
+  font-family: var(--font-mono);
+  font-size: 8px;
   font-weight: var(--weight-medium);
-  color: var(--text-muted);
+  color: var(--text-disabled);
   text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: 2px;
 }
 
 .dimBar {

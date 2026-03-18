@@ -2,30 +2,35 @@
 
 .wrapper {
   grid-column: 1 / span 8;
-  background: var(--bg-card);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-md);
+  background: #0a0e14;
+  border: none;
+  border-radius: 0;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
 }
 
 .header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: var(--space-md) var(--space-xl);
-  border-bottom: 1px solid var(--border-medium);
-  background: var(--bg-subtle);
+  padding: 4px 10px;
+  border-bottom: 1px solid #1c2733;
+  background: rgba(0, 212, 170, 0.03);
+  flex-shrink: 0;
 }
 
 .title {
-  font-family: var(--font-heading);
-  font-size: var(--text-h3);
-  font-weight: var(--weight-semibold);
-  color: var(--text-primary);
-  letter-spacing: -0.01em;
+  font-family: 'IBM Plex Mono', var(--font-mono), monospace;
+  font-size: 9px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.4);
+  letter-spacing: 1px;
+  text-transform: uppercase;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
 }
 
 .fetchingDot {
@@ -48,21 +53,21 @@
 .sortControls {
   display: flex;
   gap: 1px;
-  background: var(--bg-root);
-  border-radius: var(--radius-sm);
-  padding: 2px;
-  border: 1px solid var(--border-subtle);
+  background: transparent;
+  border-radius: 2px;
+  padding: 1px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .sortBtn {
-  padding: 4px 10px;
-  font-family: var(--font-body);
-  font-size: var(--text-micro);
-  font-weight: var(--weight-medium);
+  padding: 2px 6px;
+  font-family: 'IBM Plex Mono', var(--font-mono), monospace;
+  font-size: 8px;
+  font-weight: 500;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
-  border-radius: var(--radius-xs);
-  color: var(--text-disabled);
+  letter-spacing: 0.8px;
+  border-radius: 2px;
+  color: rgba(255, 255, 255, 0.3);
   transition: all var(--transition-instant);
   border: none;
   background: transparent;
@@ -83,16 +88,16 @@
 
 .colHeaders {
   display: grid;
-  grid-template-columns: 2.5fr 1fr 1fr 1fr 1fr 40px;
-  padding: var(--space-xs) var(--space-lg);
-  border-bottom: 2px solid var(--border-medium);
-  background: var(--bg-subtle);
-  font-family: var(--font-body);
-  font-size: 9px;
-  font-weight: var(--weight-semibold);
+  grid-template-columns: 2.5fr 1fr 1fr 1fr 56px 1fr 40px;
+  padding: 3px 10px;
+  border-bottom: 1px solid #1c2733;
+  background: #0a0e14;
+  font-family: 'IBM Plex Mono', var(--font-mono), monospace;
+  font-size: 8px;
+  font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--text-muted);
+  letter-spacing: 1.5px;
+  color: rgba(255, 255, 255, 0.25);
   position: sticky;
   top: 0;
   z-index: 2;
@@ -129,7 +134,7 @@
 
 .virtualContainer {
   scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.06) transparent;
+  scrollbar-color: rgba(69, 215, 198, 0.15) transparent;
 }
 
 .virtualContainer::-webkit-scrollbar {
@@ -141,12 +146,12 @@
 }
 
 .virtualContainer::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.06);
+  background: rgba(69, 215, 198, 0.15);
   border-radius: 2px;
 }
 
 .virtualContainer::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.12);
+  background: rgba(69, 215, 198, 0.3);
 }
 
 /* ── Empty state ───────────────────────────────────────── */
@@ -184,7 +189,7 @@
 
 @media (max-width: 768px) {
   .colHeaders {
-    grid-template-columns: 2fr 1fr 40px;
+    grid-template-columns: 2fr 1fr 48px 40px;
   }
   .hideMobile {
     display: none;
