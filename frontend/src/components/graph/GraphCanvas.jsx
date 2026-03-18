@@ -2,6 +2,7 @@ import { useState, useRef, useCallback, useMemo, useEffect, memo } from 'react';
 import { NODE_CFG, REL_CFG, COMM_COLORS } from '../../data/constants';
 import { useWindowSize } from '../../hooks/useWindowSize';
 import { fmt } from '../../engine/formatters';
+import { AnalysisOverlays } from './AnalysisOverlays';
 import styles from './GraphCanvas.module.css';
 
 const MIN_R = 3;
@@ -334,7 +335,7 @@ function useEdgeCanvas(canvasRef, edges, zoom, pan, w, h, {
       if (isOpportunity && opportunityFilter === 'funds' && e.rel !== 'fund_opportunity') continue;
 
       const rc = REL_CFG[e.rel];
-      const isHighlighted = highlightedEdges.has(i);
+      const isHighlighted = highlightedEdges.has(e);
       const dimEdge = selectedNode && !isHighlighted;
 
       const category = e.category || 'operational';
@@ -398,6 +399,8 @@ export function GraphCanvas({
   // so that node positions (in worker coordinate space) align with the SVG viewBox.
   layoutWidth,
   layoutHeight,
+  overlays = {},
+  predictedLinks = null,
 }) {
   const containerRef = useRef(null);
   const edgeCanvasRef = useRef(null);
@@ -598,17 +601,19 @@ export function GraphCanvas({
     tooltipActiveRef.current = false;
   }, []);
 
-  // Compute connected node IDs and highlighted edges for selected node
+  // Compute connected node IDs and highlighted edges for selected node.
+  // highlightedEdges stores edge object references (not array indices) so it works
+  // correctly with both the full edges array and the viewport-filtered visibleEdges.
   const { connectedIds, highlightedEdges } = useMemo(() => {
     if (!selectedNode) return { connectedIds: new Set(), highlightedEdges: new Set() };
     const cIds = new Set();
     const hEdges = new Set();
-    edges.forEach((e, i) => {
+    edges.forEach((e) => {
       const { sid, tid } = edgeId(e);
       if (sid === selectedNode || tid === selectedNode) {
         cIds.add(sid);
         cIds.add(tid);
-        hEdges.add(i);
+        hEdges.add(e);
       }
     });
     return { connectedIds: cIds, highlightedEdges: hEdges };
@@ -667,20 +672,21 @@ export function GraphCanvas({
 
   const animateDash = showOpportunities && opportunityEdgeCount < 50;
 
-  // Pre-compute edge dollar values once when edges change (avoids regex per render per edge)
+  // Pre-compute edge dollar values once when edges change (avoids regex per render per edge).
+  // Keyed by edge object reference (not index) so lookups work with filtered subsets.
   const edgeValueMap = useMemo(() => {
     const map = new Map();
-    edges.forEach((e, i) => {
+    edges.forEach((e) => {
       const val = edgeValue(e);
-      if (val) map.set(i, val);
+      if (val) map.set(e, val);
     });
     return map;
   }, [edges]);
 
   // Viewport culling — only render SVG nodes visible in the current pan/zoom viewport.
   // Nodes outside the visible area get no DOM elements, dramatically reducing SVG count.
-  const visibleNodes = useMemo(() => {
-    if (!nodes || nodes.length === 0) return [];
+  const { visibleNodes, visibleNodeIds } = useMemo(() => {
+    if (!nodes || nodes.length === 0) return { visibleNodes: [], visibleNodeIds: new Set() };
     // Convert viewport bounds to graph coordinate space
     const margin = 40; // extra margin in graph-space pixels to avoid popping
     const invZoom = 1 / (zoom || 1);
@@ -688,15 +694,29 @@ export function GraphCanvas({
     const viewMinY = (-pan.y * invZoom) - margin;
     const viewMaxX = ((w - pan.x) * invZoom) + margin;
     const viewMaxY = ((h - pan.y) * invZoom) + margin;
-    return nodes.filter((n) => {
+    const vNodes = nodes.filter((n) => {
       const nx = n.x || 0;
       const ny = n.y || 0;
       return nx >= viewMinX && nx <= viewMaxX && ny >= viewMinY && ny <= viewMaxY;
     });
+    const vIds = new Set(vNodes.map((n) => n.id));
+    return { visibleNodes: vNodes, visibleNodeIds: vIds };
   }, [nodes, zoom, pan, w, h]);
 
+  // Filter edges to only include those where BOTH endpoints are viewport-visible.
+  // Without this, the canvas draws edges to node positions where no SVG bubble exists
+  // (because the node was viewport-culled), causing edge-node misalignment.
+  const visibleEdges = useMemo(() => {
+    if (!edges || edges.length === 0) return [];
+    return edges.filter((e) => {
+      const sid = typeof e.source === 'object' ? e.source.id : e.source;
+      const tid = typeof e.target === 'object' ? e.target.id : e.target;
+      return visibleNodeIds.has(sid) && visibleNodeIds.has(tid);
+    });
+  }, [edges, visibleNodeIds]);
+
   // Canvas edge renderer — replaces 5000+ SVG <line> elements with one draw call
-  useEdgeCanvas(edgeCanvasRef, edges, zoom, pan, w, h, {
+  useEdgeCanvas(edgeCanvasRef, visibleEdges, zoom, pan, w, h, {
     selectedNode,
     highlightedEdges,
     showOpportunities,
@@ -740,8 +760,8 @@ export function GraphCanvas({
 
       <svg
         className={styles.svg}
-        viewBox={`0 0 ${w} ${h}`}
-        preserveAspectRatio="xMidYMid meet"
+        width={w}
+        height={h}
       >
         <GlowFilters />
 
@@ -749,10 +769,10 @@ export function GraphCanvas({
 
           {/* Edge labels — show for selected node connections, or all edges with $ values when showValues is on */}
           {(!tooManyForEdgeLabels || showValues) && (selectedNode || showValues) &&
-            edges.map((e, i) => {
-              const isHighlighted = highlightedEdges.has(i);
+            visibleEdges.map((e, i) => {
+              const isHighlighted = highlightedEdges.has(e);
               if (selectedNode && !isHighlighted) return null;
-              const val = edgeValueMap.get(i) || '';
+              const val = edgeValueMap.get(e) || '';
               if (!selectedNode && showValues && !val) return null;
               const sx = e.source.x || 0;
               const sy = e.source.y || 0;
@@ -770,6 +790,17 @@ export function GraphCanvas({
                 />
               );
             })}
+
+          {/* Analysis overlay layers — rendered BELOW nodes but ABOVE edges */}
+          {(overlays.communities || overlays.capitalFlows || overlays.predictedLinks || overlays.bridges) && (
+            <AnalysisOverlays
+              overlays={overlays}
+              nodes={nodes}
+              edges={edges}
+              metrics={metrics}
+              predictedLinks={predictedLinks}
+            />
+          )}
 
           {/* Nodes — viewport-culled: only nodes within visible pan/zoom bounds are rendered */}
           {visibleNodes.map((n) => {

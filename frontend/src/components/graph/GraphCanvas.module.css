@@ -20,22 +20,20 @@
   position: absolute;
   top: 0;
   left: 0;
-  width: 100%;
-  height: 100%;
   pointer-events: none;
   z-index: 0;
+  /* width/height are set imperatively by useEdgeCanvas to match layoutWidth/layoutHeight */
 }
 
 .svg {
   position: relative;
-  width: 100%;
-  height: 100%;
   display: block;
   z-index: 1;
   /* Enable sub-pixel anti-aliasing for crisp edges */
   shape-rendering: geometricPrecision;
   /* Transparent background so canvas edges show through */
   background: transparent;
+  /* width/height are set via SVG attributes to match canvas dimensions exactly */
 }
 
 /* ── Zoom controls — Bloomberg-style compact buttons ── */
