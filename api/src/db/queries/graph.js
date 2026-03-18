@@ -27,7 +27,7 @@ export async function getGraphData({ nodeTypes = [], yearMax = 2026, region } = 
 
   // ── Step 1: Fetch ALL edges in one query ─────────────────────────────────
   const edgeRows = (await pool.query(
-    `SELECT source_id, target_id, rel, event_year, note, matching_score,
+    `SELECT source_id, target_id, rel, event_year, event_date, note, matching_score,
             edge_category, edge_style, edge_color, edge_opacity
      FROM graph_edges WHERE event_year <= $1`,
     [yearMax]
@@ -324,6 +324,7 @@ export async function getGraphData({ nodeTypes = [], yearMax = 2026, region } = 
       rel: e.rel,
       y: e.event_year,
     };
+    if (e.event_date) edge.event_date = e.event_date;
     if (e.note) edge.note = e.note;
     if (e.matching_score != null) edge.matching_score = parseFloat(e.matching_score);
     if (e.edge_category && e.edge_category !== 'historical') {

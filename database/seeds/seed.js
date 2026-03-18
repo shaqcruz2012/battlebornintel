@@ -118,10 +118,11 @@ async function seed() {
 
     // 3. Graph edges
     for (const e of VERIFIED_EDGES) {
+      const eventDate = e.y ? `${e.y}-01-01` : null;
       await client.query(
-        `INSERT INTO graph_edges (source_id, target_id, rel, note, event_year)
-         VALUES ($1, $2, $3, $4, $5)`,
-        [e.source, e.target, e.rel, e.note || null, e.y || null]
+        `INSERT INTO graph_edges (source_id, target_id, rel, note, event_year, event_date)
+         VALUES ($1, $2, $3, $4, $5, $6)`,
+        [e.source, e.target, e.rel, e.note || null, e.y || null, eventDate]
       );
     }
     console.log(`  graph_edges: ${VERIFIED_EDGES.length} rows`);
