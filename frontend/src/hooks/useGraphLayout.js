@@ -7,7 +7,7 @@ import { useEffect, useState, useRef, useMemo } from 'react';
  */
 export function useGraphLayout(nodes, edges, options = {}) {
   const {
-    iterations = 300,
+    iterations = 200,
     enabled = true,
     width = 1200,
     height = 700,
@@ -20,6 +20,7 @@ export function useGraphLayout(nodes, edges, options = {}) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
   const workerRef = useRef(null);
+  const prevNodeCountRef = useRef(0);
 
   // Initialize worker on mount
   useEffect(() => {
@@ -63,8 +64,16 @@ export function useGraphLayout(nodes, edges, options = {}) {
       // data load, allowing fitAll to fire on the first valid interim frame.
       setLayout({ nodes: [], edges: [] });
       setIsLoading(false);
+      prevNodeCountRef.current = 0;
       return;
     }
+
+    // Guard: skip re-layout if node count hasn't changed (prevents re-layout
+    // on refetch with same data when only object references changed)
+    if (nodes.length === prevNodeCountRef.current) {
+      return;
+    }
+    prevNodeCountRef.current = nodes.length;
 
     const worker = workerRef.current;
     if (!worker) {

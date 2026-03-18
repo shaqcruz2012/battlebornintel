@@ -315,88 +315,106 @@ function useEdgeCanvas(canvasRef, edges, zoom, pan, w, h, {
   selectedNode, highlightedEdges, showOpportunities, opportunityFilter,
   tooManyForFullOpacity,
 }) {
+  // Throttle canvas redraws to max 30fps using RAF guard.
+  // We schedule drawing via requestAnimationFrame and store the latest params in a ref.
+  const pendingRef = useRef(null);
+  const drawParamsRef = useRef(null);
+
+  // Store latest draw params so the RAF callback always has current data
+  drawParamsRef.current = { canvasRef, edges, zoom, pan, w, h, selectedNode, highlightedEdges, showOpportunities, opportunityFilter, tooManyForFullOpacity };
+
   useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
+    if (pendingRef.current) return; // already scheduled, skip
 
-    // Size canvas to match container (HiDPI-aware)
-    canvas.width = w * DPR;
-    canvas.height = h * DPR;
-    canvas.style.width = `${w}px`;
-    canvas.style.height = `${h}px`;
+    pendingRef.current = requestAnimationFrame(() => {
+      pendingRef.current = null;
+      const { canvasRef: cRef, edges: curEdges, zoom: curZoom, pan: curPan, w: curW, h: curH,
+              selectedNode: curSel, highlightedEdges: curHL, showOpportunities: curShowOpp,
+              opportunityFilter: curOppFilter, tooManyForFullOpacity: curTooMany } = drawParamsRef.current;
 
-    const ctx = canvas.getContext('2d');
-    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
-    ctx.clearRect(0, 0, w, h);
+      const canvas = cRef.current;
+      if (!canvas) return;
 
-    if (!edges.length) return;  // clear canvas but skip drawing when no edges
+      // Size canvas to match container (HiDPI-aware)
+      canvas.width = curW * DPR;
+      canvas.height = curH * DPR;
+      canvas.style.width = `${curW}px`;
+      canvas.style.height = `${curH}px`;
 
-    ctx.save();
-    ctx.translate(pan.x, pan.y);
-    ctx.scale(zoom, zoom);
+      const ctx = canvas.getContext('2d');
+      ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+      ctx.clearRect(0, 0, curW, curH);
 
-    // Batch edges by color+opacity to minimize context state changes
-    const batches = new Map();
+      if (!curEdges.length) return;
 
-    for (let i = 0; i < edges.length; i++) {
-      const e = edges[i];
-      const sx = e.source?.x ?? e.source ?? 0;
-      const sy = e.source?.y ?? e.source ?? 0;
-      const tx = e.target?.x ?? e.target ?? 0;
-      const ty = e.target?.y ?? e.target ?? 0;
+      ctx.save();
+      ctx.translate(curPan.x, curPan.y);
+      ctx.scale(curZoom, curZoom);
 
-      // Skip edges with no valid positions
-      if (sx === 0 && sy === 0 && tx === 0 && ty === 0) continue;
+      // Batch edges by color+opacity to minimize context state changes
+      const batches = new Map();
 
-      const isOpportunity = e.category === 'opportunity' || e.rel === 'qualifies_for' || e.rel === 'fund_opportunity' || e.rel === 'potential_lp';
-      if (isOpportunity && !showOpportunities) continue;
-      if (isOpportunity && opportunityFilter === 'programs' && e.rel !== 'qualifies_for') continue;
-      if (isOpportunity && opportunityFilter === 'funds' && e.rel !== 'fund_opportunity') continue;
+      for (let i = 0; i < curEdges.length; i++) {
+        const e = curEdges[i];
+        const sx = e.source?.x ?? e.source ?? 0;
+        const sy = e.source?.y ?? e.source ?? 0;
+        const tx = e.target?.x ?? e.target ?? 0;
+        const ty = e.target?.y ?? e.target ?? 0;
 
-      const rc = REL_CFG[e.rel];
-      const isHighlighted = highlightedEdges.has(e);
-      const dimEdge = selectedNode && !isHighlighted;
+        if (sx === 0 && sy === 0 && tx === 0 && ty === 0) continue;
 
-      const category = e.category || 'operational';
-      let categoryOpacity;
-      if (category === 'historical') {
-        categoryOpacity = tooManyForFullOpacity ? 0.18 : 0.25;
-      } else if (category === 'opportunity') {
-        categoryOpacity = 0.15;
-      } else {
-        categoryOpacity = tooManyForFullOpacity ? 0.22 : 0.35;
+        const isOpportunity = e.category === 'opportunity' || e.rel === 'qualifies_for' || e.rel === 'fund_opportunity' || e.rel === 'potential_lp';
+        if (isOpportunity && !curShowOpp) continue;
+        if (isOpportunity && curOppFilter === 'programs' && e.rel !== 'qualifies_for') continue;
+        if (isOpportunity && curOppFilter === 'funds' && e.rel !== 'fund_opportunity') continue;
+
+        const rc = REL_CFG[e.rel];
+        const isHighlighted = curHL.has(e);
+        const dimEdge = curSel && !isHighlighted;
+
+        const category = e.category || 'operational';
+        let categoryOpacity;
+        if (category === 'historical') {
+          categoryOpacity = curTooMany ? 0.18 : 0.25;
+        } else if (category === 'opportunity') {
+          categoryOpacity = 0.15;
+        } else {
+          categoryOpacity = curTooMany ? 0.22 : 0.35;
+        }
+
+        const edgeOpacity = isOpportunity
+          ? (e.opacity ?? (dimEdge ? 0.05 : 0.5))
+          : (dimEdge ? 0.06 : isHighlighted ? 0.85 : categoryOpacity);
+        const edgeWidth = isOpportunity ? (isHighlighted ? 1.5 : 0.5) : (isHighlighted ? 2 : 0.5);
+        const edgeColor = e.color || (isHighlighted ? (rc?.color || '#45D7C6') : (rc?.color || '#333'));
+
+        const key = `${edgeColor}|${edgeOpacity.toFixed(2)}|${edgeWidth}`;
+        if (!batches.has(key)) {
+          batches.set(key, { color: edgeColor, opacity: edgeOpacity, width: edgeWidth, lines: [] });
+        }
+        batches.get(key).lines.push(sx, sy, tx, ty);
       }
 
-      const edgeOpacity = isOpportunity
-        ? (e.opacity ?? (dimEdge ? 0.05 : 0.5))
-        : (dimEdge ? 0.06 : isHighlighted ? 0.85 : categoryOpacity);
-      const edgeWidth = isOpportunity ? (isHighlighted ? 1.5 : 0.5) : (isHighlighted ? 2 : 0.5);
-      const edgeColor = e.color || (isHighlighted ? (rc?.color || '#45D7C6') : (rc?.color || '#333'));
-
-      // Batch key: color + opacity + width (rounded)
-      const key = `${edgeColor}|${edgeOpacity.toFixed(2)}|${edgeWidth}`;
-      if (!batches.has(key)) {
-        batches.set(key, { color: edgeColor, opacity: edgeOpacity, width: edgeWidth, lines: [] });
+      for (const [, batch] of batches) {
+        ctx.globalAlpha = batch.opacity;
+        ctx.strokeStyle = batch.color;
+        ctx.lineWidth = batch.width;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        const lines = batch.lines;
+        for (let j = 0; j < lines.length; j += 4) {
+          ctx.moveTo(lines[j], lines[j + 1]);
+          ctx.lineTo(lines[j + 2], lines[j + 3]);
+        }
+        ctx.stroke();
       }
-      batches.get(key).lines.push(sx, sy, tx, ty);
-    }
 
-    // Draw each batch in a single path
-    for (const [, batch] of batches) {
-      ctx.globalAlpha = batch.opacity;
-      ctx.strokeStyle = batch.color;
-      ctx.lineWidth = batch.width;
-      ctx.lineCap = 'round';
-      ctx.beginPath();
-      const lines = batch.lines;
-      for (let j = 0; j < lines.length; j += 4) {
-        ctx.moveTo(lines[j], lines[j + 1]);
-        ctx.lineTo(lines[j + 2], lines[j + 3]);
-      }
-      ctx.stroke();
-    }
+      ctx.restore();
+    });
 
-    ctx.restore();
+    return () => {
+      if (pendingRef.current) { cancelAnimationFrame(pendingRef.current); pendingRef.current = null; }
+    };
   }, [canvasRef, edges, zoom, pan, w, h, selectedNode, highlightedEdges, showOpportunities, opportunityFilter, tooManyForFullOpacity]);
 }
 
@@ -704,6 +722,9 @@ export function GraphCanvas({
 
   // Viewport culling — only render SVG nodes visible in the current pan/zoom viewport.
   // Nodes outside the visible area get no DOM elements, dramatically reducing SVG count.
+  // Capped at 400 visible nodes — if more would be visible, keep only highest-degree nodes.
+  const MAX_VISIBLE_NODES = 400;
+
   const { visibleNodes, visibleNodeIds } = useMemo(() => {
     if (!nodes || nodes.length === 0) return { visibleNodes: [], visibleNodeIds: new Set() };
     // Convert viewport bounds to graph coordinate space
@@ -713,14 +734,43 @@ export function GraphCanvas({
     const viewMinY = (-pan.y * invZoom) - margin;
     const viewMaxX = ((w - pan.x) * invZoom) + margin;
     const viewMaxY = ((h - pan.y) * invZoom) + margin;
-    const vNodes = nodes.filter((n) => {
+    let vNodes = nodes.filter((n) => {
       const nx = n.x || 0;
       const ny = n.y || 0;
       return nx >= viewMinX && nx <= viewMaxX && ny >= viewMinY && ny <= viewMaxY;
     });
+
+    // Cap visible nodes to MAX_VISIBLE_NODES — keep highest-degree nodes + selected/connected
+    if (vNodes.length > MAX_VISIBLE_NODES) {
+      // Build a quick degree map from edges
+      const degMap = {};
+      edges.forEach((e) => {
+        const sid = typeof e.source === 'object' ? e.source.id : e.source;
+        const tid = typeof e.target === 'object' ? e.target.id : e.target;
+        degMap[sid] = (degMap[sid] || 0) + 1;
+        degMap[tid] = (degMap[tid] || 0) + 1;
+      });
+      // Always keep selected and connected nodes, hub nodes
+      const mustKeep = new Set();
+      if (selectedNode) {
+        mustKeep.add(selectedNode);
+        connectedIds.forEach((id) => mustKeep.add(id));
+      }
+      HUB_NODE_IDS.forEach((id) => mustKeep.add(id));
+
+      // Sort remaining by degree descending
+      vNodes.sort((a, b) => {
+        const aPriority = mustKeep.has(a.id) ? 1 : 0;
+        const bPriority = mustKeep.has(b.id) ? 1 : 0;
+        if (aPriority !== bPriority) return bPriority - aPriority;
+        return (degMap[b.id] || 0) - (degMap[a.id] || 0);
+      });
+      vNodes = vNodes.slice(0, MAX_VISIBLE_NODES);
+    }
+
     const vIds = new Set(vNodes.map((n) => n.id));
     return { visibleNodes: vNodes, visibleNodeIds: vIds };
-  }, [nodes, zoom, pan, w, h]);
+  }, [nodes, edges, zoom, pan, w, h, selectedNode, connectedIds]);
 
   // Filter edges to only include those where BOTH endpoints are viewport-visible.
   // Without this, the canvas draws edges to node positions where no SVG bubble exists
@@ -832,9 +882,9 @@ export function GraphCanvas({
             const dim = dimBySearch || dimBySelection;
             const isHub = HUB_NODE_IDS.has(n.id);
 
-            // Suppress text labels at low zoom to reduce SVG element count.
-            // Hub nodes and selected/connected nodes always show labels.
-            const suppressLabels = zoom < 0.6 && !isSelected && !isConnected && !isHub;
+            // Suppress ALL text labels below zoom 0.5 to reduce SVG element count.
+            // Only selected/connected nodes get labels at very low zoom.
+            const suppressLabels = zoom < 0.5 && !isSelected && !isConnected;
 
             // Galactic core radial opacity — only computed when graph is large enough
             // and the node is not already highlighted/dimmed by selection/search.

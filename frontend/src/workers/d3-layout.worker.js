@@ -62,8 +62,8 @@ function tiltedPos(u, v, cx, cy, aX, aY) {
 function clusterTarget(node, width, height) {
   const cx = width / 2;
   const cy = height / 2;
-  const aX = width * 0.42;   // horizontal semi-axis (wide)
-  const aY = height * 0.18;  // vertical semi-axis (narrow) — cigar shape
+  const aX = width * 0.45;   // horizontal semi-axis (wide) — increased for community spacing
+  const aY = height * 0.12;  // vertical semi-axis (narrow) — cigar shape
 
   const type = node.type || 'unknown';
   const id = node.id || '';
@@ -88,7 +88,7 @@ function clusterTarget(node, width, height) {
       const u = off.x + (hashFloat(id + '_jx') - 0.5) * 0.12;
       const v = off.y + (hashFloat(id + '_jy') - 0.5) * 0.25;
       const pos = tiltedPos(u, v, cx, cy, aX, aY);
-      return { ...pos, strength: 0.10 };
+      return { ...pos, strength: 0.15 };
     }
 
     case 'fund': {
@@ -98,7 +98,7 @@ function clusterTarget(node, width, height) {
       const u = Math.cos(fundAngle) * r;
       const v = Math.sin(fundAngle) * 0.6;
       const pos = tiltedPos(u, v, cx, cy, aX, aY);
-      return { ...pos, strength: 0.18 };
+      return { ...pos, strength: 0.25 };
     }
 
     case 'accelerator': {
@@ -107,7 +107,7 @@ function clusterTarget(node, width, height) {
       const u = (hashFloat(id + '_x') - 0.5) * 1.1;
       const v = side * 0.75;
       const pos = tiltedPos(u, v, cx, cy, aX, aY);
-      return { ...pos, strength: 0.12 };
+      return { ...pos, strength: 0.20 };
     }
 
     case 'ecosystem': {
@@ -116,7 +116,7 @@ function clusterTarget(node, width, height) {
       const u = Math.cos(eAngle) * 0.85;
       const v = Math.sin(eAngle) * 0.9;
       const pos = tiltedPos(u, v, cx, cy, aX, aY);
-      return { ...pos, strength: 0.10 };
+      return { ...pos, strength: 0.15 };
     }
 
     case 'external': {
@@ -126,7 +126,7 @@ function clusterTarget(node, width, height) {
       const u = Math.cos(hAngle) * hR;
       const v = Math.sin(hAngle) * hR;
       const pos = tiltedPos(u, v, cx, cy, aX, aY);
-      return { ...pos, strength: 0.06 };
+      return { ...pos, strength: 0.10 };
     }
 
     case 'person': {
@@ -135,7 +135,7 @@ function clusterTarget(node, width, height) {
       const u = Math.cos(pAngle) * 1.15;
       const v = Math.sin(pAngle) * 1.15;
       const pos = tiltedPos(u, v, cx, cy, aX, aY);
-      return { ...pos, strength: 0.05 };
+      return { ...pos, strength: 0.08 };
     }
 
     case 'sector':
@@ -146,7 +146,7 @@ function clusterTarget(node, width, height) {
       const u = Math.cos(sAngle) * 0.70;
       const v = Math.sin(sAngle) * 0.70;
       const pos = tiltedPos(u, v, cx, cy, aX, aY);
-      return { ...pos, strength: 0.12 };
+      return { ...pos, strength: 0.18 };
     }
 
     default: {
@@ -235,7 +235,7 @@ class ForceSimulation {
       .filter(Boolean);
 
     this.alpha = 1;
-    this.alphaDecay = 0.028;  // faster cooling — converges in ~250 ticks instead of 460
+    this.alphaDecay = 0.035;  // faster cooling — converges in ~180 ticks
     this.alphaMin = 0.005;    // stop earlier — last 0.005→0.001 adds no visible improvement
     this.velocityDecay = 0.38; // slightly higher damping for faster convergence
 
@@ -280,7 +280,7 @@ class ForceSimulation {
    * is the average number of neighbors within distMax.
    */
   applyRepulsion() {
-    const distMax = 350;
+    const distMax = 500;
     const distMax2 = distMax * distMax;
     const cellSize = distMax;
     const grid = this._buildSpatialGrid(cellSize);
@@ -346,8 +346,8 @@ class ForceSimulation {
     const strength = 0.85;
     const padding = 6;
     // Max possible collision distance: 13 + 13 + 6 = 32px.
-    // Use a cell size that covers this with single-cell neighbor checks.
-    const cellSize = 40;
+    // Use a larger cell size for fewer grid lookups with 1 sub-iteration.
+    const cellSize = 60;
     const grid = this._buildSpatialGrid(cellSize);
     const offsets = [[0, 0], [1, 0], [-1, 1], [0, 1], [1, 1]];
 
@@ -411,6 +411,9 @@ class ForceSimulation {
       const srcType = edge.sourceType || a.type;
       const tgtType = edge.targetType || b.type;
 
+      // Cross-community detection: different type prefixes mean different communities
+      const isCrossCommunity = srcType !== tgtType;
+
       // Company-company edges: very tight to keep the galactic core compact
       if (srcType === 'company' && tgtType === 'company') {
         idealLength = 35;
@@ -429,6 +432,11 @@ class ForceSimulation {
       } else {
         idealLength = 110;
         strength = 0.03;
+      }
+
+      // Weaken cross-community edges so communities stay separated
+      if (isCrossCommunity) {
+        strength = Math.min(strength, 0.02);
       }
 
       const dx = b.x - a.x;
@@ -569,9 +577,9 @@ self.addEventListener('message', (e) => {
     iterations: _iterations,
   } = e.data;
 
-  // Cap total iterations — with alphaDecay 0.028 the simulation converges
-  // in ~250 ticks. 300 is a safe budget; anything beyond wastes CPU.
-  const iterations = Math.min(_iterations || 300, 300);
+  // Cap total iterations — with alphaDecay 0.035 the simulation converges
+  // in ~180 ticks. 200 is a safe budget; anything beyond wastes CPU.
+  const iterations = Math.min(_iterations || 200, 200);
 
   try {
     // Initialize positions for nodes that haven't been placed yet
