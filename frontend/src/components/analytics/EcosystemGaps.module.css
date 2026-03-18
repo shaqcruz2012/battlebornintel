@@ -1,0 +1,422 @@
+/* ── EcosystemGaps: Structural Hole Analysis view ─────── */
+
+.container {
+  grid-column: 1 / -1;
+  padding: var(--space-lg);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xl);
+}
+
+/* ── Header ───────────────────────────────────────────── */
+
+.header {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-lg);
+  flex-wrap: wrap;
+}
+
+.title {
+  font-family: var(--font-heading);
+  font-size: var(--text-h2);
+  font-weight: var(--weight-bold);
+  color: var(--text-primary);
+  letter-spacing: -0.02em;
+  margin: 0;
+}
+
+.subtitle {
+  font-family: var(--font-body);
+  font-size: var(--text-body-sm);
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+/* ── Stats strip ──────────────────────────────────────── */
+
+.statsStrip {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 1px;
+  background: var(--border-grid);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  border: 1px solid var(--border-subtle);
+}
+
+.statCard {
+  background: var(--bg-card);
+  padding: var(--space-md) var(--space-lg);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.statLabel {
+  font-family: var(--font-mono);
+  font-size: var(--text-caption-sm);
+  color: var(--text-disabled);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.statValue {
+  font-family: var(--font-mono);
+  font-size: var(--text-h3);
+  font-weight: var(--weight-bold);
+  color: var(--text-primary);
+}
+
+.statValueTeal {
+  composes: statValue;
+  color: var(--accent-teal);
+}
+
+.statValueAmber {
+  composes: statValue;
+  color: var(--accent-amber, #f0a500);
+}
+
+.statValueRed {
+  composes: statValue;
+  color: var(--accent-red, #e05050);
+}
+
+/* ── Section headers ──────────────────────────────────── */
+
+.sectionHeader {
+  font-family: var(--font-heading);
+  font-size: var(--text-h4);
+  font-weight: var(--weight-semibold);
+  color: var(--text-primary);
+  margin: 0 0 var(--space-md) 0;
+  padding-bottom: var(--space-sm);
+  border-bottom: 1px solid var(--border-subtle);
+  letter-spacing: -0.01em;
+}
+
+.sectionDesc {
+  font-size: var(--text-body-sm);
+  color: var(--text-secondary);
+  margin: calc(-1 * var(--space-sm)) 0 var(--space-md) 0;
+}
+
+/* ── Bridge nodes ─────────────────────────────────────── */
+
+.bridgeGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: var(--space-md);
+}
+
+.bridgeCard {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: var(--space-md) var(--space-lg);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  transition: border-color 0.15s ease;
+}
+
+.bridgeCard:hover {
+  border-color: var(--accent-teal);
+}
+
+.bridgeTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm);
+}
+
+.bridgeName {
+  font-family: var(--font-heading);
+  font-size: var(--text-body);
+  font-weight: var(--weight-semibold);
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.bridgeType {
+  font-family: var(--font-mono);
+  font-size: var(--text-caption-sm);
+  color: var(--bg-primary);
+  background: var(--accent-teal);
+  padding: 2px 8px;
+  border-radius: var(--radius-sm);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  flex-shrink: 0;
+}
+
+.bridgeMetrics {
+  display: flex;
+  gap: var(--space-lg);
+  font-family: var(--font-mono);
+  font-size: var(--text-caption);
+  color: var(--text-secondary);
+}
+
+.bridgeMetric {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+}
+
+.bridgeMetricLabel {
+  color: var(--text-disabled);
+}
+
+.bridgeMetricValue {
+  color: var(--accent-teal);
+  font-weight: var(--weight-semibold);
+}
+
+.communityPills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.communityPill {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 3px;
+  background: var(--bg-elevated, var(--bg-secondary));
+  color: var(--text-secondary);
+  border: 1px solid var(--border-subtle);
+}
+
+/* ── Community map (visual) ───────────────────────────── */
+
+.communityMap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-md);
+  align-items: flex-start;
+}
+
+.communityBox {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: var(--space-md);
+  min-width: 200px;
+  max-width: 340px;
+  flex: 1 1 260px;
+}
+
+.communityBoxIsland {
+  composes: communityBox;
+  border-color: var(--accent-red, #e05050);
+  border-style: dashed;
+}
+
+.communityBoxHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-sm);
+  padding-bottom: var(--space-xs);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.communityId {
+  font-family: var(--font-mono);
+  font-size: var(--text-caption-sm);
+  color: var(--accent-teal);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.communityCount {
+  font-family: var(--font-mono);
+  font-size: var(--text-caption-sm);
+  color: var(--text-disabled);
+}
+
+.communityNodes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.communityNode {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  padding: 3px 8px;
+  border-radius: 3px;
+  background: var(--bg-elevated, var(--bg-secondary));
+  color: var(--text-secondary);
+  border: 1px solid transparent;
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.communityNodeBridge {
+  composes: communityNode;
+  border-color: var(--accent-teal);
+  color: var(--accent-teal);
+}
+
+.communityNodeHub {
+  composes: communityNode;
+  border-color: var(--accent-amber, #f0a500);
+  color: var(--accent-amber, #f0a500);
+}
+
+/* ── Gaps table ───────────────────────────────────────── */
+
+.gapsTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--font-mono);
+  font-size: var(--text-caption);
+}
+
+.gapsTable th {
+  text-align: left;
+  padding: var(--space-sm) var(--space-md);
+  font-size: var(--text-caption-sm);
+  color: var(--text-disabled);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  border-bottom: 1px solid var(--border-medium, var(--border-subtle));
+  font-weight: var(--weight-normal, 400);
+}
+
+.gapsTable td {
+  padding: var(--space-sm) var(--space-md);
+  color: var(--text-secondary);
+  border-bottom: 1px solid var(--border-subtle);
+  vertical-align: top;
+}
+
+.gapsTable tr:hover td {
+  background: var(--bg-hover, rgba(255, 255, 255, 0.02));
+}
+
+.severityHigh {
+  color: var(--accent-red, #e05050);
+  font-weight: var(--weight-semibold);
+}
+
+.severityMed {
+  color: var(--accent-amber, #f0a500);
+  font-weight: var(--weight-semibold);
+}
+
+.severityLow {
+  color: var(--text-secondary);
+}
+
+.gapBridgeList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.gapBridgeChip {
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 3px;
+  background: var(--bg-elevated, var(--bg-secondary));
+  color: var(--text-secondary);
+  border: 1px solid var(--border-subtle);
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ── Gap connector lines (visual indicator) ───────────── */
+
+.gapIndicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.gapDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent-teal);
+}
+
+.gapLine {
+  width: 24px;
+  height: 2px;
+  background: repeating-linear-gradient(
+    to right,
+    var(--accent-red, #e05050) 0 4px,
+    transparent 4px 8px
+  );
+}
+
+.gapDotRight {
+  composes: gapDot;
+  background: var(--accent-amber, #f0a500);
+}
+
+/* ── Loading / empty states ───────────────────────────── */
+
+.loading {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 300px;
+  color: var(--text-disabled);
+  font-family: var(--font-mono);
+  font-size: var(--text-body-sm);
+}
+
+.empty {
+  composes: loading;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.emptyTitle {
+  font-family: var(--font-heading);
+  font-size: var(--text-h4);
+  color: var(--text-secondary);
+}
+
+/* ── Responsive ───────────────────────────────────────── */
+
+@media (max-width: 768px) {
+  .bridgeGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .statsStrip {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .communityMap {
+    flex-direction: column;
+  }
+
+  .communityBox {
+    max-width: 100%;
+  }
+
+  .gapsTable {
+    font-size: 11px;
+  }
+
+  .gapsTable th,
+  .gapsTable td {
+    padding: var(--space-xs) var(--space-sm);
+  }
+}

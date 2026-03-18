@@ -36,6 +36,7 @@ export function useGraph(nodeTypes, yearMax, region) {
     queryKey: ['graph', nodeTypes, yearMax, region],
     queryFn: () => api.getGraph(nodeTypes, yearMax, region),
     staleTime: 300_000,
+    placeholderData: (previousData) => previousData,
   });
 }
 
@@ -137,6 +138,34 @@ export function useStakeholderActivities(params = {}) {
   return useQuery({
     queryKey: ['stakeholderActivities', params],
     queryFn: () => api.getStakeholderActivities(params),
+    staleTime: 300_000,
+  });
+}
+
+/** Investor matches for a company */
+export function useInvestorMatches(companyId) {
+  return useQuery({
+    queryKey: ['analytics', 'investorMatch', companyId],
+    queryFn: () => api.getInvestorMatches(companyId),
+    enabled: !!companyId,
+    staleTime: 300_000,
+  });
+}
+
+/** Capital flow analytics */
+export function useCapitalFlows() {
+  return useQuery({
+    queryKey: ['analytics', 'capital-flows'],
+    queryFn: () => api.getCapitalFlows(),
+    staleTime: 300_000,
+  });
+}
+
+/** Capital magnet rankings */
+export function useCapitalMagnets(limit = 20) {
+  return useQuery({
+    queryKey: ['analytics', 'capital-magnets', limit],
+    queryFn: () => api.getCapitalMagnets(limit),
     staleTime: 300_000,
   });
 }

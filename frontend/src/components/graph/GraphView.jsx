@@ -7,6 +7,7 @@ import { GraphOverlayControls } from './GraphControls';
 import { GraphCanvas } from './GraphCanvas';
 import { GraphLegend } from './GraphLegend';
 import { NodeDetail } from './NodeDetail';
+import { TemporalSlider } from './TemporalSlider';
 import styles from './GraphView.module.css';
 
 const DEFAULT_NODE_FILTERS = {
@@ -33,6 +34,16 @@ export function GraphView() {
   const [opportunityFilter, setOpportunityFilter] = useState('all');
   const [showValues, setShowValues] = useState(false);
   const [focusNodeId, setFocusNodeId] = useState(null);
+  const [yearMax, setYearMax] = useState(2026);
+  const [debouncedYearMax, setDebouncedYearMax] = useState(2026);
+
+  // Debounce yearMax by 300ms so scrubbing the slider doesn't flood API requests
+  const yearDebounceRef = useRef(null);
+  useEffect(() => {
+    clearTimeout(yearDebounceRef.current);
+    yearDebounceRef.current = setTimeout(() => setDebouncedYearMax(yearMax), 300);
+    return () => clearTimeout(yearDebounceRef.current);
+  }, [yearMax]);
 
   // FIX 7a: Wrap in useCallback so GraphOverlayControls gets a stable reference
   // and doesn't re-render on every parent state change.
@@ -107,7 +118,10 @@ export function GraphView() {
   );
 
   // Fetch graph data from API with region filtering
-  const { data: graphData, isLoading: loadingGraph, error: graphError } = useGraph(activeNodeTypes, 2026, filters.region);
+  const { data: graphData, isLoading: loadingGraph, error: graphError } = useGraph(activeNodeTypes, debouncedYearMax, filters.region);
+
+  // Fetch total edge count (yearMax=2026) for the edge count indicator
+  const { data: fullGraphData } = useGraph(activeNodeTypes, 2026, filters.region);
   const { data: metricsData, isLoading: loadingMetrics, error: metricsError } = useGraphMetrics(activeNodeTypes);
 
   // Compute D3 layout in Web Worker to keep UI responsive
@@ -247,6 +261,15 @@ export function GraphView() {
             onSearchChange={setSearch}
             nodes={layout.nodes}
             onFocusNode={handleFocusNode}
+          />
+          {/* Bottom-dock temporal slider */}
+          <TemporalSlider
+            min={2015}
+            max={2026}
+            value={yearMax}
+            onChange={setYearMax}
+            visibleEdges={rawEdges.length}
+            totalEdges={fullGraphData?.edges?.length || rawEdges.length}
           />
         </div>
 

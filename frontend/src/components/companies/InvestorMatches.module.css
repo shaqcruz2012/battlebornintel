@@ -1,0 +1,239 @@
+/* ── InvestorMatches — potential investor panel ──────────── */
+
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.matchList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+/* ── Match card ── */
+
+.matchCard {
+  padding: var(--space-md);
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--border-subtle);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.matchCard:hover {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+.matchCard:focus-visible {
+  outline: 2px solid var(--accent-teal, #45D7C6);
+  outline-offset: -2px;
+}
+
+/* Tier accents — left border */
+.tier_high {
+  border-left: 2px solid rgba(69, 215, 198, 0.5);
+}
+
+.tier_medium {
+  border-left: 2px solid rgba(250, 204, 21, 0.4);
+}
+
+.tier_low {
+  border-left: 2px solid rgba(91, 97, 112, 0.3);
+}
+
+/* ── Match header (name + bar) ── */
+
+.matchHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-md);
+}
+
+.matchInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+}
+
+.investorName {
+  font-family: var(--font-body);
+  font-size: var(--text-caption);
+  font-weight: var(--weight-semibold);
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.investorType {
+  font-family: var(--font-body);
+  font-size: 10px;
+  color: var(--text-disabled);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* ── Similarity bar ── */
+
+.barContainer {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  flex-shrink: 0;
+  width: 110px;
+}
+
+.barTrack {
+  flex: 1;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.barFill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.4s ease-out;
+}
+
+.barLabel {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: var(--weight-bold);
+  min-width: 32px;
+  text-align: right;
+  letter-spacing: -0.3px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Meta row ── */
+
+.matchMeta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+}
+
+.portfolioSize {
+  font-family: var(--font-body);
+  font-size: 10px;
+  color: var(--text-disabled);
+}
+
+.overlapCount {
+  font-family: var(--font-body);
+  font-size: 10px;
+  color: var(--accent-teal, #45D7C6);
+  opacity: 0.7;
+}
+
+/* ── Reasoning ── */
+
+.reasoning {
+  margin: 0;
+  font-family: var(--font-body);
+  font-size: var(--text-caption-sm);
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+/* ── Expanded overlap section ── */
+
+.overlapSection {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  padding-top: var(--space-sm);
+  border-top: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.overlapLabel {
+  font-family: var(--font-body);
+  font-size: 9px;
+  font-weight: var(--weight-semibold);
+  color: var(--text-disabled);
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+}
+
+.overlapList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-xs);
+}
+
+.overlapTag {
+  padding: 2px 8px;
+  border-radius: var(--radius-xs);
+  background: rgba(69, 215, 198, 0.06);
+  border: 1px solid rgba(69, 215, 198, 0.12);
+  font-family: var(--font-body);
+  font-size: 10px;
+  color: var(--accent-teal, #45D7C6);
+  white-space: nowrap;
+}
+
+/* ── Loading state ── */
+
+.loading {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-md) 0;
+}
+
+.loadingText {
+  font-family: var(--font-body);
+  font-size: var(--text-caption-sm);
+  color: var(--text-disabled);
+  font-style: italic;
+}
+
+.loadingDots {
+  display: flex;
+  gap: 3px;
+}
+
+.loadingDots span {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--accent-teal, #45D7C6);
+  opacity: 0.4;
+  animation: dotPulse 1.2s infinite ease-in-out;
+}
+
+.loadingDots span:nth-child(2) {
+  animation-delay: 0.15s;
+}
+
+.loadingDots span:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+@keyframes dotPulse {
+  0%, 100% { opacity: 0.2; transform: scale(0.8); }
+  50%      { opacity: 0.8; transform: scale(1.1); }
+}
+
+/* ── Empty state ── */
+
+.empty {
+  font-family: var(--font-body);
+  font-size: var(--text-caption-sm);
+  color: var(--text-disabled);
+  font-style: italic;
+  padding: var(--space-sm) 0;
+}

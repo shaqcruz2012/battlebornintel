@@ -88,4 +88,14 @@ export const api = {
   getStakeholderActivities: (params = {}) =>
     fetchJSON(`${BASE}/stakeholder-activities`, params).then((r) => r.data),
 
+  // Analytics
+  getInvestorMatches: (companyId, params = {}) =>
+    fetchJSON(`${BASE}/analytics/investor-match/${companyId}`, params).then((r) => r.data),
+
+  getCapitalFlows: () =>
+    fetchJSON(`${BASE}/analytics/capital-flows`).then((r) => r.data),
+
+  getCapitalMagnets: (limit = 20) =>
+    fetchJSON(`${BASE}/analytics/capital-magnets`, { limit }).then((r) => r.data),
+
 };

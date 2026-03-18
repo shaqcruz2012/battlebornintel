@@ -17,6 +17,11 @@ import adminRouter from './routes/admin.js';
 import dashboardBatchRouter from './routes/dashboard-batch.js';
 import stakeholderActivitiesRouter from './routes/stakeholder-activities.js';
 import opportunitiesRouter from './routes/opportunities.js';
+import graphTraversalRouter from './routes/graph-traversal.js';
+import analyticsRouter from './routes/analytics.js';
+import analyticsStructuralRouter from './routes/analytics-structural.js';
+import analyticsPredictionsRouter from './routes/analytics-predictions.js';
+import analyticsFlowRouter from './routes/analytics-flow.js';
 
 const app = express();
 
@@ -77,12 +82,19 @@ app.get('/api/cache-stats', adminLimit, requireAdminKey, (req, res) => {
 app.use('/api/companies',              publicLimit, cacheMiddleware('companies',             300_000, { cacheControl: 'public, max-age=3600' }),  companiesRouter);
 app.use('/api/funds',                  publicLimit, cacheMiddleware('funds',                 300_000, { cacheControl: 'public, max-age=3600' }),  fundsRouter);
 app.use('/api/graph',                  publicLimit, cacheMiddleware('graph',                 300_000, { cacheControl: 'public, max-age=3600' }),  graphRouter);
+app.use('/api/graph',                  publicLimit, cacheMiddleware('graphTraversal',        300_000, { cacheControl: 'public, max-age=300' }),   graphTraversalRouter);
 app.use('/api/kpis',                   publicLimit, cacheMiddleware('kpis',                  120_000, { cacheControl: 'public, max-age=120' }),   kpisRouter);
 app.use('/api/timeline',               publicLimit, cacheMiddleware('timeline',              120_000, { cacheControl: 'public, max-age=120' }),   timelineRouter);
 app.use('/api/constants',              publicLimit, cacheMiddleware('constants',             600_000, { cacheControl: 'public, max-age=3600' }),  constantsRouter);
 app.use('/api/analysis',               publicLimit, cacheMiddleware('analysis',               60_000, { cacheControl: 'private, max-age=60' }),   analysisRouter);
 app.use('/api/stakeholder-activities', publicLimit, cacheMiddleware('stakeholderActivities',  60_000, { cacheControl: 'private, max-age=60' }),   stakeholderActivitiesRouter);
 app.use('/api/opportunities',          publicLimit, cacheMiddleware('opportunities',         300_000, { cacheControl: 'public, max-age=3600' }),  opportunitiesRouter);
+// Analytics routes (Phase 2 engines)
+app.use('/api/analytics', publicLimit, cacheMiddleware('analytics',           300_000, { cacheControl: 'public, max-age=300' }), analyticsRouter);
+app.use('/api/analytics', publicLimit, cacheMiddleware('analyticsStructural', 300_000, { cacheControl: 'public, max-age=300' }), analyticsStructuralRouter);
+app.use('/api/analytics', publicLimit, cacheMiddleware('analyticsPredictions',300_000, { cacheControl: 'public, max-age=300' }), analyticsPredictionsRouter);
+app.use('/api/analytics', publicLimit, cacheMiddleware('analyticsFlow',       300_000, { cacheControl: 'public, max-age=300' }), analyticsFlowRouter);
+
 // Admin routes: key-gated + strict rate limit
 app.use('/api/admin', adminLimit, requireAdminKey, adminRouter);
 

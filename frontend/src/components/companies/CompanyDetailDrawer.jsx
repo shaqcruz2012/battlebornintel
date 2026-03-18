@@ -2,6 +2,7 @@ import { useEffect, useCallback, useMemo } from 'react';
 import { useCompany, useCompanyAnalysis } from '../../api/hooks';
 import { fmt, stageLabel } from '../../engine/formatters';
 import { GRADE_COLORS, STAGE_COLORS, REL_CFG } from '../../data/constants';
+import { InvestorMatches } from './InvestorMatches';
 import styles from './CompanyDetailDrawer.module.css';
 
 /* ── Grade color coding ── */
@@ -254,6 +255,12 @@ export function CompanyDetailDrawer({ companyId, onClose }) {
                   </div>
                 </div>
               )}
+
+              {/* ── Potential Investors ── */}
+              <div className={styles.section}>
+                <SectionLabel>Potential Investors</SectionLabel>
+                <InvestorMatches companyId={companyId} />
+              </div>
 
               {/* ── Graph Edges (grouped by relationship type) ── */}
               {edgeGroupEntries.length > 0 && (

@@ -14,6 +14,9 @@ const CompaniesView = lazy(() => import('./components/companies/CompaniesView').
 const FundsView = lazy(() => import('./components/funds/FundsView').then(m => ({ default: m.FundsView })));
 const StakeholderFeedView = lazy(() => import('./components/feed/StakeholderFeedView').then(m => ({ default: m.StakeholderFeedView })));
 const ResourceMatrix = lazy(() => import('./components/ecosystem/ResourceMatrix'));
+const EcosystemGaps = lazy(() => import('./components/analytics/EcosystemGaps').then(m => ({ default: m.EcosystemGaps || m.default })));
+const RecommendedConnections = lazy(() => import('./components/analytics/RecommendedConnections').then(m => ({ default: m.RecommendedConnections || m.default })));
+const CapitalFlowView = lazy(() => import('./components/analytics/CapitalFlowView').then(m => ({ default: m.CapitalFlowView || m.default })));
 
 const TabFallback = () => (
   <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-secondary)' }}>
@@ -64,6 +67,9 @@ export default function App() {
                 {view === 'feed' && <StakeholderFeedView />}
                 {view === 'graph' && <GraphView />}
                 {view === 'ecosystem' && <ResourceMatrix />}
+                {view === 'ecosystemGaps' && <EcosystemGaps />}
+                {view === 'capitalFlows' && <CapitalFlowView />}
+                {view === 'predictions' && <RecommendedConnections />}
               </Suspense>
             </div>
           </ErrorBoundaryWithReset>

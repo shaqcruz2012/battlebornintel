@@ -12,6 +12,9 @@ const VIEWS = [
   { id: 'feed', label: 'Activity Feed' },
   { id: 'graph', label: 'Graph Intelligence' },
   { id: 'ecosystem', label: 'Ecosystem Map' },
+  { id: 'ecosystemGaps', label: 'Ecosystem Gaps' },
+  { id: 'capitalFlows', label: 'Capital Flows' },
+  { id: 'predictions', label: 'Predicted Links' },
 ];
 
 const GRAPH_DEFAULT_NODE_TYPES = [
