@@ -3,7 +3,9 @@
 .canvasWrap {
   position: relative;
   flex: 1;
-  min-height: 640px;
+  min-height: 0;              /* allow shrink to fit parent — was 640px, caused overflow */
+  width: 100%;
+  height: 100%;
   background: var(--bg-root);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-md);
@@ -40,7 +42,7 @@
 
 .zoomControls {
   position: absolute;
-  bottom: var(--space-lg);
+  bottom: 56px;             /* above TemporalSlider (~48px height + 8px bottom offset) */
   right: var(--space-lg);
   display: flex;
   flex-direction: column;

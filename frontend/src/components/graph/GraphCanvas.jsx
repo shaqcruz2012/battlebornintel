@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useMemo, useEffect, useLayoutEffect, memo } from 'react';
+import { useState, useRef, useCallback, useMemo, useEffect, memo } from 'react';
 import { NODE_CFG, REL_CFG, COMM_COLORS } from '../../data/constants';
 import { useWindowSize } from '../../hooks/useWindowSize';
 import { fmt } from '../../engine/formatters';
@@ -296,7 +296,7 @@ function useEdgeCanvas(canvasRef, edges, zoom, pan, w, h, {
 }) {
   useEffect(() => {
     const canvas = canvasRef.current;
-    if (!canvas || !edges.length) return;
+    if (!canvas) return;
 
     // Size canvas to match container (HiDPI-aware)
     canvas.width = w * DPR;
@@ -307,6 +307,9 @@ function useEdgeCanvas(canvasRef, edges, zoom, pan, w, h, {
     const ctx = canvas.getContext('2d');
     ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
     ctx.clearRect(0, 0, w, h);
+
+    if (!edges.length) return;  // clear canvas but skip drawing when no edges
+
     ctx.save();
     ctx.translate(pan.x, pan.y);
     ctx.scale(zoom, zoom);
@@ -408,46 +411,12 @@ export function GraphCanvas({
   const tooltipRef = useRef(null);
   const tooltipActiveRef = useRef(false);
 
-  // Track the actual rendered container dimensions via ResizeObserver.
-  // This is the authoritative size used for the SVG viewBox and canvas sizing so
-  // that both layers share the same pixel coordinate space.
-  // Seed with layoutWidth/layoutHeight (from the worker) or a window-based estimate
-  // so the initial render is correct before the observer fires.
-  const fallbackW = layoutWidth  ?? Math.min(winW - 16, 1800);
-  const fallbackH = layoutHeight ?? Math.max(640, winH - 104);
-  const [containerSize, setContainerSize] = useState({ w: fallbackW, h: fallbackH });
-
-  useLayoutEffect(() => {
-    const el = containerRef.current;
-    if (!el) return;
-    // Seed from actual DOM size immediately (avoids a flash with wrong dimensions)
-    const rect = el.getBoundingClientRect();
-    if (rect.width > 0 && rect.height > 0) {
-      setContainerSize({ w: rect.width, h: rect.height });
-    }
-    // Keep tracking via ResizeObserver for window resize / sidebar expand
-    const ro = new ResizeObserver((entries) => {
-      const entry = entries[0];
-      if (!entry) return;
-      const { width, height } = entry.contentRect;
-      if (width > 0 && height > 0) {
-        setContainerSize((prev) => {
-          // Only update on meaningful changes to avoid unnecessary re-renders
-          if (Math.abs(width - prev.w) > 2 || Math.abs(height - prev.h) > 2) {
-            return { w: width, h: height };
-          }
-          return prev;
-        });
-      }
-    });
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, []); // run once — the observer handles subsequent changes
-
-  // w/h are the actual container pixel dimensions. All coordinate math (viewBox,
-  // canvas sizing, fitAll, pan) uses these so the SVG and canvas layers are aligned.
-  const w = containerSize.w;
-  const h = containerSize.h;
+  // Use layoutWidth/layoutHeight as the authoritative coordinate system.
+  // These are the dimensions the D3 worker used to position nodes, so the SVG
+  // viewBox and canvas must use the same values. GraphView measures the actual
+  // container via ResizeObserver and passes those dimensions here.
+  const w = layoutWidth  ?? Math.min(winW - 16, 1800);
+  const h = layoutHeight ?? Math.max(640, winH - 104);
 
   const fitAll = useCallback(() => {
     const { nodes } = layout;
@@ -458,15 +427,18 @@ export function GraphCanvas({
     const maxX = Math.max(...xs);
     const minY = Math.min(...ys);
     const maxY = Math.max(...ys);
-    const padX = 60, padY = 60;
+    const padX = 60;
+    const padTop = 60;
+    const padBottom = 80;  // extra space for TemporalSlider at bottom
     const fitW = Math.max(maxX - minX, 1);
     const fitH = Math.max(maxY - minY, 1);
     // Clamp minimum zoom to 0.15 — prevents near-zero scale when positions are extreme
-    const s = Math.max(0.15, Math.min((w - padX * 2) / fitW, (h - padY * 2) / fitH, 2));
+    const s = Math.max(0.15, Math.min((w - padX * 2) / fitW, (h - padTop - padBottom) / fitH, 2));
     const cx = (minX + maxX) / 2;
     const cy = (minY + maxY) / 2;
     setZoom(s);
-    setPan({ x: w / 2 - cx * s, y: h / 2 - cy * s });
+    // Shift up slightly to center between top and slider, not the full viewport
+    setPan({ x: w / 2 - cx * s, y: (h - padBottom + padTop) / 2 - cy * s });
   }, [layout, w, h]);
 
   // Auto-fit: wait for the D3 worker to finish (layoutSettled) before fitting.
@@ -474,11 +446,13 @@ export function GraphCanvas({
   // are still exploding outward from the force simulation's initial state.
   const hasFitRef = useRef(false);
   useEffect(() => {
-    if (layout.nodes.length === 0) {
+    if (layout.nodes.length === 0 || !layoutSettled) {
+      // Reset so fitAll fires again when the next layout settles
+      // (e.g., after a resize triggers a new worker run).
       hasFitRef.current = false;
       return;
     }
-    if (layout.nodes.length > 0 && !hasFitRef.current && layoutSettled) {
+    if (!hasFitRef.current) {
       hasFitRef.current = true;
       requestAnimationFrame(fitAll);
     }
@@ -745,7 +719,7 @@ export function GraphCanvas({
       <svg
         className={styles.svg}
         viewBox={`0 0 ${w} ${h}`}
-        preserveAspectRatio="none"
+        preserveAspectRatio="xMidYMid meet"
       >
         <GlowFilters />
 

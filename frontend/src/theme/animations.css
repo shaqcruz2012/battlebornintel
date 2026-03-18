@@ -79,6 +79,12 @@
 
 .fade-in {
   animation: fadeIn 0.2s ease-out;
+  /* Participate in the AppShell flex column so children (like GraphView)
+     can stretch to fill remaining viewport height via flex: 1. */
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
 }
 
 /* ── Staggered entry ────────────────────────────────────── */

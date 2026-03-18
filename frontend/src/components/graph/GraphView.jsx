@@ -2,7 +2,6 @@ import { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import { useFilters } from '../../hooks/useFilters';
 import { useGraph, useGraphMetrics } from '../../api/hooks';
 import { useGraphLayout } from '../../hooks/useGraphLayout';
-import { useWindowSize } from '../../hooks/useWindowSize';
 import { GraphOverlayControls } from './GraphControls';
 import { GraphCanvas } from './GraphCanvas';
 import { GraphLegend } from './GraphLegend';
@@ -25,7 +24,6 @@ const DEFAULT_NODE_FILTERS = {
 
 export function GraphView() {
   const { filters } = useFilters();
-  const { width: winW, height: winH } = useWindowSize();
   const [nodeFilters, setNodeFilters] = useState(DEFAULT_NODE_FILTERS);
   const [colorMode, setColorMode] = useState('type');
   const [search, setSearch] = useState('');
@@ -71,45 +69,44 @@ export function GraphView() {
     return () => clearTimeout(t);
   }, [focusNodeId]);
 
-  // Debounce dimensions so D3 layout doesn't recompute on every resize pixel.
-  // No controls bar above canvas any more — just header(64) + tabs(40) = 104px overhead.
-  const rawW = Math.min(winW - 16, 1800);
-  const rawH = Math.max(640, winH - 104);
-  const [dims, setDims] = useState({ w: rawW, h: rawH });
-  const debounceRef = useRef(null);
-  useEffect(() => {
-    clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => {
-      // Only update dims when the change is significant (>50px) to avoid
-      // unnecessary re-renders from minor resize events.
-      setDims((prev) => {
-        if (Math.abs(rawW - prev.w) > 50 || Math.abs(rawH - prev.h) > 50) {
-          return { w: rawW, h: rawH };
-        }
-        return prev;
-      });
-    }, 200);
-    return () => clearTimeout(debounceRef.current);
-  }, [rawW, rawH]);
-
-  // Ref to measure the actual canvas container size after mount.
-  // Only override dims when the measured size differs by more than 50px from the
-  // current estimate — avoids a spurious layout re-run on the first render when
-  // the CSS-computed size is nearly identical to the window-based estimate.
+  // Measure the actual canvas container via ResizeObserver so the D3 layout
+  // worker uses the real DOM size instead of a fragile window-based estimate.
+  // This eliminates mismatches between worker coordinate space and render size.
   const canvasRef = useRef(null);
+  const [dims, setDims] = useState({ w: 1200, h: 700 }); // safe initial fallback
+  const debounceRef = useRef(null);
+
   useEffect(() => {
     const el = canvasRef.current;
     if (!el) return;
+    // Seed immediately from DOM measurement
     const rect = el.getBoundingClientRect();
     if (rect.width > 0 && rect.height > 0) {
-      setDims((prev) => {
-        if (Math.abs(rect.width - prev.w) > 50 || Math.abs(rect.height - prev.h) > 50) {
-          return { w: rect.width, h: rect.height };
-        }
-        return prev;
-      });
+      setDims({ w: rect.width, h: rect.height });
     }
-  }, []); // run once on mount
+    // Track subsequent resizes with debounce
+    const ro = new ResizeObserver((entries) => {
+      const entry = entries[0];
+      if (!entry) return;
+      const { width, height } = entry.contentRect;
+      if (width > 0 && height > 0) {
+        clearTimeout(debounceRef.current);
+        debounceRef.current = setTimeout(() => {
+          setDims((prev) => {
+            if (Math.abs(width - prev.w) > 20 || Math.abs(height - prev.h) > 20) {
+              return { w: width, h: height };
+            }
+            return prev;
+          });
+        }, 200);
+      }
+    });
+    ro.observe(el);
+    return () => {
+      ro.disconnect();
+      clearTimeout(debounceRef.current);
+    };
+  }, []); // run once on mount — observer handles subsequent changes
 
   // Active node types for API query
   const activeNodeTypes = useMemo(

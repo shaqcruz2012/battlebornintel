@@ -1,11 +1,17 @@
 /* ── GraphView — full-viewport immersive graph layout ── */
 
-/* Takes over the full height below header + tabs (64 + 40 = 104px) */
+/* Takes over the full remaining height below header + tabs.
+   Uses flex: 1 to fill the parent (AppShell column) so the exact pixel
+   offset doesn't matter — no fragile calc() that breaks when header/tab
+   height changes. Falls back to calc(100dvh - 124px) as min-height for
+   safety in non-flex contexts. */
 .graphPage {
   /* Negative horizontal margin counteracts AppShell's 32px side padding
      so the graph bleeds edge-to-edge on its row */
   margin: 0 calc(-1 * var(--grid-margin));
-  height: calc(100dvh - 104px);
+  flex: 1;
+  min-height: 0;                      /* allow flex shrink below content size */
+  height: calc(100dvh - 124px);       /* fallback for non-flex parents */
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -14,6 +20,7 @@
 .body {
   display: flex;
   flex: 1;
+  min-height: 0;         /* critical: allow flex shrink inside graphPage */
   overflow: hidden;
   position: relative;
 }
@@ -21,6 +28,8 @@
 /* Canvas area fills all horizontal space left after NodeDetail */
 .canvasOuter {
   flex: 1;
+  min-height: 0;           /* allow flex shrink — prevents overflow */
+  min-width: 0;
   position: relative;
   overflow: hidden;
 }
