@@ -164,7 +164,7 @@ export function useSearchIndex() {
           id: f.id ?? f.name,
           category: 'funds',
           name: f.name,
-          subtitle: [f.region, f.type].filter(Boolean).join(' · '),
+          subtitle: f.type || '',
           view: 'funds',
           payload: f,
         }));

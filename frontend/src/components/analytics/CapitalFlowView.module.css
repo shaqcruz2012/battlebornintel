@@ -123,6 +123,19 @@
   transition: opacity 0.2s ease;
 }
 
+.sankeyLinkLabels {
+  pointer-events: none;
+}
+
+.sankeyLinkValue {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  fill: var(--text-secondary, #a1a1aa);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+  transition: opacity 0.2s ease;
+}
+
 .sankeyColumnHeader {
   font-family: var(--font-body);
   font-size: 10px;

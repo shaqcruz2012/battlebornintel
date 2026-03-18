@@ -216,7 +216,29 @@ function FilterGroup({ label, options, value, onChange }) {
   );
 }
 
-function FeedCard({ activity }) {
+function DataQualityBadge({ activity }) {
+  const hasSource = !!activity.source_url;
+  const isVerified = !!activity.verified;
+  const confidence = activity.confidence;
+
+  let label = 'UNVERIFIED';
+  let level = 'low';
+  if (isVerified && hasSource) {
+    label = 'HIGH CONFIDENCE';
+    level = 'high';
+  } else if (hasSource || confidence >= 0.7) {
+    label = 'SOURCED';
+    level = 'medium';
+  }
+
+  return (
+    <span className={`${styles.dataQualityBadge} ${styles[`dq_${level}`]}`}>
+      {label}
+    </span>
+  );
+}
+
+function FeedCard({ activity, isExpanded, onToggle }) {
   const barColor = getStakeholderBarColor(activity.stakeholder_type);
   const eventBadge = getEventTypeBadge(activity.activity_type);
   const regionBadge = getRegionBadge(activity.location);
@@ -224,34 +246,45 @@ function FeedCard({ activity }) {
   const typeLabel = (activity.activity_type_label || activity.activity_type || '').toUpperCase();
   const regionLabel = activity.location_label || (activity.location || '').toUpperCase();
 
+  const handleCardClick = useCallback(() => {
+    onToggle(activity.id);
+  }, [activity.id, onToggle]);
+
   return (
-    <div className={styles.card}>
+    <div className={`${styles.card} ${isExpanded ? styles.cardExpanded : ''}`}>
       <div className={styles.cardBar} style={{ backgroundColor: barColor }} />
       <div className={styles.cardBody}>
-        <div className={styles.cardMeta}>
-          <div className={styles.cardMetaLeft}>
-            <span className={styles.cardLiveIndicator} />
-            <time className={styles.cardTimestamp}>{dateLabel}</time>
+        <div className={styles.cardClickArea} onClick={handleCardClick} role="button" tabIndex={0}>
+          <div className={styles.cardMeta}>
+            <div className={styles.cardMetaLeft}>
+              <span className={styles.cardLiveIndicator} />
+              <time className={styles.cardTimestamp}>{dateLabel}</time>
+            </div>
+            <div className={styles.cardMetaRight}>
+              <span
+                className={styles.regionBadge}
+                style={{ backgroundColor: regionBadge.bg, color: regionBadge.text }}
+              >
+                {regionLabel}
+              </span>
+              <span
+                className={styles.eventTypeBadge}
+                style={{ backgroundColor: eventBadge.bg, color: eventBadge.text }}
+              >
+                {typeLabel}
+              </span>
+              <span className={styles.expandChevron}>
+                {isExpanded ? '\u25B2' : '\u25BC'}
+              </span>
+            </div>
           </div>
-          <div className={styles.cardMetaRight}>
-            <span
-              className={styles.regionBadge}
-              style={{ backgroundColor: regionBadge.bg, color: regionBadge.text }}
-            >
-              {regionLabel}
-            </span>
-            <span
-              className={styles.eventTypeBadge}
-              style={{ backgroundColor: eventBadge.bg, color: eventBadge.text }}
-            >
-              {typeLabel}
-            </span>
-          </div>
+
+          <h3 className={styles.cardTitle}>{activity.company_name}</h3>
+
+          <p className={isExpanded ? styles.cardDescriptionFull : styles.cardDescription}>
+            {activity.description}
+          </p>
         </div>
-
-        <h3 className={styles.cardTitle}>{activity.company_name}</h3>
-
-        <p className={styles.cardDescription}>{activity.description}</p>
 
         <div className={styles.cardFooter}>
           <div className={styles.cardFooterLeft}>
@@ -281,6 +314,7 @@ function FeedCard({ activity }) {
                 rel="noopener noreferrer"
                 className={styles.sourceLink}
                 title={activity.source || 'Source'}
+                onClick={(e) => e.stopPropagation()}
               >
                 {activity.source && !activity.source.startsWith('http')
                   ? activity.source
@@ -292,6 +326,51 @@ function FeedCard({ activity }) {
             )}
           </div>
         </div>
+
+        {/* Expandable detail section */}
+        {isExpanded && (
+          <div className={styles.detailSection}>
+            <div className={styles.detailGrid}>
+              {activity.stakeholder_type_label && (
+                <div className={styles.detailItem}>
+                  <span className={styles.detailLabel}>STAKEHOLDER TYPE</span>
+                  <span className={styles.detailValue}>{activity.stakeholder_type_label}</span>
+                </div>
+              )}
+              <div className={styles.detailItem}>
+                <span className={styles.detailLabel}>DATA QUALITY</span>
+                <DataQualityBadge activity={activity} />
+              </div>
+              {activity.source_url && (
+                <div className={styles.detailItem}>
+                  <span className={styles.detailLabel}>SOURCE</span>
+                  <a
+                    href={activity.source_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={styles.detailSourceLink}
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    {activity.source || 'View Source'} &#8599;
+                  </a>
+                </div>
+              )}
+              {activity.company_name && (
+                <div className={styles.detailItem}>
+                  <span className={styles.detailLabel}>COMPANY</span>
+                  <span className={styles.detailCompanyLink}>{activity.company_name}</span>
+                </div>
+              )}
+            </div>
+
+            {activity.description && (
+              <div className={styles.detailFullDescription}>
+                <span className={styles.detailLabel}>FULL DESCRIPTION</span>
+                <p className={styles.detailDescriptionText}>{activity.description}</p>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -410,6 +489,11 @@ export function StakeholderFeedView() {
   const [eventType, setEventType] = useState('all');
   const [dateRange, setDateRange] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [expandedId, setExpandedId] = useState(null);
+
+  const handleToggleExpand = useCallback((id) => {
+    setExpandedId((prev) => (prev === id ? null : id));
+  }, []);
 
   const apiParams = useMemo(() => {
     const bounds = getDateRangeBounds(dateRange);
@@ -560,7 +644,12 @@ export function StakeholderFeedView() {
                   )}
                 </div>
                 {filtered.map((activity) => (
-                  <FeedCard key={activity.id} activity={activity} />
+                  <FeedCard
+                    key={activity.id}
+                    activity={activity}
+                    isExpanded={expandedId === activity.id}
+                    onToggle={handleToggleExpand}
+                  />
                 ))}
               </div>
             )}

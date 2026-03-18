@@ -247,6 +247,35 @@ function SankeyDiagram({ flows, width = 900, height = 520 }) {
         })}
       </g>
 
+      {/* Link value labels — only for flows > $1M */}
+      <g className={styles.sankeyLinkLabels}>
+        {links
+          .filter((link) => link.value > 1)
+          .map((link) => {
+            // Compute midpoint of the cubic bezier at t=0.5
+            const cx0 = link.x0 + (link.x1 - link.x0) * 0.4;
+            const cx1 = link.x0 + (link.x1 - link.x0) * 0.6;
+            const t = 0.5;
+            const mt = 1 - t;
+            const mx = mt * mt * mt * link.x0 + 3 * mt * mt * t * cx0 + 3 * mt * t * t * cx1 + t * t * t * link.x1;
+            const my = mt * mt * mt * link.y0 + 3 * mt * mt * t * link.y0 + 3 * mt * t * t * link.y1 + t * t * t * link.y1;
+            const isHovered = hovered === link.source || hovered === link.target;
+            return (
+              <text
+                key={`label-${link.id}`}
+                x={mx}
+                y={my}
+                textAnchor="middle"
+                dominantBaseline="central"
+                className={styles.sankeyLinkValue}
+                opacity={hovered ? (isHovered ? 0.85 : 0.05) : 0.55}
+              >
+                {fmtM(link.value)}
+              </text>
+            );
+          })}
+      </g>
+
       {/* Source nodes (funds) */}
       {srcNodes.map((n) => (
         <g

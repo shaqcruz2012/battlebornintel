@@ -61,13 +61,16 @@ export const STAKEHOLDER_MAP = Object.fromEntries(
 
 /**
  * Identifies Knowledge Fund edges from graph data.
- * Knowledge Fund = GOED → accelerator edges where note mentions "Knowledge Fund".
+ * Knowledge Fund = GOED → entity edges where note mentions "Knowledge Fund",
+ * or GOED grants_to relationships that are Knowledge Fund grants.
  */
 export function getKnowledgeFundEdges(edges) {
   return edges.filter(
     (e) =>
       (e.source === 'e_goed' || e.source === 'x_goed') &&
-      e.note &&
-      e.note.toLowerCase().includes('knowledge fund')
+      (
+        (e.note && e.note.toLowerCase().includes('knowledge fund')) ||
+        (e.rel === 'grants_to' && e.note && e.note.toLowerCase().includes('knowledge'))
+      )
   );
 }

@@ -1,6 +1,7 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { useInvestors, useInvestorStats } from '../../api/hooks';
 import { MainGrid } from '../layout/AppShell';
+import { downloadCsv } from '../../utils/exportCsv';
 import styles from './InvestorsView.module.css';
 
 /* ── Constants ──────────────────────────────────────────────── */
@@ -240,6 +241,37 @@ export function InvestorsView() {
     return groups;
   }, [filteredExtInvestors, extSort]);
 
+  const handleExportCsv = useCallback(() => {
+    // Combine NV funds and external investors into one export
+    const fundRows = sortedFunds.map((f) => ({
+      name: f.name,
+      category: 'NV Fund',
+      type: f.type,
+      deployed: f.deployed,
+      allocated: f.allocated,
+      companies: f.companies,
+      portfolioNames: '',
+    }));
+    const extRows = filteredExtInvestors.map((inv) => ({
+      name: inv.name,
+      category: 'External',
+      type: inv.type,
+      deployed: '',
+      allocated: '',
+      companies: inv.portfolioSize,
+      portfolioNames: inv.portfolio.map((c) => c.name).join('; '),
+    }));
+    downloadCsv([...fundRows, ...extRows], [
+      { label: 'Name', accessor: (r) => r.name },
+      { label: 'Category', accessor: (r) => r.category },
+      { label: 'Type', accessor: (r) => r.type },
+      { label: 'Deployed ($M)', accessor: (r) => r.deployed },
+      { label: 'Allocated ($M)', accessor: (r) => r.allocated },
+      { label: 'NV Companies', accessor: (r) => r.companies },
+      { label: 'Portfolio', accessor: (r) => r.portfolioNames },
+    ], 'bbi-investors.csv');
+  }, [sortedFunds, filteredExtInvestors]);
+
   if (loadingInvestors || loadingStats) {
     return <LoadingSkeleton />;
   }
@@ -286,6 +318,17 @@ export function InvestorsView() {
             ))}
           </div>
         )}
+
+        {/* ── CSV Export ────────────────────────────────────── */}
+        <div className={styles.exportRow}>
+          <button
+            className={styles.csvBtn}
+            onClick={handleExportCsv}
+            title="Download all investor data as CSV"
+          >
+            &#8595; CSV
+          </button>
+        </div>
 
         {/* ── Section 1: Nevada-Based Funds ─────────────────── */}
         <div className={styles.sectionHeader}>

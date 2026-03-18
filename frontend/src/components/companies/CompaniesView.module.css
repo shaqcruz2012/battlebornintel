@@ -72,6 +72,36 @@
   flex-shrink: 0;
 }
 
+/* ── CSV Export Button ────────────────────────────────────── */
+
+.csvBtn {
+  padding: 3px 10px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-subtle);
+  background: transparent;
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: var(--weight-semibold);
+  cursor: pointer;
+  white-space: nowrap;
+  transition:
+    border-color var(--transition-fast),
+    color var(--transition-fast),
+    background var(--transition-fast);
+}
+
+.csvBtn:hover {
+  border-color: var(--accent-teal);
+  color: var(--accent-teal);
+  background: rgba(45, 212, 191, 0.08);
+}
+
+.csvBtn:disabled {
+  opacity: 0.4;
+  pointer-events: none;
+}
+
 /* ── Table ────────────────────────────────────────────────── */
 
 .table {

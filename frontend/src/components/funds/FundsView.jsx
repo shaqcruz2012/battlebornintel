@@ -1,7 +1,8 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { useFunds, useCompanies } from '../../api/hooks';
 import { MainGrid } from '../layout/AppShell';
 import { FundCard } from './FundCard';
+import { downloadCsv } from '../../utils/exportCsv';
 import styles from './FundsView.module.css';
 
 const SORT_OPTIONS = [
@@ -104,6 +105,18 @@ export function FundsView() {
     setExpandedId((prev) => (prev === fundId ? null : fundId));
   };
 
+  const handleExportCsv = useCallback(() => {
+    downloadCsv(sortedFunds, [
+      { label: 'Name', accessor: (r) => r.name },
+      { label: 'Type', accessor: (r) => r.type },
+      { label: 'Allocated ($M)', accessor: (r) => r.allocated },
+      { label: 'Deployed ($M)', accessor: (r) => r.deployed },
+      { label: 'Leverage', accessor: (r) => r.leverage },
+      { label: 'Companies', accessor: (r) => (portfolioMap[r.id] || []).length },
+      { label: 'Thesis', accessor: (r) => r.thesis },
+    ], 'bbi-funds.csv');
+  }, [sortedFunds, portfolioMap]);
+
   if (loadingFunds || loadingCompanies) {
     return <LoadingSkeleton />;
   }
@@ -163,6 +176,14 @@ export function FundsView() {
               {opt.label}
             </button>
           ))}
+          <button
+            className={styles.csvBtn}
+            onClick={handleExportCsv}
+            disabled={sortedFunds.length === 0}
+            title="Download fund data as CSV"
+          >
+            &#8595; CSV
+          </button>
         </div>
 
         {/* Fund cards grid */}

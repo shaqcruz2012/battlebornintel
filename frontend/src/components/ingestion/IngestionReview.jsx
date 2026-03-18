@@ -2,8 +2,11 @@ import { useState, useCallback, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import styles from './IngestionReview.module.css';
 
-const ADMIN_KEY = localStorage.getItem('bbi_admin_key') || '';
-
+/**
+ * Fetch helper for ingestion API.
+ * Auth strategy: sends JWT Bearer token from login session (admin role required),
+ * with x-admin-key fallback from sessionStorage for manual key entry.
+ */
 async function fetchIngestion(path, opts = {}) {
   const url = new URL(`/api/ingestion${path}`, window.location.origin);
   if (opts.params) {
@@ -11,12 +14,20 @@ async function fetchIngestion(path, opts = {}) {
       if (v !== undefined && v !== null && v !== '' && v !== 'all') url.searchParams.set(k, v);
     }
   }
+  const headers = { 'Content-Type': 'application/json' };
+  // Prefer JWT auth (same token the rest of the app uses)
+  const token = localStorage.getItem('bbi_token');
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+  // Also send admin key if stored (fallback for non-JWT setups)
+  const adminKey = sessionStorage.getItem('bbi_admin_key') || localStorage.getItem('bbi_admin_key');
+  if (adminKey) {
+    headers['x-admin-key'] = adminKey;
+  }
   const res = await fetch(url.toString(), {
     method: opts.method || 'GET',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-admin-key': ADMIN_KEY,
-    },
+    headers,
     ...(opts.body ? { body: JSON.stringify(opts.body) } : {}),
   });
   if (!res.ok) {
@@ -172,9 +183,41 @@ export function IngestionReview() {
     }));
   }, [stats.bySource]);
 
+  const hasToken = !!localStorage.getItem('bbi_token');
+  const hasAdminKey = !!(sessionStorage.getItem('bbi_admin_key') || localStorage.getItem('bbi_admin_key'));
+  const [adminKeyInput, setAdminKeyInput] = useState('');
+
+  const handleSetAdminKey = useCallback(() => {
+    if (adminKeyInput.trim()) {
+      sessionStorage.setItem('bbi_admin_key', adminKeyInput.trim());
+      setAdminKeyInput('');
+      queryClient.invalidateQueries({ queryKey: ['ingestion'] });
+    }
+  }, [adminKeyInput, queryClient]);
+
   return (
     <div className={styles.container}>
       <h2 className={styles.title}>Ingestion Queue Review</h2>
+
+      {/* Show admin key input if user has no JWT token and no stored key */}
+      {!hasToken && !hasAdminKey && (
+        <div className={styles.authPrompt}>
+          <p>Admin authentication required. Log in with an admin account, or enter an admin API key:</p>
+          <div className={styles.authRow}>
+            <input
+              type="password"
+              className={styles.authInput}
+              placeholder="Admin API key"
+              value={adminKeyInput}
+              onChange={(e) => setAdminKeyInput(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleSetAdminKey()}
+            />
+            <button className={styles.authBtn} onClick={handleSetAdminKey}>
+              Set Key
+            </button>
+          </div>
+        </div>
+      )}
 
       {error && <div className={styles.error}>Failed to load queue: {error.message}</div>}
 

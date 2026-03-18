@@ -1,11 +1,12 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useFilters } from '../../hooks/useFilters';
-import { useCompanies, useKpis, useSectorStats, useFunds, useWeeklyBrief, useRiskAssessments } from '../../api/hooks';
+import { useCompanies, useKpis, useSectorStats, useFunds, useWeeklyBrief } from '../../api/hooks';
 import { MainGrid } from '../layout/AppShell';
 import { KpiDetailPanel } from './KpiDetailPanel';
 import { SectorDetailDrawer } from './SectorDetailDrawer';
 import { MomentumTable } from './MomentumTable';
 import { LiveActivityFeed } from './LiveActivityFeed';
+import { RiskAlerts } from './RiskAlerts';
 import styles from './TerminalGrid.module.css';
 
 // ── KPI key/label mapping for terminal readout ─────────────────────────────
@@ -181,7 +182,6 @@ export function ExecutiveDashboard({ onViewChange }) {
     filters.region && filters.region !== 'all' ? { region: filters.region } : {}
   );
   const { data: briefResponse } = useWeeklyBrief();
-  const { data: risksRaw } = useRiskAssessments();
 
   const briefData = briefResponse?.data;
 
@@ -364,6 +364,9 @@ export function ExecutiveDashboard({ onViewChange }) {
           </div>
         </div>
       </div>
+
+      {/* ── Risk Alerts ── */}
+      <RiskAlerts companies={companies} funds={funds} />
 
       {/* ── Overlays (render outside the grid) ── */}
       {activeKpi && (

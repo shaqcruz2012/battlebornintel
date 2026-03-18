@@ -496,6 +496,153 @@
 }
 
 
+/* ── Card click area ──────────────────────────────────────────────────────── */
+
+.cardClickArea {
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.expandChevron {
+  font-size: 8px;
+  color: var(--text-disabled);
+  transition: color var(--transition-fast);
+  margin-left: var(--space-xs);
+}
+
+.card:hover .expandChevron {
+  color: var(--text-secondary);
+}
+
+.cardExpanded {
+  border-color: color-mix(in srgb, var(--accent-teal) 40%, transparent);
+  box-shadow: var(--shadow-elevated);
+}
+
+.cardDescriptionFull {
+  font-size: var(--text-body-sm);
+  color: var(--text-secondary);
+  margin: 0;
+  line-height: var(--leading-relaxed);
+}
+
+/* ── Expandable detail section ───────────────────────────────────────────── */
+
+.detailSection {
+  border-top: 1px solid var(--border-subtle);
+  margin-top: var(--space-sm);
+  padding-top: var(--space-md);
+  animation: detailSlideIn 0.2s ease-out;
+}
+
+@keyframes detailSlideIn {
+  from {
+    opacity: 0;
+    max-height: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    max-height: 400px;
+    transform: translateY(0);
+  }
+}
+
+.detailGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: var(--space-sm) var(--space-md);
+  margin-bottom: var(--space-sm);
+}
+
+.detailItem {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.detailLabel {
+  font-family: var(--font-mono);
+  font-size: 8px;
+  font-weight: var(--weight-semibold);
+  color: var(--text-disabled);
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+}
+
+.detailValue {
+  font-size: var(--text-body-sm);
+  color: var(--text-primary);
+  font-weight: var(--weight-medium);
+}
+
+.detailSourceLink {
+  font-family: var(--font-mono);
+  font-size: var(--text-body-sm);
+  color: var(--accent-teal);
+  text-decoration: none;
+  transition: opacity 0.15s;
+}
+
+.detailSourceLink:hover {
+  text-decoration: underline;
+  opacity: 0.85;
+}
+
+.detailCompanyLink {
+  font-size: var(--text-body-sm);
+  color: var(--accent-teal);
+  font-weight: var(--weight-medium);
+}
+
+.detailFullDescription {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  padding-top: var(--space-sm);
+  border-top: 1px solid var(--border-subtle);
+}
+
+.detailDescriptionText {
+  font-size: var(--text-body-sm);
+  color: var(--text-secondary);
+  line-height: var(--leading-relaxed);
+  margin: 0;
+}
+
+/* ── Data quality badge ──────────────────────────────────────────────────── */
+
+.dataQualityBadge {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: var(--weight-semibold);
+  letter-spacing: 0.06em;
+  padding: 2px 6px;
+  border-radius: var(--radius-xs);
+  display: inline-block;
+  width: fit-content;
+}
+
+.dq_high {
+  background: color-mix(in srgb, var(--status-success, #10b981) 12%, transparent);
+  color: var(--status-success, #10b981);
+  border: 1px solid color-mix(in srgb, var(--status-success, #10b981) 30%, transparent);
+}
+
+.dq_medium {
+  background: color-mix(in srgb, var(--accent-teal) 10%, transparent);
+  color: var(--accent-teal);
+  border: 1px solid color-mix(in srgb, var(--accent-teal) 25%, transparent);
+}
+
+.dq_low {
+  background: color-mix(in srgb, var(--text-disabled) 10%, transparent);
+  color: var(--text-disabled);
+  border: 1px solid color-mix(in srgb, var(--text-disabled) 20%, transparent);
+}
+
 /* ── Sidebar ──────────────────────────────────────────────────────────────── */
 
 .sidebar {

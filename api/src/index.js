@@ -56,12 +56,19 @@ const publicLimit = makeRateLimiter({ windowMs: 60_000, max: 300 });
 const adminLimit  = makeRateLimiter({ windowMs: 60_000, max: 10, message: 'Admin rate limit exceeded' });
 
 // ── Admin API key guard ─────────────────────────────────────────────────────
+// Accepts EITHER a valid x-admin-key header OR a JWT with admin role.
+// This lets the login system gate access without needing a separate key.
 function requireAdminKey(req, res, next) {
+  // Check x-admin-key header first
   const key = req.headers['x-admin-key'];
-  if (!cfg.adminApiKey || key !== cfg.adminApiKey) {
-    return res.status(403).json({ error: 'Forbidden' });
+  if (cfg.adminApiKey && key === cfg.adminApiKey) {
+    return next();
   }
-  next();
+  // Fall back to JWT admin role (req.user populated by optionalAuth middleware)
+  if (req.user && req.user.role === 'admin') {
+    return next();
+  }
+  return res.status(403).json({ error: 'Forbidden' });
 }
 
 // Optional auth — populates req.user when a valid token is present

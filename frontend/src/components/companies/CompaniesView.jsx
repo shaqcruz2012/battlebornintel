@@ -6,6 +6,7 @@ import { FilterChip } from '../shared/FilterChip';
 import { Card } from '../shared/Card';
 import { CompanyRow } from './CompanyRow';
 import { CompanyDetailDrawer } from './CompanyDetailDrawer';
+import { downloadCsv } from '../../utils/exportCsv';
 import styles from './CompaniesView.module.css';
 
 const STAGE_OPTIONS = [
@@ -133,6 +134,19 @@ export function CompaniesView() {
     setExpandedId((prev) => (prev === id ? null : id));
   }, []);
 
+  const handleExportCsv = useCallback(() => {
+    downloadCsv(displayedCompanies, [
+      { label: 'Name', accessor: (r) => r.name },
+      { label: 'IRS Score', accessor: (r) => r.irs },
+      { label: 'Grade', accessor: (r) => r.grade },
+      { label: 'Stage', accessor: (r) => r.stage },
+      { label: 'Funding ($M)', accessor: (r) => r.funding },
+      { label: 'Momentum', accessor: (r) => r.momentum },
+      { label: 'City', accessor: (r) => r.city },
+      { label: 'Sectors', accessor: (r) => Array.isArray(r.sector) ? r.sector.join('; ') : r.sector },
+    ], 'bbi-companies.csv');
+  }, [displayedCompanies]);
+
   // Filtered + sorted list
   const displayedCompanies = useMemo(() => {
     if (!companies) return [];
@@ -239,6 +253,17 @@ export function CompaniesView() {
               />
             ))}
           </div>
+
+          <span className={styles.separator} />
+
+          <button
+            className={styles.csvBtn}
+            onClick={handleExportCsv}
+            disabled={displayedCompanies.length === 0}
+            title="Download filtered companies as CSV"
+          >
+            &#8595; CSV
+          </button>
         </div>
 
         {/* ── Loading ────────────────────────────────────────── */}

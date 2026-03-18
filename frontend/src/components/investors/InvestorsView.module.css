@@ -50,6 +50,38 @@
 
 /* ── Section headers ──────────────────────────────────── */
 
+/* ── Export Row ───────────────────────────────────────── */
+
+.exportRow {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.csvBtn {
+  padding: var(--space-xs) var(--space-md);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-subtle);
+  background: transparent;
+  color: var(--text-secondary);
+  font-family: var(--font-body);
+  font-size: var(--text-caption-sm);
+  font-weight: var(--weight-semibold);
+  cursor: pointer;
+  white-space: nowrap;
+  transition:
+    border-color var(--transition-fast),
+    color var(--transition-fast),
+    background var(--transition-fast);
+}
+
+.csvBtn:hover {
+  border-color: var(--accent-teal);
+  color: var(--accent-teal);
+  background: rgba(45, 212, 191, 0.08);
+}
+
+/* ── Section Header ──────────────────────────────────── */
+
 .sectionHeader {
   display: flex;
   align-items: center;
