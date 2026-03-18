@@ -1,8 +1,19 @@
 /**
  * IRS (Investment Rating Score) — pure computation.
  * Accepts constants as parameters instead of importing static data.
+ *
+ * @param {Object} company - Company data object
+ * @param {string} company.stage - Funding stage (e.g. 'seed', 'series_a')
+ * @param {number} [company.momentum] - Momentum score (0-100)
+ * @param {number} [company.funding] - Total funding in $M
+ * @param {number} [company.employees] - Employee count
+ * @param {string[]} [company.sector] - Array of sector tags
+ * @param {string[]} [company.eligible] - Array of eligible fund IDs
+ * @param {string} [company.description] - Company description
+ * @param {Object} sectorHeat - Map of sector name to heat score (0-100)
+ * @param {Object} stageNorms - Map of stage to funding benchmark in $M
+ * @returns {{ irs: number, grade: string, triggers: string[], dims: Object }}
  */
-
 export function computeIRS(company, sectorHeat, stageNorms) {
   const m = Math.min(company.momentum || 0, 100);
   const fv = Math.min(

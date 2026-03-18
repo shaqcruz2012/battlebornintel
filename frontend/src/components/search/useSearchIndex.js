@@ -59,7 +59,8 @@ function scoreCompany(company, query) {
 function scoreFund(fund, query) {
   return Math.max(
     scoreMatch(fund.name, query),
-    scoreMatch(fund.region, query)
+    scoreMatch(fund.type, query),
+    scoreMatch(fund.thesis, query)
   );
 }
 
@@ -143,9 +144,9 @@ export function useSearchIndex() {
         .filter((c) => c._score > 0)
         .sort((a, b) => b._score - a._score)
         .slice(0, MAX_PER_CATEGORY)
-        .map(({ _score: _s, ...c }) => ({
+        .map(({ _score: _, ...c }) => ({
           id: c.id ?? c.name,
-          category: 'company',
+          category: 'companies',
           name: c.name,
           subtitle: [c.city, ...(c.sectors ?? []).slice(0, 2)].filter(Boolean).join(' · '),
           view: 'companies',
@@ -159,9 +160,9 @@ export function useSearchIndex() {
         .filter((f) => f._score > 0)
         .sort((a, b) => b._score - a._score)
         .slice(0, MAX_PER_CATEGORY)
-        .map(({ _score: _s, ...f }) => ({
+        .map(({ _score: _, ...f }) => ({
           id: f.id ?? f.name,
-          category: 'fund',
+          category: 'funds',
           name: f.name,
           subtitle: [f.region, f.type].filter(Boolean).join(' · '),
           view: 'funds',
@@ -179,9 +180,9 @@ export function useSearchIndex() {
         .filter((n) => n._score > 0)
         .sort((a, b) => b._score - a._score)
         .slice(0, MAX_PER_CATEGORY)
-        .map(({ _score: _s, ...n }) => ({
+        .map(({ _score: _, ...n }) => ({
           id: n.id,
-          category: 'person',
+          category: 'people',
           name: n.label ?? n.name,
           subtitle: n.role ?? n.title ?? 'Person',
           view: 'graph',
@@ -195,9 +196,9 @@ export function useSearchIndex() {
         .filter((n) => n._score > 0)
         .sort((a, b) => b._score - a._score)
         .slice(0, MAX_PER_CATEGORY)
-        .map(({ _score: _s, ...n }) => ({
+        .map(({ _score: _, ...n }) => ({
           id: n.id,
-          category: 'organization',
+          category: 'organizations',
           name: n.label ?? n.name,
           subtitle: n.type.charAt(0).toUpperCase() + n.type.slice(1),
           view: 'graph',

@@ -1,8 +1,18 @@
 /**
  * Graph analytics — PageRank, Betweenness Centrality, Community Detection, Watchlist.
  * Pure computation on (nodes, edges) arrays.
+ *
+ * @param {Array<{ id: string, type: string, label?: string, funding?: number }>} nodes
+ * @param {Array<{ source: string|Object, target: string|Object }>} edges
+ * @returns {{
+ *   pagerank: Record<string, number>,
+ *   betweenness: Record<string, number>,
+ *   communities: Record<string, number>,
+ *   communityNames: Record<string, string>,
+ *   watchlist: Array<Object>,
+ *   numCommunities: number
+ * }}
  */
-
 export function computeGraphMetrics(nodes, edges) {
   if (!nodes.length)
     return { pagerank: {}, betweenness: {}, communities: {}, watchlist: [], numCommunities: 0 };

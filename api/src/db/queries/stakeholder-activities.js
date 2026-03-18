@@ -187,13 +187,8 @@ export async function getStakeholderActivities(filters = {}) {
   // Count-only mode: return just the total matching rows
   if (countOnly) {
     const countSql = `SELECT COUNT(*) as total FROM (${sql}) _counted`;
-    try {
-      const { rows } = await pool.query(countSql, params);
-      return parseInt(rows[0].total, 10);
-    } catch (error) {
-      console.error('Error counting stakeholder activities:', error);
-      throw error;
-    }
+    const { rows } = await pool.query(countSql, params);
+    return parseInt(rows[0].total, 10);
   }
 
   // Wrap the filtered query with COUNT(*) OVER() so we get the total
@@ -205,26 +200,21 @@ export async function getStakeholderActivities(filters = {}) {
     params.push(limit);
   }
 
-  try {
-    const { rows } = await pool.query(finalSql, params);
-    const totalCount = rows.length > 0 ? parseInt(rows[0]._total_count, 10) : 0;
-    const mappedRows = rows.map((row) => ({
-      id: row.id,
-      date: row.date,
-      activity_type: row.activity_type,
-      company_name: row.company_name,
-      description: row.description,
-      location: row.location,
-      source: row.source,
-      source_url: row.source_url || null,
-      verified: row.verified,
-      stakeholder_type: row.stakeholder_type,
-    }));
-    return { rows: mappedRows, totalCount };
-  } catch (error) {
-    console.error('Error fetching stakeholder activities:', error);
-    throw error;
-  }
+  const { rows } = await pool.query(finalSql, params);
+  const totalCount = rows.length > 0 ? parseInt(rows[0]._total_count, 10) : 0;
+  const mappedRows = rows.map((row) => ({
+    id: row.id,
+    date: row.date,
+    activity_type: row.activity_type,
+    company_name: row.company_name,
+    description: row.description,
+    location: row.location,
+    source: row.source,
+    source_url: row.source_url || null,
+    verified: row.verified,
+    stakeholder_type: row.stakeholder_type,
+  }));
+  return { rows: mappedRows, totalCount };
 }
 
 /**

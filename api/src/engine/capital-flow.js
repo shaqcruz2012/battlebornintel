@@ -9,6 +9,20 @@ import pool from '../db/pool.js';
 
 // ── 1. Build directed weighted funding subgraph ─────────────────────────────
 
+/**
+ * Compute capital flow analytics across the funding subgraph.
+ *
+ * Queries all funds, invested_in edges, and companies, then builds:
+ * - Sankey-ready fund-to-sector and sector-to-company flow arrays
+ * - Weighted PageRank "capital magnet" scores
+ * - Source-sink analysis (net deployers vs net attractors)
+ * - Aggregations by sector, region, and stage
+ *
+ * @returns {Promise<{
+ *   flows: Array, rawFlows: Array, capitalMagnets: Array,
+ *   sourceSink: Array, byRegion: Object, bySector: Object, byStage: Object
+ * }>}
+ */
 export async function computeCapitalFlows() {
   // Fire all independent queries in parallel
   const [

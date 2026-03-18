@@ -335,9 +335,7 @@ export async function getGraphData({ nodeTypes = [], yearMax = 2026, region } = 
     if (e.edge_opacity != null) edge.opacity = e.edge_opacity;
     edges.push(edge);
   }
-  if (placeholderCount > 0) {
-    console.log(`[graph] Added ${placeholderCount} placeholder nodes for edges with missing endpoints`);
-  }
+  // placeholderCount tracked for diagnostics; omitted from production logs
 
   // ── Step 6: Derived edges (from in-memory data, no extra queries) ────────
   if (nodeTypeSet.has('company') && nodeTypeSet.has('fund')) {
@@ -385,6 +383,47 @@ export async function getGraphData({ nodeTypes = [], yearMax = 2026, region } = 
   }
 
   return { nodes, edges };
+}
+
+/**
+ * Returns a lightweight version of graph data optimized for initial render.
+ * Strips heavy fields from nodes (eligible, sector arrays) and edges (note, style, color, opacity).
+ * Nodes get only: id, label, type + type-specific sizing fields (funding, region, stage for companies).
+ * Edges get only: source, target, rel, y, category.
+ * Full detail is available from the main getGraphData() endpoint on demand.
+ */
+export async function getGraphDataLight(params) {
+  const { nodes, edges } = await getGraphData(params);
+
+  // Strip nodes to essential render fields
+  const lightNodes = nodes.map(n => {
+    const light = { id: n.id, label: n.label, type: n.type };
+    // Keep only fields needed for layout positioning and sizing
+    if (n.type === 'company') {
+      if (n.funding != null) light.funding = n.funding;
+      if (n.region) light.region = n.region;
+      if (n.stage) light.stage = n.stage;
+      if (n.momentum != null) light.momentum = n.momentum;
+      if (n.employees != null) light.employees = n.employees;
+    } else if (n.type === 'fund') {
+      if (n.fundType) light.fundType = n.fundType;
+    } else if (n.type === 'external') {
+      if (n.etype) light.etype = n.etype;
+    }
+    return light;
+  });
+
+  // Strip edges to essential render fields — drop note, style, color, opacity, matching_score
+  const lightEdges = edges.map(e => {
+    const light = { source: e.source, target: e.target, rel: e.rel };
+    if (e.y) light.y = e.y;
+    if (e.category) light.category = e.category;
+    // Keep note only if it contains a dollar value (used for $ labels on edges)
+    if (e.note && /\$[\d,.]+[BMK]?/.test(e.note)) light.note = e.note;
+    return light;
+  });
+
+  return { nodes: lightNodes, edges: lightEdges };
 }
 
 export async function getGraphMetrics() {

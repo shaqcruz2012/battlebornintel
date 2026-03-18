@@ -68,13 +68,6 @@ router.get('/', async (req, res, next) => {
       limit: parsedLimit,
     });
 
-    if (data.length === 0) {
-      console.warn(
-        '[stakeholder-activities] Empty results for filters:',
-        JSON.stringify(filterParams),
-      );
-    }
-
     const activeFilters = {
       location: location !== 'all' ? location : null,
       since: since || null,
@@ -84,7 +77,6 @@ router.get('/', async (req, res, next) => {
     };
 
     res.json({
-      success: true,
       data,
       meta: {
         count: data.length,
@@ -95,12 +87,7 @@ router.get('/', async (req, res, next) => {
       },
     });
   } catch (err) {
-    console.error('[stakeholder-activities] GET / failed:', err.message);
-    res.status(500).json({
-      success: false,
-      error: 'Failed to fetch stakeholder activities',
-      message: process.env.NODE_ENV !== 'production' ? err.message : undefined,
-    });
+    next(err);
   }
 });
 
@@ -123,22 +110,12 @@ router.get('/company/:companyId', async (req, res, next) => {
       parseInt(limit, 10) || 20
     );
 
-    if (data.length === 0) {
-      console.warn(`[stakeholder-activities] No activities found for company ${parsedCompanyId}`);
-    }
-
     res.json({
-      success: true,
       data,
       meta: { count: data.length },
     });
   } catch (err) {
-    console.error('[stakeholder-activities] GET /company/:companyId failed:', err.message);
-    res.status(500).json({
-      success: false,
-      error: 'Failed to fetch company activities',
-      message: process.env.NODE_ENV !== 'production' ? err.message : undefined,
-    });
+    next(err);
   }
 });
 
@@ -159,14 +136,7 @@ router.get('/location/:location', async (req, res, next) => {
 
     const data = await getActivitiesByLocationAndDateRange(location, startDate, endDate);
 
-    if (data.length === 0) {
-      console.warn(
-        `[stakeholder-activities] No activities for location="${location}" between ${startDate} and ${endDate}`,
-      );
-    }
-
     res.json({
-      success: true,
       data,
       meta: {
         count: data.length,
@@ -178,12 +148,7 @@ router.get('/location/:location', async (req, res, next) => {
       },
     });
   } catch (err) {
-    console.error('[stakeholder-activities] GET /location/:location failed:', err.message);
-    res.status(500).json({
-      success: false,
-      error: 'Failed to fetch activities by location',
-      message: process.env.NODE_ENV !== 'production' ? err.message : undefined,
-    });
+    next(err);
   }
 });
 
@@ -195,10 +160,7 @@ router.get('/stats/by-type', async (req, res, next) => {
   try {
     const data = await countActivitiesByType();
 
-    res.json({
-      success: true,
-      data,
-    });
+    res.json({ data });
   } catch (err) {
     next(err);
   }
@@ -212,10 +174,7 @@ router.get('/stats/by-location', async (req, res, next) => {
   try {
     const data = await countActivitiesByLocation();
 
-    res.json({
-      success: true,
-      data,
-    });
+    res.json({ data });
   } catch (err) {
     next(err);
   }

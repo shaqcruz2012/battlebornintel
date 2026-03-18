@@ -1,17 +1,31 @@
 import { Router } from 'express';
-import { getGraphData, getGraphMetrics } from '../db/queries/graph.js';
+import { getGraphData, getGraphDataLight, getGraphMetrics } from '../db/queries/graph.js';
 import { computeAndReturnMetrics } from '../services/graphService.js';
 
 const router = Router();
 
+function parseGraphParams(req) {
+  const nodeTypes = req.query.nodeTypes
+    ? req.query.nodeTypes.split(',')
+    : ['company', 'fund', 'person', 'external', 'accelerator', 'ecosystem'];
+  const yearMax = parseInt(req.query.yearMax || '2026', 10);
+  const region = req.query.region || 'all';
+  return { nodeTypes, yearMax, region };
+}
+
 router.get('/', async (req, res, next) => {
   try {
-    const nodeTypes = req.query.nodeTypes
-      ? req.query.nodeTypes.split(',')
-      : ['company', 'fund', 'person', 'external', 'accelerator', 'ecosystem'];
-    const yearMax = parseInt(req.query.yearMax || '2026', 10);
-    const region = req.query.region || 'all';
-    const data = await getGraphData({ nodeTypes, yearMax, region });
+    const data = await getGraphData(parseGraphParams(req));
+    res.json({ data });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// Lightweight endpoint for initial render — smaller payload, faster parse
+router.get('/light', async (req, res, next) => {
+  try {
+    const data = await getGraphDataLight(parseGraphParams(req));
     res.json({ data });
   } catch (err) {
     next(err);

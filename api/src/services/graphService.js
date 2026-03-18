@@ -25,7 +25,7 @@ export async function recomputeAndCacheMetrics() {
     'sector', 'region', 'exchange',
   ];
   const { nodes, edges } = await getGraphData({ nodeTypes: allTypes, yearMax: 2026 });
-  const { pagerank, betweenness, communities, communityNames } = computeGraphMetrics(nodes, edges);
+  const { pagerank, betweenness, communities } = computeGraphMetrics(nodes, edges);
 
   const client = await pool.connect();
   try {

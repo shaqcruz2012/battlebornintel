@@ -7,7 +7,7 @@ import { useEffect, useState, useRef, useMemo } from 'react';
  */
 export function useGraphLayout(nodes, edges, options = {}) {
   const {
-    iterations = 200,
+    iterations = 150,
     enabled = true,
     width = 1200,
     height = 700,
@@ -85,41 +85,21 @@ export function useGraphLayout(nodes, edges, options = {}) {
     setIsLoading(true);
     setError(null);
 
-    // Send work to worker
-    worker.postMessage({ nodes, edges, width, height, iterations });
+    // Send work to worker — use transfer mode for large graphs (>200 nodes)
+    const useTransfer = nodes.length > 200;
+    worker.postMessage({ nodes, edges, width, height, iterations, useTransfer });
 
-    // Handle worker response — supports progressive rendering via interim frames.
-    // Interim frames are throttled with requestAnimationFrame to avoid flooding
-    // React with re-renders faster than the browser can paint.
-    let pendingInterim = null;
-    let rafId = null;
-
-    const flushInterim = () => {
-      if (pendingInterim) {
-        setLayout({ nodes: pendingInterim, edges });
-        setError(null);
-        pendingInterim = null;
-      }
-      rafId = null;
-    };
-
+    // Handle worker response — the worker now sends only the final frame
+    // (no interim messages), eliminating intermediate React re-renders.
+    // The user sees a loading skeleton then the complete graph appears at once.
     const handleMessage = (e) => {
-      const { success, nodes: layoutNodes, error: workerError, interim } = e.data;
+      const { success, nodes: layoutNodes, error: workerError } = e.data;
 
       if (success) {
-        if (interim) {
-          // Buffer interim frames and flush at display refresh rate
-          pendingInterim = layoutNodes;
-          if (!rafId) {
-            rafId = requestAnimationFrame(flushInterim);
-          }
-        } else {
-          // Final frame — apply immediately and mark complete
-          if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
-          setLayout({ nodes: layoutNodes, edges });
-          setError(null);
-          setIsLoading(false);
-        }
+        // Final frame — apply immediately and mark complete
+        setLayout({ nodes: layoutNodes, edges });
+        setError(null);
+        setIsLoading(false);
       } else {
         setError(workerError);
         setLayout({ nodes, edges });
@@ -137,7 +117,6 @@ export function useGraphLayout(nodes, edges, options = {}) {
     worker.addEventListener('error', handleError);
 
     return () => {
-      if (rafId) cancelAnimationFrame(rafId);
       worker.removeEventListener('message', handleMessage);
       worker.removeEventListener('error', handleError);
     };

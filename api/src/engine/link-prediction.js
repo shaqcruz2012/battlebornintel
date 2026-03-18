@@ -252,6 +252,52 @@ function typeCompatibilityScore(metaA, metaC) {
 }
 
 /**
+ * Generate a natural-language opportunity summary explaining WHY
+ * this predicted connection would be valuable.
+ */
+function generateOpportunitySummary(nodeA, nodeC, bridgeNode, features, score) {
+  const parts = [];
+
+  // Opening based on connection type
+  if (nodeA.type === 'fund' && nodeC.type === 'company') {
+    parts.push(`${nodeA.label} should evaluate ${nodeC.label} as a potential investment.`);
+  } else if (nodeA.type === 'company' && nodeC.type === 'fund') {
+    parts.push(`${nodeC.label} should evaluate ${nodeA.label} as a potential investment.`);
+  } else if (nodeA.type === 'company' && nodeC.type === 'company') {
+    parts.push(`${nodeA.label} and ${nodeC.label} have strong partnership potential.`);
+  } else if (nodeA.type === 'accelerator' && nodeC.type === 'company') {
+    parts.push(`${nodeC.label} could benefit from ${nodeA.label}'s accelerator program.`);
+  } else if (nodeA.type === 'company' && nodeC.type === 'accelerator') {
+    parts.push(`${nodeA.label} could benefit from ${nodeC.label}'s accelerator program.`);
+  } else {
+    parts.push(`A connection between ${nodeA.label} and ${nodeC.label} would strengthen the ecosystem.`);
+  }
+
+  // Evidence based on features
+  if (features.jaccard > 0.3) {
+    parts.push(`They share ${Math.round(features.jaccard * 100)}% of their network connections through ${bridgeNode.label}.`);
+  }
+  if (features.sectorOverlap > 0.5) {
+    parts.push(`Both operate in overlapping sectors, suggesting strategic alignment.`);
+  }
+  if (features.geoProximity >= 1.0) {
+    parts.push(`Co-located in the same region, enabling face-to-face collaboration.`);
+  }
+  if (features.recency > 0.7) {
+    parts.push(`Recent activity from the bridge connection suggests timely relevance.`);
+  }
+
+  // Closing with strength assessment
+  if (score > 0.7) {
+    parts.push(`High confidence recommendation — multiple strong signals.`);
+  } else if (score > 0.5) {
+    parts.push(`Moderate confidence — worth exploring through the shared connection.`);
+  }
+
+  return parts.join(' ');
+}
+
+/**
  * Generate a human-readable reasoning string.
  */
 function generateReasoning(features, metaA, metaC, commonCount) {
@@ -349,10 +395,13 @@ export async function predictMissingLinks({ limit = 50, minScore = 0.3 } = {}) {
 
         if (score >= minScore) {
           const commonCount = countCommon(neighborsA || new Set(), neighborsC);
+          const nodeAObj = { id: metaA.id, label: metaA.label, type: metaA.type };
+          const nodeCObj = { id: metaC.id, label: metaC.label, type: metaC.type };
+          const bridgeObj = { id: metaB.id, label: metaB.label, type: metaB.type };
           predictions.push({
-            nodeA: { id: metaA.id, label: metaA.label, type: metaA.type },
-            nodeC: { id: metaC.id, label: metaC.label, type: metaC.type },
-            bridgeNode: { id: metaB.id, label: metaB.label, type: metaB.type },
+            nodeA: nodeAObj,
+            nodeC: nodeCObj,
+            bridgeNode: bridgeObj,
             score: Math.round(score * 1000) / 1000,
             features: {
               jaccard: Math.round(features.jaccard * 1000) / 1000,
@@ -362,6 +411,7 @@ export async function predictMissingLinks({ limit = 50, minScore = 0.3 } = {}) {
               typeCompatibility: Math.round(features.typeCompatibility * 1000) / 1000,
             },
             reasoning: generateReasoning(features, metaA, metaC, commonCount),
+            opportunity: generateOpportunitySummary(nodeAObj, nodeCObj, bridgeObj, features, score),
           });
         }
       }
@@ -453,10 +503,13 @@ export async function predictLinksForNode(nodeId, { limit = 20, minScore = 0.3 }
 
       if (score >= minScore) {
         const commonCount = countCommon(neighborsTarget, neighborsC);
+        const nodeAObj = { id: metaTarget.id, label: metaTarget.label, type: metaTarget.type };
+        const nodeCObj = { id: metaC.id, label: metaC.label, type: metaC.type };
+        const bridgeObj = { id: metaB.id, label: metaB.label, type: metaB.type };
         predictions.push({
-          nodeA: { id: metaTarget.id, label: metaTarget.label, type: metaTarget.type },
-          nodeC: { id: metaC.id, label: metaC.label, type: metaC.type },
-          bridgeNode: { id: metaB.id, label: metaB.label, type: metaB.type },
+          nodeA: nodeAObj,
+          nodeC: nodeCObj,
+          bridgeNode: bridgeObj,
           score: Math.round(score * 1000) / 1000,
           features: {
             jaccard: Math.round(features.jaccard * 1000) / 1000,
@@ -466,6 +519,7 @@ export async function predictLinksForNode(nodeId, { limit = 20, minScore = 0.3 }
             typeCompatibility: Math.round(features.typeCompatibility * 1000) / 1000,
           },
           reasoning: generateReasoning(features, metaTarget, metaC, commonCount),
+          opportunity: generateOpportunitySummary(nodeAObj, nodeCObj, bridgeObj, features, score),
         });
       }
     }

@@ -167,6 +167,7 @@ const NodeCircle = memo(function NodeCircle({
   baseOpacity,  // radial galactic-core opacity (0.68–1.0), applied when not dim/selected
   isHub,        // true for BBV/GOED hub nodes — always full opacity + persistent glow
   suppressLabels, // true when zoom is too low to read labels — skip text SVG elements
+  suppressGlowRings, // true at low zoom — skip decorative glow rings to reduce SVG element count
 }) {
   const showLabel = !suppressLabels && (r >= 10 || isSelected || (isConnected && hasSelection));
 
@@ -176,10 +177,13 @@ const NodeCircle = memo(function NodeCircle({
     : isSelected || isConnected ? 1
     : (baseOpacity ?? 1);
 
+  // At low zoom, skip decorative glow rings (saves 2-3 SVG elements per connected/hub node)
+  const showGlowRings = !suppressGlowRings;
+
   return (
     <g opacity={groupOpacity} style={{ transition: 'opacity 300ms ease, transform 200ms ease' }} className={!dim ? styles.nodeGroup : undefined}>
       {/* Soft outer glow for connected nodes */}
-      {isConnected && !isSelected && hasSelection && (
+      {showGlowRings && isConnected && !isSelected && hasSelection && (
         <>
           <circle
             cx={node.x} cy={node.y} r={r + 6}
@@ -211,7 +215,7 @@ const NodeCircle = memo(function NodeCircle({
         </>
       )}
       {/* Hub node (BBV/GOED) persistent ambient glow rings — galactic core effect */}
-      {isHub && !isSelected && (
+      {showGlowRings && isHub && !isSelected && (
         <>
           <circle
             cx={node.x} cy={node.y} r={r + 14}
@@ -531,9 +535,21 @@ export function GraphCanvas({
     [searchTerm, searchLower]
   );
 
+  // Debounced wheel zoom — batches rapid scroll events via RAF to prevent
+  // re-rendering on every wheel tick. Accumulates delta and applies once per frame.
+  const wheelDeltaRef = useRef(0);
+  const wheelRafRef = useRef(null);
   const handleWheel = useCallback((e) => {
     e.preventDefault();
-    setZoom((z) => Math.max(0.3, Math.min(3, z + (e.deltaY > 0 ? -0.1 : 0.1))));
+    wheelDeltaRef.current += e.deltaY > 0 ? -0.1 : 0.1;
+    if (!wheelRafRef.current) {
+      wheelRafRef.current = requestAnimationFrame(() => {
+        const delta = wheelDeltaRef.current;
+        wheelDeltaRef.current = 0;
+        wheelRafRef.current = null;
+        setZoom((z) => Math.max(0.3, Math.min(3, z + delta)));
+      });
+    }
   }, []);
 
   const handleMouseDown = useCallback((e) => {
@@ -542,10 +558,22 @@ export function GraphCanvas({
     setDragStart({ x: e.clientX - pan.x, y: e.clientY - pan.y });
   }, [pan]);
 
+  // RAF-throttled pan — prevents re-rendering on every mousemove during drag
+  const panRafRef = useRef(null);
+  const pendingPanRef = useRef(null);
   const handleMouseMove = useCallback(
     (e) => {
       if (dragging && dragStart) {
-        setPan({ x: e.clientX - dragStart.x, y: e.clientY - dragStart.y });
+        pendingPanRef.current = { x: e.clientX - dragStart.x, y: e.clientY - dragStart.y };
+        if (!panRafRef.current) {
+          panRafRef.current = requestAnimationFrame(() => {
+            panRafRef.current = null;
+            if (pendingPanRef.current) {
+              setPan(pendingPanRef.current);
+              pendingPanRef.current = null;
+            }
+          });
+        }
       }
     },
     [dragging, dragStart]
@@ -796,8 +824,29 @@ export function GraphCanvas({
   if (!nodes || nodes.length === 0) {
     return (
       <div className={styles.canvasWrap} ref={containerRef}>
-        <div style={{ padding: 40, color: 'var(--text-disabled)', textAlign: 'center' }}>
-          No graph data. Enable node types in controls.
+        <div style={{
+          padding: 40,
+          color: 'var(--text-disabled)',
+          textAlign: 'center',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          height: '100%',
+          gap: 12,
+        }}>
+          {/* Pulsing dot animation for loading state */}
+          <div style={{
+            width: 8,
+            height: 8,
+            borderRadius: '50%',
+            background: 'var(--accent-teal, #45d7c6)',
+            animation: 'pulse 1.5s ease-in-out infinite',
+            opacity: 0.6,
+          }} />
+          <span style={{ fontSize: 12 }}>
+            {layoutSettled === false ? 'Computing layout...' : 'No graph data. Enable node types in controls.'}
+          </span>
         </div>
       </div>
     );
@@ -832,7 +881,10 @@ export function GraphCanvas({
         width={w}
         height={h}
       >
-        <GlowFilters />
+        {/* Only include SVG filter defs when zoom is high enough for them to be visible.
+            SVG filters (feGaussianBlur) are GPU-expensive; skipping them at low zoom
+            reduces composite cost significantly. */}
+        {zoom >= 0.6 && <GlowFilters />}
 
         <g transform={`translate(${pan.x},${pan.y}) scale(${zoom})`}>
 
@@ -886,6 +938,11 @@ export function GraphCanvas({
             // Only selected/connected nodes get labels at very low zoom.
             const suppressLabels = zoom < 0.5 && !isSelected && !isConnected;
 
+            // Suppress decorative glow rings below zoom 0.6 to reduce SVG element count.
+            // Each hub/connected node has 2-3 extra circle elements for glow effects.
+            // At low zoom these are sub-pixel and invisible anyway.
+            const suppressGlowRings = zoom < 0.6 && !isSelected;
+
             // Galactic core radial opacity — only computed when graph is large enough
             // and the node is not already highlighted/dimmed by selection/search.
             const baseOpacity = (!dim && !isSelected && !isConnected && maxDist > 0)
@@ -910,11 +967,13 @@ export function GraphCanvas({
                 baseOpacity={baseOpacity}
                 isHub={isHub}
                 suppressLabels={suppressLabels}
+                suppressGlowRings={suppressGlowRings}
               />
             );
 
-            if (isSelected) return <g key={n.id} filter="url(#nodeGlowStrong)">{inner}</g>;
-            if (isHub && !isSelected) return <g key={n.id} filter="url(#nodeGlowHub)">{inner}</g>;
+            // Only apply expensive SVG glow filters when zoom is high enough to see them
+            if (isSelected && zoom >= 0.6) return <g key={n.id} filter="url(#nodeGlowStrong)">{inner}</g>;
+            if (isHub && !isSelected && zoom >= 0.6) return <g key={n.id} filter="url(#nodeGlowHub)">{inner}</g>;
             return inner;
           })}
         </g>

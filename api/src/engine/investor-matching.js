@@ -161,12 +161,17 @@ function generateReasoning(companyFeatures, portfolioProfile, portfolioCompanies
 }
 
 /**
- * Find investor matches for a given company.
+ * Find investor matches for a given company using neighborhood-based
+ * cosine similarity on structural graph features.
  *
- * @param {number|string} companyId — numeric company ID (without prefix)
- * @param {Object} opts
- * @param {number} [opts.limit=20] — max results
- * @returns {Promise<{company, matches}>}
+ * Builds feature vectors from sector, stage, region, and funding dimensions,
+ * then computes cosine similarity between the target company and each
+ * investor's aggregate portfolio profile.
+ *
+ * @param {number|string} companyId - Numeric company ID (without c_ prefix)
+ * @param {Object} [opts]
+ * @param {number} [opts.limit=20] - Maximum number of matches to return
+ * @returns {Promise<{ company: Object, matches: Array<{ investorId: string, investorName: string, similarity: number, reasoning: string }> } | null>}
  */
 export async function findInvestorMatches(companyId, { limit = 20 } = {}) {
   const numericId = parseInt(companyId, 10);

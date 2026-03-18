@@ -49,6 +49,14 @@ export const api = {
       region,
     }).then((r) => r.data),
 
+  // Lightweight graph — smaller payload for initial render
+  getGraphLight: (nodeTypes, yearMax, region) =>
+    fetchJSON(`${BASE}/graph/light`, {
+      nodeTypes: nodeTypes?.join(','),
+      yearMax,
+      region,
+    }).then((r) => r.data),
+
   getGraphMetrics: (nodeTypes) =>
     fetchJSON(`${BASE}/graph/metrics`, {
       nodeTypes: nodeTypes?.join(','),

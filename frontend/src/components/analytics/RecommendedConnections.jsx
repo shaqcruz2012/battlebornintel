@@ -71,8 +71,9 @@ function nodeTypeClass(type) {
 }
 
 function PredictionCard({ prediction }) {
-  const { nodeA, nodeC, bridgeNode, score, features, reasoning } = prediction;
+  const { nodeA, nodeC, bridgeNode, score, features, reasoning, opportunity } = prediction;
   const pct = Math.round(score * 100);
+  const [expanded, setExpanded] = useState(false);
 
   return (
     <div className={styles.card}>
@@ -105,6 +106,24 @@ function PredictionCard({ prediction }) {
             </span>
           ))}
         </div>
+
+        {opportunity && (
+          <div className={styles.opportunitySection}>
+            <button
+              type="button"
+              className={styles.opportunityToggle}
+              onClick={() => setExpanded((prev) => !prev)}
+            >
+              {expanded ? '\u25BE' : '\u25B8'} Opportunity
+              {!expanded && (
+                <span className={styles.opportunityTooltip}>{opportunity}</span>
+              )}
+            </button>
+            {expanded && (
+              <div className={styles.opportunitySummary}>{opportunity}</div>
+            )}
+          </div>
+        )}
       </div>
 
       <div className={styles.scoreCol}>

@@ -1,6 +1,6 @@
 import { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import { useFilters } from '../../hooks/useFilters';
-import { useGraph, useGraphMetrics, usePredictedLinks } from '../../api/hooks';
+import { useGraphLight, useGraph, useGraphMetrics, usePredictedLinks } from '../../api/hooks';
 import { useGraphLayout } from '../../hooks/useGraphLayout';
 import { GraphOverlayControls } from './GraphControls';
 import { GraphCanvas } from './GraphCanvas';
@@ -126,11 +126,19 @@ export function GraphView() {
     [nodeFilters]
   );
 
-  // Fetch graph data from API with region filtering
-  const { data: graphData, isLoading: loadingGraph, error: graphError } = useGraph(activeNodeTypes, debouncedYearMax, filters.region);
+  // Fetch lightweight graph data for fast initial render (smaller payload)
+  const { data: lightGraphData, isLoading: loadingLightGraph, error: lightGraphError } = useGraphLight(activeNodeTypes, debouncedYearMax, filters.region);
+
+  // Fetch full graph data in background for detail features ($ values, notes, node detail)
+  const { data: fullDetailData } = useGraph(activeNodeTypes, debouncedYearMax, filters.region);
+
+  // Use light data for initial render, upgrade to full data when available
+  const graphData = fullDetailData || lightGraphData;
+  const loadingGraph = loadingLightGraph && !lightGraphData;
+  const graphError = lightGraphError;
 
   // Fetch total edge count (yearMax=2026) for the edge count indicator
-  const { data: fullGraphData } = useGraph(activeNodeTypes, 2026, filters.region);
+  const { data: fullGraphData } = useGraphLight(activeNodeTypes, 2026, filters.region);
   const { data: metricsData, isLoading: loadingMetrics, error: metricsError } = useGraphMetrics(activeNodeTypes);
 
   // Fetch predicted links only when that overlay is active (lazy load)
@@ -206,20 +214,13 @@ export function GraphView() {
     );
   }
 
-  // Block render only while raw graph data is being fetched from the API.
-  // D3 layout streams interim frames so the canvas renders progressively.
-  if (loadingGraph || loadingMetrics) {
-    return (
-      <div className={styles.graphPage}>
-        <div className={styles.loadingCenter}>
-          Loading graph...
-        </div>
-      </div>
-    );
-  }
+  // Show graph shell immediately — controls, legend, and empty canvas render
+  // while data loads. The GraphCanvas handles its own empty/loading state.
+  // This eliminates the blank white screen during initial data fetch.
+  const isInitialLoading = loadingGraph || loadingMetrics;
 
-  // Empty state — data loaded but no visible nodes
-  if (rawNodes.length === 0) {
+  // Empty state — data loaded but no visible nodes (only show if not still loading)
+  if (!isInitialLoading && rawNodes.length === 0) {
     return (
       <div className={styles.graphPage}>
         <div className={styles.emptyState}>

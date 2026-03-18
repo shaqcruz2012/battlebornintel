@@ -362,6 +362,78 @@
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
 
+/* ── Opportunity summary ─────────────────────────────────── */
+
+.opportunityToggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 6px;
+  padding: 0;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: var(--weight-medium);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-disabled);
+  background: none;
+  border: none;
+  cursor: pointer;
+  transition: color var(--transition-instant);
+}
+
+.opportunityToggle:hover {
+  color: var(--accent-teal);
+}
+
+.opportunitySection {
+  position: relative;
+}
+
+.opportunitySummary {
+  font-family: var(--font-body);
+  font-size: 11px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  padding: 8px 0 4px 10px;
+  border-left: 2px solid rgba(69, 215, 198, 0.3);
+  margin-top: 6px;
+  font-style: italic;
+}
+
+.opportunityTooltip {
+  position: absolute;
+  left: 0;
+  bottom: calc(100% + 4px);
+  background: var(--bg-card);
+  border: 1px solid var(--border-medium);
+  border-left: 2px solid rgba(69, 215, 198, 0.3);
+  border-radius: var(--radius-sm);
+  padding: 8px 12px;
+  font-family: var(--font-body);
+  font-size: 11px;
+  font-style: italic;
+  font-weight: var(--weight-normal);
+  text-transform: none;
+  letter-spacing: normal;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  min-width: 260px;
+  max-width: 380px;
+  white-space: normal;
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.15s ease;
+  z-index: 10;
+  pointer-events: none;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.opportunityToggle:hover .opportunityTooltip {
+  opacity: 1;
+  visibility: visible;
+}
+
 /* ── Empty / loading states ──────────────────────────────── */
 
 .loading {

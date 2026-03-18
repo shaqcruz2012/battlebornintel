@@ -31,7 +31,12 @@ import investorsRouter from './routes/investors.js';
 const app = express();
 
 app.use(compression());
-app.use(cors());
+app.use(cors({
+  origin: cfg.nodeEnv === 'production'
+    ? (process.env.CORS_ORIGIN || 'https://battlebornintel.com')
+    : true,
+  credentials: true,
+}));
 app.use(express.json());
 
 // ── Simple in-memory rate limiter (no extra deps) ───────────────────────────
@@ -142,13 +147,17 @@ app.listen(cfg.port, () => {
   // Pre-warm the graph cache so the first user request hits warm cache
   setTimeout(async () => {
     try {
-      const url = `http://localhost:${cfg.port}/api/graph`;
+      const base = `http://localhost:${cfg.port}/api/graph`;
       console.log('[cache-warm] Pre-warming graph cache...');
-      const res = await fetch(url);
-      if (res.ok) {
-        console.log('[cache-warm] Graph cache warmed successfully');
+      // Warm both the full and lightweight endpoints in parallel
+      const [res1, res2] = await Promise.all([
+        fetch(base),
+        fetch(`${base}/light`),
+      ]);
+      if (res1.ok && res2.ok) {
+        console.log('[cache-warm] Graph cache warmed successfully (full + light)');
       } else {
-        console.warn(`[cache-warm] Graph warm-up returned status ${res.status}`);
+        console.warn(`[cache-warm] Graph warm-up partial: full=${res1.status}, light=${res2.status}`);
       }
     } catch (err) {
       console.warn('[cache-warm] Graph warm-up failed:', err.message);

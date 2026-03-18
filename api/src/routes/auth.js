@@ -3,7 +3,7 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import cfg from '../config.js';
 import pool from '../db/pool.js';
-import { authenticateToken, requireRole } from '../middleware/auth.js';
+import { authenticateToken } from '../middleware/auth.js';
 
 const router = Router();
 const SALT_ROUNDS = 12;

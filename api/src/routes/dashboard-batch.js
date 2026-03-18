@@ -6,10 +6,9 @@
 
 import { Router } from 'express';
 import { cacheMiddleware } from '../middleware/cache.js';
-import { getAllCompanies, getCompanyById } from '../db/queries/companies.js';
+import { getAllCompanies } from '../db/queries/companies.js';
 import { getAllFunds } from '../db/queries/funds.js';
-import { getKpis } from '../db/queries/kpis.js';
-import { getSectorStats } from '../db/queries/kpis.js';
+import { getKpis, getSectorStats } from '../db/queries/kpis.js';
 
 const router = Router();
 
@@ -42,7 +41,7 @@ router.get('/', async (req, res, next) => {
     if (filtersStr) {
       try {
         filters = JSON.parse(filtersStr);
-      } catch (e) {
+      } catch {
         return res.status(400).json({ error: 'Invalid filters JSON' });
       }
     }
@@ -58,10 +57,7 @@ router.get('/', async (req, res, next) => {
 
     if (shouldFetchCompanies) {
       promises.push(
-        getAllCompanies(filters).catch(err => {
-          console.error('Companies query error:', err);
-          return [];
-        })
+        getAllCompanies(filters).catch(() => [])
       );
     } else {
       promises.push(Promise.resolve(null));
@@ -69,10 +65,7 @@ router.get('/', async (req, res, next) => {
 
     if (shouldFetchKpis) {
       promises.push(
-        getKpis(filters).catch(err => {
-          console.error('KPIs query error:', err);
-          return {};
-        })
+        getKpis(filters).catch(() => ({}))
       );
     } else {
       promises.push(Promise.resolve(null));
@@ -80,10 +73,7 @@ router.get('/', async (req, res, next) => {
 
     if (shouldFetchFunds) {
       promises.push(
-        getAllFunds().catch(err => {
-          console.error('Funds query error:', err);
-          return [];
-        })
+        getAllFunds().catch(() => [])
       );
     } else {
       promises.push(Promise.resolve(null));
@@ -91,10 +81,7 @@ router.get('/', async (req, res, next) => {
 
     if (shouldFetchSectors) {
       promises.push(
-        getSectorStats().catch(err => {
-          console.error('Sector stats query error:', err);
-          return [];
-        })
+        getSectorStats().catch(() => [])
       );
     } else {
       promises.push(Promise.resolve(null));
@@ -109,7 +96,7 @@ router.get('/', async (req, res, next) => {
     if (shouldFetchFunds) response.funds = funds;
     if (shouldFetchSectors) response.sectors = sectors;
 
-    res.json(response);
+    res.json({ data: response });
   } catch (err) {
     next(err);
   }
@@ -128,23 +115,17 @@ router.get('/executives', async (req, res, next) => {
     if (filtersStr) {
       try {
         filters = JSON.parse(filtersStr);
-      } catch (e) {
+      } catch {
         return res.status(400).json({ error: 'Invalid filters JSON' });
       }
     }
 
     const [companies, kpis] = await Promise.all([
-      getAllCompanies(filters).catch(err => {
-        console.error('Companies query error:', err);
-        return [];
-      }),
-      getKpis(filters).catch(err => {
-        console.error('KPIs query error:', err);
-        return {};
-      }),
+      getAllCompanies(filters).catch(() => []),
+      getKpis(filters).catch(() => ({})),
     ]);
 
-    res.json({ companies, kpis });
+    res.json({ data: { companies, kpis } });
   } catch (err) {
     next(err);
   }
@@ -164,21 +145,12 @@ router.get('/goed', async (req, res, next) => {
     const filters = region && region !== 'all' ? { region } : {};
 
     const [kpis, sectors, companies] = await Promise.all([
-      getKpis(filters).catch(err => {
-        console.error('KPIs query error:', err);
-        return {};
-      }),
-      getSectorStats(filters).catch(err => {
-        console.error('Sector stats query error:', err);
-        return [];
-      }),
-      getAllCompanies(filters).catch(err => {
-        console.error('Companies query error:', err);
-        return [];
-      }),
+      getKpis(filters).catch(() => ({})),
+      getSectorStats(filters).catch(() => []),
+      getAllCompanies(filters).catch(() => []),
     ]);
 
-    res.json({ kpis, sectors, companies });
+    res.json({ data: { kpis, sectors, companies } });
   } catch (err) {
     next(err);
   }

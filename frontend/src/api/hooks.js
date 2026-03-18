@@ -40,6 +40,16 @@ export function useGraph(nodeTypes, yearMax, region) {
   });
 }
 
+/** Lightweight graph — smaller payload for faster initial render */
+export function useGraphLight(nodeTypes, yearMax, region) {
+  return useQuery({
+    queryKey: ['graphLight', nodeTypes, yearMax, region],
+    queryFn: () => api.getGraphLight(nodeTypes, yearMax, region),
+    staleTime: 300_000,
+    placeholderData: (previousData) => previousData,
+  });
+}
+
 /** Graph metrics (PageRank, Betweenness, Communities, Watchlist) */
 export function useGraphMetrics(nodeTypes) {
   return useQuery({
