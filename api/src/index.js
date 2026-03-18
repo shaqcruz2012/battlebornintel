@@ -27,6 +27,8 @@ import analyticsFlowRouter from './routes/analytics-flow.js';
 import ingestionRouter from './routes/ingestion.js';
 import subscribersRouter, { emailLogRouter } from './routes/subscribers.js';
 import investorsRouter from './routes/investors.js';
+import newsRouter, { setLastRefreshAt } from './routes/news.js';
+import { initTrackedCompanies, refreshNewsCache } from './services/newsAggregator.js';
 
 const app = express();
 
@@ -126,6 +128,9 @@ app.use('/api/analysis',               publicLimit, cacheMiddleware('analysis', 
 app.use('/api/stakeholder-activities', publicLimit, cacheMiddleware('stakeholderActivities',  60_000, { cacheControl: 'private, max-age=60' }),   stakeholderActivitiesRouter);
 app.use('/api/opportunities',          publicLimit, cacheMiddleware('opportunities',         300_000, { cacheControl: 'public, max-age=3600' }),  opportunitiesRouter);
 app.use('/api/investors',              publicLimit, cacheMiddleware('investors',             300_000, { cacheControl: 'public, max-age=3600' }),  investorsRouter);
+// Frontier news feed
+app.use('/api/news', publicLimit, cacheMiddleware('news', 120_000, { cacheControl: 'public, max-age=120' }), newsRouter);
+
 // Analytics routes (Phase 2 engines)
 app.use('/api/analytics', publicLimit, cacheMiddleware('analytics',           300_000, { cacheControl: 'public, max-age=300' }), analyticsRouter);
 app.use('/api/analytics', publicLimit, cacheMiddleware('analyticsStructural', 300_000, { cacheControl: 'public, max-age=300' }), analyticsStructuralRouter);
@@ -150,6 +155,29 @@ app.use(errorHandler);
 
 app.listen(cfg.port, () => {
   console.log(`BBI API listening on port ${cfg.port}`);
+
+  // Initialize frontier news aggregator: load company names, do initial fetch, schedule refresh
+  (async () => {
+    try {
+      await initTrackedCompanies(pool);
+      console.log('[news] Running initial news fetch...');
+      await refreshNewsCache(pool);
+      setLastRefreshAt(new Date().toISOString());
+      console.log('[news] Initial fetch complete');
+    } catch (err) {
+      console.warn('[news] Initial fetch failed:', err.message);
+    }
+  })();
+
+  // Refresh news every 30 minutes
+  setInterval(async () => {
+    try {
+      await refreshNewsCache(pool);
+      setLastRefreshAt(new Date().toISOString());
+    } catch (err) {
+      console.warn('[news] Scheduled refresh failed:', err.message);
+    }
+  }, 30 * 60 * 1000).unref();
 
   // Pre-warm the graph cache so the first user request hits warm cache
   setTimeout(async () => {

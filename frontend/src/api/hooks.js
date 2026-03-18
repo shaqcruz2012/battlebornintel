@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from './client.js';
 
 /** Scored, filtered companies */
@@ -215,6 +215,45 @@ export function useInvestorStats() {
     queryKey: ['investorStats'],
     queryFn: () => api.getInvestorStats(),
     staleTime: 300_000,
+  });
+}
+
+/** Frontier news feed */
+export function useNews(params = {}) {
+  return useQuery({
+    queryKey: ['news', 'frontier', params],
+    queryFn: () => api.getNews(params),
+    staleTime: 120_000,
+    refetchInterval: 30 * 60 * 1000, // auto-refresh every 30 min
+  });
+}
+
+/** Nevada-only news */
+export function useNewsNevada(params = {}) {
+  return useQuery({
+    queryKey: ['news', 'nevada', params],
+    queryFn: () => api.getNewsNevada(params),
+    staleTime: 120_000,
+  });
+}
+
+/** Sector heatmap data */
+export function useNewsSectors() {
+  return useQuery({
+    queryKey: ['news', 'sectors'],
+    queryFn: () => api.getNewsSectors(),
+    staleTime: 120_000,
+  });
+}
+
+/** Manual news refresh */
+export function useNewsRefresh() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => api.refreshNews(),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['news'] });
+    },
   });
 }
 

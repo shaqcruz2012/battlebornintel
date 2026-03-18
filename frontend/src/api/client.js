@@ -123,4 +123,25 @@ export const api = {
   getInvestorStats: () =>
     fetchJSON(`${BASE}/investors/stats`).then((r) => r.data),
 
+  // Frontier News
+  getNews: (params = {}) =>
+    fetchJSON(`${BASE}/news/frontier`, params).then((r) => r),
+
+  getNewsNevada: (params = {}) =>
+    fetchJSON(`${BASE}/news/nevada`, params).then((r) => r),
+
+  getNewsSectors: () =>
+    fetchJSON(`${BASE}/news/sectors`).then((r) => r.data),
+
+  refreshNews: () =>
+    fetch(`${BASE}/news/refresh`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(localStorage.getItem('bbi_token')
+          ? { Authorization: `Bearer ${localStorage.getItem('bbi_token')}` }
+          : {}),
+      },
+    }).then((r) => r.json()),
+
 };

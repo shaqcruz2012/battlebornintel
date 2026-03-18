@@ -1,6 +1,6 @@
-import { useState } from 'react';
 import { Card } from '../shared/Card';
 import { Tooltip } from '../shared/Tooltip';
+import { EventCard } from '../shared/EventCard';
 import styles from './WeeklyBriefCard.module.css';
 
 const EVENT_COLORS = {
@@ -143,32 +143,22 @@ function TaxonomyBadge({ type }) {
   );
 }
 
-function EventRow({ event }) {
-  return (
-    <div className={styles.eventRow}>
-      <EventTypeIcon type={event.type} />
-      <div className={styles.eventContent}>
-        <Tooltip content={event.detail}>
-          <div className={styles.eventMeta}>
-            <span className={styles.eventCompany}>{event.company}</span>
-            <TaxonomyBadge type={event.type} />
-            {event.source_url && (
-              <a
-                href={event.source_url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className={styles.sourceLink}
-                onClick={(e) => e.stopPropagation()}
-              >
-                Source &#8599;
-              </a>
-            )}
-          </div>
-          <div className={styles.eventDetail}>{event.detail}</div>
-        </Tooltip>
-      </div>
-    </div>
-  );
+function BriefEventCard({ event }) {
+  // Map timeline event shape to unified EventCard props
+  const normalized = {
+    id: event.id || `${event.date}-${event.company}`,
+    date: event.date,
+    activity_type: event.type,
+    company_name: event.company,
+    description: event.detail,
+    source_url: event.source_url,
+    verified: event.verified,
+    confidence: event.confidence,
+    city: event.city,
+    region: event.region,
+  };
+
+  return <EventCard event={normalized} isExpanded={false} onToggle={() => {}} compact />;
 }
 
 function ReapMetrics({ reap }) {
@@ -256,7 +246,7 @@ export function WeeklyBriefCard({ week, isCurrentWeek = false }) {
         <div className={styles.eventsList}>
           {week.events.length > 0 ? (
             week.events.map((event, idx) => (
-              <EventRow key={`${event.date}-${idx}`} event={event} />
+              <BriefEventCard key={`${event.date}-${idx}`} event={event} />
             ))
           ) : (
             <div className={styles.noEvents}>No activities recorded</div>

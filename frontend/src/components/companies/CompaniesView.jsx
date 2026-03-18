@@ -134,19 +134,6 @@ export function CompaniesView() {
     setExpandedId((prev) => (prev === id ? null : id));
   }, []);
 
-  const handleExportCsv = useCallback(() => {
-    downloadCsv(displayedCompanies, [
-      { label: 'Name', accessor: (r) => r.name },
-      { label: 'IRS Score', accessor: (r) => r.irs },
-      { label: 'Grade', accessor: (r) => r.grade },
-      { label: 'Stage', accessor: (r) => r.stage },
-      { label: 'Funding ($M)', accessor: (r) => r.funding },
-      { label: 'Momentum', accessor: (r) => r.momentum },
-      { label: 'City', accessor: (r) => r.city },
-      { label: 'Sectors', accessor: (r) => Array.isArray(r.sector) ? r.sector.join('; ') : r.sector },
-    ], 'bbi-companies.csv');
-  }, [displayedCompanies]);
-
   // Filtered + sorted list
   const displayedCompanies = useMemo(() => {
     if (!companies) return [];
@@ -195,6 +182,19 @@ export function CompaniesView() {
 
     return sorted;
   }, [companies, search, stageFilter, regionFilter, sectorFilters, sortKey, sortDir]);
+
+  const handleExportCsv = useCallback(() => {
+    downloadCsv(displayedCompanies, [
+      { label: 'Name', accessor: (r) => r.name },
+      { label: 'IRS Score', accessor: (r) => r.irs },
+      { label: 'Grade', accessor: (r) => r.grade },
+      { label: 'Stage', accessor: (r) => r.stage },
+      { label: 'Funding ($M)', accessor: (r) => r.funding },
+      { label: 'Momentum', accessor: (r) => r.momentum },
+      { label: 'City', accessor: (r) => r.city },
+      { label: 'Sectors', accessor: (r) => Array.isArray(r.sector) ? r.sector.join('; ') : r.sector },
+    ], 'bbi-companies.csv');
+  }, [displayedCompanies]);
 
   return (
     <MainGrid>

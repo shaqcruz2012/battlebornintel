@@ -17,6 +17,7 @@ const BASE_VIEWS = [
   { id: 'ecosystemGaps', label: 'Ecosystem Gaps' },
   { id: 'capitalFlows', label: 'Capital Flows' },
   { id: 'predictions', label: 'Predicted Links' },
+  { id: 'frontierNews', label: 'Frontier Intel' },
 ];
 
 const ADMIN_VIEWS = [

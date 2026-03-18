@@ -3,32 +3,31 @@ import pool from '../pool.js';
 export async function getTimeline({ limit = 30, type } = {}) {
   let sql = `
     SELECT
-      t.id,
-      t.event_date,
-      t.event_type,
-      t.company_name,
-      t.detail,
-      t.icon,
-      t.company_id,
-      t.confidence,
-      t.verified,
-      t.source_url,
+      e.id,
+      e.event_date,
+      e.event_type,
+      e.company_name,
+      e.description AS detail,
+      e.company_id,
+      e.confidence,
+      e.verified,
+      e.source_url,
       c.city,
       c.region,
       c.slug AS company_slug
-    FROM timeline_events t
-    LEFT JOIN companies c ON c.id = t.company_id
+    FROM events e
+    LEFT JOIN companies c ON c.id = e.company_id
   `;
   const params = [];
   let idx = 1;
 
   if (type) {
-    sql += ` WHERE t.event_type = $${idx}`;
+    sql += ` WHERE e.event_type = $${idx}`;
     params.push(type);
     idx++;
   }
 
-  sql += ` ORDER BY t.event_date DESC LIMIT $${idx}`;
+  sql += ` ORDER BY e.event_date DESC LIMIT $${idx}`;
   params.push(limit);
 
   const { rows } = await pool.query(sql, params);
@@ -40,7 +39,7 @@ export async function getTimeline({ limit = 30, type } = {}) {
     companyId: r.company_id,
     companySlug: r.company_slug,
     detail: r.detail,
-    icon: r.icon,
+    icon: null,
     confidence: r.confidence,
     verified: r.verified,
     source_url: r.source_url || null,
@@ -89,7 +88,7 @@ export async function getREAPMetrics({ since, until } = {}) {
       END AS reap_category,
       COUNT(*)                       AS event_count,
       array_agg(DISTINCT event_type) AS event_types
-    FROM timeline_events
+    FROM events
     WHERE ${conditions.join(' AND ')}
     GROUP BY reap_category
     ORDER BY reap_category
@@ -114,7 +113,7 @@ export async function getTimelineWeeks() {
       date_trunc('week', event_date)::date AS week_start,
       COUNT(*) AS event_count,
       array_agg(DISTINCT event_type) AS event_types
-    FROM timeline_events
+    FROM events
     GROUP BY date_trunc('week', event_date)
     ORDER BY week_start DESC
   `;
@@ -133,24 +132,23 @@ export async function getTimelineWeeks() {
 export async function getTimelineWeek(weekStart) {
   const sql = `
     SELECT
-      t.id,
-      t.event_date,
-      t.event_type,
-      t.company_name,
-      t.detail,
-      t.icon,
-      t.company_id,
-      t.confidence,
-      t.verified,
-      t.source_url,
+      e.id,
+      e.event_date,
+      e.event_type,
+      e.company_name,
+      e.description AS detail,
+      e.company_id,
+      e.confidence,
+      e.verified,
+      e.source_url,
       c.city,
       c.region,
       c.slug AS company_slug
-    FROM timeline_events t
-    LEFT JOIN companies c ON c.id = t.company_id
-    WHERE t.event_date >= $1::date
-      AND t.event_date < ($1::date + INTERVAL '7 days')
-    ORDER BY t.event_date DESC
+    FROM events e
+    LEFT JOIN companies c ON c.id = e.company_id
+    WHERE e.event_date >= $1::date
+      AND e.event_date < ($1::date + INTERVAL '7 days')
+    ORDER BY e.event_date DESC
   `;
   const { rows } = await pool.query(sql, [weekStart]);
   return rows.map((r) => ({
@@ -161,7 +159,7 @@ export async function getTimelineWeek(weekStart) {
     companyId: r.company_id,
     companySlug: r.company_slug,
     detail: r.detail,
-    icon: r.icon,
+    icon: null,
     confidence: r.confidence,
     verified: r.verified,
     source_url: r.source_url || null,
