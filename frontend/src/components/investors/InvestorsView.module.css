@@ -1,0 +1,491 @@
+/* ── Investors View: Bloomberg terminal-style investor dashboard ── */
+
+.wrapper {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  padding: var(--space-sm) 0;
+}
+
+/* ── KPI Strip ────────────────────────────────────────── */
+
+.kpiStrip {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 1px;
+  background: var(--border-grid);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.kpiCell {
+  background: var(--bg-elevated);
+  padding: var(--space-sm) var(--space-md);
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.kpiValue {
+  font-family: 'IBM Plex Mono', var(--font-mono), monospace;
+  font-size: var(--text-card-numeric-sm);
+  font-weight: var(--weight-semibold);
+  color: var(--accent-teal);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+  line-height: var(--leading-tight);
+}
+
+.kpiLabel {
+  font-family: 'IBM Plex Mono', var(--font-mono), monospace;
+  font-size: 8px;
+  font-weight: var(--weight-semibold);
+  color: var(--text-disabled);
+  text-transform: uppercase;
+  letter-spacing: 2px;
+}
+
+/* ── Section headers ──────────────────────────────────── */
+
+.sectionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-xs) 0;
+  border-bottom: 1px solid var(--border-subtle);
+  margin-top: var(--space-sm);
+}
+
+.sectionTitle {
+  font-family: 'IBM Plex Mono', var(--font-mono), monospace;
+  font-size: 9px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.4);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.sectionCount {
+  font-family: 'IBM Plex Mono', var(--font-mono), monospace;
+  font-size: 9px;
+  color: var(--accent-teal);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Controls bar ─────────────────────────────────────── */
+
+.controls {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  flex-wrap: wrap;
+}
+
+.controlsLabel {
+  font-family: var(--font-body);
+  font-size: var(--text-caption-sm);
+  color: var(--text-disabled);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+.sortBtn {
+  padding: var(--space-xs) var(--space-md);
+  background: transparent;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-body);
+  font-size: var(--text-caption-sm);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition:
+    border-color var(--transition-fast),
+    color var(--transition-fast),
+    background var(--transition-fast);
+  white-space: nowrap;
+}
+
+.sortBtn:hover {
+  border-color: var(--border-hover);
+  color: var(--text-primary);
+  background: var(--bg-hover);
+}
+
+.sortBtnActive {
+  border-color: var(--border-active);
+  color: var(--accent-teal);
+  background: var(--bg-active-row);
+}
+
+.filterBtn {
+  padding: var(--space-xs) var(--space-md);
+  background: transparent;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  font-family: 'IBM Plex Mono', var(--font-mono), monospace;
+  font-size: 9px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  white-space: nowrap;
+}
+
+.filterBtn:hover {
+  border-color: var(--border-hover);
+  color: var(--text-primary);
+  background: var(--bg-hover);
+}
+
+.filterBtnActive {
+  border-color: var(--border-active);
+  color: var(--accent-teal);
+  background: rgba(69, 215, 198, 0.08);
+}
+
+/* ── Fund cards grid ──────────────────────────────────── */
+
+.fundsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: var(--space-sm);
+}
+
+.fundCard {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: var(--space-md);
+  cursor: pointer;
+  transition:
+    border-color var(--transition-fast),
+    background var(--transition-fast);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.fundCard:hover {
+  border-color: var(--border-hover);
+  background: var(--bg-elevated);
+}
+
+.fundCardExpanded {
+  border-color: var(--border-active);
+  background: var(--bg-active-row);
+}
+
+.fundCardHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm);
+}
+
+.fundName {
+  font-family: 'IBM Plex Mono', var(--font-mono), monospace;
+  font-size: var(--text-h3);
+  font-weight: var(--weight-semibold);
+  color: var(--text-primary);
+  line-height: var(--leading-snug);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.typeBadge {
+  display: inline-flex;
+  align-items: center;
+  padding: var(--space-2xs) var(--space-sm);
+  font-family: 'IBM Plex Mono', var(--font-mono), monospace;
+  font-size: var(--text-micro);
+  font-weight: var(--weight-bold);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  border-radius: var(--radius-xs);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.deployBar {
+  height: 4px;
+  background: var(--border-subtle);
+  border-radius: var(--radius-xs);
+  overflow: hidden;
+}
+
+.deployFill {
+  height: 100%;
+  background: var(--accent-teal);
+  border-radius: var(--radius-xs);
+  transition: width var(--transition-normal);
+}
+
+.fundStats {
+  display: flex;
+  justify-content: space-between;
+  font-family: 'IBM Plex Mono', var(--font-mono), monospace;
+  font-size: var(--text-caption-sm);
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+.fundStatsLabel {
+  color: var(--text-disabled);
+  font-size: 8px;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  margin-right: var(--space-2xs);
+}
+
+.thesis {
+  font-family: var(--font-body);
+  font-size: var(--text-caption-sm);
+  color: var(--text-secondary);
+  font-style: italic;
+  line-height: var(--leading-normal);
+  margin: 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.companyCount {
+  font-family: var(--font-body);
+  font-size: var(--text-caption-sm);
+  color: var(--text-secondary);
+}
+
+/* ── External investors table ─────────────────────────── */
+
+.investorTable {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.investorTh {
+  font-family: 'IBM Plex Mono', var(--font-mono), monospace;
+  font-size: 8px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.25);
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  text-align: left;
+  padding: var(--space-xs) var(--space-sm);
+  border-bottom: 1px solid var(--border-subtle);
+  background: #0a0e14;
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  cursor: pointer;
+  user-select: none;
+}
+
+.investorTh:hover {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.investorThRight {
+  text-align: right;
+}
+
+.investorRow {
+  cursor: pointer;
+  transition: background var(--transition-fast);
+}
+
+.investorRow:hover {
+  background: var(--bg-hover);
+}
+
+.investorRowExpanded {
+  background: var(--bg-active-row);
+}
+
+.investorTd {
+  padding: var(--space-xs) var(--space-sm);
+  font-family: var(--font-body);
+  font-size: var(--text-caption-sm);
+  color: var(--text-secondary);
+  vertical-align: middle;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+}
+
+.investorName {
+  font-weight: var(--weight-semibold);
+  color: var(--text-primary);
+  font-family: 'IBM Plex Mono', var(--font-mono), monospace;
+  font-size: 11px;
+}
+
+.investorPortfolioSize {
+  font-family: 'IBM Plex Mono', var(--font-mono), monospace;
+  font-variant-numeric: tabular-nums;
+  color: var(--accent-teal);
+  text-align: right;
+  font-weight: 600;
+}
+
+.investorTypeBadge {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 6px;
+  font-family: 'IBM Plex Mono', var(--font-mono), monospace;
+  font-size: 8px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-radius: 2px;
+  white-space: nowrap;
+}
+
+/* ── Expanded portfolio list ──────────────────────────── */
+
+.portfolioRow {
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.portfolioRow td {
+  padding: var(--space-2xs) var(--space-sm) var(--space-2xs) var(--space-xl);
+  font-size: var(--text-caption-sm);
+  color: var(--text-secondary);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.02);
+}
+
+.portfolioCompanyName {
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.portfolioStage {
+  font-family: 'IBM Plex Mono', var(--font-mono), monospace;
+  font-size: 9px;
+  color: var(--text-disabled);
+  text-transform: uppercase;
+}
+
+.portfolioFunding {
+  font-family: 'IBM Plex Mono', var(--font-mono), monospace;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+/* ── Type breakdown chips ─────────────────────────────── */
+
+.typeBreakdown {
+  display: flex;
+  gap: var(--space-sm);
+  flex-wrap: wrap;
+  margin-top: var(--space-xs);
+}
+
+.typeChip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+  padding: var(--space-2xs) var(--space-sm);
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  font-family: 'IBM Plex Mono', var(--font-mono), monospace;
+  font-size: 9px;
+  color: var(--text-secondary);
+}
+
+.typeChipCount {
+  color: var(--accent-teal);
+  font-weight: 600;
+}
+
+.typeChipLabel {
+  color: var(--text-disabled);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* ── Group header rows ────────────────────────────────── */
+
+.groupHeader {
+  background: rgba(69, 215, 198, 0.03);
+}
+
+.groupHeader td {
+  padding: var(--space-xs) var(--space-sm);
+  font-family: 'IBM Plex Mono', var(--font-mono), monospace;
+  font-size: 9px;
+  font-weight: 600;
+  color: var(--accent-teal);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+/* ── Loading skeleton ─────────────────────────────────── */
+
+.loadingWrapper {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xl);
+  padding: var(--space-lg) 0;
+}
+
+.skeletonKpi {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 1px;
+  background: var(--border-grid);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.skeletonKpiCell {
+  height: 80px;
+  background: var(--bg-card);
+}
+
+.skeletonTable {
+  height: 400px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+}
+
+/* ── Responsive ───────────────────────────────────────── */
+
+@media (max-width: 1200px) {
+  .kpiStrip {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  .skeletonKpi {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .kpiStrip {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .fundsGrid {
+    grid-template-columns: 1fr;
+  }
+  .skeletonKpi {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .hideMobile {
+    display: none;
+  }
+}

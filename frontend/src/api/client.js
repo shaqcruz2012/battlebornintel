@@ -105,4 +105,14 @@ export const api = {
   getPredictedLinks: (limit = 30) =>
     fetchJSON(`${BASE}/analytics/predicted-links`, { limit }).then((r) => r.data),
 
+  // Investors
+  getInvestors: () =>
+    fetchJSON(`${BASE}/investors`).then((r) => r.data),
+
+  getInvestor: (id) =>
+    fetchJSON(`${BASE}/investors/${id}`).then((r) => r.data),
+
+  getInvestorStats: () =>
+    fetchJSON(`${BASE}/investors/stats`).then((r) => r.data),
+
 };

@@ -180,6 +180,34 @@ export function usePredictedLinks(limit = 30, enabled = false) {
   });
 }
 
+/** All investors (NV funds + external) */
+export function useInvestors() {
+  return useQuery({
+    queryKey: ['investors'],
+    queryFn: () => api.getInvestors(),
+    staleTime: 300_000,
+  });
+}
+
+/** Single investor detail */
+export function useInvestor(id) {
+  return useQuery({
+    queryKey: ['investor', id],
+    queryFn: () => api.getInvestor(id),
+    enabled: !!id,
+    staleTime: 300_000,
+  });
+}
+
+/** Investor aggregate stats */
+export function useInvestorStats() {
+  return useQuery({
+    queryKey: ['investorStats'],
+    queryFn: () => api.getInvestorStats(),
+    staleTime: 300_000,
+  });
+}
+
 /** GOED dashboard summary — composes existing queries */
 const GOED_NODE_TYPES = ['company', 'fund', 'person', 'external', 'accelerator', 'ecosystem'];
 

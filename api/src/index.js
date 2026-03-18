@@ -26,6 +26,7 @@ import analyticsPredictionsRouter from './routes/analytics-predictions.js';
 import analyticsFlowRouter from './routes/analytics-flow.js';
 import ingestionRouter from './routes/ingestion.js';
 import subscribersRouter, { emailLogRouter } from './routes/subscribers.js';
+import investorsRouter from './routes/investors.js';
 
 const app = express();
 
@@ -112,6 +113,7 @@ app.use('/api/constants',              publicLimit, cacheMiddleware('constants',
 app.use('/api/analysis',               publicLimit, cacheMiddleware('analysis',               60_000, { cacheControl: 'private, max-age=60' }),   analysisRouter);
 app.use('/api/stakeholder-activities', publicLimit, cacheMiddleware('stakeholderActivities',  60_000, { cacheControl: 'private, max-age=60' }),   stakeholderActivitiesRouter);
 app.use('/api/opportunities',          publicLimit, cacheMiddleware('opportunities',         300_000, { cacheControl: 'public, max-age=3600' }),  opportunitiesRouter);
+app.use('/api/investors',              publicLimit, cacheMiddleware('investors',             300_000, { cacheControl: 'public, max-age=3600' }),  investorsRouter);
 // Analytics routes (Phase 2 engines)
 app.use('/api/analytics', publicLimit, cacheMiddleware('analytics',           300_000, { cacheControl: 'public, max-age=300' }), analyticsRouter);
 app.use('/api/analytics', publicLimit, cacheMiddleware('analyticsStructural', 300_000, { cacheControl: 'public, max-age=300' }), analyticsStructuralRouter);
