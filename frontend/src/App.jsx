@@ -13,6 +13,7 @@ const GraphView = lazy(() => import('./components/graph/GraphView').then(m => ({
 const CompaniesView = lazy(() => import('./components/companies/CompaniesView').then(m => ({ default: m.CompaniesView })));
 const FundsView = lazy(() => import('./components/funds/FundsView').then(m => ({ default: m.FundsView })));
 const StakeholderFeedView = lazy(() => import('./components/feed/StakeholderFeedView').then(m => ({ default: m.StakeholderFeedView })));
+const ResourceMatrix = lazy(() => import('./components/ecosystem/ResourceMatrix'));
 
 const TabFallback = () => (
   <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-secondary)' }}>
@@ -62,6 +63,7 @@ export default function App() {
                 {view === 'goed' && <GoedView />}
                 {view === 'feed' && <StakeholderFeedView />}
                 {view === 'graph' && <GraphView />}
+                {view === 'ecosystem' && <ResourceMatrix />}
               </Suspense>
             </div>
           </ErrorBoundaryWithReset>
