@@ -167,11 +167,11 @@ export async function getShortestPaths(sourceId, targetId, maxDepth = 4) {
     `WITH RECURSIVE paths AS (
       -- Base: edges from source (bidirectional)
       SELECT source_id AS origin, target_id AS head, rel,
-             ARRAY[source_id, target_id] AS path, ARRAY[rel] AS rels, 1 AS depth
+             ARRAY[source_id, target_id]::text[] AS path, ARRAY[rel]::text[] AS rels, 1 AS depth
       FROM graph_edges WHERE source_id = $1
       UNION ALL
       SELECT source_id AS origin, source_id AS head, rel,
-             ARRAY[target_id, source_id] AS path, ARRAY[rel] AS rels, 1 AS depth
+             ARRAY[target_id, source_id]::text[] AS path, ARRAY[rel]::text[] AS rels, 1 AS depth
       FROM graph_edges WHERE target_id = $1
 
       UNION ALL

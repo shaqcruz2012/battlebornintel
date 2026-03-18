@@ -106,7 +106,7 @@ export async function getGraphData({ nodeTypes = [], yearMax = 2026, region } = 
   if (fundIds.length > 0) {
     queries.push(
       pool.query(
-        `SELECT id, name, fund_type FROM graph_funds WHERE id = ANY($1::int[])`,
+        `SELECT id, name, fund_type FROM graph_funds WHERE id = ANY($1::text[])`,
         [fundIds]
       ).then(r => ({ type: 'fund', rows: r.rows }))
     );

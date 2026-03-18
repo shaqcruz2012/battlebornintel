@@ -243,7 +243,7 @@ export async function findInvestorMatches(companyId, { limit = 20 } = {}) {
   // Fetch fund and external details in parallel
   const [fundDetailsResult, externalDetailsResult] = await Promise.all([
     fundInvestorIds.length > 0
-      ? pool.query(`SELECT id, name, fund_type FROM graph_funds WHERE id = ANY($1::int[])`, [fundInvestorIds])
+      ? pool.query(`SELECT id, name, fund_type FROM graph_funds WHERE id = ANY($1::text[])`, [fundInvestorIds])
       : { rows: [] },
     externalInvestorIds.length > 0
       ? pool.query(`SELECT id, name, entity_type FROM externals WHERE id = ANY($1::text[])`, [externalInvestorIds])

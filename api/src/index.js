@@ -25,6 +25,7 @@ import analyticsStructuralRouter from './routes/analytics-structural.js';
 import analyticsPredictionsRouter from './routes/analytics-predictions.js';
 import analyticsFlowRouter from './routes/analytics-flow.js';
 import ingestionRouter from './routes/ingestion.js';
+import subscribersRouter, { emailLogRouter } from './routes/subscribers.js';
 
 const app = express();
 
@@ -122,6 +123,10 @@ app.use('/api/admin', adminLimit, requireAdminKey, adminRouter);
 
 // Ingestion queue: admin-key-gated for write ops, read ops for analysts
 app.use('/api/ingestion', adminLimit, requireAdminKey, ingestionRouter);
+
+// Email subscribers & log: admin-key-gated
+app.use('/api/subscribers', adminLimit, requireAdminKey, subscribersRouter);
+app.use('/api/email-log', adminLimit, requireAdminKey, emailLogRouter);
 
 // High-impact batch endpoint for dashboard
 app.use('/api/dashboard-batch', publicLimit, dashboardBatchRouter);
