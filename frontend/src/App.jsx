@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, lazy, Suspense } from 'react';
 import { FilterProvider } from './hooks/useFilters';
+import { AuthProvider } from './hooks/useAuth';
 import { ErrorBoundary, ErrorBoundaryWithReset } from './components/ErrorBoundary';
 import { AppShell } from './components/layout/AppShell';
 import { Header } from './components/layout/Header';
@@ -17,6 +18,7 @@ const ResourceMatrix = lazy(() => import('./components/ecosystem/ResourceMatrix'
 const EcosystemGaps = lazy(() => import('./components/analytics/EcosystemGaps').then(m => ({ default: m.EcosystemGaps || m.default })));
 const RecommendedConnections = lazy(() => import('./components/analytics/RecommendedConnections').then(m => ({ default: m.RecommendedConnections || m.default })));
 const CapitalFlowView = lazy(() => import('./components/analytics/CapitalFlowView').then(m => ({ default: m.CapitalFlowView || m.default })));
+const IngestionReview = lazy(() => import('./components/ingestion/IngestionReview').then(m => ({ default: m.IngestionReview || m.default })));
 
 const TabFallback = () => (
   <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-secondary)' }}>
@@ -46,6 +48,7 @@ export default function App() {
 
   return (
     <ErrorBoundary>
+      <AuthProvider>
       <FilterProvider>
         <AppShell>
           <Header activeView={view} onViewChange={setView} />
@@ -70,11 +73,13 @@ export default function App() {
                 {view === 'ecosystemGaps' && <EcosystemGaps />}
                 {view === 'capitalFlows' && <CapitalFlowView />}
                 {view === 'predictions' && <RecommendedConnections />}
+                {view === 'ingestion' && <IngestionReview />}
               </Suspense>
             </div>
           </ErrorBoundaryWithReset>
         </AppShell>
       </FilterProvider>
+      </AuthProvider>
     </ErrorBoundary>
   );
 }

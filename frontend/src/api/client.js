@@ -14,7 +14,11 @@ async function fetchJSON(path, params = {}, { signal } = {}) {
     }
   }
 
-  const res = await fetch(url.toString(), { signal });
+  const headers = {};
+  const token = localStorage.getItem('bbi_token');
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+
+  const res = await fetch(url.toString(), { signal, headers });
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
     throw new Error(body.error || `API error ${res.status}`);

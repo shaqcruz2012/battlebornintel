@@ -29,8 +29,8 @@ export async function getGraphData({ nodeTypes = [], yearMax = 2026, region } = 
   const edgeRows = (await pool.query(
     `SELECT source_id, target_id, rel, event_year, event_date, note, matching_score,
             edge_category, edge_style, edge_color, edge_opacity
-     FROM graph_edges WHERE event_year <= $1`,
-    [yearMax]
+     FROM graph_edges WHERE event_year <= $1::int`,
+    [parseInt(yearMax, 10) || 2026]
   )).rows;
 
   // ── Step 2: Collect referenced node IDs & classify by prefix ─────────────

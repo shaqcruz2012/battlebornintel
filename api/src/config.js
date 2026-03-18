@@ -16,4 +16,5 @@ export default {
   databaseUrl: databaseUrl || '',
   nodeEnv: process.env.NODE_ENV || 'development',
   adminApiKey: process.env.ADMIN_API_KEY || null,
+  jwtSecret: process.env.JWT_SECRET || 'bbi-dev-secret-change-in-production',
 };

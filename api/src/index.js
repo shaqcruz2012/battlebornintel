@@ -6,6 +6,8 @@ import pool from './db/pool.js';
 import { errorHandler } from './middleware/errorHandler.js';
 import { cacheMiddleware, getCacheStats } from './middleware/cache.js';
 
+import authRouter from './routes/auth.js';
+import { optionalAuth } from './middleware/auth.js';
 import companiesRouter from './routes/companies.js';
 import fundsRouter from './routes/funds.js';
 import graphRouter from './routes/graph.js';
@@ -22,6 +24,7 @@ import analyticsRouter from './routes/analytics.js';
 import analyticsStructuralRouter from './routes/analytics-structural.js';
 import analyticsPredictionsRouter from './routes/analytics-predictions.js';
 import analyticsFlowRouter from './routes/analytics-flow.js';
+import ingestionRouter from './routes/ingestion.js';
 
 const app = express();
 
@@ -53,6 +56,25 @@ function requireAdminKey(req, res, next) {
   }
   next();
 }
+
+// Optional auth — populates req.user when a valid token is present
+app.use(optionalAuth);
+
+// Audit logging — logs requests when req.user exists
+app.use(async (req, res, next) => {
+  if (req.user && req.method !== 'OPTIONS') {
+    // Fire-and-forget: don't block the request
+    pool.query(
+      `INSERT INTO audit_log (user_id, action, resource, ip_address, user_agent)
+       VALUES ($1, $2, $3, $4, $5)`,
+      [req.user.id, req.method, req.originalUrl, req.ip, req.headers['user-agent']]
+    ).catch(() => {}); // silently ignore audit failures
+  }
+  next();
+});
+
+// Auth routes (public — no auth required)
+app.use('/api/auth', authRouter);
 
 // Health check
 app.get('/api/health', async (req, res) => {
@@ -97,6 +119,9 @@ app.use('/api/analytics', publicLimit, cacheMiddleware('analyticsFlow',       30
 
 // Admin routes: key-gated + strict rate limit
 app.use('/api/admin', adminLimit, requireAdminKey, adminRouter);
+
+// Ingestion queue: admin-key-gated for write ops, read ops for analysts
+app.use('/api/ingestion', adminLimit, requireAdminKey, ingestionRouter);
 
 // High-impact batch endpoint for dashboard
 app.use('/api/dashboard-batch', publicLimit, dashboardBatchRouter);

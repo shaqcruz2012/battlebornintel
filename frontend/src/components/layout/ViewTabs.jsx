@@ -1,9 +1,10 @@
-import { useCallback, useRef } from 'react';
+import { useCallback, useRef, useMemo } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
+import { useAuth } from '../../hooks/useAuth';
 import { api } from '../../api/client.js';
 import styles from './ViewTabs.module.css';
 
-const VIEWS = [
+const BASE_VIEWS = [
   { id: 'executive', label: 'Executive Dashboard' },
   { id: 'companies', label: 'Companies' },
   { id: 'funds', label: 'Funds' },
@@ -17,6 +18,10 @@ const VIEWS = [
   { id: 'predictions', label: 'Predicted Links' },
 ];
 
+const ADMIN_VIEWS = [
+  { id: 'ingestion', label: 'Ingestion Queue', adminOnly: true },
+];
+
 const GRAPH_DEFAULT_NODE_TYPES = [
   'company', 'fund', 'person', 'external', 'accelerator', 'ecosystem',
 ];
@@ -25,6 +30,12 @@ const GRAPH_YEAR_MAX = 2026;
 export function ViewTabs({ active, onChange }) {
   const queryClient = useQueryClient();
   const tabsRef = useRef(null);
+  const { user } = useAuth();
+
+  const VIEWS = useMemo(() => {
+    const isPrivileged = user && (user.role === 'admin' || user.role === 'analyst');
+    return isPrivileged ? [...BASE_VIEWS, ...ADMIN_VIEWS] : BASE_VIEWS;
+  }, [user]);
 
   const handleGraphTabHover = useCallback(() => {
     queryClient.prefetchQuery({
@@ -65,7 +76,7 @@ export function ViewTabs({ active, onChange }) {
       const tabs = tabsRef.current?.querySelectorAll('[role="tab"]');
       tabs?.[nextIdx]?.focus();
     },
-    [active, onChange],
+    [active, onChange, VIEWS],
   );
 
   return (
