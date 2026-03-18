@@ -20,6 +20,12 @@
 
 BEGIN;
 
+-- Ensure idempotency: create unique index if it doesn't exist
+-- (graph_edges has no unique constraint on source/target/rel, so ON CONFLICT
+--  needs this index to prevent duplicates on re-run)
+CREATE UNIQUE INDEX IF NOT EXISTS uq_graph_edges_src_tgt_rel
+  ON graph_edges (source_id, target_id, rel);
+
 -- ============================================================
 -- SECTION 1: Enrich accelerator metadata
 -- ============================================================
@@ -91,7 +97,7 @@ INSERT INTO graph_edges (source_id, target_id, rel, note, event_year, source_url
 VALUES ('u_unlv', 'a_blackfire', 'manages',
   'UNLV operates Black Fire Innovation as its flagship applied research and corporate innovation facility at Harry Reid Research & Technology Park',
   2020, 'https://www.unlv.edu/blackfire', 0.95, 'HIGH')
-ON CONFLICT DO NOTHING;
+ON CONFLICT (source_id, target_id, rel) DO NOTHING;
 
 -- 3b. Caesars co-founded Black Fire (already has collaborated_with; add founding edge)
 INSERT INTO graph_edges (source_id, target_id, rel, note, event_year, source_url, confidence, data_quality)
