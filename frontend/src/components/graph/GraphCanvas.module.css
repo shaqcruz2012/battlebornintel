@@ -186,6 +186,12 @@
   50% { opacity: 1; }
 }
 
+/* ── Node hover — Palantir-style glow on interactive node groups ── */
+
+.nodeGroup {
+  transition: filter 200ms ease;
+}
+
 /* ── Animated dash for opportunity edges ── */
 
 @keyframes dashFlow {

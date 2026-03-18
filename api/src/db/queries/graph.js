@@ -398,11 +398,11 @@ export async function getGraphMetrics() {
     rows = result.rows;
   } catch (err) {
     console.error('[graph] graph_metrics_cache query failed:', err.message);
-    return { pagerank: {}, betweenness: {}, communities: {} };
+    return { pagerank: {}, betweenness: {}, communities: {}, communityNames: {} };
   }
 
   if (!rows || rows.length === 0) {
-    return { pagerank: {}, betweenness: {}, communities: {} };
+    return { pagerank: {}, betweenness: {}, communities: {}, communityNames: {} };
   }
 
   const pagerank = {};
@@ -420,5 +420,147 @@ export async function getGraphMetrics() {
     communities[r.node_id] = r.community_id;
   }
 
-  return { pagerank, betweenness, communities };
+  // Build community names from node attributes
+  const communityNames = await buildCommunityNames(rows, communities);
+
+  return { pagerank, betweenness, communities, communityNames };
+}
+
+/**
+ * Build descriptive community names by loading node metadata for each community's members.
+ * Queries only company data (which has sector/region) to keep it lightweight.
+ */
+async function buildCommunityNames(metricsRows, communities) {
+  // Group node IDs by community
+  const communityMembers = {}; // cid -> [node_id]
+  for (const r of metricsRows) {
+    const cid = r.community_id;
+    if (cid == null) continue;
+    if (!communityMembers[cid]) communityMembers[cid] = [];
+    communityMembers[cid].push(r.node_id);
+  }
+
+  // Collect all company IDs to fetch their sectors/regions
+  const companyIds = [];
+  const allNodeIds = new Set();
+  for (const members of Object.values(communityMembers)) {
+    for (const nid of members) {
+      allNodeIds.add(nid);
+      if (nid.startsWith('c_')) companyIds.push(nid.slice(2));
+    }
+  }
+
+  // Batch-load company metadata (sector, region, name)
+  const companyMap = {}; // c_<id> -> { name, sectors, region }
+  if (companyIds.length > 0) {
+    try {
+      const result = await pool.query(
+        `SELECT id, name, sectors, region FROM companies WHERE id = ANY($1::int[])`,
+        [companyIds]
+      );
+      for (const row of result.rows) {
+        companyMap[`c_${row.id}`] = {
+          label: row.name,
+          sectors: row.sectors || [],
+          region: row.region,
+          type: 'company',
+        };
+      }
+    } catch (err) {
+      console.error('[graph] company metadata query for community names failed:', err.message);
+    }
+  }
+
+  // Also load fund names for hub resolution
+  const fundIds = [];
+  for (const nid of allNodeIds) {
+    if (nid.startsWith('f_')) fundIds.push(nid.slice(2));
+  }
+  const fundMap = {};
+  if (fundIds.length > 0) {
+    try {
+      const result = await pool.query(
+        `SELECT id, name FROM graph_funds WHERE id = ANY($1::text[])`,
+        [fundIds]
+      );
+      for (const row of result.rows) {
+        fundMap[`f_${row.id}`] = { label: row.name, type: 'fund' };
+      }
+    } catch (err) {
+      console.error('[graph] fund metadata query for community names failed:', err.message);
+    }
+  }
+
+  const regionNames = {
+    las_vegas: 'Las Vegas',
+    reno: 'Reno',
+    henderson: 'Henderson',
+    'reno-sparks': 'Reno-Sparks',
+    rural: 'Rural NV',
+    statewide: 'Statewide',
+  };
+
+  function titleCase(str) {
+    if (!str) return '';
+    return str.charAt(0).toUpperCase() + str.slice(1);
+  }
+
+  // Build degree map from edges for hub detection (use pagerank as proxy from cache)
+  const prByNode = {};
+  for (const r of metricsRows) {
+    prByNode[r.node_id] = r.pagerank ?? 0;
+  }
+
+  const communityNames = {};
+  for (const [cid, memberIds] of Object.entries(communityMembers)) {
+    // Sector frequency
+    const sectorCounts = {};
+    const regionCounts = {};
+    const typeCounts = {};
+    let hubNode = null;
+    let hubPr = -1;
+
+    for (const nid of memberIds) {
+      // Determine type from prefix
+      const pfx = nid.split('_')[0];
+      const typeMap = { c: 'company', f: 'fund', p: 'person', a: 'accelerator', e: 'ecosystem', x: 'external', s: 'sector', r: 'region' };
+      const ntype = typeMap[pfx] || 'unknown';
+      typeCounts[ntype] = (typeCounts[ntype] || 0) + 1;
+
+      // Track hub by pagerank
+      const pr = prByNode[nid] || 0;
+      if (pr > hubPr) {
+        hubPr = pr;
+        hubNode = companyMap[nid] || fundMap[nid] || { label: nid, type: ntype };
+      }
+
+      // Gather sectors/regions from company data
+      const cData = companyMap[nid];
+      if (cData) {
+        const sectors = Array.isArray(cData.sectors) ? cData.sectors : [cData.sectors];
+        sectors.forEach(s => { if (s) sectorCounts[s] = (sectorCounts[s] || 0) + 1; });
+        if (cData.region) regionCounts[cData.region] = (regionCounts[cData.region] || 0) + 1;
+      }
+    }
+
+    const topSector = Object.entries(sectorCounts).sort((a, b) => b[1] - a[1])[0];
+    const topRegion = Object.entries(regionCounts).sort((a, b) => b[1] - a[1])[0];
+    const topType = Object.entries(typeCounts).sort((a, b) => b[1] - a[1])[0];
+
+    const parts = [];
+    if (topSector && topSector[1] >= 2) parts.push(topSector[0]);
+    if (topRegion && topRegion[1] >= 2) parts.push(regionNames[topRegion[0]] || titleCase(topRegion[0]));
+
+    if (!parts.length) {
+      if (hubNode && hubNode.label && hubNode.label !== hubNode.id) {
+        parts.push(hubNode.label);
+      } else if (topType) {
+        parts.push(titleCase(topType[0]) + ' Group');
+      }
+    }
+
+    communityNames[cid] = parts.length ? parts.join(' \u00B7 ') : `Cluster ${memberIds.length}`;
+  }
+
+  return communityNames;
 }

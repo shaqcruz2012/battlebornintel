@@ -171,13 +171,13 @@ const NodeCircle = memo(function NodeCircle({
   const showLabel = !suppressLabels && (r >= 10 || isSelected || (isConnected && hasSelection));
 
   // Hub nodes are always fully visible; selection states take precedence over radial fade
-  const groupOpacity = dim ? 0.1
+  const groupOpacity = dim ? 0.3
     : isHub ? 1
     : isSelected || isConnected ? 1
     : (baseOpacity ?? 1);
 
   return (
-    <g opacity={groupOpacity} style={{ transition: 'opacity 300ms ease' }}>
+    <g opacity={groupOpacity} style={{ transition: 'opacity 300ms ease, transform 200ms ease' }} className={!dim ? styles.nodeGroup : undefined}>
       {/* Soft outer glow for connected nodes */}
       {isConnected && !isSelected && hasSelection && (
         <>
@@ -192,17 +192,21 @@ const NodeCircle = memo(function NodeCircle({
           />
         </>
       )}
-      {/* Selected node glow ring */}
+      {/* Selected node teal glow ring — Palantir-style */}
       {isSelected && (
         <>
           <circle
-            cx={node.x} cy={node.y} r={r + 8}
-            fill={fill} fillOpacity={0.08}
+            cx={node.x} cy={node.y} r={r + 10}
+            fill="#45d7c6" fillOpacity={0.06}
           />
           <circle
-            cx={node.x} cy={node.y} r={r + 4}
-            fill="none" stroke="var(--accent-teal)"
-            strokeWidth={1.5} opacity={0.5}
+            cx={node.x} cy={node.y} r={r + 6}
+            fill="#45d7c6" fillOpacity={0.10}
+          />
+          <circle
+            cx={node.x} cy={node.y} r={r + 3}
+            fill="none" stroke="#45d7c6"
+            strokeWidth={2} opacity={0.6}
           />
         </>
       )}
@@ -235,12 +239,12 @@ const NodeCircle = memo(function NodeCircle({
           isHub && !isSelected
             ? 'rgba(255,255,255,0.35)'
             : isSelected
-              ? '#fff'
+              ? '#45d7c6'
               : isConnected && hasSelection
                 ? 'var(--accent-teal)'
                 : 'rgba(0,0,0,0.25)'
         }
-        strokeWidth={isHub && !isSelected ? 1 : isSelected ? 1.5 : isConnected && hasSelection ? 1 : 0.4}
+        strokeWidth={isHub && !isSelected ? 1 : isSelected ? 2 : isConnected && hasSelection ? 1 : 0.4}
         style={{
           cursor: 'pointer',
           transition: 'stroke-width 200ms ease, stroke 200ms ease',
@@ -249,38 +253,53 @@ const NodeCircle = memo(function NodeCircle({
         onMouseEnter={(e) => onHover(node, e)}
         onMouseLeave={onLeave}
       />
-      {/* Node label */}
+      {/* Node label — Palantir-style: teal for selected, node type color otherwise */}
       {showLabel && (
         <>
+          {/* Selected label: dark pill background for contrast */}
+          {isSelected && (
+            <rect
+              x={node.x - (Math.min(node.label?.length || 0, 18) * 3.2 + 10)}
+              y={node.y + r + 3}
+              width={(Math.min(node.label?.length || 0, 18) * 6.4 + 20)}
+              height={16}
+              rx={8}
+              fill="rgba(10, 14, 20, 0.85)"
+              stroke="rgba(69, 215, 198, 0.3)"
+              strokeWidth={1}
+              pointerEvents="none"
+            />
+          )}
           {/* Label text shadow for readability */}
           <text
-            x={node.x} y={node.y + r + 12}
+            x={node.x} y={node.y + r + 14}
             textAnchor="middle"
-            fill="rgba(5, 6, 9, 0.7)"
+            fill="rgba(5, 6, 9, 0.95)"
             fontSize={isSelected ? 10 : 9}
             fontFamily="var(--font-body)"
             fontWeight={isSelected || (isConnected && hasSelection) ? '600' : '400'}
             pointerEvents="none"
-            stroke="rgba(5, 6, 9, 0.7)"
-            strokeWidth={2.5}
+            stroke="rgba(5, 6, 9, 0.95)"
+            strokeWidth={3}
             strokeLinejoin="round"
           >
             {node.label?.length > 18 ? node.label.slice(0, 16) + '...' : node.label}
           </text>
           <text
-            x={node.x} y={node.y + r + 12}
+            x={node.x} y={node.y + r + 14}
             textAnchor="middle"
             fill={
               isSelected
-                ? 'var(--text-primary)'
+                ? '#45d7c6'
                 : isConnected && hasSelection
-                  ? 'var(--text-primary)'
-                  : 'var(--text-secondary)'
+                  ? fill
+                  : fill
             }
             fontSize={isSelected ? 10 : 9}
             fontFamily="var(--font-body)"
             fontWeight={isSelected || (isConnected && hasSelection) ? '600' : '400'}
             pointerEvents="none"
+            style={!isSelected ? { textShadow: '0 1px 4px rgba(0,0,0,0.95)' } : undefined}
           >
             {node.label?.length > 18 ? node.label.slice(0, 16) + '...' : node.label}
           </text>

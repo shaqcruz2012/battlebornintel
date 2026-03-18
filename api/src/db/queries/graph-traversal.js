@@ -412,7 +412,35 @@ export async function getCommunities() {
     allHubIds.push(...hubs.map(h => h.node_id));
   }
 
-  const nodeMap = await resolveNodes(allHubIds);
+  // Also resolve ALL member IDs for community naming
+  const allMemberIds = [];
+  for (const [, members] of communityMembers) {
+    allMemberIds.push(...members.map(m => m.node_id));
+  }
+  const nodeMap = await resolveNodes([...new Set([...allHubIds, ...allMemberIds])]);
+
+  // Load company sectors/regions for community naming
+  const companyIds = allMemberIds.filter(id => id.startsWith('c_')).map(id => id.slice(2));
+  const companyMeta = {};
+  if (companyIds.length > 0) {
+    try {
+      const compResult = await pool.query(
+        `SELECT id, sectors, region FROM companies WHERE id = ANY($1::int[])`,
+        [companyIds]
+      );
+      for (const row of compResult.rows) {
+        companyMeta[`c_${row.id}`] = { sectors: row.sectors || [], region: row.region };
+      }
+    } catch (err) {
+      console.error('[communities] company metadata query failed:', err.message);
+    }
+  }
+
+  const regionNames = {
+    las_vegas: 'Las Vegas', reno: 'Reno', henderson: 'Henderson',
+    'reno-sparks': 'Reno-Sparks', rural: 'Rural NV', statewide: 'Statewide',
+  };
+  function titleCase(s) { return s ? s.charAt(0).toUpperCase() + s.slice(1) : ''; }
 
   // Build community objects
   const communities = [];
@@ -422,11 +450,44 @@ export async function getCommunities() {
       return { id: h.node_id, label: node.label, type: node.type, pagerank: h.pagerank };
     });
 
+    // Auto-name this community
+    const sectorCounts = {};
+    const regionCounts = {};
+    const typeCounts = {};
+    for (const m of members) {
+      const node = nodeMap.get(m.node_id);
+      if (node) typeCounts[node.type] = (typeCounts[node.type] || 0) + 1;
+      const cData = companyMeta[m.node_id];
+      if (cData) {
+        (Array.isArray(cData.sectors) ? cData.sectors : [cData.sectors]).forEach(s => {
+          if (s) sectorCounts[s] = (sectorCounts[s] || 0) + 1;
+        });
+        if (cData.region) regionCounts[cData.region] = (regionCounts[cData.region] || 0) + 1;
+      }
+    }
+    const topSector = Object.entries(sectorCounts).sort((a, b) => b[1] - a[1])[0];
+    const topRegion = Object.entries(regionCounts).sort((a, b) => b[1] - a[1])[0];
+    const topType = Object.entries(typeCounts).sort((a, b) => b[1] - a[1])[0];
+    const hubNode = hubs[0];
+
+    const parts = [];
+    if (topSector && topSector[1] >= 2) parts.push(topSector[0]);
+    if (topRegion && topRegion[1] >= 2) parts.push(regionNames[topRegion[0]] || titleCase(topRegion[0]));
+    if (!parts.length && hubNode && hubNode.label && hubNode.label !== hubNode.id) {
+      parts.push(hubNode.label);
+    } else if (!parts.length && topType) {
+      parts.push(titleCase(topType[0]) + ' Group');
+    }
+    const name = parts.length ? parts.join(' \u00B7 ') : `Cluster ${members.length}`;
+
     communities.push({
       id: cid,
+      name,
       size: members.length,
       hubs,
       bridges: bridgeCounts.get(cid) || 0,
+      topSector: topSector ? topSector[0] : null,
+      topRegion: topRegion ? (regionNames[topRegion[0]] || titleCase(topRegion[0])) : null,
     });
   }
 

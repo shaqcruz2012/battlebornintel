@@ -347,6 +347,62 @@ export async function analyzeStructuralHoles() {
   // Step 4: Find ecosystem gaps
   const gaps = findGaps(communities, pairCount, edges, nodeMap, constraints);
 
+  // Build community names from node attributes
+  const communityMemberMap = {};
+  for (const [nodeId, cid] of Object.entries(communities)) {
+    if (!communityMemberMap[cid]) communityMemberMap[cid] = [];
+    const n = nodeMap[nodeId] || {};
+    communityMemberMap[cid].push(n);
+  }
+
+  const regionDisplayNames = {
+    las_vegas: 'Las Vegas', reno: 'Reno', henderson: 'Henderson',
+    'reno-sparks': 'Reno-Sparks', rural: 'Rural NV', statewide: 'Statewide',
+  };
+  function titleCase(s) { return s ? s.charAt(0).toUpperCase() + s.slice(1) : ''; }
+
+  const communityNames = {};
+  for (const [cid, mems] of Object.entries(communityMemberMap)) {
+    const sectorCounts = {};
+    const regionCounts = {};
+    const typeCounts = {};
+    mems.forEach(m => {
+      const sectors = m.sector || m.sectors || [];
+      (Array.isArray(sectors) ? sectors : [sectors]).forEach(s => {
+        if (s) sectorCounts[s] = (sectorCounts[s] || 0) + 1;
+      });
+      if (m.region) regionCounts[m.region] = (regionCounts[m.region] || 0) + 1;
+      if (m.type) typeCounts[m.type] = (typeCounts[m.type] || 0) + 1;
+    });
+    const topSector = Object.entries(sectorCounts).sort((a, b) => b[1] - a[1])[0];
+    const topRegion = Object.entries(regionCounts).sort((a, b) => b[1] - a[1])[0];
+    const topType = Object.entries(typeCounts).sort((a, b) => b[1] - a[1])[0];
+
+    const parts = [];
+    if (topSector && topSector[1] >= 2) parts.push(topSector[0]);
+    if (topRegion && topRegion[1] >= 2) parts.push(regionDisplayNames[topRegion[0]] || titleCase(topRegion[0]));
+    if (!parts.length) {
+      // Use the highest-degree node label as name
+      const sortedByDeg = [...mems].filter(m => m.label && m.label !== m.id);
+      if (sortedByDeg.length) parts.push(sortedByDeg[0].label);
+      else if (topType) parts.push(titleCase(topType[0]) + ' Group');
+    }
+    communityNames[cid] = parts.length ? parts.join(' \u00B7 ') : `Cluster ${mems.length}`;
+  }
+
+  // Annotate islands and gaps with community names
+  for (const island of islands) {
+    island.communityName = communityNames[island.communityId] || `Community ${island.communityId}`;
+  }
+  for (const gap of gaps) {
+    gap.communityAName = communityNames[gap.communityA] || `Community ${gap.communityA}`;
+    gap.communityBName = communityNames[gap.communityB] || `Community ${gap.communityB}`;
+  }
+  // Annotate bridge community IDs with names
+  for (const bridge of bridgeNodes) {
+    bridge.communityLabels = bridge.communities.map(cid => communityNames[cid] || `C${cid}`);
+  }
+
   // Stats
   const communityIds = new Set(Object.values(communities));
   const constraintValues = Object.values(constraints);
@@ -358,6 +414,7 @@ export async function analyzeStructuralHoles() {
     bridges: bridgeNodes,
     islands,
     gaps,
+    communityNames,
     stats: {
       totalCommunities: communityIds.size,
       avgConstraint,

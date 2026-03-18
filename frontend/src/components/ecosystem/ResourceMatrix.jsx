@@ -18,6 +18,7 @@ import styles from './ResourceMatrix.module.css';
 export default function ResourceMatrix() {
   const areaRef      = useRef(null);
   const tooltipRef   = useRef(null);
+  const bodyTipsRef  = useRef([]);
 
   const [dataset, setDataset]       = useState('core');
   const [activeTrack, setTrack]     = useState('ALL');
@@ -27,6 +28,21 @@ export default function ResourceMatrix() {
   const [gapVis, setGapVis]         = useState(
     Object.fromEntries(POLICY_GAPS.map(g => [g.id, false]))
   );
+  const [dimensions, setDimensions] = useState({ w: 0, h: 0 });
+
+  // Track container size so chart re-renders when layout is ready or resized
+  useEffect(() => {
+    const el = areaRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver((entries) => {
+      const { width, height } = entries[0].contentRect;
+      if (width > 0 && height > 0) {
+        setDimensions({ w: Math.round(width), h: Math.round(height) });
+      }
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
 
   // Derived dataset
   const rawData = dataset === 'core'
@@ -55,6 +71,10 @@ export default function ResourceMatrix() {
     const W = area.clientWidth;
     const H = area.clientHeight;
     if (!W || !H) return;
+
+    // Clean up previous body-appended tooltips
+    bodyTipsRef.current.forEach(el => el.remove());
+    bodyTipsRef.current = [];
 
     const pW = W - PAD.left - PAD.right;
     const pH = H - PAD.top  - PAD.bottom;
@@ -246,7 +266,11 @@ export default function ResourceMatrix() {
     // ── Stats ────────────────────────────────────────────────────
     updateStats();
 
-  }, [rawData, activeTrack, activeStage, activeCats, labelsOn, gapVis, isVisible, isStageDim]);
+    return () => {
+      bodyTipsRef.current.forEach(el => el.remove());
+      bodyTipsRef.current = [];
+    };
+  }, [rawData, activeTrack, activeStage, activeCats, labelsOn, gapVis, isVisible, isStageDim, dimensions]);
 
   // ── Gap overlay renderer ─────────────────────────────────────────
   function renderGaps(area, toX, toY) {
@@ -309,6 +333,7 @@ export default function ResourceMatrix() {
       tt.className = styles.ovTooltip;
       tt.innerHTML = `<div style="color:${ov.color};font-weight:700;margin-bottom:6px;font-size:10px">${ov.label}</div><div style="font-size:9px;color:#8fa3b8;line-height:1.6">${ov.description}</div>`;
       document.body.appendChild(tt);
+      bodyTipsRef.current.push(tt);
 
       g.addEventListener('mouseenter', (e) => {
         tt.style.display = 'block';

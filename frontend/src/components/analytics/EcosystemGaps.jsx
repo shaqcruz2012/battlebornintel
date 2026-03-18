@@ -93,8 +93,10 @@ function BridgeCards({ bridges }) {
               </span>
             </div>
             <div className={styles.communityPills}>
-              {b.communities.map((cid) => (
-                <span key={cid} className={styles.communityPill}>C{cid}</span>
+              {b.communities.map((cid, idx) => (
+                <span key={cid} className={styles.communityPill} title={`Community ${cid}`}>
+                  {b.communityLabels?.[idx] || `C${cid}`}
+                </span>
               ))}
             </div>
           </div>
@@ -131,7 +133,7 @@ function IslandList({ islands, bridgeNodeIds }) {
       {islands.map((island) => (
         <div key={island.communityId} className={styles.communityBoxIsland}>
           <div className={styles.communityBoxHeader}>
-            <span className={styles.communityId}>Community {island.communityId}</span>
+            <span className={styles.communityId} title={`Community ${island.communityId}`}>{island.communityName || `Community ${island.communityId}`}</span>
             <span className={styles.communityCount}>
               {island.nodeCount} node{island.nodeCount !== 1 ? 's' : ''}
               {island.externalEdges > 0 ? ` / ${island.externalEdges} ext edge` : ' / isolated'}
@@ -189,12 +191,12 @@ function GapsTable({ gaps }) {
                     <span className={styles.gapDotRight} />
                   </span>
                 </td>
-                <td>
-                  C{g.communityA}{' '}
+                <td title={`Community ${g.communityA}`}>
+                  {g.communityAName || `C${g.communityA}`}{' '}
                   <span style={{ color: 'var(--text-disabled)' }}>({g.communityASize})</span>
                 </td>
-                <td>
-                  C{g.communityB}{' '}
+                <td title={`Community ${g.communityB}`}>
+                  {g.communityBName || `C${g.communityB}`}{' '}
                   <span style={{ color: 'var(--text-disabled)' }}>({g.communityBSize})</span>
                 </td>
                 <td>{g.interEdges}</td>
@@ -247,6 +249,16 @@ function GapsTable({ gaps }) {
 export function EcosystemGaps() {
   const { data, isLoading, error } = useStructuralHoles();
 
+  const bridges = data?.bridges ?? [];
+  const islands = data?.islands ?? [];
+  const gaps = data?.gaps ?? [];
+  const stats = data?.stats ?? {};
+
+  const bridgeNodeIds = useMemo(
+    () => new Set(bridges.map((b) => b.nodeId)),
+    [bridges]
+  );
+
   if (isLoading) {
     return (
       <MainGrid>
@@ -276,12 +288,6 @@ export function EcosystemGaps() {
       </MainGrid>
     );
   }
-
-  const { bridges, islands, gaps, stats } = data;
-  const bridgeNodeIds = useMemo(
-    () => new Set(bridges.map((b) => b.nodeId)),
-    [bridges]
-  );
 
   return (
     <MainGrid>

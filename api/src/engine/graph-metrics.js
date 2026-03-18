@@ -137,5 +137,99 @@ export function computeGraphMetrics(nodes, edges) {
 
   watchlist.sort((a, b) => b.priority - a.priority);
 
-  return { pagerank, betweenness, communities, watchlist, numCommunities: nextCid };
+  // ── Community Naming ──
+  // Auto-generate descriptive names for each community based on member attributes.
+  const communityMembers = {};  // cid -> [node]
+  ids.forEach((id, i) => {
+    const cid = communities[id];
+    if (!communityMembers[cid]) communityMembers[cid] = [];
+    const n = nodeMap[id];
+    communityMembers[cid].push({ ...n, degree: adj[i].length });
+  });
+
+  const communityNames = {};
+  for (const [cid, members] of Object.entries(communityMembers)) {
+    communityNames[cid] = nameCommunity(members);
+  }
+
+  return { pagerank, betweenness, communities, communityNames, watchlist, numCommunities: nextCid };
+}
+
+/* ── Community Naming ── */
+
+/**
+ * Generate a human-readable name for a community based on its members.
+ *
+ * Strategy priority:
+ *   1. Dominant sector (most common sector tag across members)
+ *   2. Dominant region (most common region)
+ *   3. Hub node label (highest degree member)
+ *   4. Dominant node type
+ *
+ * Produces names like: "AI · Las Vegas", "CleanTech · Reno", "BBV Portfolio"
+ */
+function nameCommunity(members) {
+  if (!members || members.length === 0) return 'Empty Cluster';
+
+  // Sector frequency
+  const sectorCounts = {};
+  members.forEach(m => {
+    const sectors = m.sector || m.sectors || [];
+    const sArr = Array.isArray(sectors) ? sectors : [sectors];
+    sArr.forEach(s => {
+      if (s) sectorCounts[s] = (sectorCounts[s] || 0) + 1;
+    });
+  });
+  const topSector = Object.entries(sectorCounts).sort((a, b) => b[1] - a[1])[0];
+
+  // Region frequency
+  const regionCounts = {};
+  members.forEach(m => {
+    if (m.region) regionCounts[m.region] = (regionCounts[m.region] || 0) + 1;
+  });
+  const topRegion = Object.entries(regionCounts).sort((a, b) => b[1] - a[1])[0];
+
+  // Hub node (highest degree)
+  const sorted = [...members].sort((a, b) => (b.degree || 0) - (a.degree || 0));
+  const hubNode = sorted[0];
+
+  // Dominant node type
+  const typeCounts = {};
+  members.forEach(m => {
+    if (m.type) typeCounts[m.type] = (typeCounts[m.type] || 0) + 1;
+  });
+  const topType = Object.entries(typeCounts).sort((a, b) => b[1] - a[1])[0];
+
+  // Region display name mapping
+  const regionNames = {
+    las_vegas: 'Las Vegas',
+    reno: 'Reno',
+    henderson: 'Henderson',
+    'reno-sparks': 'Reno-Sparks',
+    rural: 'Rural NV',
+    statewide: 'Statewide',
+  };
+
+  const parts = [];
+  if (topSector && topSector[1] >= 2) parts.push(topSector[0]);
+  if (topRegion && topRegion[1] >= 2) parts.push(regionNames[topRegion[0]] || titleCase(topRegion[0]));
+
+  // If we have nothing descriptive yet, use hub node or dominant type
+  if (!parts.length) {
+    if (hubNode && hubNode.label && hubNode.label !== hubNode.id) {
+      parts.push(hubNode.label);
+    } else if (topType) {
+      parts.push(titleCase(topType[0]) + ' Group');
+    }
+  }
+
+  // If still empty, generic fallback
+  if (!parts.length) return `Cluster ${members.length}`;
+
+  return parts.join(' \u00B7 ');
+}
+
+function titleCase(str) {
+  if (!str) return '';
+  return str.charAt(0).toUpperCase() + str.slice(1);
 }

@@ -61,17 +61,33 @@ function hullPath(hull, pad = 20) {
 
 /* ── Communities overlay ── */
 
-const CommunitiesOverlay = memo(function CommunitiesOverlay({ nodes, communities }) {
+const CommunitiesOverlay = memo(function CommunitiesOverlay({ nodes, communities, communityNames }) {
   const groups = useMemo(() => {
     if (!communities || !nodes?.length) return [];
-    // Group nodes by community_id
+    // Group nodes by community_id, also track hub (highest degree proxy via label)
     const map = {};
+    const hubMap = {}; // cid -> { label, degree }
     nodes.forEach((n) => {
       const cid = communities[n.id];
       if (cid === undefined) return;
       if (!map[cid]) map[cid] = [];
-      map[cid].push({ x: n.x || 0, y: n.y || 0 });
+      map[cid].push({ x: n.x || 0, y: n.y || 0, label: n.label, id: n.id });
     });
+
+    // Track hub node per community (most connected within the group)
+    for (const [cid, pts] of Object.entries(map)) {
+      // Simple heuristic: the node closest to centroid is usually the hub
+      const cx = pts.reduce((s, p) => s + p.x, 0) / pts.length;
+      const cy = pts.reduce((s, p) => s + p.y, 0) / pts.length;
+      let closest = pts[0];
+      let closestDist = Infinity;
+      for (const p of pts) {
+        const d = (p.x - cx) ** 2 + (p.y - cy) ** 2;
+        if (d < closestDist) { closestDist = d; closest = p; }
+      }
+      hubMap[cid] = closest?.label || '';
+    }
+
     return Object.entries(map)
       .filter(([, pts]) => pts.length >= 3)
       .map(([cid, pts]) => {
@@ -80,9 +96,11 @@ const CommunitiesOverlay = memo(function CommunitiesOverlay({ nodes, communities
         const path = hullPath(hull, 25);
         const cx = pts.reduce((s, p) => s + p.x, 0) / pts.length;
         const cy = pts.reduce((s, p) => s + p.y, 0) / pts.length;
-        return { cid, color, path, cx, cy, count: pts.length };
+        const name = communityNames?.[cid] || `Community ${cid}`;
+        const hub = hubMap[cid] || '';
+        return { cid, color, path, cx, cy, count: pts.length, name, hub };
       });
-  }, [nodes, communities]);
+  }, [nodes, communities, communityNames]);
 
   if (!groups.length) return null;
 
@@ -97,17 +115,32 @@ const CommunitiesOverlay = memo(function CommunitiesOverlay({ nodes, communities
             strokeWidth={1.5}
             strokeDasharray="8,4"
           />
+          {/* Community name label */}
           <text
-            x={g.cx} y={g.cy}
+            x={g.cx} y={g.cy - 5}
             textAnchor="middle"
-            fill={g.color + 'AA'}
-            fontSize={9}
+            fill={g.color + 'CC'}
+            fontSize={10}
             fontFamily="var(--font-body)"
-            fontWeight="600"
+            fontWeight="700"
             letterSpacing="0.5"
           >
-            {`Community ${g.cid} (${g.count})`}
+            {`${g.name} (${g.count})`}
           </text>
+          {/* Hub node sub-label */}
+          {g.hub && g.hub !== g.name && (
+            <text
+              x={g.cx} y={g.cy + 7}
+              textAnchor="middle"
+              fill={g.color + '88'}
+              fontSize={7}
+              fontFamily="var(--font-mono)"
+              fontWeight="400"
+              letterSpacing="0.3"
+            >
+              {g.hub}
+            </text>
+          )}
         </g>
       ))}
     </g>
@@ -404,7 +437,7 @@ export const AnalysisOverlays = memo(function AnalysisOverlays({
   return (
     <g className="analysis-overlays">
       {show.communities && (
-        <CommunitiesOverlay nodes={nodes} communities={metrics?.communities} />
+        <CommunitiesOverlay nodes={nodes} communities={metrics?.communities} communityNames={metrics?.communityNames} />
       )}
       {show.capitalFlows && (
         <CapitalFlowOverlay edges={edges} />

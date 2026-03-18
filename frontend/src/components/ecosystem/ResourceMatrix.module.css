@@ -6,7 +6,8 @@
 .wrap {
   display: flex;
   flex-direction: column;
-  height: 100%;
+  height: calc(100vh - 124px);
+  min-height: 500px;
   background: #0d1117;
   font-family: 'IBM Plex Mono', monospace;
 }
