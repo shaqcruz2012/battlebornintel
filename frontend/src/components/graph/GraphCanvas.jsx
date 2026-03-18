@@ -165,8 +165,9 @@ const NodeCircle = memo(function NodeCircle({
   onSelect, onHover, onLeave,
   baseOpacity,  // radial galactic-core opacity (0.68–1.0), applied when not dim/selected
   isHub,        // true for BBV/GOED hub nodes — always full opacity + persistent glow
+  suppressLabels, // true when zoom is too low to read labels — skip text SVG elements
 }) {
-  const showLabel = r >= 10 || isSelected || (isConnected && hasSelection);
+  const showLabel = !suppressLabels && (r >= 10 || isSelected || (isConnected && hasSelection));
 
   // Hub nodes are always fully visible; selection states take precedence over radial fade
   const groupOpacity = dim ? 0.1
@@ -421,12 +422,15 @@ export function GraphCanvas({
   const fitAll = useCallback(() => {
     const { nodes } = layout;
     if (!nodes || !nodes.length) return;
-    const xs = nodes.map((n) => n.x || 0);
-    const ys = nodes.map((n) => n.y || 0);
-    const minX = Math.min(...xs);
-    const maxX = Math.max(...xs);
-    const minY = Math.min(...ys);
-    const maxY = Math.max(...ys);
+    let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+    for (let i = 0; i < nodes.length; i++) {
+      const nx = nodes[i].x || 0;
+      const ny = nodes[i].y || 0;
+      if (nx < minX) minX = nx;
+      if (nx > maxX) maxX = nx;
+      if (ny < minY) minY = ny;
+      if (ny > maxY) maxY = ny;
+    }
     const padX = 60;
     const padTop = 60;
     const padBottom = 80;  // extra space for TemporalSlider at bottom
@@ -673,6 +677,24 @@ export function GraphCanvas({
     return map;
   }, [edges]);
 
+  // Viewport culling — only render SVG nodes visible in the current pan/zoom viewport.
+  // Nodes outside the visible area get no DOM elements, dramatically reducing SVG count.
+  const visibleNodes = useMemo(() => {
+    if (!nodes || nodes.length === 0) return [];
+    // Convert viewport bounds to graph coordinate space
+    const margin = 40; // extra margin in graph-space pixels to avoid popping
+    const invZoom = 1 / (zoom || 1);
+    const viewMinX = (-pan.x * invZoom) - margin;
+    const viewMinY = (-pan.y * invZoom) - margin;
+    const viewMaxX = ((w - pan.x) * invZoom) + margin;
+    const viewMaxY = ((h - pan.y) * invZoom) + margin;
+    return nodes.filter((n) => {
+      const nx = n.x || 0;
+      const ny = n.y || 0;
+      return nx >= viewMinX && nx <= viewMaxX && ny >= viewMinY && ny <= viewMaxY;
+    });
+  }, [nodes, zoom, pan, w, h]);
+
   // Canvas edge renderer — replaces 5000+ SVG <line> elements with one draw call
   useEdgeCanvas(edgeCanvasRef, edges, zoom, pan, w, h, {
     selectedNode,
@@ -749,8 +771,8 @@ export function GraphCanvas({
               );
             })}
 
-          {/* Nodes */}
-          {nodes.map((n) => {
+          {/* Nodes — viewport-culled: only nodes within visible pan/zoom bounds are rendered */}
+          {visibleNodes.map((n) => {
             const r = nodeRadius(n, metrics?.pagerank);
             const fill = nodeColor(n, colorMode, metrics?.communities);
             const isSelected = selectedNode === n.id;
@@ -759,6 +781,10 @@ export function GraphCanvas({
             const dimBySelection = selectedNode && !isSelected && !isConnected;
             const dim = dimBySearch || dimBySelection;
             const isHub = HUB_NODE_IDS.has(n.id);
+
+            // Suppress text labels at low zoom to reduce SVG element count.
+            // Hub nodes and selected/connected nodes always show labels.
+            const suppressLabels = zoom < 0.6 && !isSelected && !isConnected && !isHub;
 
             // Galactic core radial opacity — only computed when graph is large enough
             // and the node is not already highlighted/dimmed by selection/search.
@@ -783,6 +809,7 @@ export function GraphCanvas({
                 onLeave={hideTooltip}
                 baseOpacity={baseOpacity}
                 isHub={isHub}
+                suppressLabels={suppressLabels}
               />
             );
 
