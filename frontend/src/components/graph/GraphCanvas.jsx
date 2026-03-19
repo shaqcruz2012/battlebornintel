@@ -1027,20 +1027,10 @@ export function GraphCanvas({
 
         <g transform={`translate(${pan.x},${pan.y}) scale(${zoom})`}>
 
-          {/* Edge labels — progressive visibility based on zoom tier:
-              - galaxy/constellation: only on selected node edges
-              - cluster/street: selected node edges + $ values when showValues on
-              - detail: all edge labels visible */}
-          {(!tooManyForEdgeLabels || showValues || zoomTier === 'detail') &&
-            (selectedNode || showValues || zoomTier === 'detail') &&
-            visibleEdges.map((e, i) => {
+          {/* Edge labels — only shown when a node is clicked (its edges get labels) */}
+          {selectedNode && visibleEdges.map((e, i) => {
               const isHighlighted = highlightedEdges.has(e);
-              // At detail zoom, show labels on ALL edges
-              if (zoomTier !== 'detail') {
-                if (selectedNode && !isHighlighted) return null;
-                const val = edgeValueMap.get(e) || '';
-                if (!selectedNode && showValues && !val) return null;
-              }
+              if (!isHighlighted) return null;
               const val = edgeValueMap.get(e) || '';
               const sx = e.source.x || 0;
               const sy = e.source.y || 0;
@@ -1052,7 +1042,7 @@ export function GraphCanvas({
                 <EdgeLabel
                   key={`label-${i}`}
                   sx={sx} sy={sy} tx={tx} ty={ty}
-                  label={(selectedNode || zoomTier === 'detail') ? edgeLabelText(e) : ''}
+                  label={edgeLabelText(e)}
                   val={val}
                   relColor={rc?.color}
                 />
