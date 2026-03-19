@@ -89,7 +89,7 @@ const CommunitiesOverlay = memo(function CommunitiesOverlay({ nodes, communities
     }
 
     return Object.entries(map)
-      .filter(([, pts]) => pts.length >= 3)
+      .filter(([, pts]) => pts.length >= 7)
       .map(([cid, pts]) => {
         const color = COMM_COLORS[parseInt(cid) % COMM_COLORS.length];
         const hull = convexHull(pts);

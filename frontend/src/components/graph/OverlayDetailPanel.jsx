@@ -70,7 +70,7 @@ const CommunitiesTable = memo(function CommunitiesTable({ nodes, communities, co
     });
 
     return Object.entries(groups)
-      .filter(([, members]) => members.length >= 2)
+      .filter(([, members]) => members.length >= 7)
       .map(([cid, members]) => {
         const color = COMM_COLORS[parseInt(cid) % COMM_COLORS.length];
         const name = communityNames?.[cid] || `Community ${cid}`;

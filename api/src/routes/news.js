@@ -29,7 +29,7 @@ router.get('/frontier', async (req, res, next) => {
       idx++;
     }
 
-    query += ` ORDER BY relevance DESC, score DESC LIMIT $${idx}`;
+    query += ` ORDER BY published_at DESC NULLS LAST, relevance DESC LIMIT $${idx}`;
     params.push(limit);
 
     const { rows } = await pool.query(query, params);
@@ -53,7 +53,7 @@ router.get('/nevada', async (req, res, next) => {
     const { rows } = await pool.query(
       `SELECT * FROM frontier_news_cache
        WHERE nevada_match = true
-       ORDER BY relevance DESC, score DESC
+       ORDER BY published_at DESC NULLS LAST, relevance DESC
        LIMIT $1`,
       [limit]
     );
