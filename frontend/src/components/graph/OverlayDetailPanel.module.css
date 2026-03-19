@@ -1,0 +1,185 @@
+/* ── OverlayDetailPanel — Bloomberg-style overlay data tables ── */
+
+.wrapper {
+  position: relative;
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  background: var(--surface, #111117);
+  border-top: 1px solid var(--border, #2A2A35);
+}
+
+.wrapper.open {
+  max-height: 40vh;
+}
+
+.inner {
+  overflow-y: auto;
+  max-height: calc(40vh - 32px);
+  padding: 0 16px 12px;
+}
+
+.inner::-webkit-scrollbar {
+  width: 5px;
+}
+
+.inner::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.inner::-webkit-scrollbar-thumb {
+  background: var(--border, #2A2A35);
+  border-radius: 3px;
+}
+
+/* ── Collapse toggle bar ── */
+.toggleBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 16px;
+  cursor: pointer;
+  user-select: none;
+  background: var(--surface, #111117);
+  border-bottom: 1px solid var(--border, #2A2A35);
+}
+
+.toggleBar:hover {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.toggleLabel {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  color: var(--text-secondary, #6B6A72);
+}
+
+.toggleChevron {
+  font-size: 12px;
+  color: var(--text-secondary, #6B6A72);
+  transition: transform 0.25s ease;
+}
+
+.toggleChevron.expanded {
+  transform: rotate(180deg);
+}
+
+/* ── Section blocks ── */
+.section {
+  margin-top: 12px;
+}
+
+.section + .section {
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.sectionHeader {
+  margin: 0 0 2px;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+}
+
+.sectionDesc {
+  margin: 0 0 8px;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px;
+  color: var(--text-secondary, #6B6A72);
+  line-height: 1.4;
+}
+
+/* ── Tables ── */
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px;
+}
+
+.table th {
+  text-align: left;
+  font-weight: 600;
+  font-size: 9px;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  color: var(--text-secondary, #6B6A72);
+  padding: 4px 8px;
+  border-bottom: 1px solid var(--border, #2A2A35);
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+}
+
+.table th:hover {
+  color: #26A69A;
+}
+
+.table th.sorted {
+  color: #26A69A;
+}
+
+.table th .sortArrow {
+  margin-left: 3px;
+  font-size: 8px;
+  opacity: 0.6;
+}
+
+.table td {
+  padding: 3px 8px;
+  color: var(--text-primary, #D4D0C8);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 180px;
+}
+
+.table tr:hover td {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.table td.num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Color swatch dot for communities */
+.colorDot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  vertical-align: middle;
+}
+
+/* Accent colors per overlay type */
+.commColor { color: #9B72CF; }
+.flowColor { color: #C8A55A; }
+.predColor { color: #26A69A; }
+.bridgeColor { color: #E85D5D; }
+
+/* Score bar */
+.scoreBar {
+  display: inline-block;
+  height: 4px;
+  border-radius: 2px;
+  vertical-align: middle;
+  margin-right: 6px;
+}
+
+/* Truncated community list */
+.commList {
+  font-size: 10px;
+  color: var(--text-secondary, #6B6A72);
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

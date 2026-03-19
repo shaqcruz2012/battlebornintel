@@ -855,4 +855,26 @@ export const VERIFIED_EDGES = [
   {source:"f_startupnv",target:"c_47",rel:"invested_in",note:"StartUpNV portfolio — Cloudforce Networks",y:2023},
   {source:"f_startupnv",target:"c_62",rel:"invested_in",note:"StartUpNV portfolio — MiOrganics",y:2023},
   {source:"f_startupnv",target:"c_63",rel:"invested_in",note:"StartUpNV portfolio — BuildQ (AccelerateNV + FundNV2 $200K)",y:2023},
+
+  // === INDEPENDENT NV STARTUPS — Additional confirmed investor edges ===
+  // Carbon Health (c_22) — Series A/B investors
+  {source:"x_javelin_vp",target:"c_22",rel:"invested_in",note:"Javelin VP Series A $6.5M co-investor 2017",y:2017},
+  {source:"x_bullpen_cap",target:"c_22",rel:"invested_in",note:"Bullpen Capital Series A $6.5M co-investor 2017",y:2017},
+  {source:"x_dcvc_ext",target:"c_22",rel:"invested_in",note:"DCVC Series B $30M new investor 2019",y:2019},
+  // Ollie (c_20) — Seed/Series A/B investors
+  {source:"x_primary_vp",target:"c_20",rel:"invested_in",note:"Primary VP seed co-lead $4.4M 2016",y:2016},
+  {source:"x_quadrille_cap",target:"c_20",rel:"invested_in",note:"Quadrille Capital Series B investor",y:2019},
+  {source:"x_ecp_growth",target:"c_20",rel:"invested_in",note:"ECP Growth Series B investor",y:2019},
+  {source:"x_rosecliff_v",target:"c_20",rel:"invested_in",note:"Rosecliff Ventures Series A participant 2017",y:2017},
+  {source:"x_wme_ventures",target:"c_20",rel:"invested_in",note:"WME Ventures Series A participant 2017",y:2017},
+  // Springbig (c_12) — PIPE investor
+  {source:"x_key_invest",target:"c_12",rel:"invested_in",note:"Key Investment Partners Springbig PIPE 2022",y:2022},
+  // Wynn Interactive (c_39) — Austerlitz SPAC
+  {source:"x_austerlitz",target:"c_39",rel:"invested_in",note:"Austerlitz SPAC (Bill Foley) WynnBET merger $640M 2021",y:2021},
+  // SilverSun / QXO (c_65) — Sequoia Heritage
+  {source:"x_sequoia_heritage",target:"c_65",rel:"invested_in",note:"Sequoia Heritage $100M co-investor QXO $1B round 2024",y:2024},
+  // Bombard Renewable Energy (c_70) — Everus/MDU
+  {source:"x_everus",target:"c_70",rel:"invested_in",note:"Everus Construction (MDU subsidiary) parent of Bombard Electric 2005",y:2005},
+  // Jackpot Digital (c_71) — debenture financing
+  {source:"x_jp_debenture",target:"c_71",rel:"invested_in",note:"Secured debenture US$1.4M for ETG manufacturing",y:2023},
 ];

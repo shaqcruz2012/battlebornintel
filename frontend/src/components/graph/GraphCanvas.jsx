@@ -737,6 +737,30 @@ export function GraphCanvas({
 
   const animateDash = showOpportunities && opportunityEdgeCount < 50;
 
+  // Community labels — always visible as subtle background text (like constellation names).
+  // Computed from node positions, grouped by _communityId from the layout worker.
+  // When community overlay is toggled ON, labels become brighter.
+  const communityLabels = useMemo(() => {
+    if (!nodes || nodes.length === 0) return [];
+    const groups = {};
+    nodes.forEach(n => {
+      const cid = n._communityId ?? metrics?.communities?.[n.id];
+      if (cid === undefined || cid === null) return;
+      if (!groups[cid]) groups[cid] = [];
+      groups[cid].push(n);
+    });
+    return Object.entries(groups)
+      .filter(([, members]) => members.length >= 3)
+      .map(([cid, members]) => {
+        const cx = members.reduce((s, n) => s + (n.x || 0), 0) / members.length;
+        const cy = members.reduce((s, n) => s + (n.y || 0), 0) / members.length;
+        const name = metrics?.communityNames?.[cid] || `Cluster ${cid}`;
+        const fontSize = Math.max(14, Math.min(24, members.length * 1.5));
+        const color = COMM_COLORS[parseInt(cid) % COMM_COLORS.length];
+        return { cid, cx, cy, name, fontSize, count: members.length, color };
+      });
+  }, [nodes, metrics?.communities, metrics?.communityNames]);
+
   // Pre-compute edge dollar values once when edges change (avoids regex per render per edge).
   // Keyed by edge object reference (not index) so lookups work with filtered subsets.
   const edgeValueMap = useMemo(() => {
@@ -911,6 +935,30 @@ export function GraphCanvas({
                 />
               );
             })}
+
+          {/* Community labels — always visible as subtle background text, like
+              constellation names in a star map. Brighter when community overlay is active. */}
+          {communityLabels.map(cl => {
+            const isOverlayActive = overlays.communities;
+            const opacity = isOverlayActive ? 0.4 : 0.15;
+            return (
+              <text
+                key={`comm-label-${cl.cid}`}
+                x={cl.cx}
+                y={cl.cy - 20}
+                textAnchor="middle"
+                fill={cl.color || 'rgba(69, 215, 198, 1)'}
+                fillOpacity={opacity}
+                fontSize={cl.fontSize}
+                fontFamily="var(--font-mono)"
+                fontWeight="700"
+                letterSpacing="2px"
+                pointerEvents="none"
+              >
+                {cl.name.toUpperCase()}
+              </text>
+            );
+          })}
 
           {/* Analysis overlay layers — rendered BELOW nodes but ABOVE edges */}
           {(overlays.communities || overlays.capitalFlows || overlays.predictedLinks || overlays.bridges) && (

@@ -1,23 +1,19 @@
 /**
- * D3 Layout Web Worker — v4 Milky Way cigar layout
+ * D3 Layout Web Worker — v5 Community-first galaxy layout
  * Offloads expensive force-simulation computations from the main thread.
  *
- * Layout concept: "cigar-shaped side view of the Milky Way"
- * The galaxy seen edge-on is an elongated ellipse — dense bright core at center,
- * disk arms extending left/right, sparse halo at the periphery.
+ * Layout concept: "solar systems within a galaxy"
+ * Each community forms a tight cluster (solar system) positioned around the
+ * canvas center. The largest community sits at the center; remaining communities
+ * are arranged in a tilted elliptical ring. Within each community, nodes
+ * arrange themselves by force simulation with type-based sub-offsets.
  *
- * Key improvements:
- *  - Elliptical coordinate system: aX = width*0.42, aY = height*0.18 (cigar 2-3:1)
- *  - Companies packed in dense elliptical core, sub-grouped by region
- *  - Funds form inner disk arms (left/right of core)
- *  - Accelerators in thin disk band above/below core
- *  - Ecosystem orgs in outer disk ring
- *  - Externals scattered in wide halo
- *  - People at far periphery
- *  - Stable deterministic jitter via hashFloat (no Math.random() in cluster targets)
- *  - Company-company links use 35px ideal distance to keep core compact
- *  - fund→company invested_in edges use strength 0.12 to pull portfolio close
- *  - velocityDecay = 0.35 so elongated shape forms naturally before cooling
+ * Key improvements over v4:
+ *  - Community-first clustering: nodes cluster by community_id, not by type
+ *  - Communities that span types (fund + portfolio companies + accelerator) stay together
+ *  - Intra-community edges use shorter ideal distance and stronger springs
+ *  - Cross-community edges use longer distances to keep clusters separated
+ *  - Community centers computed from node counts and arranged in tilted ellipse
  */
 
 /**
@@ -37,126 +33,103 @@ const TILT = 15 * Math.PI / 180;
 const cosTilt = Math.cos(TILT);
 const sinTilt = Math.sin(TILT);
 
-function tiltedPos(u, v, cx, cy, aX, aY) {
-  const lx = u * aX;
-  const ly = v * aY;
-  return {
-    x: cx + lx * cosTilt - ly * sinTilt,
-    y: cy + lx * sinTilt + ly * cosTilt,
-  };
+// Module-level community centers — set once per simulation run
+let communityCenters = {};
+
+/**
+ * Pre-compute community center positions.
+ * Largest community gets the center. Remaining communities are arranged in a
+ * tilted elliptical ring, with larger communities closer to center.
+ */
+function computeCommunityCenters(nodes, width, height) {
+  const commSizes = {};
+  nodes.forEach(n => {
+    const comm = n._communityId;
+    if (comm !== undefined && comm !== null) {
+      commSizes[comm] = (commSizes[comm] || 0) + 1;
+    }
+  });
+
+  // Sort communities by size (largest first)
+  const sorted = Object.entries(commSizes)
+    .sort((a, b) => b[1] - a[1]);
+
+  if (sorted.length === 0) return {};
+
+  const cx = width / 2;
+  const cy = height / 2;
+  const R = Math.min(width, height) * 0.32;
+  const centers = {};
+
+  // Largest community gets the center
+  centers[sorted[0][0]] = { x: cx, y: cy };
+
+  // Remaining communities arranged in a ring, tilted 15 degrees
+  if (sorted.length > 1) {
+    const ringCount = sorted.length - 1;
+    for (let i = 1; i < sorted.length; i++) {
+      const angle = ((i - 1) / ringCount) * Math.PI * 2;
+      // Larger communities closer to center, smaller ones further out
+      const sizeRatio = sorted[i][1] / sorted[0][1];
+      const dist = R * (0.6 + (1 - sizeRatio) * 0.5);
+      const rawX = Math.cos(angle) * dist;
+      const rawY = Math.sin(angle) * dist * 0.4; // elliptical
+      // Apply tilt
+      centers[sorted[i][0]] = {
+        x: cx + rawX * cosTilt - rawY * sinTilt,
+        y: cy + rawX * sinTilt + rawY * cosTilt,
+      };
+    }
+  }
+
+  return centers;
 }
 
 /**
  * Returns the cluster target position and attraction strength for a node.
  *
- * Uses an elliptical coordinate system where x range >> y range to produce
- * a cigar / Milky Way edge-on shape:
- *   Major axis (horizontal): width * 0.42
- *   Minor axis (vertical):   height * 0.18
+ * Community-first: nodes are pulled toward their community's center position.
+ * Within each community, nodes get small type-based sub-offsets so different
+ * node types don't pile directly on top of each other.
  *
- * @param {object} node  - graph node with at minimum { id, type, region, label }
- * @param {number} width  - canvas width in px
- * @param {number} height - canvas height in px
- * @returns {{ x: number, y: number, strength: number }}
+ * Nodes without a community fall back to a central position with weak pull.
  */
 function clusterTarget(node, width, height) {
+  const comm = node._communityId;
+  if (comm !== undefined && comm !== null && communityCenters[comm]) {
+    const center = communityCenters[comm];
+    // Type-based sub-offset within the community — keeps different types
+    // slightly separated while staying in the same cluster
+    const typeOffset = {
+      company:     { dx: 0,   dy: 0   },
+      fund:        { dx: -20, dy: -15 },
+      external:    { dx: 20,  dy: 10  },
+      accelerator: { dx: -15, dy: 15  },
+      ecosystem:   { dx: 15,  dy: -10 },
+      person:      { dx: 10,  dy: -15 },
+      sector:      { dx: -10, dy: 10  },
+      region:      { dx: 12,  dy: 8   },
+      exchange:    { dx: -8,  dy: -12 },
+      program:     { dx: 8,   dy: 12  },
+    };
+    const off = typeOffset[node.type] || { dx: 0, dy: 0 };
+    const jitter = 15; // small spread within community
+    return {
+      x: center.x + off.dx + (hashFloat(node.id + '_cx') - 0.5) * jitter,
+      y: center.y + off.dy + (hashFloat(node.id + '_cy') - 0.5) * jitter,
+      strength: 0.20, // strong pull to keep clusters tight
+    };
+  }
+  // Fallback for nodes without a community — weak pull to periphery
   const cx = width / 2;
   const cy = height / 2;
-  const aX = width * 0.45;   // horizontal semi-axis (wide) — increased for community spacing
-  const aY = height * 0.12;  // vertical semi-axis (narrow) — cigar shape
-
-  const type = node.type || 'unknown';
-  const id = node.id || '';
-
-  switch (type) {
-    case 'company': {
-      // Core: tight elliptical cluster, sub-grouped by Nevada region.
-      // Stable hashFloat jitter so layout is deterministic across re-runs.
-      const regionOffsets = {
-        las_vegas:       { x: -0.08, y:  0.00 },
-        henderson:       { x: -0.04, y: -0.06 },
-        las_vegas_metro: { x: -0.06, y:  0.04 },
-        reno:            { x:  0.10, y:  0.05 },
-        washoe:          { x:  0.12, y: -0.03 },
-        northern_nevada: { x:  0.14, y:  0.08 },
-        sparks:          { x:  0.16, y: -0.04 },
-        elko:            { x:  0.18, y:  0.10 },
-        statewide:       { x:  0.00, y:  0.00 },
-      };
-      const reg = node.region || 'las_vegas';
-      const off = regionOffsets[reg] || { x: 0, y: 0 };
-      const u = off.x + (hashFloat(id + '_jx') - 0.5) * 0.12;
-      const v = off.y + (hashFloat(id + '_jy') - 0.5) * 0.25;
-      const pos = tiltedPos(u, v, cx, cy, aX, aY);
-      return { ...pos, strength: 0.15 };
-    }
-
-    case 'fund': {
-      // Inner disk — funds spread deterministically left and right of core.
-      const fundAngle = hashFloat(id) * Math.PI; // 0..PI maps across full arc
-      const r = 0.55 + hashFloat(id + '_r') * 0.15;
-      const u = Math.cos(fundAngle) * r;
-      const v = Math.sin(fundAngle) * 0.6;
-      const pos = tiltedPos(u, v, cx, cy, aX, aY);
-      return { ...pos, strength: 0.25 };
-    }
-
-    case 'accelerator': {
-      // Thin disk band above/below core
-      const side = hashFloat(id) > 0.5 ? 1 : -1;
-      const u = (hashFloat(id + '_x') - 0.5) * 1.1;
-      const v = side * 0.75;
-      const pos = tiltedPos(u, v, cx, cy, aX, aY);
-      return { ...pos, strength: 0.20 };
-    }
-
-    case 'ecosystem': {
-      // Outer disk, sparse wide elliptical band
-      const eAngle = hashFloat(id) * Math.PI * 2;
-      const u = Math.cos(eAngle) * 0.85;
-      const v = Math.sin(eAngle) * 0.9;
-      const pos = tiltedPos(u, v, cx, cy, aX, aY);
-      return { ...pos, strength: 0.15 };
-    }
-
-    case 'external': {
-      // Halo — wide flattened ellipse surrounding the disk
-      const hAngle = hashFloat(id) * Math.PI * 2;
-      const hR = 0.88 + hashFloat(id + '_r') * 0.20;
-      const u = Math.cos(hAngle) * hR;
-      const v = Math.sin(hAngle) * hR;
-      const pos = tiltedPos(u, v, cx, cy, aX, aY);
-      return { ...pos, strength: 0.10 };
-    }
-
-    case 'person': {
-      // Far periphery — outermost sparse ring
-      const pAngle = hashFloat(id) * Math.PI * 2;
-      const u = Math.cos(pAngle) * 1.15;
-      const v = Math.sin(pAngle) * 1.15;
-      const pos = tiltedPos(u, v, cx, cy, aX, aY);
-      return { ...pos, strength: 0.08 };
-    }
-
-    case 'sector':
-    case 'region':
-    case 'exchange': {
-      // Categorical nodes — mid-disk ring
-      const sAngle = hashFloat(id) * Math.PI * 2;
-      const u = Math.cos(sAngle) * 0.70;
-      const v = Math.sin(sAngle) * 0.70;
-      const pos = tiltedPos(u, v, cx, cy, aX, aY);
-      return { ...pos, strength: 0.18 };
-    }
-
-    default: {
-      const dAngle = hashFloat(id) * Math.PI * 2;
-      const u = Math.cos(dAngle) * 0.95;
-      const v = Math.sin(dAngle) * 0.95;
-      const pos = tiltedPos(u, v, cx, cy, aX, aY);
-      return { ...pos, strength: 0.05 };
-    }
-  }
+  const dAngle = hashFloat(node.id) * Math.PI * 2;
+  const dR = 0.6 + hashFloat(node.id + '_r') * 0.3;
+  return {
+    x: cx + Math.cos(dAngle) * dR * width * 0.3,
+    y: cy + Math.sin(dAngle) * dR * height * 0.15,
+    strength: 0.05,
+  };
 }
 
 // Module-level set so getNodeRadius() doesn't allocate on every call
@@ -177,7 +150,7 @@ function getNodeRadius(node) {
 
 class ForceSimulation {
   /**
-   * @param {object[]} nodes  - graph nodes (must include { id, x, y, type, region, label })
+   * @param {object[]} nodes  - graph nodes (must include { id, x, y, type, _communityId })
    * @param {object[]} edges  - graph edges with source/target as string IDs or numeric indices
    * @param {number}   width  - canvas width in px
    * @param {number}   height - canvas height in px
@@ -186,7 +159,10 @@ class ForceSimulation {
     this.width = width;
     this.height = height;
 
-    // ── Degree map: count how many edges touch each node ID ──────────────────
+    // ── Compute community centers before building node targets ──────────
+    communityCenters = computeCommunityCenters(nodes, width, height);
+
+    // ── Degree map: count how many edges touch each node ID ──────────────
     // High-degree nodes repel more strongly and are pushed to the core.
     const degree = {};
     edges.forEach((e) => {
@@ -216,7 +192,7 @@ class ForceSimulation {
 
     // Resolve edge source/target to numeric indices using the id map.
     // Edges with unresolvable or self-referential endpoints are dropped.
-    // Preserve relationship type and endpoint types for distance/strength scaling.
+    // Preserve relationship type and community membership for spring scaling.
     this.edges = edges
       .map((e) => {
         const si =
@@ -230,6 +206,11 @@ class ForceSimulation {
           rel: e.rel || e.type || '',
           sourceType: nodes[si] ? nodes[si].type : null,
           targetType: nodes[ti] ? nodes[ti].type : null,
+          _sameCommunity: (
+            nodes[si]?._communityId !== undefined &&
+            nodes[si]?._communityId !== null &&
+            nodes[si]?._communityId === nodes[ti]?._communityId
+          ),
         };
       })
       .filter(Boolean);
@@ -390,13 +371,11 @@ class ForceSimulation {
 
   /**
    * Edge spring attraction — pulls connected nodes toward an ideal separation.
-   * Ideal length and spring strength vary by relationship type and node types:
    *
-   *  - Company↔Company edges use idealLength = 35px to keep the core compact
-   *  - fund→company invested_in edges use strength = 0.12 to pull portfolio near fund arm
-   *  - Strong ties (invested_in, founder_of, loaned_to): short distance, strong pull
-   *  - Medium ties (accelerated_by, partners_with, manages): medium distance
-   *  - Weak/categorical ties (operates_in, affiliated_with): long distance, weak pull
+   * Community-aware: intra-community edges use shorter ideal distance (25-40px)
+   * and stronger springs to keep community members tightly clustered.
+   * Cross-community edges use longer distances and weaker springs to maintain
+   * separation between clusters.
    *
    * Respects fixed (fx/fy) nodes.
    */
@@ -408,35 +387,32 @@ class ForceSimulation {
 
       let idealLength, strength;
       const rel = edge.rel;
-      const srcType = edge.sourceType || a.type;
-      const tgtType = edge.targetType || b.type;
+      const sameCommunity = edge._sameCommunity;
 
-      // Cross-community detection: different type prefixes mean different communities
-      const isCrossCommunity = srcType !== tgtType;
-
-      // Company-company edges: very tight to keep the galactic core compact
-      if (srcType === 'company' && tgtType === 'company') {
-        idealLength = 35;
-        strength = 0.06;
-      } else if (this._tightRels.has(rel)) {
-        idealLength = 50;
-        // fund→company invested_in: stronger pull so portfolio clusters near fund arm
-        if (rel === 'invested_in' && (srcType === 'fund' || tgtType === 'fund')) {
-          strength = 0.12;
+      if (sameCommunity) {
+        // Intra-community: tight clustering — short distance, strong spring
+        if (this._tightRels.has(rel)) {
+          idealLength = 25;
+          strength = 0.14;
+        } else if (this._mediumRels.has(rel)) {
+          idealLength = 35;
+          strength = 0.10;
         } else {
+          idealLength = 40;
           strength = 0.08;
         }
-      } else if (this._mediumRels.has(rel)) {
-        idealLength = 80;
-        strength = 0.05;
       } else {
-        idealLength = 110;
-        strength = 0.03;
-      }
-
-      // Weaken cross-community edges so communities stay separated
-      if (isCrossCommunity) {
-        strength = Math.min(strength, 0.02);
+        // Cross-community: keep clusters separated — longer distance, weaker spring
+        if (this._tightRels.has(rel)) {
+          idealLength = 100;
+          strength = 0.03;
+        } else if (this._mediumRels.has(rel)) {
+          idealLength = 130;
+          strength = 0.02;
+        } else {
+          idealLength = 160;
+          strength = 0.015;
+        }
       }
 
       const dx = b.x - a.x;
@@ -452,7 +428,7 @@ class ForceSimulation {
   }
 
   /**
-   * Cluster force — pulls each node toward its type/region zone.
+   * Cluster force — pulls each node toward its community zone.
    * Hub nodes use a high strength (0.6) so they gravitate firmly to center.
    */
   applyClusterForce() {
@@ -552,15 +528,17 @@ function marginRand(dim) {
  * Serialize only the fields consumers need, stripping internal simulation
  * state (vx, vy, fx, fy, index, degree, _r, _clusterTarget) to keep message
  * size lean and avoid polluting the node objects received by GraphCanvas.
+ * Preserve _communityId so the renderer can draw community labels.
  */
 function serializeNodes(nodes) {
   // eslint-disable-next-line no-unused-vars
-  return nodes.map(({ id, type, label, x, y, vx, vy, fx, fy, index, degree, _r, _clusterTarget, _cx, _cy, ...rest }) => ({
+  return nodes.map(({ id, type, label, x, y, vx, vy, fx, fy, index, degree, _r, _clusterTarget, _cx, _cy, _communityId, ...rest }) => ({
     id,
     type,
     label,
     x,
     y,
+    _communityId,
     ...rest,
   }));
 }

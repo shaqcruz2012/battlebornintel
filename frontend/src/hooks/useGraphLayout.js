@@ -35,7 +35,7 @@ export function useGraphLayout(nodes, edges, options = {}) {
   // This prevents the layout from recomputing when upstream code recreates the same
   // arrays with new references but identical data.
   const nodesKey = useMemo(
-    () => JSON.stringify((nodes || []).map((n) => n.id).sort()),
+    () => JSON.stringify((nodes || []).map((n) => `${n.id}:${n._communityId ?? ''}`).sort()),
     [nodes]
   );
   const edgesKey = useMemo(

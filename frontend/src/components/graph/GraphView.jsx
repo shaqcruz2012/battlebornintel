@@ -8,6 +8,7 @@ import { GraphLegend } from './GraphLegend';
 import { NodeDetail } from './NodeDetail';
 import { TemporalSlider } from './TemporalSlider';
 import { AnalysisOverlayBar } from './AnalysisOverlayBar';
+import { OverlayDetailPanel } from './OverlayDetailPanel';
 import styles from './GraphView.module.css';
 
 const DEFAULT_NODE_FILTERS = {
@@ -147,8 +148,23 @@ export function GraphView() {
   // Compute D3 layout in Web Worker to keep UI responsive
   const rawNodes = graphData?.nodes || [];
   const rawEdges = graphData?.edges || [];
+
+  const metrics = metricsData || { pagerank: {}, betweenness: {}, communities: {}, communityNames: {} };
+
+  // Attach community_id to each node before sending to the layout worker.
+  // The worker uses _communityId for community-first clustering (v5 layout).
+  // Use metricsData directly (not the fallback) so the dep is referentially stable.
+  const communities = metricsData?.communities;
+  const nodesWithCommunity = useMemo(() => {
+    if (!rawNodes.length || !communities) return rawNodes;
+    return rawNodes.map(n => ({
+      ...n,
+      _communityId: communities[n.id],
+    }));
+  }, [rawNodes, communities]);
+
   // isLoading stays true until the worker's final frame — used to gate fitAll.
-  const { layout: workerLayout, isLoading: layoutLoading } = useGraphLayout(rawNodes, rawEdges, { width: dims.w, height: dims.h });
+  const { layout: workerLayout, isLoading: layoutLoading } = useGraphLayout(nodesWithCommunity, rawEdges, { width: dims.w, height: dims.h });
 
   // ── Progressive disclosure ────────────────────────────────────────────────
   // Compute degree from raw edges so we can filter low-degree leaf nodes on
@@ -199,8 +215,6 @@ export function GraphView() {
     return { nodes: visibleNodes, edges: resolvedEdges };
   }, [workerLayout, nodeDegreeMap, selectedNode, search]);
 
-  const metrics = metricsData || { pagerank: {}, betweenness: {}, communities: {}, watchlist: [] };
-
   // Error state — show message with retry button
   if (graphError || metricsError) {
     return (
@@ -238,55 +252,67 @@ export function GraphView() {
   return (
     <div className={styles.graphPage}>
       <div className={styles.body}>
-        {/* Canvas area — fills all available space */}
-        <div className={styles.canvasOuter} ref={canvasRef}>
-          <GraphCanvas
-            layout={layout}
-            metrics={metrics}
-            colorMode={colorMode}
-            selectedNode={selectedNode}
-            onSelectNode={handleSelectNode}
-            searchTerm={search}
-            showOpportunities={showOpportunities}
-            opportunityFilter={opportunityFilter}
-            showValues={showValues}
-            focusNodeId={focusNodeId}
-            layoutSettled={!layoutLoading}
-            layoutWidth={dims.w}
-            layoutHeight={dims.h}
+        {/* Main column: canvas + overlay detail panel stacked vertically */}
+        <div className={styles.mainColumn}>
+          {/* Canvas area — fills all available space */}
+          <div className={styles.canvasOuter} ref={canvasRef}>
+            <GraphCanvas
+              layout={layout}
+              metrics={metrics}
+              colorMode={colorMode}
+              selectedNode={selectedNode}
+              onSelectNode={handleSelectNode}
+              searchTerm={search}
+              showOpportunities={showOpportunities}
+              opportunityFilter={opportunityFilter}
+              showValues={showValues}
+              focusNodeId={focusNodeId}
+              layoutSettled={!layoutLoading}
+              layoutWidth={dims.w}
+              layoutHeight={dims.h}
+              overlays={overlays}
+              predictedLinks={predictedLinksData}
+            />
+            {/* Left overlay: legend (minimizable) */}
+            <GraphLegend colorMode={colorMode} nodeFilters={nodeFilters} layout={layout} />
+            {/* Right overlay: node/color/edge controls + search (minimizable) */}
+            <GraphOverlayControls
+              nodeFilters={nodeFilters}
+              onToggleNode={toggleNode}
+              onSetNodeFilters={setNodeFilters}
+              colorMode={colorMode}
+              onColorModeChange={setColorMode}
+              showOpportunities={showOpportunities}
+              onToggleOpportunities={handleToggleOpportunities}
+              opportunityFilter={opportunityFilter}
+              onOpportunityFilterChange={setOpportunityFilter}
+              showValues={showValues}
+              onToggleValues={handleToggleValues}
+              search={search}
+              onSearchChange={setSearch}
+              nodes={layout.nodes}
+              onFocusNode={handleFocusNode}
+            />
+            {/* Analysis overlay toggle bar */}
+            <AnalysisOverlayBar overlays={overlays} onToggle={toggleOverlay} />
+            {/* Bottom-dock temporal slider */}
+            <TemporalSlider
+              min={2015}
+              max={2026}
+              value={yearMax}
+              onChange={setYearMax}
+              visibleEdges={rawEdges.length}
+              totalEdges={fullGraphData?.edges?.length || rawEdges.length}
+            />
+          </div>
+
+          {/* Overlay detail tables — slides in when overlays active */}
+          <OverlayDetailPanel
             overlays={overlays}
-            predictedLinks={predictedLinksData}
-          />
-          {/* Left overlay: legend (minimizable) */}
-          <GraphLegend colorMode={colorMode} nodeFilters={nodeFilters} layout={layout} />
-          {/* Right overlay: node/color/edge controls + search (minimizable) */}
-          <GraphOverlayControls
-            nodeFilters={nodeFilters}
-            onToggleNode={toggleNode}
-            onSetNodeFilters={setNodeFilters}
-            colorMode={colorMode}
-            onColorModeChange={setColorMode}
-            showOpportunities={showOpportunities}
-            onToggleOpportunities={handleToggleOpportunities}
-            opportunityFilter={opportunityFilter}
-            onOpportunityFilterChange={setOpportunityFilter}
-            showValues={showValues}
-            onToggleValues={handleToggleValues}
-            search={search}
-            onSearchChange={setSearch}
             nodes={layout.nodes}
-            onFocusNode={handleFocusNode}
-          />
-          {/* Analysis overlay toggle bar */}
-          <AnalysisOverlayBar overlays={overlays} onToggle={toggleOverlay} />
-          {/* Bottom-dock temporal slider */}
-          <TemporalSlider
-            min={2015}
-            max={2026}
-            value={yearMax}
-            onChange={setYearMax}
-            visibleEdges={rawEdges.length}
-            totalEdges={fullGraphData?.edges?.length || rawEdges.length}
+            edges={layout.edges}
+            metrics={metrics}
+            predictedLinks={predictedLinksData}
           />
         </div>
 
