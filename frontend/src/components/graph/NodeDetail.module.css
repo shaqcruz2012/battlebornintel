@@ -312,6 +312,36 @@
   letter-spacing: -0.3px;
 }
 
+.edgeYear {
+  font-family: var(--font-mono);
+  font-size: 8px;
+  color: var(--text-muted);
+  background: rgba(255, 255, 255, 0.04);
+  padding: 1px 4px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.edgeTag {
+  font-family: var(--font-mono);
+  font-size: 7px;
+  color: rgba(255, 255, 255, 0.35);
+  font-style: italic;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.edgeSourceLink {
+  font-size: 7px;
+  color: rgba(69, 215, 198, 0.6);
+  text-decoration: none;
+  flex-shrink: 0;
+}
+
+.edgeSourceLink:hover {
+  color: #45d7c6;
+}
+
 .oppScoreRow {
   display: flex;
   align-items: center;

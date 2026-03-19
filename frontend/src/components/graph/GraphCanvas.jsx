@@ -74,8 +74,9 @@ function computeExpandOffsets(selectedNode, connectedIds, nodes, edges, zoom) {
   const cx = sel.x || 0;
   const cy = sel.y || 0;
 
-  // Desired spread radius scales inversely with zoom (closer zoom = less spread needed)
-  const spreadRadius = Math.max(60, 120 / Math.max(zoom, 0.4));
+  // Desired spread radius — 50% wider to prevent overlap on dense clusters.
+  // Scales inversely with zoom (closer zoom = less spread needed).
+  const spreadRadius = Math.max(90, 180 / Math.max(zoom, 0.4));
 
   const offsets = {};
   const count = neighbors.length;
@@ -94,7 +95,7 @@ function computeExpandOffsets(selectedNode, connectedIds, nodes, edges, zoom) {
       const angle = dist > 5
         ? Math.atan2(dy, dx)
         : (2 * Math.PI * i) / count - Math.PI / 2;
-      const targetDist = spreadRadius + (i % 2) * 20; // stagger slightly
+      const targetDist = spreadRadius + (i % 2) * 30; // stagger for readability
       const targetX = cx + Math.cos(angle) * targetDist;
       const targetY = cy + Math.sin(angle) * targetDist;
       offsets[n.id] = { dx: targetX - nx, dy: targetY - ny };
@@ -168,7 +169,6 @@ const EdgeLabel = memo(function EdgeLabel({ sx, sy, tx, ty, label, val, relColor
 
   return (
     <g pointerEvents="none">
-      {/* Bloomberg-style annotation card */}
       <rect
         x={mx - halfW} y={my - 14}
         width={labelWidth} height={val ? 26 : 16}

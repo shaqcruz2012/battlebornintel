@@ -3,6 +3,28 @@ import { NODE_CFG, REL_CFG } from '../../data/constants';
 import { fmt, stageLabel } from '../../engine/formatters';
 import styles from './NodeDetail.module.css';
 
+/* ── Extract 1-2 word tag from edge note ── */
+
+function extractTag(note, rel, nodeName) {
+  if (!note) return null;
+  // Skip generic notes like "FundNV investment in X" or "BBV portfolio — X"
+  if (/^(FundNV|BBV|1864|AngelNV|Sierra|f_)\s*(investment|portfolio)/i.test(note)) return null;
+  if (/^(BBV|AngelNV|FundNV) portfolio/i.test(note)) return null;
+  // Try to extract round info: "Series A", "Series B", "Seed", "Phase I"
+  const round = note.match(/Series [A-E]\+?|Seed|Phase [I1-3]+|Pre-Seed|SPAC|IPO|merger|grant/i);
+  if (round) return round[0];
+  // Try dollar context: "$100M co-lead" → "co-lead"
+  const context = note.match(/\$[\d,.]+[BMK]?\s+(.{2,15}?)[\s.,;]/);
+  if (context) {
+    const words = context[1].trim().split(/\s+/).slice(0, 2).join(' ');
+    if (words.length <= 15) return words;
+  }
+  // Try key action words
+  const action = note.match(/co-lead|co-invest|anchor|strategic|angel|SBIR|accelerat|tax abate|PPA|merger|acqui/i);
+  if (action) return action[0];
+  return null;
+}
+
 /* ── Collapsible section wrapper ── */
 
 function CollapsibleSection({ label, count, defaultOpen = true, children }) {
@@ -73,7 +95,7 @@ export function NodeDetail({ nodeId, layout, metrics, onClose }) {
         const targetId = typeof e.target === 'object' ? e.target.id : e.target;
         const otherId = sourceId === nodeId ? targetId : sourceId;
         const other = nodes.find((n) => n.id === otherId);
-        return { rel: e.rel, node: other, note: e.note, edgeCategory: e.category, matchScore: e.matching_score };
+        return { rel: e.rel, node: other, note: e.note, source_url: e.source_url, year: e.y, edgeCategory: e.category, matchScore: e.matching_score };
       })
       .filter((c) => c.node);
   }, [edges, nodes, nodeId]);
@@ -192,33 +214,50 @@ export function NodeDetail({ nodeId, layout, metrics, onClose }) {
             defaultOpen={true}
           >
             <div className={styles.connectionList}>
-              {groupedConnections.historical.slice(0, 20).map((c, i) => {
+              {groupedConnections.historical.slice(0, 25).map((c, i) => {
                 const rc = REL_CFG[c.rel] || {};
                 const dollarMatch = c.note?.match(/\$[\d,.]+[BMK]?/);
                 const dollarAmt = dollarMatch ? dollarMatch[0] : null;
+                // Extract 1-2 word tag from note (skip generic notes)
+                const tag = extractTag(c.note, c.rel, c.node.label);
                 return (
-                  <div key={i}>
-                    <div className={styles.connection}>
-                      <span
-                        className={styles.connectionDot}
-                        style={{ background: NODE_CFG[c.node.type]?.color || '#666' }}
-                      />
-                      <span className={styles.connectionName}>{c.node.label}</span>
-                      {dollarAmt && (
-                        <span className={styles.oppAmount} style={{ margin: 0, fontSize: '9px', padding: '1px 4px' }}>
-                          {dollarAmt}
-                        </span>
-                      )}
-                      <span
-                        className={styles.connectionRel}
-                        style={rc.color ? {
-                          color: rc.color,
-                          background: `${rc.color}12`,
-                        } : undefined}
-                      >
-                        {rc.label || c.rel}
+                  <div key={i} className={styles.connection}>
+                    <span
+                      className={styles.connectionDot}
+                      style={{ background: NODE_CFG[c.node.type]?.color || '#666' }}
+                    />
+                    <span className={styles.connectionName}>{c.node.label}</span>
+                    {dollarAmt && (
+                      <span className={styles.oppAmount} style={{ margin: 0, fontSize: '9px', padding: '1px 4px' }}>
+                        {dollarAmt}
                       </span>
-                    </div>
+                    )}
+                    {c.year && (
+                      <span className={styles.edgeYear}>{c.year}</span>
+                    )}
+                    {tag && (
+                      <span className={styles.edgeTag}>{tag}</span>
+                    )}
+                    {c.source_url && (
+                      <a
+                        href={c.source_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className={styles.edgeSourceLink}
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        {'\u2197'}
+                      </a>
+                    )}
+                    <span
+                      className={styles.connectionRel}
+                      style={rc.color ? {
+                        color: rc.color,
+                        background: `${rc.color}12`,
+                      } : undefined}
+                    >
+                      {rc.label || c.rel}
+                    </span>
                   </div>
                 );
               })}

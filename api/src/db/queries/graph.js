@@ -28,7 +28,7 @@ export async function getGraphData({ nodeTypes = [], yearMax = 2026, region } = 
   // ── Step 1: Fetch ALL edges in one query ─────────────────────────────────
   const edgeRows = (await pool.query(
     `SELECT source_id, target_id, rel, event_year, event_date, note, matching_score,
-            edge_category, edge_style, edge_color, edge_opacity
+            edge_category, edge_style, edge_color, edge_opacity, source_url
      FROM graph_edges WHERE event_year <= $1::int`,
     [parseInt(yearMax, 10) || 2026]
   )).rows;
@@ -326,6 +326,7 @@ export async function getGraphData({ nodeTypes = [], yearMax = 2026, region } = 
     };
     if (e.event_date) edge.event_date = e.event_date;
     if (e.note) edge.note = e.note;
+    if (e.source_url) edge.source_url = e.source_url;
     if (e.matching_score != null) edge.matching_score = parseFloat(e.matching_score);
     if (e.edge_category && e.edge_category !== 'historical') {
       edge.category = e.edge_category;
@@ -413,13 +414,13 @@ export async function getGraphDataLight(params) {
     return light;
   });
 
-  // Strip edges to essential render fields — drop note, style, color, opacity, matching_score
+  // Strip edges to render fields — keep note and source_url for tooltips
   const lightEdges = edges.map(e => {
     const light = { source: e.source, target: e.target, rel: e.rel };
     if (e.y) light.y = e.y;
     if (e.category) light.category = e.category;
-    // Keep note only if it contains a dollar value (used for $ labels on edges)
-    if (e.note && /\$[\d,.]+[BMK]?/.test(e.note)) light.note = e.note;
+    if (e.note) light.note = e.note;
+    if (e.source_url) light.source_url = e.source_url;
     return light;
   });
 

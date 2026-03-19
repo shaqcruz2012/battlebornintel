@@ -12,6 +12,7 @@ const BASE_VIEWS = [
   { id: 'goed', label: 'GOED' },
   { id: 'feed', label: 'Activity Feed' },
   { id: 'graph', label: 'Graph Intelligence' },
+  { id: 'galaxy', label: 'Galaxy View' },
   { id: 'ecosystem', label: 'Ecosystem Map' },
   { id: 'ecosystemGaps', label: 'Ecosystem Gaps' },
   { id: 'capitalFlows', label: 'Capital Flows' },

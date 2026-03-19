@@ -20,6 +20,7 @@ const RecommendedConnections = lazy(() => import('./components/analytics/Recomme
 const CapitalFlowView = lazy(() => import('./components/analytics/CapitalFlowView').then(m => ({ default: m.CapitalFlowView || m.default })));
 const IngestionReview = lazy(() => import('./components/ingestion/IngestionReview').then(m => ({ default: m.IngestionReview || m.default })));
 const FrontierIntelligence = lazy(() => import('./components/news/FrontierIntelligence').then(m => ({ default: m.FrontierIntelligence || m.default })));
+const GalaxyView = lazy(() => import('./components/graph/GalaxyView').then(m => ({ default: m.GalaxyView })));
 
 const TabFallback = () => (
   <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-secondary)' }}>
@@ -70,6 +71,7 @@ export default function App() {
                 {view === 'goed' && <GoedView />}
                 {view === 'feed' && <StakeholderFeedView />}
                 {view === 'graph' && <GraphView />}
+                {view === 'galaxy' && <GalaxyView />}
                 {view === 'ecosystem' && <ResourceMatrix />}
                 {view === 'ecosystemGaps' && <EcosystemGaps />}
                 {view === 'capitalFlows' && <CapitalFlowView />}
