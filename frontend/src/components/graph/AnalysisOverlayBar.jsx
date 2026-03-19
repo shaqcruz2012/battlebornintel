@@ -2,7 +2,7 @@ import { memo } from 'react';
 import styles from './AnalysisOverlayBar.module.css';
 
 const OVERLAYS = [
-  { key: 'communities',    label: 'Communities',    color: '#9B72CF' },
+  { key: 'communities',    label: 'Clusters',       color: '#9B72CF' },
   { key: 'capitalFlows',   label: 'Capital Flows',  color: '#C8A55A' },
   { key: 'predictedLinks', label: 'Predicted Links', color: '#26A69A' },
   { key: 'bridges',        label: 'Bridges',        color: '#E85D5D' },

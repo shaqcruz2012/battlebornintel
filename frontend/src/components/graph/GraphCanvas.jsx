@@ -779,14 +779,27 @@ export function GraphCanvas({
       groups[cid].push(n);
     });
     return Object.entries(groups)
-      .filter(([, members]) => members.length >= 7)
+      .filter(([, members]) => {
+        if (members.length < 7) return false;
+        // Skip clusters that are just "1 startup + its VCs" — need multiple companies
+        const types = {};
+        members.forEach(m => { types[m.type] = (types[m.type] || 0) + 1; });
+        const uniqueTypes = Object.keys(types).length;
+        const companyCount = types.company || 0;
+        // If only 2 node types and ≤1 company, it's just a startup+investors cluster — hide it
+        if (uniqueTypes <= 2 && companyCount <= 1) return false;
+        return true;
+      })
       .map(([cid, members]) => {
         const cx = members.reduce((s, n) => s + (n.x || 0), 0) / members.length;
         const cy = members.reduce((s, n) => s + (n.y || 0), 0) / members.length;
-        const name = metrics?.communityNames?.[cid] || `Cluster ${cid}`;
+        const rawName = metrics?.communityNames?.[cid] || `Cluster ${cid}`;
+        // Count companies for display
+        const companyCount = members.filter(m => m.type === 'company').length;
+        const name = rawName;
         const fontSize = Math.max(14, Math.min(24, members.length * 1.5));
         const color = COMM_COLORS[parseInt(cid) % COMM_COLORS.length];
-        return { cid, cx, cy, name, fontSize, count: members.length, color };
+        return { cid, cx, cy, name, fontSize, count: members.length, companyCount, color };
       });
   }, [nodes, metrics?.communities, metrics?.communityNames]);
 
@@ -1159,7 +1172,7 @@ export function GraphCanvas({
                     {cl.name.toUpperCase()}
                   </div>
                   <div style={{ color: '#6b6a72', fontSize: 9, marginBottom: 6 }}>
-                    {cl.count} nodes · {Object.entries(types).map(([t, c]) => `${c} ${t}`).join(', ')}
+                    {cl.companyCount || 0} companies · {cl.count} total · {Object.entries(types).filter(([t]) => t !== 'company').map(([t, c]) => `${c} ${t}`).join(', ')}
                   </div>
                   <div style={{ borderTop: '1px solid #1c2733', paddingTop: 4 }}>
                     <div style={{ color: '#4a6070', fontSize: 8, letterSpacing: '1.5px', marginBottom: 3 }}>TOP MEMBERS</div>

@@ -98,10 +98,10 @@ const CommunitiesTable = memo(function CommunitiesTable({ nodes, communities, co
   return (
     <div className={styles.section}>
       <h4 className={`${styles.sectionHeader} ${styles.commColor}`}>
-        COMMUNITIES DETECTED: {rows.length}
+        CLUSTERS DETECTED: {rows.length}
       </h4>
       <p className={styles.sectionDesc}>
-        Communities are groups of densely connected nodes identified by label propagation algorithm.
+        Clusters are groups of densely connected nodes identified by label propagation algorithm.
       </p>
       <table className={styles.table}>
         <thead>
