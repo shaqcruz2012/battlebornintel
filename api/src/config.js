@@ -5,9 +5,10 @@ import { fileURLToPath } from 'url';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 config({ path: resolve(__dirname, '../../.env') });
 
-const databaseUrl = process.env.DATABASE_URL;
+const databaseUrl = process.env.DATABASE_URL || process.env.DATABASE_PRIVATE_URL;
 if (!databaseUrl && process.env.NODE_ENV !== 'test') {
-  console.error('FATAL: DATABASE_URL environment variable is not set');
+  console.error('FATAL: DATABASE_URL environment variable is not set.');
+  console.error('Available env vars:', Object.keys(process.env).filter(k => k.includes('DATA') || k.includes('PG') || k.includes('POSTGRES')).join(', '));
   process.exit(1);
 }
 

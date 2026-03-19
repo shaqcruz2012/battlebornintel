@@ -6,7 +6,7 @@
     "node": ">=18"
   },
   "scripts": {
-    "build": "cd frontend && npm install && VITE_API_URL= npm run build && mkdir -p ../api/public && cp -r dist/* ../api/public/ && cd ../api && npm install",
+    "build": "cd api && npm ci --omit=dev && cd ../frontend && npm ci && VITE_API_URL= npm run build && mkdir -p ../api/public && cp -r dist/* ../api/public/",
     "start": "cd api && node src/index.js"
   }
 }
