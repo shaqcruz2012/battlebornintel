@@ -272,6 +272,7 @@ export function GraphView() {
               layoutHeight={dims.h}
               overlays={overlays}
               predictedLinks={predictedLinksData}
+              nodeDegreeMap={nodeDegreeMap}
             />
             {/* Left overlay: legend (minimizable) */}
             <GraphLegend colorMode={colorMode} nodeFilters={nodeFilters} layout={layout} />

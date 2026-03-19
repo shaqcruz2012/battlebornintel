@@ -442,6 +442,7 @@ export function GraphCanvas({
   layoutHeight,
   overlays = {},
   predictedLinks = null,
+  nodeDegreeMap = {},
 }) {
   const containerRef = useRef(null);
   const edgeCanvasRef = useRef(null);
@@ -451,6 +452,16 @@ export function GraphCanvas({
   const [dragging, setDragging] = useState(false);
   const [dragStart, setDragStart] = useState(null);
   const [selectedCommunity, setSelectedCommunity] = useState(null);
+
+  // ── Progressive detail: Google Maps-style zoom tiers ──────────────────
+  // Galaxy (zoomed way out) → Constellation → Cluster → Street → Detail
+  const zoomTier = useMemo(() => {
+    if (zoom < 0.5) return 'galaxy';
+    if (zoom < 0.8) return 'constellation';
+    if (zoom < 1.2) return 'cluster';
+    if (zoom < 2.0) return 'street';
+    return 'detail';
+  }, [zoom]);
 
   // FIX 2: Tooltip state moved to refs — mouse-move no longer triggers React re-renders.
   // We imperatively update a DOM div so the SVG subtree is untouched on hover.
@@ -614,6 +625,7 @@ export function GraphCanvas({
   const { nodes, edges } = layout;
 
   // FIX 2: Imperative tooltip helpers — no setState, no re-renders on hover.
+  // At detail zoom (2.0+), tooltips show richer inline data (sectors, betweenness).
   const showTooltip = useCallback((node, clientX, clientY) => {
     const el = tooltipRef.current;
     if (!el) return;
@@ -627,6 +639,12 @@ export function GraphCanvas({
       if (node.stage)   parts.push({ label: 'Stage',   value: node.stage.replace(/_/g, ' ') });
       if (node.employees) parts.push({ label: 'Emp',   value: String(node.employees) });
       if (node.momentum)  parts.push({ label: 'MTM',   value: String(node.momentum) });
+      // Detail zoom: show extra fields inline
+      if (zoomTier === 'detail') {
+        if (node.sectors) parts.push({ label: 'Sectors', value: (Array.isArray(node.sectors) ? node.sectors.join(', ') : String(node.sectors)) });
+        const bt = metrics?.betweenness?.[node.id];
+        if (bt !== undefined) parts.push({ label: 'Bridge', value: bt.toFixed(3) });
+      }
       metricsHtml = parts.map(m =>
         `<div class="${styles.tooltipMetric}">` +
         `<span class="${styles.tooltipMetricLabel}">${m.label}</span>` +
@@ -641,6 +659,16 @@ export function GraphCanvas({
         `<div class="${styles.tooltipMetric}">` +
         `<span class="${styles.tooltipMetricLabel}">PR</span>` +
         `<span class="${styles.tooltipMetricValue}">${pr.toFixed(2)}</span>` +
+        `</div>`;
+    }
+
+    // Detail zoom: show degree count
+    if (zoomTier === 'detail') {
+      const deg = nodeDegreeMap[node.id] || 0;
+      metricsHtml +=
+        `<div class="${styles.tooltipMetric}">` +
+        `<span class="${styles.tooltipMetricLabel}">Edges</span>` +
+        `<span class="${styles.tooltipMetricValue}">${deg}</span>` +
         `</div>`;
     }
 
@@ -659,7 +687,7 @@ export function GraphCanvas({
     el.style.top  = `${clientY - 10}px`;
     el.style.display = 'block';
     tooltipActiveRef.current = true;
-  }, [metrics]);
+  }, [metrics, zoomTier, nodeDegreeMap]);
 
   const hideTooltip = useCallback(() => {
     const el = tooltipRef.current;
@@ -773,37 +801,93 @@ export function GraphCanvas({
     return map;
   }, [edges]);
 
-  // Viewport culling — only render SVG nodes visible in the current pan/zoom viewport.
-  // Nodes outside the visible area get no DOM elements, dramatically reducing SVG count.
-  // Capped at 400 visible nodes — if more would be visible, keep only highest-degree nodes.
+  // ── Progressive detail: zoom-tier node filtering ─────────────────────
+  // At low zoom, only show hub/high-degree nodes. As the user zooms in,
+  // progressively reveal more nodes — like Google Maps showing countries
+  // → states → cities → streets → buildings.
+  //
+  // Always-visible overrides: selected node + its connections, search matches,
+  // selected community members, and hub anchors.
   const MAX_VISIBLE_NODES = 400;
+
+  // Compute top-30 PageRank node IDs for constellation tier
+  const topPagerankIds = useMemo(() => {
+    const pr = metrics?.pagerank;
+    if (!pr) return new Set();
+    const sorted = Object.entries(pr).sort((a, b) => b[1] - a[1]);
+    return new Set(sorted.slice(0, 30).map(([id]) => id));
+  }, [metrics?.pagerank]);
 
   const { visibleNodes, visibleNodeIds } = useMemo(() => {
     if (!nodes || nodes.length === 0) return { visibleNodes: [], visibleNodeIds: new Set() };
-    // Convert viewport bounds to graph coordinate space
-    const margin = 40; // extra margin in graph-space pixels to avoid popping
+
+    // Build the "always show" set — selected node + connections, search matches
+    const always = new Set();
+    if (selectedNode) {
+      always.add(selectedNode);
+      connectedIds.forEach((id) => always.add(id));
+    }
+    // Search matches always visible
+    const searchLow = searchTerm?.toLowerCase();
+    if (searchLow) {
+      nodes.forEach((n) => {
+        if (n.label?.toLowerCase().includes(searchLow) || n.id?.toLowerCase().includes(searchLow)) {
+          always.add(n.id);
+        }
+      });
+    }
+
+    // Step 1: Zoom-tier filtering — filter nodes by importance at current zoom
+    const tierFiltered = nodes.filter((n) => {
+      if (always.has(n.id)) return true;
+      if (HUB_NODE_IDS.has(n.id)) return true;
+
+      // If a community is selected, filter by community membership first
+      if (selectedCommunity != null) {
+        const nc = n._communityId ?? metrics?.communities?.[n.id];
+        if (nc !== selectedCommunity) return false;
+      }
+
+      const degree = nodeDegreeMap[n.id] || 0;
+      const pr = metrics?.pagerank?.[n.id] || 0;
+
+      switch (zoomTier) {
+        case 'galaxy':
+          // Galaxy view: no individual nodes (only community indicators)
+          return false;
+        case 'constellation':
+          // Hub nodes + high degree + top PageRank
+          return degree >= 10 || topPagerankIds.has(n.id) || pr > 0.5;
+        case 'cluster':
+          // Moderate detail: degree >= 3 or notable PageRank
+          return degree >= 3 || pr > 0.2;
+        case 'street':
+          // Most nodes: degree >= 1 (connected)
+          return degree >= 1;
+        case 'detail':
+          // Everything visible
+          return true;
+        default:
+          return true;
+      }
+    });
+
+    // Step 2: Viewport culling — only render nodes in the visible pan/zoom area
+    const margin = 40;
     const invZoom = 1 / (zoom || 1);
     const viewMinX = (-pan.x * invZoom) - margin;
     const viewMinY = (-pan.y * invZoom) - margin;
     const viewMaxX = ((w - pan.x) * invZoom) + margin;
     const viewMaxY = ((h - pan.y) * invZoom) + margin;
-    let vNodes = nodes.filter((n) => {
+
+    let vNodes = tierFiltered.filter((n) => {
       const nx = n.x || 0;
       const ny = n.y || 0;
       return nx >= viewMinX && nx <= viewMaxX && ny >= viewMinY && ny <= viewMaxY;
     });
 
-    // Cap visible nodes to MAX_VISIBLE_NODES — keep highest-degree nodes + selected/connected
+    // Step 3: Cap to MAX_VISIBLE_NODES — keep highest-priority nodes
     if (vNodes.length > MAX_VISIBLE_NODES) {
-      // Build a quick degree map from edges
-      const degMap = {};
-      edges.forEach((e) => {
-        const sid = typeof e.source === 'object' ? e.source.id : e.source;
-        const tid = typeof e.target === 'object' ? e.target.id : e.target;
-        degMap[sid] = (degMap[sid] || 0) + 1;
-        degMap[tid] = (degMap[tid] || 0) + 1;
-      });
-      // Always keep selected and connected nodes, hub nodes
       const mustKeep = new Set();
       if (selectedNode) {
         mustKeep.add(selectedNode);
@@ -811,31 +895,43 @@ export function GraphCanvas({
       }
       HUB_NODE_IDS.forEach((id) => mustKeep.add(id));
 
-      // Sort remaining by degree descending
       vNodes.sort((a, b) => {
         const aPriority = mustKeep.has(a.id) ? 1 : 0;
         const bPriority = mustKeep.has(b.id) ? 1 : 0;
         if (aPriority !== bPriority) return bPriority - aPriority;
-        return (degMap[b.id] || 0) - (degMap[a.id] || 0);
+        return (nodeDegreeMap[b.id] || 0) - (nodeDegreeMap[a.id] || 0);
       });
       vNodes = vNodes.slice(0, MAX_VISIBLE_NODES);
     }
 
     const vIds = new Set(vNodes.map((n) => n.id));
     return { visibleNodes: vNodes, visibleNodeIds: vIds };
-  }, [nodes, edges, zoom, pan, w, h, selectedNode, connectedIds]);
+  }, [nodes, edges, zoom, pan, w, h, selectedNode, connectedIds, zoomTier, nodeDegreeMap, metrics, searchTerm, selectedCommunity, topPagerankIds]);
 
-  // Filter edges to only include those where BOTH endpoints are viewport-visible.
-  // Without this, the canvas draws edges to node positions where no SVG bubble exists
-  // (because the node was viewport-culled), causing edge-node misalignment.
+  // Filter edges: both endpoints must be viewport-visible, plus zoom-tier filtering.
+  // At constellation zoom, only major relationship types are shown to reduce clutter.
+  // At galaxy zoom, no edges are shown (only community indicators).
+  const MAJOR_RELS = useMemo(() => new Set(['invested_in', 'grants_to', 'manages', 'founded_by', 'funds', 'acquired']), []);
+
   const visibleEdges = useMemo(() => {
     if (!edges || edges.length === 0) return [];
-    return edges.filter((e) => {
+    if (zoomTier === 'galaxy') return []; // no edges at galaxy zoom
+
+    let filtered = edges.filter((e) => {
       const sid = typeof e.source === 'object' ? e.source.id : e.source;
       const tid = typeof e.target === 'object' ? e.target.id : e.target;
       return visibleNodeIds.has(sid) && visibleNodeIds.has(tid);
     });
-  }, [edges, visibleNodeIds]);
+
+    // At constellation zoom, only show major relationship types (unless edge is highlighted)
+    if (zoomTier === 'constellation') {
+      filtered = filtered.filter((e) =>
+        MAJOR_RELS.has(e.rel) || highlightedEdges.has(e)
+      );
+    }
+
+    return filtered;
+  }, [edges, visibleNodeIds, zoomTier, MAJOR_RELS, highlightedEdges]);
 
   // Canvas edge renderer — replaces 5000+ SVG <line> elements with one draw call
   useEdgeCanvas(edgeCanvasRef, visibleEdges, zoom, pan, w, h, {
@@ -914,13 +1010,21 @@ export function GraphCanvas({
 
         <g transform={`translate(${pan.x},${pan.y}) scale(${zoom})`}>
 
-          {/* Edge labels — show for selected node connections, or all edges with $ values when showValues is on */}
-          {(!tooManyForEdgeLabels || showValues) && (selectedNode || showValues) &&
+          {/* Edge labels — progressive visibility based on zoom tier:
+              - galaxy/constellation: only on selected node edges
+              - cluster/street: selected node edges + $ values when showValues on
+              - detail: all edge labels visible */}
+          {(!tooManyForEdgeLabels || showValues || zoomTier === 'detail') &&
+            (selectedNode || showValues || zoomTier === 'detail') &&
             visibleEdges.map((e, i) => {
               const isHighlighted = highlightedEdges.has(e);
-              if (selectedNode && !isHighlighted) return null;
+              // At detail zoom, show labels on ALL edges
+              if (zoomTier !== 'detail') {
+                if (selectedNode && !isHighlighted) return null;
+                const val = edgeValueMap.get(e) || '';
+                if (!selectedNode && showValues && !val) return null;
+              }
               const val = edgeValueMap.get(e) || '';
-              if (!selectedNode && showValues && !val) return null;
               const sx = e.source.x || 0;
               const sy = e.source.y || 0;
               const tx = e.target.x || 0;
@@ -931,36 +1035,70 @@ export function GraphCanvas({
                 <EdgeLabel
                   key={`label-${i}`}
                   sx={sx} sy={sy} tx={tx} ty={ty}
-                  label={selectedNode ? edgeLabelText(e) : ''}
+                  label={(selectedNode || zoomTier === 'detail') ? edgeLabelText(e) : ''}
                   val={val}
                   relColor={rc?.color}
                 />
               );
             })}
 
+          {/* Galaxy-view community labels — large prominent labels when zoomed way out.
+              At galaxy zoom, individual nodes are hidden, so community names serve as
+              the primary visual landmarks (like country names on a world map). */}
+          {(zoomTier === 'galaxy' || zoomTier === 'constellation') && communityLabels.map(cl => {
+            const color = cl.color || '#45d7c6';
+            // Galaxy: large prominent labels; Constellation: medium, slightly faded
+            const isGalaxy = zoomTier === 'galaxy';
+            const fontSize = isGalaxy ? Math.max(16, cl.fontSize * 1.2) : Math.max(11, cl.fontSize * 0.7);
+            const fillOpacity = isGalaxy ? 0.45 : 0.25;
+            return (
+              <text
+                key={`gl-${cl.cid}`}
+                x={cl.cx} y={cl.cy}
+                textAnchor="middle"
+                fill={color} fillOpacity={fillOpacity}
+                fontSize={fontSize}
+                fontFamily="var(--font-mono)"
+                fontWeight="700"
+                letterSpacing="2px"
+                pointerEvents="none"
+                style={{ transition: 'fill-opacity 300ms ease, font-size 300ms ease' }}
+              >
+                {cl.name.toUpperCase()}
+              </text>
+            );
+          })}
+
           {/* Community indicators — small clickable dots at each community centroid.
-              Click to highlight that community's nodes and show detail popover. */}
-          {communityLabels.map(cl => {
+              Click to highlight that community's nodes and show detail popover.
+              Fade out at cluster+ zoom when individual nodes are visible. */}
+          {(zoomTier === 'galaxy' || zoomTier === 'constellation' || zoomTier === 'cluster') &&
+          communityLabels.map(cl => {
             const isSelected = selectedCommunity === cl.cid;
             const color = cl.color || '#45d7c6';
+            // Fade community dots as zoom increases and individual nodes become visible
+            const dotOpacity = zoomTier === 'cluster' ? 0.4 : 1;
             return (
               <g key={`comm-ind-${cl.cid}`}
-                style={{ cursor: 'pointer' }}
+                style={{ cursor: 'pointer', opacity: dotOpacity, transition: 'opacity 300ms ease' }}
                 onClick={(e) => { e.stopPropagation(); setSelectedCommunity(isSelected ? null : cl.cid); }}
               >
-                {/* Outer ring */}
-                <circle cx={cl.cx} cy={cl.cy} r={isSelected ? 18 : 12}
+                {/* Outer ring — larger at galaxy zoom for easier clicking */}
+                <circle cx={cl.cx} cy={cl.cy}
+                  r={isSelected ? 18 : (zoomTier === 'galaxy' ? 16 : 12)}
                   fill="none" stroke={color}
-                  strokeOpacity={isSelected ? 0.6 : 0.15}
+                  strokeOpacity={isSelected ? 0.6 : (zoomTier === 'galaxy' ? 0.3 : 0.15)}
                   strokeWidth={isSelected ? 2 : 1}
                   strokeDasharray={isSelected ? 'none' : '3,3'}
                 />
-                {/* Center dot */}
-                <circle cx={cl.cx} cy={cl.cy} r={3}
-                  fill={color} fillOpacity={isSelected ? 0.8 : 0.25}
+                {/* Center dot — larger at galaxy zoom */}
+                <circle cx={cl.cx} cy={cl.cy}
+                  r={zoomTier === 'galaxy' ? 5 : 3}
+                  fill={color}
+                  fillOpacity={isSelected ? 0.8 : (zoomTier === 'galaxy' ? 0.5 : 0.25)}
                 />
-                {/* Tiny label — only show on hover/select, not always */}
-                {isSelected && (
+                {/* Label — always visible at galaxy zoom, only on select otherwise */}
+                {(isSelected || zoomTier === 'galaxy') && (
                   <>
                     <rect
                       x={cl.cx - cl.name.length * 3.2 - 6}
@@ -1069,9 +1207,25 @@ export function GraphCanvas({
             const dim = dimBySearch || dimBySelection || dimByCommunity;
             const isHub = HUB_NODE_IDS.has(n.id);
 
-            // Suppress ALL text labels below zoom 0.5 to reduce SVG element count.
-            // Only selected/connected nodes get labels at very low zoom.
-            const suppressLabels = zoom < 0.5 && !isSelected && !isConnected;
+            // Progressive label visibility based on zoom tier:
+            // - galaxy: no labels (no nodes visible anyway)
+            // - constellation: labels on hub nodes only
+            // - cluster: labels on degree >= 5
+            // - street: labels on degree >= 2
+            // - detail: all labels
+            // Selected/connected nodes always get labels regardless of zoom.
+            const degree = nodeDegreeMap[n.id] || 0;
+            const suppressLabels = (() => {
+              if (isSelected || isConnected) return false;
+              switch (zoomTier) {
+                case 'galaxy': return true;
+                case 'constellation': return !isHub && !topPagerankIds.has(n.id);
+                case 'cluster': return degree < 5;
+                case 'street': return degree < 2;
+                case 'detail': return false;
+                default: return false;
+              }
+            })();
 
             // Suppress decorative glow rings below zoom 0.6 to reduce SVG element count.
             // Each hub/connected node has 2-3 extra circle elements for glow effects.
@@ -1113,6 +1267,11 @@ export function GraphCanvas({
           })}
         </g>
       </svg>
+
+      {/* Zoom tier indicator — shows current detail level and visible node count */}
+      <div className={styles.zoomTier}>
+        {zoomTier.toUpperCase()} · {visibleNodes.length}/{nodes.length} nodes
+      </div>
 
       {/* Zoom controls */}
       <div className={styles.zoomControls}>

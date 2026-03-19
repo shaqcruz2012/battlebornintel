@@ -204,6 +204,28 @@
   animation: dashFlow 1.5s linear infinite;
 }
 
+/* ── Zoom tier indicator — monospace badge showing current detail level ── */
+
+.zoomTier {
+  position: absolute;
+  bottom: 56px;             /* same vertical position as zoom controls */
+  left: var(--space-lg);
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: var(--weight-medium);
+  letter-spacing: 0.8px;
+  color: var(--text-disabled);
+  text-transform: uppercase;
+  background: rgba(12, 16, 20, 0.8);
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-subtle);
+  backdrop-filter: blur(8px);
+  pointer-events: none;
+  z-index: 10;
+  transition: color 200ms ease;
+}
+
 /* ── Crosshair cursor overlay when panning ── */
 
 .canvasWrap[data-dragging="true"] {
