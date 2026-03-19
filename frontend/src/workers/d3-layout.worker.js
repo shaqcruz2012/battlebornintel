@@ -593,6 +593,7 @@ self.addEventListener('message', (e) => {
     width = 1200,
     height = 700,
     iterations: _iterations,
+    _requestId,
   } = e.data;
 
   // Cap total iterations — with alphaDecay 0.045 the simulation converges
@@ -630,15 +631,17 @@ self.addEventListener('message', (e) => {
         positions: buffer.buffer,
         ids,
         nodes: serializeNodes(sim.nodes),
+        _requestId,
       }, [buffer.buffer]);
     } else {
       self.postMessage({
         success: true,
         interim: false,
         nodes: serializeNodes(sim.nodes),
+        _requestId,
       });
     }
   } catch (error) {
-    self.postMessage({ success: false, error: error.message });
+    self.postMessage({ success: false, error: error.message, _requestId });
   }
 });
