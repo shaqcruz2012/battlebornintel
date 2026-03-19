@@ -153,8 +153,9 @@ export function cacheMiddleware(keyPrefix = '', ttlMs = 300000, options = {}) {
         res.setHeader('X-Cache', 'MISS');
         applyHttpCacheHeaders(res);
         if (resolveInflight) resolveInflight(data);
-      } else if (rejectInflight) {
-        rejectInflight(new Error('non-200'));
+      } else if (resolveInflight) {
+        // Resolve with null instead of rejecting — prevents unhandled rejection crashes
+        resolveInflight(null);
       }
       inflight.delete(key);
       return originalJson(data);
