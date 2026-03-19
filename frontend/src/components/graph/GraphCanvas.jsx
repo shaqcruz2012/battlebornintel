@@ -450,6 +450,7 @@ export function GraphCanvas({
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [dragging, setDragging] = useState(false);
   const [dragStart, setDragStart] = useState(null);
+  const [selectedCommunity, setSelectedCommunity] = useState(null);
 
   // FIX 2: Tooltip state moved to refs — mouse-move no longer triggers React re-renders.
   // We imperatively update a DOM div so the SVG subtree is untouched on hover.
@@ -904,6 +905,7 @@ export function GraphCanvas({
         className={styles.svg}
         width={w}
         height={h}
+        onClick={() => setSelectedCommunity(null)}
       >
         {/* Only include SVG filter defs when zoom is high enough for them to be visible.
             SVG filters (feGaussianBlur) are GPU-expensive; skipping them at low zoom
@@ -936,29 +938,112 @@ export function GraphCanvas({
               );
             })}
 
-          {/* Community labels — always visible as subtle background text, like
-              constellation names in a star map. Brighter when community overlay is active. */}
+          {/* Community indicators — small clickable dots at each community centroid.
+              Click to highlight that community's nodes and show detail popover. */}
           {communityLabels.map(cl => {
-            const isOverlayActive = overlays.communities;
-            const opacity = isOverlayActive ? 0.4 : 0.15;
+            const isSelected = selectedCommunity === cl.cid;
+            const color = cl.color || '#45d7c6';
             return (
-              <text
-                key={`comm-label-${cl.cid}`}
-                x={cl.cx}
-                y={cl.cy - 20}
-                textAnchor="middle"
-                fill={cl.color || 'rgba(69, 215, 198, 1)'}
-                fillOpacity={opacity}
-                fontSize={cl.fontSize}
-                fontFamily="var(--font-mono)"
-                fontWeight="700"
-                letterSpacing="2px"
-                pointerEvents="none"
+              <g key={`comm-ind-${cl.cid}`}
+                style={{ cursor: 'pointer' }}
+                onClick={(e) => { e.stopPropagation(); setSelectedCommunity(isSelected ? null : cl.cid); }}
               >
-                {cl.name.toUpperCase()}
-              </text>
+                {/* Outer ring */}
+                <circle cx={cl.cx} cy={cl.cy} r={isSelected ? 18 : 12}
+                  fill="none" stroke={color}
+                  strokeOpacity={isSelected ? 0.6 : 0.15}
+                  strokeWidth={isSelected ? 2 : 1}
+                  strokeDasharray={isSelected ? 'none' : '3,3'}
+                />
+                {/* Center dot */}
+                <circle cx={cl.cx} cy={cl.cy} r={3}
+                  fill={color} fillOpacity={isSelected ? 0.8 : 0.25}
+                />
+                {/* Tiny label — only show on hover/select, not always */}
+                {isSelected && (
+                  <>
+                    <rect
+                      x={cl.cx - cl.name.length * 3.2 - 6}
+                      y={cl.cy - 28}
+                      width={cl.name.length * 6.4 + 12}
+                      height={16}
+                      rx={3}
+                      fill="rgba(10, 14, 20, 0.9)"
+                      stroke={color}
+                      strokeOpacity={0.4}
+                      strokeWidth={1}
+                    />
+                    <text
+                      x={cl.cx} y={cl.cy - 17}
+                      textAnchor="middle"
+                      fill={color}
+                      fontSize="9"
+                      fontFamily="var(--font-mono)"
+                      fontWeight="600"
+                      letterSpacing="1px"
+                    >
+                      {cl.name.toUpperCase()}
+                    </text>
+                  </>
+                )}
+              </g>
             );
           })}
+
+          {/* Selected community detail popover */}
+          {selectedCommunity != null && (() => {
+            const cl = communityLabels.find(c => c.cid === selectedCommunity);
+            if (!cl) return null;
+            const commNodes = nodes.filter(n =>
+              (n._communityId ?? metrics?.communities?.[n.id]) === selectedCommunity
+            );
+            const types = {};
+            commNodes.forEach(n => { types[n.type] = (types[n.type] || 0) + 1; });
+            const topNodes = [...commNodes]
+              .sort((a, b) => (metrics?.pagerank?.[b.id] || 0) - (metrics?.pagerank?.[a.id] || 0))
+              .slice(0, 6);
+            return (
+              <foreignObject x={cl.cx + 22} y={cl.cy - 80} width={220} height={200}
+                style={{ overflow: 'visible', pointerEvents: 'all' }}>
+                <div style={{
+                  background: 'rgba(10, 14, 20, 0.95)',
+                  border: `1px solid ${cl.color || '#45d7c6'}44`,
+                  borderRadius: 4,
+                  padding: '8px 10px',
+                  fontFamily: 'var(--font-mono)',
+                  fontSize: 10,
+                  color: '#d4d0c8',
+                  backdropFilter: 'blur(8px)',
+                  maxHeight: 180,
+                  overflowY: 'auto',
+                }}>
+                  <div style={{ color: cl.color || '#45d7c6', fontWeight: 700, fontSize: 11, marginBottom: 4, letterSpacing: '1px' }}>
+                    {cl.name.toUpperCase()}
+                  </div>
+                  <div style={{ color: '#6b6a72', fontSize: 9, marginBottom: 6 }}>
+                    {cl.count} nodes · {Object.entries(types).map(([t, c]) => `${c} ${t}`).join(', ')}
+                  </div>
+                  <div style={{ borderTop: '1px solid #1c2733', paddingTop: 4 }}>
+                    <div style={{ color: '#4a6070', fontSize: 8, letterSpacing: '1.5px', marginBottom: 3 }}>TOP MEMBERS</div>
+                    {topNodes.map(n => (
+                      <div key={n.id} style={{
+                        display: 'flex', alignItems: 'center', gap: 4, marginBottom: 2,
+                        cursor: 'pointer',
+                      }} onClick={() => { onSelectNode?.(n.id); setSelectedCommunity(null); }}>
+                        <span style={{
+                          width: 6, height: 6, borderRadius: '50%',
+                          background: NODE_CFG[n.type]?.color || '#888',
+                          flexShrink: 0,
+                        }} />
+                        <span style={{ color: '#d4d0c8', fontSize: 10 }}>{n.label}</span>
+                        <span style={{ color: '#4a6070', fontSize: 8, marginLeft: 'auto' }}>{n.type}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </foreignObject>
+            );
+          })()}
 
           {/* Analysis overlay layers — rendered BELOW nodes but ABOVE edges */}
           {(overlays.communities || overlays.capitalFlows || overlays.predictedLinks || overlays.bridges) && (
@@ -979,7 +1064,9 @@ export function GraphCanvas({
             const isConnected = connectedIds.has(n.id);
             const dimBySearch = searchTerm && !matchesSearch(n);
             const dimBySelection = selectedNode && !isSelected && !isConnected;
-            const dim = dimBySearch || dimBySelection;
+            const nodeCommunity = n._communityId ?? metrics?.communities?.[n.id];
+            const dimByCommunity = selectedCommunity != null && nodeCommunity !== selectedCommunity;
+            const dim = dimBySearch || dimBySelection || dimByCommunity;
             const isHub = HUB_NODE_IDS.has(n.id);
 
             // Suppress ALL text labels below zoom 0.5 to reduce SVG element count.
