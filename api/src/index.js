@@ -1,10 +1,15 @@
 import express from 'express';
 import cors from 'cors';
 import compression from 'compression';
+import { resolve, dirname } from 'path';
+import { fileURLToPath } from 'url';
+import { existsSync } from 'fs';
 import cfg from './config.js';
 import pool from './db/pool.js';
 import { errorHandler } from './middleware/errorHandler.js';
 import { cacheMiddleware, getCacheStats } from './middleware/cache.js';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
 
 import authRouter from './routes/auth.js';
 import { optionalAuth } from './middleware/auth.js';
@@ -179,6 +184,19 @@ app.use('/api/dashboard-batch', publicLimit, dashboardBatchRouter);
 
 // Error handler
 app.use(errorHandler);
+
+// ── Production: serve frontend static files ─────────────────────────────────
+// In production (Railway), the frontend is built to api/public/ and served here.
+// SPA fallback: any non-API route serves index.html for client-side routing.
+const publicDir = resolve(__dirname, '../public');
+if (existsSync(publicDir)) {
+  app.use(express.static(publicDir, { maxAge: '1h' }));
+  app.get('*', (req, res) => {
+    if (!req.path.startsWith('/api')) {
+      res.sendFile(resolve(publicDir, 'index.html'));
+    }
+  });
+}
 
 app.listen(cfg.port, () => {
   console.log(`BBI API listening on port ${cfg.port}`);

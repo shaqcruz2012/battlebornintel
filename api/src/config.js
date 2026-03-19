@@ -19,7 +19,7 @@ if (nodeEnv === 'production' && !jwtSecret) {
 }
 
 export default {
-  port: parseInt(process.env.API_PORT || '3001', 10),
+  port: parseInt(process.env.PORT || process.env.API_PORT || '3001', 10),
   databaseUrl: databaseUrl || '',
   nodeEnv,
   adminApiKey: process.env.ADMIN_API_KEY || null,

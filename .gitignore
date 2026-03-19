@@ -22,3 +22,7 @@ agents/.venv
 .vscode
 .idea
 *.sw?
+
+# Build output
+api/public
+frontend/dist
