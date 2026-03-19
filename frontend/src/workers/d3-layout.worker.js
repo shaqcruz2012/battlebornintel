@@ -58,28 +58,58 @@ function computeCommunityCenters(nodes, width, height) {
 
   const cx = width / 2;
   const cy = height / 2;
-  const R = Math.min(width, height) * 0.32;
+  // Galaxy shape: wide major axis, narrow minor axis (cigar/lens shape)
+  const majorAxis = Math.min(width, height) * 0.42;
+  const minorAxis = majorAxis * 0.25; // flatten to 4:1 ratio
   const centers = {};
 
-  // Largest community gets the center
-  centers[sorted[0][0]] = { x: cx, y: cy };
+  // Top 2-3 largest communities share the dense center (the galactic bulge)
+  const bulgeCount = Math.min(3, Math.ceil(sorted.length * 0.2));
+  for (let i = 0; i < bulgeCount && i < sorted.length; i++) {
+    // Spread slightly within bulge, offset by hash for stability
+    const h = hashFloat('comm_' + sorted[i][0]);
+    const bulgeSpread = majorAxis * 0.08;
+    const rawX = (h - 0.5) * bulgeSpread;
+    const rawY = (hashFloat('cy_' + sorted[i][0]) - 0.5) * bulgeSpread * 0.5;
+    centers[sorted[i][0]] = {
+      x: cx + rawX * cosTilt - rawY * sinTilt,
+      y: cy + rawX * sinTilt + rawY * cosTilt,
+    };
+  }
 
-  // Remaining communities arranged in a ring, tilted 15 degrees
-  if (sorted.length > 1) {
-    const ringCount = sorted.length - 1;
-    for (let i = 1; i < sorted.length; i++) {
-      const angle = ((i - 1) / ringCount) * Math.PI * 2;
-      // Larger communities closer to center, smaller ones further out
-      const sizeRatio = sorted[i][1] / sorted[0][1];
-      const dist = R * (0.6 + (1 - sizeRatio) * 0.5);
+  // Remaining communities form two tapering arms extending from the bulge
+  const armNodes = sorted.slice(bulgeCount);
+  if (armNodes.length > 0) {
+    const halfArm = Math.ceil(armNodes.length / 2);
+    armNodes.forEach(([commId, size], idx) => {
+      // Alternate between left arm and right arm
+      const isRightArm = idx < halfArm;
+      const armIdx = isRightArm ? idx : idx - halfArm;
+      const armLen = isRightArm ? halfArm : armNodes.length - halfArm;
+
+      // Progress along the arm (0 = near bulge, 1 = tip)
+      const t = armLen > 1 ? armIdx / (armLen - 1) : 0;
+
+      // Distance from center increases along arm, tapers at tip
+      const dist = majorAxis * (0.20 + t * 0.75);
+
+      // Arms spiral slightly (galaxy-like) — 30° sweep per arm
+      const armBaseAngle = isRightArm ? 0 : Math.PI;
+      const spiralSweep = 0.5; // radians of spiral
+      const angle = armBaseAngle + (t - 0.5) * spiralSweep;
+
+      // Minor axis narrows toward tips (taper)
+      const taper = 1 - t * 0.6;
+      const perpOffset = (hashFloat('arm_' + commId) - 0.5) * minorAxis * taper * 0.6;
+
       const rawX = Math.cos(angle) * dist;
-      const rawY = Math.sin(angle) * dist * 0.4; // elliptical
-      // Apply tilt
-      centers[sorted[i][0]] = {
+      const rawY = Math.sin(angle) * dist * 0.25 + perpOffset;
+
+      centers[commId] = {
         x: cx + rawX * cosTilt - rawY * sinTilt,
         y: cy + rawX * sinTilt + rawY * cosTilt,
       };
-    }
+    });
   }
 
   return centers;
@@ -113,11 +143,11 @@ function clusterTarget(node, width, height) {
       program:     { dx: 8,   dy: 12  },
     };
     const off = typeOffset[node.type] || { dx: 0, dy: 0 };
-    const jitter = 15; // small spread within community
+    const jitter = 20; // spread within community
     return {
       x: center.x + off.dx + (hashFloat(node.id + '_cx') - 0.5) * jitter,
       y: center.y + off.dy + (hashFloat(node.id + '_cy') - 0.5) * jitter,
-      strength: 0.20, // strong pull to keep clusters tight
+      strength: 0.25, // strong pull to keep clusters tight and separated
     };
   }
   // Fallback for nodes without a community — weak pull to periphery
@@ -402,16 +432,16 @@ class ForceSimulation {
           strength = 0.08;
         }
       } else {
-        // Cross-community: keep clusters separated — longer distance, weaker spring
+        // Cross-community: push clusters apart — long distance, very weak spring
         if (this._tightRels.has(rel)) {
-          idealLength = 100;
-          strength = 0.03;
-        } else if (this._mediumRels.has(rel)) {
-          idealLength = 130;
+          idealLength = 150;
           strength = 0.02;
+        } else if (this._mediumRels.has(rel)) {
+          idealLength = 200;
+          strength = 0.012;
         } else {
-          idealLength = 160;
-          strength = 0.015;
+          idealLength = 250;
+          strength = 0.008;
         }
       }
 

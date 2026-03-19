@@ -751,7 +751,7 @@ export function GraphCanvas({
       groups[cid].push(n);
     });
     return Object.entries(groups)
-      .filter(([, members]) => members.length >= 3)
+      .filter(([, members]) => members.length >= 7)
       .map(([cid, members]) => {
         const cx = members.reduce((s, n) => s + (n.x || 0), 0) / members.length;
         const cy = members.reduce((s, n) => s + (n.y || 0), 0) / members.length;
