@@ -165,7 +165,7 @@ export function useSearchIndex() {
           category: 'funds',
           name: f.name,
           subtitle: f.type || '',
-          view: 'funds',
+          view: 'investors',
           payload: f,
         }));
 

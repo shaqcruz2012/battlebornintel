@@ -27,6 +27,7 @@ import analyticsFlowRouter from './routes/analytics-flow.js';
 import ingestionRouter from './routes/ingestion.js';
 import subscribersRouter, { emailLogRouter } from './routes/subscribers.js';
 import investorsRouter from './routes/investors.js';
+import risksRouter from './routes/risks.js';
 import newsRouter, { setLastRefreshAt } from './routes/news.js';
 import { initTrackedCompanies, refreshNewsCache } from './services/newsAggregator.js';
 
@@ -76,15 +77,40 @@ function requireAdminKey(req, res, next) {
 // Optional auth — populates req.user when a valid token is present
 app.use(optionalAuth);
 
-// Audit logging — logs requests when req.user exists
-app.use(async (req, res, next) => {
+// Batched audit logging — collects entries in memory and flushes every 5 seconds
+// to avoid consuming a pool connection on every authenticated request.
+const auditBuffer = [];
+const AUDIT_FLUSH_INTERVAL = 5_000;
+const AUDIT_FLUSH_MAX = 100;
+
+function flushAuditBuffer() {
+  if (auditBuffer.length === 0) return;
+  const batch = auditBuffer.splice(0, AUDIT_FLUSH_MAX);
+  const values = [];
+  const placeholders = [];
+  for (let i = 0; i < batch.length; i++) {
+    const off = i * 5;
+    placeholders.push(`($${off + 1}, $${off + 2}, $${off + 3}, $${off + 4}, $${off + 5})`);
+    values.push(batch[i].userId, batch[i].action, batch[i].resource, batch[i].ip, batch[i].ua);
+  }
+  pool.query(
+    `INSERT INTO audit_log (user_id, action, resource, ip_address, user_agent) VALUES ${placeholders.join(', ')}`,
+    values
+  ).catch(() => {});
+}
+
+setInterval(flushAuditBuffer, AUDIT_FLUSH_INTERVAL).unref();
+
+app.use((req, res, next) => {
   if (req.user && req.method !== 'OPTIONS') {
-    // Fire-and-forget: don't block the request
-    pool.query(
-      `INSERT INTO audit_log (user_id, action, resource, ip_address, user_agent)
-       VALUES ($1, $2, $3, $4, $5)`,
-      [req.user.id, req.method, req.originalUrl, req.ip, req.headers['user-agent']]
-    ).catch(() => {}); // silently ignore audit failures
+    auditBuffer.push({
+      userId: req.user.id,
+      action: req.method,
+      resource: req.originalUrl,
+      ip: req.ip,
+      ua: req.headers['user-agent'],
+    });
+    if (auditBuffer.length >= AUDIT_FLUSH_MAX) flushAuditBuffer();
   }
   next();
 });
@@ -126,6 +152,7 @@ app.use('/api/timeline',               publicLimit, cacheMiddleware('timeline', 
 app.use('/api/constants',              publicLimit, cacheMiddleware('constants',             600_000, { cacheControl: 'public, max-age=3600' }),  constantsRouter);
 app.use('/api/analysis',               publicLimit, cacheMiddleware('analysis',               60_000, { cacheControl: 'private, max-age=60' }),   analysisRouter);
 app.use('/api/stakeholder-activities', publicLimit, cacheMiddleware('stakeholderActivities',  60_000, { cacheControl: 'private, max-age=60' }),   stakeholderActivitiesRouter);
+app.use('/api/risks',                  publicLimit, cacheMiddleware('risks',                  120_000, { cacheControl: 'private, max-age=120' }),  risksRouter);
 app.use('/api/opportunities',          publicLimit, cacheMiddleware('opportunities',         300_000, { cacheControl: 'public, max-age=3600' }),  opportunitiesRouter);
 app.use('/api/investors',              publicLimit, cacheMiddleware('investors',             300_000, { cacheControl: 'public, max-age=3600' }),  investorsRouter);
 // Frontier news feed

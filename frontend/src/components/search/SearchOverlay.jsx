@@ -248,7 +248,7 @@ export function SearchOverlay({ isOpen, onClose, onViewChange }) {
             ref={inputRef}
             type="text"
             className={styles.input}
-            placeholder="Search companies, funds, people..."
+            placeholder="Search companies, investors, people..."
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={handleKeyDown}
@@ -272,7 +272,7 @@ export function SearchOverlay({ isOpen, onClose, onViewChange }) {
           {!isTyping && (
             <div className={styles.emptyState}>
               <span className={styles.emptyIcon}>_</span>
-              <span>Type to search companies, funds, people...</span>
+              <span>Type to search companies, investors, people...</span>
               <span className={styles.emptyHint}>
                 <kbd>&#8593;</kbd><kbd>&#8595;</kbd> navigate
                 &nbsp;&nbsp;

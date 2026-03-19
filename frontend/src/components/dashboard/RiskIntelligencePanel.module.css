@@ -1,0 +1,491 @@
+/* ── Risk Intelligence Panel: Bloomberg-style ───────────── */
+
+.wrapper {
+  grid-column: 1 / -1;
+  margin-top: var(--space-sm);
+}
+
+/* ── Header ─────────────────────────────────────────────── */
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 12px;
+  background: rgba(0, 212, 170, 0.06);
+  border: 1px solid #1c2733;
+  border-bottom: none;
+  border-radius: 4px 4px 0 0;
+}
+
+.headerLeft {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.title {
+  font-family: 'IBM Plex Mono', var(--font-mono), monospace;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: #45d7c6;
+}
+
+.title::before {
+  content: '\25B8';
+  font-size: 8px;
+  opacity: 0.7;
+  margin-right: 6px;
+}
+
+.severityBadges {
+  display: flex;
+  gap: 6px;
+}
+
+.severityBadge {
+  font-family: 'IBM Plex Mono', var(--font-mono), monospace;
+  font-size: 8px;
+  font-weight: 600;
+  padding: 1px 6px;
+  border-radius: 2px;
+  letter-spacing: 0.5px;
+  border: 1px solid;
+}
+
+.badgeCritical {
+  color: #ef4444;
+  background: rgba(239, 68, 68, 0.08);
+  border-color: rgba(239, 68, 68, 0.25);
+}
+
+.badgeHigh {
+  color: #f97316;
+  background: rgba(249, 115, 22, 0.08);
+  border-color: rgba(249, 115, 22, 0.25);
+}
+
+.badgeMedium {
+  color: #e5b654;
+  background: rgba(229, 182, 84, 0.08);
+  border-color: rgba(229, 182, 84, 0.25);
+}
+
+.badgeLow {
+  color: rgba(255, 255, 255, 0.4);
+  background: rgba(255, 255, 255, 0.03);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+/* ── Main Body ──────────────────────────────────────────── */
+
+.body {
+  background: #0a0e14;
+  border: 1px solid #1c2733;
+  border-radius: 0 0 4px 4px;
+  padding: 12px;
+  display: grid;
+  grid-template-columns: 200px 1fr 1fr;
+  gap: 12px;
+  min-height: 200px;
+  max-height: 420px;
+}
+
+/* ── Risk Score Display ─────────────────────────────────── */
+
+.scoreSection {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border-right: 1px solid #1c2733;
+  padding-right: 12px;
+}
+
+.scoreLabel {
+  font-family: 'IBM Plex Mono', var(--font-mono), monospace;
+  font-size: 8px;
+  font-weight: 600;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.scoreValue {
+  font-family: 'IBM Plex Mono', var(--font-mono), monospace;
+  font-size: 48px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -2px;
+}
+
+.scoreGrade {
+  font-family: 'IBM Plex Mono', var(--font-mono), monospace;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 2px;
+  padding: 2px 10px;
+  border-radius: 2px;
+}
+
+.gradeCritical {
+  color: #ef4444;
+  background: rgba(239, 68, 68, 0.1);
+}
+
+.gradeElevated {
+  color: #f97316;
+  background: rgba(249, 115, 22, 0.1);
+}
+
+.gradeModerate {
+  color: #e5b654;
+  background: rgba(229, 182, 84, 0.1);
+}
+
+.gradeLow {
+  color: #34c9a8;
+  background: rgba(52, 201, 168, 0.1);
+}
+
+.gradientBar {
+  width: 100%;
+  height: 4px;
+  border-radius: 2px;
+  background: linear-gradient(to right, #34c9a8, #e5b654, #f97316, #ef4444);
+  position: relative;
+  margin-top: 4px;
+}
+
+.gradientMarker {
+  position: absolute;
+  top: -3px;
+  width: 2px;
+  height: 10px;
+  background: #fff;
+  border-radius: 1px;
+  transition: left 0.4s ease;
+}
+
+/* ── Signal Cards ───────────────────────────────────────── */
+
+.signalsSection {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.filterBar {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 8px;
+  flex-shrink: 0;
+}
+
+.filterPill {
+  font-family: 'IBM Plex Mono', var(--font-mono), monospace;
+  font-size: 8px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 2px;
+  border: 1px solid #1c2733;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.4);
+  cursor: pointer;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  transition: all 0.15s ease;
+}
+
+.filterPill:hover {
+  border-color: rgba(255, 255, 255, 0.2);
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.filterPillActive {
+  border-color: #45d7c6;
+  color: #45d7c6;
+  background: rgba(69, 215, 198, 0.06);
+}
+
+.signalList {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(69, 215, 198, 0.15) transparent;
+}
+
+.signalList::-webkit-scrollbar {
+  width: 4px;
+}
+
+.signalList::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.signalList::-webkit-scrollbar-thumb {
+  background: rgba(69, 215, 198, 0.15);
+  border-radius: 2px;
+}
+
+.signalCard {
+  padding: 8px 10px;
+  background: rgba(255, 255, 255, 0.02);
+  border-left: 2px solid;
+  border-radius: 0 3px 3px 0;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.signalCard:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.signalCardExpanded {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.signalHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.signalIcon {
+  font-size: 12px;
+  flex-shrink: 0;
+  width: 16px;
+  text-align: center;
+}
+
+.signalSeverity {
+  font-family: 'IBM Plex Mono', var(--font-mono), monospace;
+  font-size: 7px;
+  font-weight: 700;
+  padding: 1px 5px;
+  border-radius: 2px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+
+.signalTitle {
+  font-family: 'IBM Plex Mono', var(--font-mono), monospace;
+  font-size: 9px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.85);
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.signalExpanded {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.signalDescription {
+  font-family: 'IBM Plex Mono', var(--font-mono), monospace;
+  font-size: 8px;
+  color: rgba(255, 255, 255, 0.5);
+  line-height: 1.6;
+  margin-bottom: 6px;
+}
+
+.signalMetricBar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.metricLabel {
+  font-family: 'IBM Plex Mono', var(--font-mono), monospace;
+  font-size: 7px;
+  color: rgba(255, 255, 255, 0.3);
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  min-width: 50px;
+}
+
+.metricTrack {
+  flex: 1;
+  height: 3px;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 2px;
+  position: relative;
+  overflow: hidden;
+}
+
+.metricFill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.4s ease;
+}
+
+.metricValue {
+  font-family: 'IBM Plex Mono', var(--font-mono), monospace;
+  font-size: 8px;
+  font-weight: 600;
+  min-width: 40px;
+  text-align: right;
+}
+
+.signalRecommendation {
+  font-family: 'IBM Plex Mono', var(--font-mono), monospace;
+  font-size: 8px;
+  color: rgba(69, 215, 198, 0.6);
+  line-height: 1.5;
+  padding-left: 8px;
+  border-left: 1px solid rgba(69, 215, 198, 0.2);
+}
+
+.signalEntities {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+  margin-bottom: 6px;
+}
+
+.entityTag {
+  font-family: 'IBM Plex Mono', var(--font-mono), monospace;
+  font-size: 7px;
+  padding: 1px 5px;
+  border-radius: 2px;
+  background: rgba(69, 215, 198, 0.06);
+  color: rgba(69, 215, 198, 0.7);
+  border: 1px solid rgba(69, 215, 198, 0.12);
+}
+
+/* ── Risk Heatmap ───────────────────────────────────────── */
+
+.heatmapSection {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.heatmapTitle {
+  font-family: 'IBM Plex Mono', var(--font-mono), monospace;
+  font-size: 8px;
+  font-weight: 600;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.4);
+  margin-bottom: 8px;
+  flex-shrink: 0;
+}
+
+.heatmapGrid {
+  flex: 1;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(69, 215, 198, 0.15) transparent;
+}
+
+.heatmapGrid::-webkit-scrollbar {
+  width: 4px;
+}
+
+.heatmapGrid::-webkit-scrollbar-thumb {
+  background: rgba(69, 215, 198, 0.15);
+  border-radius: 2px;
+}
+
+.heatmapTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: 'IBM Plex Mono', var(--font-mono), monospace;
+}
+
+.heatmapTh {
+  font-size: 7px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.35);
+  padding: 3px 4px;
+  text-align: center;
+  letter-spacing: 0.5px;
+  border-bottom: 1px solid #1c2733;
+  position: sticky;
+  top: 0;
+  background: #0a0e14;
+}
+
+.heatmapThName {
+  text-align: left;
+  min-width: 80px;
+}
+
+.heatmapRow {
+  transition: background 0.1s ease;
+}
+
+.heatmapRow:hover {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.heatmapName {
+  font-size: 8px;
+  color: rgba(255, 255, 255, 0.6);
+  padding: 3px 4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 90px;
+}
+
+.heatCell {
+  padding: 2px 3px;
+  text-align: center;
+}
+
+.heatDot {
+  display: inline-block;
+  width: 16px;
+  height: 12px;
+  border-radius: 2px;
+  font-size: 7px;
+  font-weight: 600;
+  line-height: 12px;
+  color: rgba(0, 0, 0, 0.6);
+}
+
+/* ── Loading / Empty ────────────────────────────────────── */
+
+.loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(255, 255, 255, 0.3);
+  font-family: 'IBM Plex Mono', var(--font-mono), monospace;
+  font-size: 9px;
+  letter-spacing: 1px;
+  padding: 40px;
+  grid-column: 1 / -1;
+}
+
+/* ── Responsive ─────────────────────────────────────────── */
+
+@media (max-width: 1200px) {
+  .body {
+    grid-template-columns: 1fr;
+    max-height: none;
+  }
+
+  .scoreSection {
+    border-right: none;
+    border-bottom: 1px solid #1c2733;
+    padding-right: 0;
+    padding-bottom: 12px;
+    flex-direction: row;
+    justify-content: space-around;
+  }
+}

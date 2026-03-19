@@ -12,7 +12,6 @@ const WeeklyBriefView = lazy(() => import('./components/brief/WeeklyBriefView').
 const GoedView = lazy(() => import('./components/goed/GoedView').then(m => ({ default: m.GoedView })));
 const GraphView = lazy(() => import('./components/graph/GraphView').then(m => ({ default: m.GraphView })));
 const CompaniesView = lazy(() => import('./components/companies/CompaniesView').then(m => ({ default: m.CompaniesView })));
-const FundsView = lazy(() => import('./components/funds/FundsView').then(m => ({ default: m.FundsView })));
 const InvestorsView = lazy(() => import('./components/investors/InvestorsView').then(m => ({ default: m.InvestorsView })));
 const StakeholderFeedView = lazy(() => import('./components/feed/StakeholderFeedView').then(m => ({ default: m.StakeholderFeedView })));
 const ResourceMatrix = lazy(() => import('./components/ecosystem/ResourceMatrix'));
@@ -67,7 +66,6 @@ export default function App() {
               <Suspense fallback={<TabFallback />}>
                 {view === 'brief' && <WeeklyBriefView />}
                 {view === 'companies' && <CompaniesView />}
-                {view === 'funds' && <FundsView />}
                 {view === 'investors' && <InvestorsView />}
                 {view === 'goed' && <GoedView />}
                 {view === 'feed' && <StakeholderFeedView />}

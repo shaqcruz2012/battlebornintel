@@ -2,14 +2,16 @@ import pool from '../pool.js';
 
 export async function getAllCompanies({ stage, region, sector, search, sortBy } = {}) {
   let sql = `
-    WITH latest_scores AS (
-      SELECT DISTINCT ON (company_id) company_id, irs_score, grade, triggers, dims
-      FROM computed_scores
-      ORDER BY company_id, computed_at DESC
-    )
-    SELECT c.*, cs.irs_score, cs.grade, cs.triggers, cs.dims
+    SELECT c.*,
+           cs.irs_score, cs.grade, cs.triggers, cs.dims
     FROM companies c
-    LEFT JOIN latest_scores cs ON cs.company_id = c.id
+    LEFT JOIN LATERAL (
+      SELECT irs_score, grade, triggers, dims
+      FROM computed_scores
+      WHERE company_id = c.id
+      ORDER BY computed_at DESC
+      LIMIT 1
+    ) cs ON true
   `;
   const conditions = [];
   const params = [];
@@ -65,36 +67,38 @@ export async function getAllCompanies({ stage, region, sector, search, sortBy } 
 }
 
 export async function getCompanyById(id) {
-  const { rows } = await pool.query(
-    `WITH latest_scores AS (
-       SELECT DISTINCT ON (company_id) company_id, irs_score, grade, triggers, dims
-       FROM computed_scores
-       ORDER BY company_id, computed_at DESC
-     )
-     SELECT c.*, cs.irs_score, cs.grade, cs.triggers, cs.dims
-     FROM companies c
-     LEFT JOIN latest_scores cs ON cs.company_id = c.id
-     WHERE c.id = $1`,
-    [id]
-  );
-  if (rows.length === 0) return null;
-
-  const company = formatCompany(rows[0]);
-
-  // Get edges
   const nodeId = `c_${id}`;
-  const { rows: edges } = await pool.query(
-    `SELECT * FROM graph_edges WHERE source_id = $1 OR target_id = $1`,
-    [nodeId]
-  );
-  company.edges = edges;
 
-  // Get listings
-  const { rows: listings } = await pool.query(
-    `SELECT * FROM listings WHERE company_id = $1`,
-    [id]
-  );
-  company.listings = listings;
+  // Run all three queries in parallel instead of sequentially
+  const [companyResult, edgeResult, listingResult] = await Promise.all([
+    pool.query(
+      `WITH latest_scores AS (
+         SELECT DISTINCT ON (company_id) company_id, irs_score, grade, triggers, dims
+         FROM computed_scores
+         WHERE company_id = $1
+         ORDER BY company_id, computed_at DESC
+       )
+       SELECT c.*, cs.irs_score, cs.grade, cs.triggers, cs.dims
+       FROM companies c
+       LEFT JOIN latest_scores cs ON cs.company_id = c.id
+       WHERE c.id = $1`,
+      [id]
+    ),
+    pool.query(
+      `SELECT * FROM graph_edges WHERE source_id = $1 OR target_id = $1`,
+      [nodeId]
+    ),
+    pool.query(
+      `SELECT * FROM listings WHERE company_id = $1`,
+      [id]
+    ),
+  ]);
+
+  if (companyResult.rows.length === 0) return null;
+
+  const company = formatCompany(companyResult.rows[0]);
+  company.edges = edgeResult.rows;
+  company.listings = listingResult.rows;
 
   return company;
 }

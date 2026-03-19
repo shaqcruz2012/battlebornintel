@@ -143,6 +143,15 @@ export function useRiskAssessments() {
   });
 }
 
+/** Risk intelligence signals (computed from ecosystem data) */
+export function useRiskSignals(params = {}) {
+  return useQuery({
+    queryKey: ['risks', params],
+    queryFn: () => api.getRiskSignals(params),
+    staleTime: 120_000,
+  });
+}
+
 /** Stakeholder activities digest */
 export function useStakeholderActivities(params = {}) {
   return useQuery({

@@ -6,7 +6,7 @@ import { KpiDetailPanel } from './KpiDetailPanel';
 import { SectorDetailDrawer } from './SectorDetailDrawer';
 import { MomentumTable } from './MomentumTable';
 import { LiveActivityFeed } from './LiveActivityFeed';
-import { RiskAlerts } from './RiskAlerts';
+import { RiskIntelligencePanel } from './RiskIntelligencePanel';
 import styles from './TerminalGrid.module.css';
 
 // ── KPI key/label mapping for terminal readout ─────────────────────────────
@@ -365,8 +365,8 @@ export function ExecutiveDashboard({ onViewChange }) {
         </div>
       </div>
 
-      {/* ── Risk Alerts ── */}
-      <RiskAlerts companies={companies} funds={funds} />
+      {/* ── Risk Intelligence ── */}
+      <RiskIntelligencePanel companies={companies} />
 
       {/* ── Overlays (render outside the grid) ── */}
       {activeKpi && (

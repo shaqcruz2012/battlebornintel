@@ -93,6 +93,10 @@ class Cache {
 // Global cache instance
 const cache = new Cache();
 
+// In-flight request deduplication: if multiple identical requests arrive while
+// the first is still being computed, they all share the same result.
+const inflight = new Map(); // key -> Promise<data>
+
 /**
  * Cache middleware factory
  * @param {string} keyPrefix - Prefix for cache keys (e.g., 'companies')
@@ -121,14 +125,38 @@ export function cacheMiddleware(keyPrefix = '', ttlMs = 300000, options = {}) {
       return res.json(cached);
     }
 
-    // Intercept res.json to cache response
+    // Request deduplication: if an identical GET is already in-flight, wait for it
+    if (req.method === 'GET' && inflight.has(key)) {
+      inflight.get(key).then(data => {
+        res.setHeader('X-Cache', 'DEDUP');
+        applyHttpCacheHeaders(res);
+        res.json(data);
+      }).catch(() => next());
+      return;
+    }
+
+    // Track this request as in-flight
+    let resolveInflight, rejectInflight;
+    if (req.method === 'GET') {
+      const promise = new Promise((resolve, reject) => {
+        resolveInflight = resolve;
+        rejectInflight = reject;
+      });
+      inflight.set(key, promise);
+    }
+
+    // Intercept res.json to cache response and resolve in-flight waiters
     const originalJson = res.json.bind(res);
     res.json = function(data) {
       if (req.method === 'GET' && res.statusCode === 200) {
         cache.set(key, data, ttlMs);
         res.setHeader('X-Cache', 'MISS');
         applyHttpCacheHeaders(res);
+        if (resolveInflight) resolveInflight(data);
+      } else if (rejectInflight) {
+        rejectInflight(new Error('non-200'));
       }
+      inflight.delete(key);
       return originalJson(data);
     };
 

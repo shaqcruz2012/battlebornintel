@@ -58,6 +58,51 @@ function edgeValue(e) {
   return '';
 }
 
+/* ── Focus+Expand: Palantir-style radial spread for selected node neighbors ── */
+// When a node is selected, its neighbors spread out in a radial pattern around it
+// to prevent pile-ups. Returns a map of nodeId → { dx, dy } offsets.
+function computeExpandOffsets(selectedNode, connectedIds, nodes, edges, zoom) {
+  if (!selectedNode || connectedIds.size <= 1) return {};
+  const sel = nodes.find((n) => n.id === selectedNode);
+  if (!sel) return {};
+
+  // Find neighbors (exclude the selected node itself)
+  const neighborIds = [...connectedIds].filter((id) => id !== selectedNode);
+  const neighbors = neighborIds.map((id) => nodes.find((n) => n.id === id)).filter(Boolean);
+  if (neighbors.length === 0) return {};
+
+  const cx = sel.x || 0;
+  const cy = sel.y || 0;
+
+  // Desired spread radius scales inversely with zoom (closer zoom = less spread needed)
+  const spreadRadius = Math.max(60, 120 / Math.max(zoom, 0.4));
+
+  const offsets = {};
+  const count = neighbors.length;
+
+  for (let i = 0; i < count; i++) {
+    const n = neighbors[i];
+    const nx = n.x || 0;
+    const ny = n.y || 0;
+    const dx = nx - cx;
+    const dy = ny - cy;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+
+    // If nodes are too close (< spreadRadius), push them out radially
+    if (dist < spreadRadius) {
+      // Use the natural angle if there's any distance, otherwise distribute evenly
+      const angle = dist > 5
+        ? Math.atan2(dy, dx)
+        : (2 * Math.PI * i) / count - Math.PI / 2;
+      const targetDist = spreadRadius + (i % 2) * 20; // stagger slightly
+      const targetX = cx + Math.cos(angle) * targetDist;
+      const targetY = cy + Math.sin(angle) * targetDist;
+      offsets[n.id] = { dx: targetX - nx, dy: targetY - ny };
+    }
+  }
+  return offsets;
+}
+
 /* ── Radial opacity: nodes near the canvas centroid appear brighter ── */
 // Returns an opacity in [0.68, 1.0] — center nodes full opacity, outer nodes 0.68.
 // We compute the centroid lazily from the node array passed in.
@@ -168,20 +213,34 @@ const NodeCircle = memo(function NodeCircle({
   isHub,        // true for BBV/GOED hub nodes — always full opacity + persistent glow
   suppressLabels, // true when zoom is too low to read labels — skip text SVG elements
   suppressGlowRings, // true at low zoom — skip decorative glow rings to reduce SVG element count
+  expandOffset, // { dx, dy } offset for focus+expand radial spread
 }) {
   const showLabel = !suppressLabels && (r >= 10 || isSelected || (isConnected && hasSelection));
 
-  // Hub nodes are always fully visible; selection states take precedence over radial fade
-  const groupOpacity = dim ? 0.3
-    : isHub ? 1
+  // Palantir-style focus: non-connected nodes dim to near-invisible when a selection is active
+  const groupOpacity = dim ? 0.12
+    : isHub && !hasSelection ? 1
     : isSelected || isConnected ? 1
     : (baseOpacity ?? 1);
 
   // At low zoom, skip decorative glow rings (saves 2-3 SVG elements per connected/hub node)
   const showGlowRings = !suppressGlowRings;
 
+  // Focus+expand: apply radial spread offset as CSS transform for smooth animation
+  const expandTransform = expandOffset
+    ? `translate(${expandOffset.dx}px, ${expandOffset.dy}px)`
+    : undefined;
+  // Selected node scales up slightly for emphasis
+  const scaleTransform = isSelected ? 'scale(1.3)' : undefined;
+  const transformOrigin = isSelected ? `${node.x}px ${node.y}px` : undefined;
+  const combinedTransform = scaleTransform || expandTransform || undefined;
+
   return (
-    <g opacity={groupOpacity} style={{ transition: 'opacity 300ms ease, transform 200ms ease' }} className={!dim ? styles.nodeGroup : undefined}>
+    <g opacity={groupOpacity} style={{
+      transition: 'opacity 400ms ease, transform 350ms cubic-bezier(0.34, 1.56, 0.64, 1)',
+      transform: combinedTransform,
+      transformOrigin,
+    }} className={!dim ? styles.nodeGroup : undefined}>
       {/* Soft outer glow for connected nodes */}
       {showGlowRings && isConnected && !isSelected && hasSelection && (
         <>
@@ -387,8 +446,8 @@ function useEdgeCanvas(canvasRef, edges, zoom, pan, w, h, {
         }
 
         const edgeOpacity = isOpportunity
-          ? (e.opacity ?? (dimEdge ? 0.05 : 0.5))
-          : (dimEdge ? 0.06 : isHighlighted ? 0.85 : categoryOpacity);
+          ? (e.opacity ?? (dimEdge ? 0.02 : 0.5))
+          : (dimEdge ? 0.03 : isHighlighted ? 0.9 : categoryOpacity);
         const edgeWidth = isOpportunity ? (isHighlighted ? 1.5 : 0.5) : (isHighlighted ? 2 : 0.5);
         const edgeColor = e.color || (isHighlighted ? (rc?.color || '#45D7C6') : (rc?.color || '#333'));
 
@@ -716,6 +775,15 @@ export function GraphCanvas({
     });
     return { connectedIds: cIds, highlightedEdges: hEdges };
   }, [selectedNode, edges]);
+
+  // Focus+Expand: compute radial spread offsets for neighbors of selected node.
+  // Nodes that are too close to the selected node get pushed outward so they
+  // don't pile on top of each other. Offsets are applied as CSS transforms for
+  // smooth animated transitions (Palantir-style expand).
+  const expandOffsets = useMemo(
+    () => computeExpandOffsets(selectedNode, connectedIds, nodes, edges, zoom),
+    [selectedNode, connectedIds, nodes, edges, zoom],
+  );
 
   // FIX 1: Single stable callback instead of per-node map.
   // NodeCircle calls onSelect(nodeId) and this handler toggles selection.
@@ -1264,6 +1332,7 @@ export function GraphCanvas({
                 isHub={isHub}
                 suppressLabels={suppressLabels}
                 suppressGlowRings={suppressGlowRings}
+                expandOffset={expandOffsets[n.id]}
               />
             );
 

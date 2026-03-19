@@ -96,6 +96,9 @@ export const api = {
   getRiskAssessments: () =>
     fetchJSON(`${BASE}/analysis/risks`).then((r) => r.data),
 
+  getRiskSignals: (params = {}) =>
+    fetchJSON(`${BASE}/risks`, params).then((r) => r.data),
+
   // Stakeholder Activities
   getStakeholderActivities: (params = {}) =>
     fetchJSON(`${BASE}/stakeholder-activities`, params).then((r) => r.data),

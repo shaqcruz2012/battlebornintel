@@ -7,7 +7,6 @@ import styles from './ViewTabs.module.css';
 const BASE_VIEWS = [
   { id: 'executive', label: 'Executive Dashboard' },
   { id: 'companies', label: 'Companies' },
-  { id: 'funds', label: 'Funds' },
   { id: 'investors', label: 'Investors' },
   { id: 'brief', label: 'Weekly Brief' },
   { id: 'goed', label: 'GOED' },

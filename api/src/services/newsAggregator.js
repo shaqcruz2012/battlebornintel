@@ -100,14 +100,31 @@ export async function getRelevantNews({ minRelevance = 5, limit = 50 } = {}) {
     .slice(0, limit);
 }
 
-// Refresh cache: fetch from HN, classify, upsert into DB
+// Refresh cache: fetch from HN, classify, batch upsert into DB
 export async function refreshNewsCache(pool) {
   const stories = await getRelevantNews({ minRelevance: 1, limit: 100 });
 
-  for (const s of stories) {
+  if (stories.length > 0) {
+    // Batch upsert: single query instead of N individual inserts
+    const COLS = 13;
+    const values = [];
+    const placeholders = [];
+    for (let i = 0; i < stories.length; i++) {
+      const s = stories[i];
+      const off = i * COLS;
+      placeholders.push(
+        `($${off+1},$${off+2},$${off+3},$${off+4},$${off+5},$${off+6},$${off+7},$${off+8},$${off+9},$${off+10},$${off+11},$${off+12},$${off+13},NOW())`
+      );
+      values.push(
+        s.id, s.source, s.title, s.url, s.score, s.comments, s.author,
+        s.timestamp, s.relevance, s.nevadaMatch,
+        s.matchedSectors, s.companyMatches, s.tag,
+      );
+    }
+
     await pool.query(
       `INSERT INTO frontier_news_cache (id, source, title, url, score, comments, author, published_at, relevance, nevada_match, matched_sectors, company_matches, tag, fetched_at)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,NOW())
+       VALUES ${placeholders.join(', ')}
        ON CONFLICT (id) DO UPDATE SET
          score = EXCLUDED.score,
          comments = EXCLUDED.comments,
@@ -117,12 +134,8 @@ export async function refreshNewsCache(pool) {
          company_matches = EXCLUDED.company_matches,
          tag = EXCLUDED.tag,
          fetched_at = NOW()`,
-      [
-        s.id, s.source, s.title, s.url, s.score, s.comments, s.author,
-        s.timestamp, s.relevance, s.nevadaMatch,
-        s.matchedSectors, s.companyMatches, s.tag,
-      ]
-    ).catch(() => {}); // skip individual failures
+      values
+    ).catch(err => console.warn('[news] Batch upsert failed:', err.message));
   }
 
   // Prune stories older than 7 days
