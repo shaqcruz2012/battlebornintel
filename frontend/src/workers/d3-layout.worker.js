@@ -58,53 +58,37 @@ function computeCommunityCenters(nodes, width, height) {
 
   const cx = width / 2;
   const cy = height / 2;
-  // Galaxy shape: wide major axis, narrow minor axis (cigar/lens shape)
-  const majorAxis = Math.min(width, height) * 0.42;
-  const minorAxis = majorAxis * 0.25; // flatten to 4:1 ratio
+  // Use most of the available canvas — communities need room to breathe
+  const majorAxis = width * 0.42;
+  const minorAxis = height * 0.32;
   const centers = {};
 
-  // Top 2-3 largest communities share the dense center (the galactic bulge)
-  const bulgeCount = Math.min(3, Math.ceil(sorted.length * 0.2));
-  for (let i = 0; i < bulgeCount && i < sorted.length; i++) {
-    // Spread slightly within bulge, offset by hash for stability
-    const h = hashFloat('comm_' + sorted[i][0]);
-    const bulgeSpread = majorAxis * 0.08;
-    const rawX = (h - 0.5) * bulgeSpread;
-    const rawY = (hashFloat('cy_' + sorted[i][0]) - 0.5) * bulgeSpread * 0.5;
-    centers[sorted[i][0]] = {
-      x: cx + rawX * cosTilt - rawY * sinTilt,
-      y: cy + rawX * sinTilt + rawY * cosTilt,
-    };
-  }
+  // Only the single largest community gets the true center
+  centers[sorted[0][0]] = { x: cx, y: cy };
 
-  // Remaining communities form two tapering arms extending from the bulge
-  const armNodes = sorted.slice(bulgeCount);
-  if (armNodes.length > 0) {
-    const halfArm = Math.ceil(armNodes.length / 2);
-    armNodes.forEach(([commId, size], idx) => {
-      // Alternate between left arm and right arm
-      const isRightArm = idx < halfArm;
-      const armIdx = isRightArm ? idx : idx - halfArm;
-      const armLen = isRightArm ? halfArm : armNodes.length - halfArm;
+  // All other communities spread out in a wide elliptical arrangement
+  // using the full canvas area — no cramped bulge, no overlapping arms
+  if (sorted.length > 1) {
+    const rest = sorted.slice(1);
+    rest.forEach(([commId, size], idx) => {
+      // Distribute evenly around ellipse with golden-angle spacing
+      // Golden angle prevents communities from lining up
+      const goldenAngle = 2.399963; // radians (~137.5°)
+      const angle = idx * goldenAngle;
 
-      // Progress along the arm (0 = near bulge, 1 = tip)
-      const t = armLen > 1 ? armIdx / (armLen - 1) : 0;
+      // Distance: larger communities closer to center, smaller further out
+      const sizeRatio = size / sorted[0][1];
+      const minDist = 0.35; // minimum distance from center (fraction of axis)
+      const maxDist = 0.90;
+      const dist = minDist + (1 - sizeRatio) * (maxDist - minDist);
 
-      // Distance from center increases along arm, tapers at tip
-      const dist = majorAxis * (0.20 + t * 0.75);
+      // Add per-community jitter so same-size communities don't overlap
+      const jitterR = (hashFloat('jR_' + commId) - 0.5) * 0.15;
 
-      // Arms spiral slightly (galaxy-like) — 30° sweep per arm
-      const armBaseAngle = isRightArm ? 0 : Math.PI;
-      const spiralSweep = 0.5; // radians of spiral
-      const angle = armBaseAngle + (t - 0.5) * spiralSweep;
+      const rawX = Math.cos(angle) * majorAxis * (dist + jitterR);
+      const rawY = Math.sin(angle) * minorAxis * (dist + jitterR);
 
-      // Minor axis narrows toward tips (taper)
-      const taper = 1 - t * 0.6;
-      const perpOffset = (hashFloat('arm_' + commId) - 0.5) * minorAxis * taper * 0.6;
-
-      const rawX = Math.cos(angle) * dist;
-      const rawY = Math.sin(angle) * dist * 0.25 + perpOffset;
-
+      // Apply 15° tilt
       centers[commId] = {
         x: cx + rawX * cosTilt - rawY * sinTilt,
         y: cy + rawX * sinTilt + rawY * cosTilt,
@@ -143,11 +127,11 @@ function clusterTarget(node, width, height) {
       program:     { dx: 8,   dy: 12  },
     };
     const off = typeOffset[node.type] || { dx: 0, dy: 0 };
-    const jitter = 20; // spread within community
+    const jitter = 40; // spread within community — enough room to see individual nodes
     return {
       x: center.x + off.dx + (hashFloat(node.id + '_cx') - 0.5) * jitter,
       y: center.y + off.dy + (hashFloat(node.id + '_cy') - 0.5) * jitter,
-      strength: 0.25, // strong pull to keep clusters tight and separated
+      strength: 0.18, // moderate pull — tight enough to cluster, loose enough to breathe
     };
   }
   // Fallback for nodes without a community — weak pull to periphery
@@ -291,7 +275,7 @@ class ForceSimulation {
    * is the average number of neighbors within distMax.
    */
   applyRepulsion() {
-    const distMax = 500;
+    const distMax = 700;
     const distMax2 = distMax * distMax;
     const cellSize = distMax;
     const grid = this._buildSpatialGrid(cellSize);
