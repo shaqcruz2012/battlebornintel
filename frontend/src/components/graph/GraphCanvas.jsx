@@ -443,6 +443,8 @@ export function GraphCanvas({
   overlays = {},
   predictedLinks = null,
   nodeDegreeMap = {},
+  selectedCluster = null,
+  onSelectCluster,
 }) {
   const containerRef = useRef(null);
   const edgeCanvasRef = useRef(null);
@@ -451,7 +453,9 @@ export function GraphCanvas({
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [dragging, setDragging] = useState(false);
   const [dragStart, setDragStart] = useState(null);
-  const [selectedCommunity, setSelectedCommunity] = useState(null);
+  // selectedCommunity is now lifted to GraphView as selectedCluster
+  const selectedCommunity = selectedCluster;
+  const setSelectedCommunity = onSelectCluster || (() => {});
 
   // ── Progressive detail: Google Maps-style zoom tiers ──────────────────
   // Galaxy (zoomed way out) → Constellation → Cluster → Street → Detail

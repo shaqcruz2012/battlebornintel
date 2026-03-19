@@ -150,6 +150,17 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* Clickable cluster name in table */
+.clickableName {
+  cursor: pointer;
+  color: var(--accent-teal, #45d7c6);
+  transition: opacity 150ms ease;
+}
+.clickableName:hover {
+  opacity: 0.7;
+  text-decoration: underline;
+}
+
 /* Color swatch dot for communities */
 .colorDot {
   display: inline-block;

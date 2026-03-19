@@ -55,7 +55,7 @@ function SortTh({ label, field, sortKey, sortDir, onSort }) {
 
 /* ── Communities Table ── */
 
-const CommunitiesTable = memo(function CommunitiesTable({ nodes, communities, communityNames, pagerank }) {
+const CommunitiesTable = memo(function CommunitiesTable({ nodes, communities, communityNames, pagerank, onSelectCluster }) {
   const { sortKey, sortDir, toggle, sort } = useSortable('size');
 
   const rows = useMemo(() => {
@@ -116,7 +116,15 @@ const CommunitiesTable = memo(function CommunitiesTable({ nodes, communities, co
           {sorted.map((r) => (
             <tr key={r.cid}>
               <td><span className={styles.colorDot} style={{ background: r.color }} /></td>
-              <td>{r.name}</td>
+              <td>
+                <span
+                  className={styles.clickableName}
+                  onClick={() => onSelectCluster?.(r.cid)}
+                  title="Click to highlight this cluster on the graph"
+                >
+                  {r.name}
+                </span>
+              </td>
               <td className={styles.num}>{r.size}</td>
               <td>{r.hub}</td>
             </tr>
@@ -394,6 +402,7 @@ export const OverlayDetailPanel = memo(function OverlayDetailPanel({
   edges,
   metrics,
   predictedLinks,
+  onSelectCluster,
 }) {
   const [expanded, setExpanded] = useState(true);
 
@@ -425,6 +434,7 @@ export const OverlayDetailPanel = memo(function OverlayDetailPanel({
               communities={metrics?.communities}
               communityNames={metrics?.communityNames}
               pagerank={metrics?.pagerank}
+              onSelectCluster={onSelectCluster}
             />
           )}
           {overlays.capitalFlows && (

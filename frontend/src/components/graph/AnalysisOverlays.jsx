@@ -125,7 +125,7 @@ const CommunitiesOverlay = memo(function CommunitiesOverlay({ nodes, communities
             fontWeight="700"
             letterSpacing="0.5"
           >
-            {`${g.name} (${g.count})`}
+            {`${g.name} — ${g.count}`}
           </text>
           {/* Hub node sub-label */}
           {g.hub && g.hub !== g.name && (
@@ -179,12 +179,7 @@ const CapitalFlowOverlay = memo(function CapitalFlowOverlay({ edges }) {
 
   return (
     <g className="overlay-capital-flow" pointerEvents="none">
-      {/* Directional arrows along capital flow edges */}
-      <defs>
-        <marker id="flowArrow" markerWidth="6" markerHeight="4" refX="5" refY="2" orient="auto">
-          <path d="M0,0 L6,2 L0,4" fill="#C8A55A" fillOpacity="0.7" />
-        </marker>
-      </defs>
+      {/* Capital flow edges — no arrowheads, just flowing lines */}
       {flowEdges.map((e, i) => {
         const width = Math.max(1, Math.min(4, 1 + Math.log(1 + (e.val || 0)) * 0.4));
         return (
@@ -195,7 +190,6 @@ const CapitalFlowOverlay = memo(function CapitalFlowOverlay({ edges }) {
               stroke="#C8A55A"
               strokeWidth={width}
               strokeOpacity={0.25}
-              markerEnd="url(#flowArrow)"
             />
             {/* Animated flowing dots */}
             <line

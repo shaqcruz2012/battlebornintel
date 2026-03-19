@@ -36,6 +36,7 @@ export function GraphView() {
   const [focusNodeId, setFocusNodeId] = useState(null);
   const [yearMax, setYearMax] = useState(2026);
   const [debouncedYearMax, setDebouncedYearMax] = useState(2026);
+  const [selectedCluster, setSelectedCluster] = useState(null);
 
   // Analysis overlay toggles
   const [overlays, setOverlays] = useState({
@@ -273,6 +274,8 @@ export function GraphView() {
               overlays={overlays}
               predictedLinks={predictedLinksData}
               nodeDegreeMap={nodeDegreeMap}
+              selectedCluster={selectedCluster}
+              onSelectCluster={setSelectedCluster}
             />
             {/* Left overlay: legend (minimizable) */}
             <GraphLegend colorMode={colorMode} nodeFilters={nodeFilters} layout={layout} />
@@ -314,6 +317,7 @@ export function GraphView() {
             edges={layout.edges}
             metrics={metrics}
             predictedLinks={predictedLinksData}
+            onSelectCluster={setSelectedCluster}
           />
         </div>
 
