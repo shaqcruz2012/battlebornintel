@@ -1,0 +1,12 @@
+{
+  "name": "battlebornintel",
+  "version": "1.0.0",
+  "private": true,
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "build": "cd frontend && npm install && VITE_API_URL= npm run build && mkdir -p ../api/public && cp -r dist/* ../api/public/ && cd ../api && npm install",
+    "start": "cd api && node src/index.js"
+  }
+}
