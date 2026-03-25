@@ -6,12 +6,13 @@
 // Requires: no extra deps — pure DOM/SVG rendering
 // ─────────────────────────────────────────────────────────────────────
 
-import React, { useRef, useEffect, useState, useCallback } from 'react';
+import React, { useRef, useEffect, useState, useCallback, useMemo } from 'react';
 import {
   coreAll, expandedData,
   COLOR_MAP, STAGE_Y_BANDS, STAGE_NAMES,
 } from '../../data/ecosystemOrgs';
 import { POLICY_GAPS } from '../../data/policyGaps';
+import { useEcosystemMap } from '../../api/hooks.js';
 import styles from './ResourceMatrix.module.css';
 
 // ── Component ────────────────────────────────────────────────────────
@@ -19,6 +20,9 @@ export default function ResourceMatrix() {
   const areaRef      = useRef(null);
   const tooltipRef   = useRef(null);
   const bodyTipsRef  = useRef([]);
+
+  // Fetch live ecosystem data from API, fall back to static data
+  const { data: apiOrgs } = useEcosystemMap();
 
   const [dataset, setDataset]       = useState('core');
   const [activeTrack, setTrack]     = useState('ALL');
@@ -44,10 +48,33 @@ export default function ResourceMatrix() {
     return () => ro.disconnect();
   }, []);
 
-  // Derived dataset
-  const rawData = dataset === 'core'
-    ? [...coreAll]
-    : [...coreAll, ...expandedData];
+  // Convert API entities to ResourceMatrix format (null when API unavailable)
+  const liveOrgs = useMemo(() => {
+    if (!apiOrgs || apiOrgs.length === 0) return null;
+    return apiOrgs.map(org => ({
+      name: org.name,
+      abbr: org.id ? org.id.replace(/^[a-z]_/, '').slice(0, 6).toUpperCase() : (org.name || '').slice(0, 6).toUpperCase(),
+      type: org.detail?.accelType || org.detail?.fundType || org.detail?.programType || org.type,
+      x: org.x ?? (org.track === 'IDE' ? 7 + Math.random() * 2 : 3 + Math.random() * 4),
+      y: org.y ?? Math.random() * 8 + 1,
+      size: org.size || Math.min(2 + (org.edgeCount || 0) * 0.3, 8),
+      cat: org.cat || org.type,
+      track: org.track || 'Hybrid',
+      stageN: org.y ? Math.floor(org.y / 2.5) : 1,
+      geo: org.detail?.city || org.detail?.region || 'Nevada',
+      funding: org.detail?.fundType || org.detail?.programType || '',
+      industry: '',
+      website: '',
+      edgeCount: org.edgeCount || 0,
+      fromApi: true,
+    }));
+  }, [apiOrgs]);
+
+  // Derived dataset — merge API data with static (API orgs take priority)
+  const staticOrgs = dataset === 'core' ? coreAll : [...coreAll, ...expandedData];
+  const rawData = liveOrgs
+    ? [...liveOrgs, ...staticOrgs.filter(s => !liveOrgs.find(l => l.name === s.name))]
+    : [...staticOrgs];
 
   const PAD  = { top: 36, right: 40, bottom: 36, left: 52 };
   const AXIS = 10;
@@ -364,6 +391,11 @@ export default function ResourceMatrix() {
     tt.querySelector('#tt-ind').textContent   = d.industry;
     tt.querySelector('#tt-web').textContent   = d.website;
     tt.querySelector('#tt-web').style.color   = color;
+    const connEl = tt.querySelector('#tt-conn');
+    if (connEl) {
+      connEl.textContent = d.edgeCount > 0 ? String(d.edgeCount) : '';
+      connEl.parentElement.style.display = d.edgeCount > 0 ? '' : 'none';
+    }
     const fill = tt.querySelector('#tt-stage-fill');
     fill.style.background = color;
     fill.style.width = ((d.stageN / 3) * 100) + '%';
@@ -413,6 +445,11 @@ export default function ResourceMatrix() {
             <button key={d} className={dataset === d ? styles.btnActive : styles.btn}
               onClick={() => setDataset(d)}>{d.toUpperCase()}</button>
           ))}
+          {liveOrgs && (
+            <span style={{ fontSize: '0.7rem', color: '#4ECDC4', marginLeft: 8 }}>
+              &#9679; {liveOrgs.length} live entities
+            </span>
+          )}
         </div>
         <div className={styles.ctrlGroup}>
           <span className={styles.ctrlLabel}>TRACK</span>
@@ -465,6 +502,7 @@ export default function ResourceMatrix() {
           <div className={styles.ttRow}><span className={styles.ttK}>Stage</span><span id="tt-stage" className={styles.ttV}></span></div>
           <div className={styles.ttRow}><span className={styles.ttK}>Geography</span><span id="tt-geo" className={styles.ttV}></span></div>
           <div className={styles.ttRow}><span className={styles.ttK}>Funding</span><span id="tt-fund" className={styles.ttV}></span></div>
+          <div className={styles.ttRow} style={{ display: 'none' }}><span className={styles.ttK}>Connections</span><span id="tt-conn" className={styles.ttV}></span></div>
           <div className={styles.ttDivider}></div>
           <div className={styles.ttK} style={{ marginBottom: 4 }}>Industry Focus</div>
           <div id="tt-ind" className={styles.ttInd}></div>

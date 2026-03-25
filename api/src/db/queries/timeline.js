@@ -17,12 +17,13 @@ export async function getTimeline({ limit = 30, type } = {}) {
       c.slug AS company_slug
     FROM events e
     LEFT JOIN companies c ON c.id = e.company_id
+    WHERE e.quarantined = FALSE AND e.verified = TRUE
   `;
   const params = [];
   let idx = 1;
 
   if (type) {
-    sql += ` WHERE e.event_type = $${idx}`;
+    sql += ` AND e.event_type = $${idx}`;
     params.push(type);
     idx++;
   }
@@ -61,7 +62,7 @@ export async function getTimeline({ limit = 30, type } = {}) {
  * @param {string} [opts.until] - ISO date upper bound (inclusive)
  */
 export async function getREAPMetrics({ since, until } = {}) {
-  const conditions = [`event_type != 'Founding'`];
+  const conditions = [`event_type != 'Founding'`, `quarantined = FALSE`];
   const params = [];
   let idx = 1;
 
@@ -114,6 +115,7 @@ export async function getTimelineWeeks() {
       COUNT(*) AS event_count,
       array_agg(DISTINCT event_type) AS event_types
     FROM events
+    WHERE quarantined = FALSE AND verified = TRUE
     GROUP BY date_trunc('week', event_date)
     ORDER BY week_start DESC
   `;
@@ -146,7 +148,8 @@ export async function getTimelineWeek(weekStart) {
       c.slug AS company_slug
     FROM events e
     LEFT JOIN companies c ON c.id = e.company_id
-    WHERE e.event_date >= $1::date
+    WHERE e.quarantined = FALSE AND e.verified = TRUE
+      AND e.event_date >= $1::date
       AND e.event_date < ($1::date + INTERVAL '7 days')
     ORDER BY e.event_date DESC
   `;

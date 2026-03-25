@@ -31,20 +31,20 @@ export function useFunds(filters = {}) {
 }
 
 /** Graph nodes + edges */
-export function useGraph(nodeTypes, yearMax, region) {
+export function useGraph(nodeTypes, yearMax, region, opportunities = false) {
   return useQuery({
-    queryKey: ['graph', nodeTypes, yearMax, region],
-    queryFn: () => api.getGraph(nodeTypes, yearMax, region),
+    queryKey: ['graph', nodeTypes, yearMax, region, opportunities],
+    queryFn: () => api.getGraph(nodeTypes, yearMax, region, opportunities),
     staleTime: 300_000,
     placeholderData: (previousData) => previousData,
   });
 }
 
 /** Lightweight graph — smaller payload for faster initial render */
-export function useGraphLight(nodeTypes, yearMax, region) {
+export function useGraphLight(nodeTypes, yearMax, region, opportunities = false) {
   return useQuery({
-    queryKey: ['graphLight', nodeTypes, yearMax, region],
-    queryFn: () => api.getGraphLight(nodeTypes, yearMax, region),
+    queryKey: ['graphLight', nodeTypes, yearMax, region, opportunities],
+    queryFn: () => api.getGraphLight(nodeTypes, yearMax, region, opportunities),
     staleTime: 300_000,
     placeholderData: (previousData) => previousData,
   });
@@ -263,6 +263,24 @@ export function useNewsRefresh() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['news'] });
     },
+  });
+}
+
+/** Ecosystem map entities for ResourceMatrix */
+export function useEcosystemMap() {
+  return useQuery({
+    queryKey: ['ecosystemMap'],
+    queryFn: () => api.getEcosystemMap(),
+    staleTime: 120_000,
+  });
+}
+
+/** Ecosystem policy gaps */
+export function useEcosystemGaps() {
+  return useQuery({
+    queryKey: ['ecosystemGaps'],
+    queryFn: () => api.getEcosystemGaps(),
+    staleTime: 120_000,
   });
 }
 

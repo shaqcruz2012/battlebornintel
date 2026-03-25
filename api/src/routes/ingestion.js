@@ -129,10 +129,11 @@ router.put('/queue/:id/approve', async (req, res, next) => {
         const detail = `${data.round || 'Funding'}: $${((data.amount || 0) / 1_000_000).toFixed(1)}M${data.lead_investor ? ` led by ${data.lead_investor}` : ''}`;
 
         const eventResult = await client.query(
-          `INSERT INTO timeline_events (event_date, event_type, company_name, detail)
-           VALUES ($1, 'Funding', $2, $3)
+          `INSERT INTO events (event_date, event_type, company_name, description, origin, data_quality, entity_id)
+           VALUES ($1, 'Funding', $2, $3, 'ingestion', 'MEDIUM',
+                   CASE WHEN $4::int IS NOT NULL THEN 'c_' || $4::int ELSE NULL END)
            RETURNING id`,
-          [eventDate, data.company, detail]
+          [eventDate, data.company, detail, data.company_id || null]
         );
 
         // If there's an investor, also create an invested_in edge
@@ -166,8 +167,8 @@ router.put('/queue/:id/approve', async (req, res, next) => {
         // Also create a timeline event for the partnership
         if (data.date) {
           await client.query(
-            `INSERT INTO timeline_events (event_date, event_type, company_name, detail)
-             VALUES ($1, 'Partnership', $2, $3)`,
+            `INSERT INTO events (event_date, event_type, company_name, description, origin, data_quality)
+             VALUES ($1, 'Partnership', $2, $3, 'ingestion', 'MEDIUM')`,
             [data.date, data.company_a, `Partnership with ${data.company_b}: ${data.details || ''}`]
           );
         }
@@ -220,10 +221,11 @@ router.put('/queue/:id/approve', async (req, res, next) => {
         const detail = `Hiring ${data.positions || '?'} ${data.department || ''} positions${data.details ? ': ' + data.details : ''}`;
 
         const eventResult = await client.query(
-          `INSERT INTO timeline_events (event_date, event_type, company_name, detail)
-           VALUES ($1, 'Hiring', $2, $3)
+          `INSERT INTO events (event_date, event_type, company_name, description, origin, data_quality, entity_id)
+           VALUES ($1, 'Hiring', $2, $3, 'ingestion', 'MEDIUM',
+                   CASE WHEN $4::int IS NOT NULL THEN 'c_' || $4::int ELSE NULL END)
            RETURNING id`,
-          [eventDate, data.company, detail]
+          [eventDate, data.company, detail, data.company_id || null]
         );
 
         appliedRecord = { timeline_event_id: eventResult.rows[0].id };
@@ -334,8 +336,10 @@ router.post('/queue/batch', async (req, res, next) => {
               const eventDate = data.date || new Date().toISOString().slice(0, 10);
               const detail = `${data.round || 'Funding'}: $${((data.amount || 0) / 1_000_000).toFixed(1)}M${data.lead_investor ? ` led by ${data.lead_investor}` : ''}`;
               await client.query(
-                `INSERT INTO timeline_events (event_date, event_type, company_name, detail) VALUES ($1, 'Funding', $2, $3)`,
-                [eventDate, data.company, detail]
+                `INSERT INTO events (event_date, event_type, company_name, description, origin, data_quality, entity_id)
+                 VALUES ($1, 'Funding', $2, $3, 'ingestion', 'MEDIUM',
+                         CASE WHEN $4::int IS NOT NULL THEN 'c_' || $4::int ELSE NULL END)`,
+                [eventDate, data.company, detail, data.company_id || null]
               );
               if (data.lead_investor) {
                 const investorSlug = data.lead_investor.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/-+$/, '');
@@ -375,8 +379,10 @@ router.post('/queue/batch', async (req, res, next) => {
               const eventDate = data.date || new Date().toISOString().slice(0, 10);
               const detail = `Hiring ${data.positions || '?'} ${data.department || ''} positions${data.details ? ': ' + data.details : ''}`;
               await client.query(
-                `INSERT INTO timeline_events (event_date, event_type, company_name, detail) VALUES ($1, 'Hiring', $2, $3)`,
-                [eventDate, data.company, detail]
+                `INSERT INTO events (event_date, event_type, company_name, description, origin, data_quality, entity_id)
+                 VALUES ($1, 'Hiring', $2, $3, 'ingestion', 'MEDIUM',
+                         CASE WHEN $4::int IS NOT NULL THEN 'c_' || $4::int ELSE NULL END)`,
+                [eventDate, data.company, detail, data.company_id || null]
               );
               break;
             }

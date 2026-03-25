@@ -32,7 +32,7 @@ export async function computeCapitalFlows() {
   ] = await Promise.all([
     pool.query(`SELECT id, name, fund_type, deployed_m, allocated_m, company_count FROM funds`),
     pool.query(`
-      SELECT ge.source_id, ge.target_id, ge.note, ge.weight, ge.event_year
+      SELECT ge.source_id, ge.target_id, ge.note, ge.metadata, ge.event_year
       FROM graph_edges ge
       WHERE ge.rel = 'invested_in'
     `),
@@ -70,9 +70,9 @@ export async function computeCapitalFlows() {
 
     let value = 0;
 
-    // Try to extract dollar value from weight JSON
-    if (e.weight && e.weight.deal_size_m) {
-      value = parseFloat(e.weight.deal_size_m);
+    // Try to extract dollar value from metadata JSON
+    if (e.metadata && e.metadata.deal_size_m) {
+      value = parseFloat(e.metadata.deal_size_m);
     }
 
     // Try to parse dollar amount from note

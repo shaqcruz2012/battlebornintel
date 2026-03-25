@@ -249,18 +249,18 @@ export function CompanyDetailDrawer({ companyId, onClose }) {
                 </div>
               </div>
 
-              {/* ── Fund Eligibility ── */}
+              {/* ── Fund Opportunities (collapsed by default) ── */}
               {company?.eligible && company.eligible.length > 0 && (
-                <div className={styles.section}>
-                  <SectionLabel>Fund Eligibility</SectionLabel>
+                <details className={styles.section}>
+                  <summary><SectionLabel>Fund Opportunities ({company.eligible.length})</SectionLabel></summary>
                   <div className={styles.eligibleList}>
                     {company.eligible.map((fund) => (
-                      <span key={fund} className={styles.eligibleTag}>
+                      <span key={fund} className={styles.eligibleTag} style={{opacity: 0.7}}>
                         {fund}
                       </span>
                     ))}
                   </div>
-                </div>
+                </details>
               )}
 
               {/* ── Potential Investors ── */}

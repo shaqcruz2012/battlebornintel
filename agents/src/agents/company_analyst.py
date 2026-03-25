@@ -40,16 +40,17 @@ class CompanyAnalyst(BaseAgent):
         if not company:
             raise ValueError(f"Company {company_id} not found")
 
-        # Fetch edges
+        # Fetch edges with names from unified entity_registry
         node_id = f"c_{company_id}"
         edges = await pool.fetch(
-            """SELECT ge.*,
-                      COALESCE(e.name, a.name, eo.name, p.name) as connected_name
+            """SELECT ge.source_id, ge.target_id, ge.rel, ge.note,
+                      er.label AS connected_name
                FROM graph_edges ge
-               LEFT JOIN externals e ON (e.id = ge.source_id OR e.id = ge.target_id) AND e.id != $1
-               LEFT JOIN accelerators a ON (a.id = ge.source_id OR a.id = ge.target_id) AND a.id != $1
-               LEFT JOIN ecosystem_orgs eo ON (eo.id = ge.source_id OR eo.id = ge.target_id) AND eo.id != $1
-               LEFT JOIN people p ON (p.id = ge.source_id OR p.id = ge.target_id) AND p.id != $1
+               LEFT JOIN entity_registry er
+                 ON er.canonical_id = CASE
+                      WHEN ge.source_id = $1 THEN ge.target_id
+                      ELSE ge.source_id
+                    END
                WHERE ge.source_id = $1 OR ge.target_id = $1""",
             node_id,
         )

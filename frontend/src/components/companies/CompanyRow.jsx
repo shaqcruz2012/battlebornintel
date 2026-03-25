@@ -68,16 +68,16 @@ const ExpandedDetail = memo(function ExpandedDetail({ company }) {
           )}
 
           {c.eligible && c.eligible.length > 0 && (
-            <div className={styles.detailSection}>
-              <span className={styles.detailLabel}>Eligible Funds</span>
+            <details className={styles.detailSection}>
+              <summary className={styles.detailLabel}>Fund Opportunities ({c.eligible.length})</summary>
               <div className={styles.eligibleList}>
                 {c.eligible.map((fund) => (
-                  <span key={fund} className={styles.eligibleTag}>
+                  <span key={fund} className={styles.eligibleTag} style={{opacity: 0.7}}>
                     {fund}
                   </span>
                 ))}
               </div>
-            </div>
+            </details>
           )}
 
           {triggerConfigs.length > 0 && (

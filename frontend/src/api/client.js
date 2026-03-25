@@ -42,19 +42,21 @@ export const api = {
     fetchJSON(`${BASE}/funds/${id}`).then((r) => r.data),
 
   // Graph
-  getGraph: (nodeTypes, yearMax, region) =>
+  getGraph: (nodeTypes, yearMax, region, opportunities) =>
     fetchJSON(`${BASE}/graph`, {
       nodeTypes: nodeTypes?.join(','),
       yearMax,
       region,
+      opportunities: opportunities ? 'true' : undefined,
     }).then((r) => r.data),
 
   // Lightweight graph — smaller payload for initial render
-  getGraphLight: (nodeTypes, yearMax, region) =>
+  getGraphLight: (nodeTypes, yearMax, region, opportunities) =>
     fetchJSON(`${BASE}/graph/light`, {
       nodeTypes: nodeTypes?.join(','),
       yearMax,
       region,
+      opportunities: opportunities ? 'true' : undefined,
     }).then((r) => r.data),
 
   getGraphMetrics: (nodeTypes) =>
@@ -135,6 +137,13 @@ export const api = {
 
   getNewsSectors: () =>
     fetchJSON(`${BASE}/news/sectors`).then((r) => r.data),
+
+  // Ecosystem map
+  getEcosystemMap: () =>
+    fetchJSON(`${BASE}/ecosystem/map`).then((r) => r.data),
+
+  getEcosystemGaps: () =>
+    fetchJSON(`${BASE}/ecosystem/gaps`).then((r) => r.data),
 
   refreshNews: () =>
     fetch(`${BASE}/news/refresh`, {

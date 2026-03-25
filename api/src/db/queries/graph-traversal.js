@@ -1,88 +1,11 @@
 import pool from '../pool.js';
+import { resolveNodesFromRegistry } from './entities.js';
 
 /**
- * Resolve node labels and types from IDs by querying all entity tables.
- * Returns a Map of id -> { id, label, type }.
+ * Resolve node labels and types from IDs using the unified entity_registry.
+ * Delegates to resolveNodesFromRegistry (single query instead of 7-table dispatch).
  */
-async function resolveNodes(nodeIds) {
-  if (nodeIds.length === 0) return new Map();
-
-  const ids = [...new Set(nodeIds)];
-  const nodeMap = new Map();
-
-  // Classify IDs by prefix
-  const companyIds = [];
-  const fundIds = [];
-  const personIds = [];
-  const externalIds = [];
-  const acceleratorIds = [];
-  const ecosystemIds = [];
-
-  for (const id of ids) {
-    const pfx = id.split('_')[0];
-    switch (pfx) {
-      case 'c':   companyIds.push(id.slice(2)); break;
-      case 'f':   fundIds.push(id.slice(2)); break;
-      case 'p':   if (/^p_\d/.test(id)) break; else personIds.push(id); break;
-      case 'a':   acceleratorIds.push(id); break;
-      case 'e':   ecosystemIds.push(id); break;
-      case 'x': case 'i': case 'u': case 'v': case 'gov':
-        externalIds.push(id); break;
-    }
-  }
-
-  const queries = [];
-
-  if (companyIds.length > 0) {
-    queries.push(
-      pool.query(`SELECT id, name FROM companies WHERE id = ANY($1::int[])`, [companyIds])
-        .then(r => r.rows.forEach(row => nodeMap.set(`c_${row.id}`, { id: `c_${row.id}`, label: row.name, type: 'company' })))
-    );
-  }
-  if (fundIds.length > 0) {
-    queries.push(
-      pool.query(`SELECT id, name FROM graph_funds WHERE id = ANY($1::text[])`, [fundIds])
-        .then(r => r.rows.forEach(row => nodeMap.set(`f_${row.id}`, { id: `f_${row.id}`, label: row.name, type: 'fund' })))
-    );
-  }
-  if (personIds.length > 0) {
-    queries.push(
-      pool.query(`SELECT id, name FROM people WHERE id = ANY($1::text[])`, [personIds])
-        .then(r => r.rows.forEach(row => nodeMap.set(row.id, { id: row.id, label: row.name, type: 'person' })))
-    );
-  }
-  if (externalIds.length > 0) {
-    queries.push(
-      pool.query(`SELECT id, name, entity_type FROM externals WHERE id = ANY($1::text[])`, [externalIds])
-        .then(r => r.rows.forEach(row => nodeMap.set(row.id, { id: row.id, label: row.name, type: 'external' })))
-    );
-  }
-  if (acceleratorIds.length > 0) {
-    queries.push(
-      pool.query(`SELECT id, name FROM accelerators WHERE id = ANY($1::text[])`, [acceleratorIds])
-        .then(r => r.rows.forEach(row => nodeMap.set(row.id, { id: row.id, label: row.name, type: 'accelerator' })))
-    );
-  }
-  if (ecosystemIds.length > 0) {
-    queries.push(
-      pool.query(`SELECT id, name FROM ecosystem_orgs WHERE id = ANY($1::text[])`, [ecosystemIds])
-        .then(r => r.rows.forEach(row => nodeMap.set(row.id, { id: row.id, label: row.name, type: 'ecosystem' })))
-    );
-  }
-
-  await Promise.all(queries);
-
-  // Fill in any unresolved IDs with a fallback
-  for (const id of ids) {
-    if (!nodeMap.has(id)) {
-      const pfx = id.split('_')[0];
-      const typeMap = { c: 'company', f: 'fund', p: 'person', a: 'accelerator', e: 'ecosystem', x: 'external', i: 'external', u: 'external', v: 'external', gov: 'external', s: 'sector', r: 'region', ex: 'exchange' };
-      nodeMap.set(id, { id, label: id, type: typeMap[pfx] || 'unknown' });
-    }
-  }
-
-  return nodeMap;
-}
+const resolveNodes = resolveNodesFromRegistry;
 
 /**
  * 1. Multi-hop neighborhood traversal using recursive CTE.

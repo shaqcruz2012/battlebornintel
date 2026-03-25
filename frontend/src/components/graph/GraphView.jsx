@@ -129,10 +129,11 @@ export function GraphView() {
   );
 
   // Fetch lightweight graph data for fast initial render (smaller payload)
-  const { data: lightGraphData, isLoading: loadingLightGraph, error: lightGraphError } = useGraphLight(activeNodeTypes, debouncedYearMax, filters.region);
+  // When opportunities toggle is ON, include opportunity edges from the API
+  const { data: lightGraphData, isLoading: loadingLightGraph, error: lightGraphError } = useGraphLight(activeNodeTypes, debouncedYearMax, filters.region, showOpportunities);
 
   // Fetch full graph data in background for detail features ($ values, notes, node detail)
-  const { data: fullDetailData } = useGraph(activeNodeTypes, debouncedYearMax, filters.region);
+  const { data: fullDetailData } = useGraph(activeNodeTypes, debouncedYearMax, filters.region, showOpportunities);
 
   // Use light data for initial render, upgrade to full data when available
   const graphData = fullDetailData || lightGraphData;

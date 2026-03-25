@@ -1,4 +1,5 @@
 import pool from '../pool.js';
+import { resolveNodesFromRegistry } from './entities.js';
 
 /**
  * Optimized graph data loader.
@@ -11,7 +12,7 @@ import pool from '../pool.js';
  *   4. Build derived sector/region/exchange nodes from already-loaded company data.
  *   5. Produce derived edges (eligible_for, operates_in, etc.) from in-memory data.
  */
-export async function getGraphData({ nodeTypes = [], yearMax = 2026, region } = {}) {
+export async function getGraphData({ nodeTypes = [], yearMax = 2026, region, includeOpportunities = false } = {}) {
   const nodes = [];
   const nodeSet = new Set();
 
@@ -25,22 +26,28 @@ export async function getGraphData({ nodeTypes = [], yearMax = 2026, region } = 
   const regionFilter = region && region !== 'all';
   const nodeTypeSet = new Set(nodeTypes);
 
-  // ── Step 1: Fetch ALL edges in one query ─────────────────────────────────
-  const edgeRows = (await pool.query(
-    `SELECT source_id, target_id, rel, event_year, event_date, note, matching_score,
-            edge_category, edge_style, edge_color, edge_opacity, source_url
-     FROM graph_edges WHERE event_year <= $1::int`,
-    [parseInt(yearMax, 10) || 2026]
-  )).rows;
+  // ── Step 1: Fetch edges ──────────────────────────────────────────────────
+  // By default, exclude opportunity edges (fund_opportunity, qualifies_for, potential_lp)
+  // to keep the graph clean. Include them only when the Opportunities toggle is ON.
+  const yearParam = parseInt(yearMax, 10) || 2026;
+  const edgeQuery = includeOpportunities
+    ? `SELECT source_id, target_id, rel, event_year, event_date, note, matching_score,
+              edge_category, edge_style, edge_color, edge_opacity, source_url
+       FROM graph_edges WHERE event_year <= $1::int`
+    : `SELECT source_id, target_id, rel, event_year, event_date, note, matching_score,
+              edge_category, edge_style, edge_color, edge_opacity, source_url
+       FROM graph_edges WHERE event_year <= $1::int
+         AND (edge_category IS NULL OR edge_category != 'opportunity')`;
+  const edgeRows = (await pool.query(edgeQuery, [yearParam])).rows;
 
-  // ── Step 2: Collect referenced node IDs & classify by prefix ─────────────
+  // ── Step 2: Collect referenced node IDs ──────────────────────────────────
   const referencedIds = new Set();
   for (const e of edgeRows) {
     referencedIds.add(e.source_id);
     referencedIds.add(e.target_id);
   }
 
-  // Map ID prefix → node type
+  // Map ID prefix → node type (still needed for filtering and derived nodes)
   const typeFromId = (id) => {
     const pfx = id.split('_')[0];
     switch (pfx) {
@@ -61,40 +68,29 @@ export async function getGraphData({ nodeTypes = [], yearMax = 2026, region } = 
     }
   };
 
-  // Partition IDs by table, filtering to only requested node types
-  const companyIds = [];
-  const fundIds = [];
-  const personIds = [];
-  const externalIds = [];
-  const acceleratorIds = [];
-  const ecosystemIds = [];
-  const programIds = [];
-
-  // Also track which IDs belong to excluded types (so we can skip edges to them)
+  // Filter to only IDs whose type was requested
+  const idsToResolve = [];
+  const companyIdsForDetail = [];
   for (const id of referencedIds) {
     const ntype = typeFromId(id);
     if (ntype === null) continue;
-    // Only resolve nodes whose type was requested
-    switch (ntype) {
-      case 'company':     if (nodeTypeSet.has('company') || nodeTypeSet.has('sector') || nodeTypeSet.has('region'))  companyIds.push(id.slice(2)); break;
-      case 'fund':        if (nodeTypeSet.has('fund'))        fundIds.push(id.slice(2)); break;
-      case 'person':      if (nodeTypeSet.has('person'))      personIds.push(id); break;
-      case 'program':     if (nodeTypeSet.has('program'))     programIds.push(id.slice(2)); break;
-      case 'external':    if (nodeTypeSet.has('external'))    externalIds.push(id); break;
-      case 'accelerator': if (nodeTypeSet.has('accelerator')) acceleratorIds.push(id); break;
-      case 'ecosystem':   if (nodeTypeSet.has('ecosystem'))   ecosystemIds.push(id); break;
-      // sector, region, exchange are derived — no DB lookup needed
+    if (ntype === 'sector' || ntype === 'region' || ntype === 'exchange') continue; // derived
+    if (ntype === 'company' && (nodeTypeSet.has('company') || nodeTypeSet.has('sector') || nodeTypeSet.has('region'))) {
+      idsToResolve.push(id);
+      companyIdsForDetail.push(id.slice(2));
+    } else if (nodeTypeSet.has(ntype)) {
+      idsToResolve.push(id);
     }
   }
 
-  // ── Step 3: Batch-resolve nodes in parallel ──────────────────────────────
-  // Only query tables that have IDs to resolve
-  const queries = [];
+  // ── Step 3: Resolve nodes from unified entity_registry + detail queries ──
+  const detailQueries = [];
 
-  if (companyIds.length > 0) {
+  // Company detail query (D3 needs funding, momentum, stage, etc. for sizing/coloring)
+  if (companyIdsForDetail.length > 0) {
     const regionClause = regionFilter ? ` AND region = $2` : '';
-    const params = regionFilter ? [companyIds, region] : [companyIds];
-    queries.push(
+    const params = regionFilter ? [companyIdsForDetail, region] : [companyIdsForDetail];
+    detailQueries.push(
       pool.query(
         `SELECT id, name, stage, funding_m, momentum, employees, city, region, sectors, eligible, founded
          FROM companies WHERE id = ANY($1::int[])${regionClause}`,
@@ -103,46 +99,54 @@ export async function getGraphData({ nodeTypes = [], yearMax = 2026, region } = 
     );
   }
 
-  if (fundIds.length > 0) {
-    queries.push(
-      pool.query(
-        `SELECT id, name, fund_type FROM graph_funds WHERE id = ANY($1::text[])`,
-        [fundIds]
-      ).then(r => ({ type: 'fund', rows: r.rows }))
+  // Fund detail (fund_type for legend)
+  const fundIdsForDetail = idsToResolve.filter(id => id.startsWith('f_')).map(id => id.slice(2));
+  if (fundIdsForDetail.length > 0) {
+    detailQueries.push(
+      pool.query(`SELECT id, name, fund_type FROM graph_funds WHERE id = ANY($1::text[])`, [fundIdsForDetail])
+        .then(r => ({ type: 'fund', rows: r.rows }))
     );
   }
 
-  if (personIds.length > 0) {
-    queries.push(
-      pool.query(
-        `SELECT id, name, role, company_id FROM people WHERE id = ANY($1::text[])`,
-        [personIds]
-      ).then(r => ({ type: 'person', rows: r.rows }))
+  // Person detail (role, company_id for derived edges)
+  const personIdsForDetail = idsToResolve.filter(id => {
+    const pfx = id.split('_')[0];
+    return pfx === 'p' && !/^p_\d/.test(id);
+  });
+  if (personIdsForDetail.length > 0) {
+    detailQueries.push(
+      pool.query(`SELECT id, name, role, company_id FROM people WHERE id = ANY($1::text[])`, [personIdsForDetail])
+        .then(r => ({ type: 'person', rows: r.rows }))
     );
   }
 
-  if (programIds.length > 0) {
-    queries.push(
-      pool.query(
-        `SELECT id, slug, name, program_type FROM programs WHERE id = ANY($1::int[])`,
-        [programIds]
-      ).then(r => ({ type: 'program', rows: r.rows }))
+  // Program detail (slug, program_type)
+  const programIdsForDetail = idsToResolve.filter(id => /^p_\d/.test(id)).map(id => id.slice(2));
+  if (programIdsForDetail.length > 0) {
+    detailQueries.push(
+      pool.query(`SELECT id, slug, name, program_type FROM programs WHERE id = ANY($1::int[])`, [programIdsForDetail])
+        .then(r => ({ type: 'program', rows: r.rows }))
     );
   }
 
-  if (externalIds.length > 0) {
-    queries.push(
-      pool.query(
-        `SELECT id, name, entity_type FROM externals WHERE id = ANY($1::text[])`,
-        [externalIds]
-      ).then(r => ({ type: 'external', rows: r.rows }))
+  // External detail (entity_type)
+  const externalIdsForDetail = idsToResolve.filter(id => {
+    const pfx = id.split('_')[0];
+    return ['x', 'i', 'u', 'v', 'gov'].includes(pfx);
+  });
+  if (externalIdsForDetail.length > 0) {
+    detailQueries.push(
+      pool.query(`SELECT id, name, entity_type FROM externals WHERE id = ANY($1::text[])`, [externalIdsForDetail])
+        .then(r => ({ type: 'external', rows: r.rows }))
     );
   }
 
-  if (acceleratorIds.length > 0) {
+  // Accelerator detail (accel_type, city, region, founded)
+  const accelIdsForDetail = idsToResolve.filter(id => id.startsWith('a_'));
+  if (accelIdsForDetail.length > 0) {
     const regionClause = regionFilter ? ` AND region = $2` : '';
-    const params = regionFilter ? [acceleratorIds, region] : [acceleratorIds];
-    queries.push(
+    const params = regionFilter ? [accelIdsForDetail, region] : [accelIdsForDetail];
+    detailQueries.push(
       pool.query(
         `SELECT id, name, accel_type, city, region, founded FROM accelerators WHERE id = ANY($1::text[])${regionClause}`,
         params
@@ -150,10 +154,12 @@ export async function getGraphData({ nodeTypes = [], yearMax = 2026, region } = 
     );
   }
 
-  if (ecosystemIds.length > 0) {
+  // Ecosystem detail (entity_type, city, region)
+  const ecoIdsForDetail = idsToResolve.filter(id => id.startsWith('e_'));
+  if (ecoIdsForDetail.length > 0) {
     const regionClause = regionFilter ? ` AND region = $2` : '';
-    const params = regionFilter ? [ecosystemIds, region] : [ecosystemIds];
-    queries.push(
+    const params = regionFilter ? [ecoIdsForDetail, region] : [ecoIdsForDetail];
+    detailQueries.push(
       pool.query(
         `SELECT id, name, entity_type, city, region FROM ecosystem_orgs WHERE id = ANY($1::text[])${regionClause}`,
         params
@@ -163,15 +169,15 @@ export async function getGraphData({ nodeTypes = [], yearMax = 2026, region } = 
 
   // Exchange data (only if requested)
   if (nodeTypeSet.has('exchange')) {
-    queries.push(
+    detailQueries.push(
       pool.query(`SELECT company_id, exchange, ticker FROM listings`).then(r => ({ type: 'listing', rows: r.rows }))
     );
-    queries.push(
+    detailQueries.push(
       pool.query(`SELECT DISTINCT exchange FROM listings`).then(r => ({ type: 'exchange', rows: r.rows }))
     );
   }
 
-  const results = await Promise.all(queries);
+  const results = await Promise.all(detailQueries);
 
   // Index results by type for easy access
   const resultsByType = {};
@@ -193,7 +199,7 @@ export async function getGraphData({ nodeTypes = [], yearMax = 2026, region } = 
   const listingRows = resultsByType.listing || [];
   const exchangeRows = resultsByType.exchange || [];
 
-  // ── Step 4: Build nodes from resolved data ───────────────────────────────
+  // ── Step 4: Build nodes from detail data ─────────────────────────────────
   if (nodeTypeSet.has('company')) {
     for (const c of companyRows) {
       add(`c_${c.id}`, c.name, 'company', {
@@ -204,7 +210,6 @@ export async function getGraphData({ nodeTypes = [], yearMax = 2026, region } = 
         city: c.city,
         region: c.region,
         sector: c.sectors,
-        eligible: c.eligible,
         founded: c.founded,
       });
     }
@@ -328,7 +333,7 @@ export async function getGraphData({ nodeTypes = [], yearMax = 2026, region } = 
     if (e.note) edge.note = e.note;
     if (e.source_url) edge.source_url = e.source_url;
     if (e.matching_score != null) edge.matching_score = parseFloat(e.matching_score);
-    if (e.edge_category && e.edge_category !== 'historical') {
+    if (e.edge_category) {
       edge.category = e.edge_category;
     }
     if (e.edge_style) edge.style = e.edge_style;
@@ -339,15 +344,9 @@ export async function getGraphData({ nodeTypes = [], yearMax = 2026, region } = 
   // placeholderCount tracked for diagnostics; omitted from production logs
 
   // ── Step 6: Derived edges (from in-memory data, no extra queries) ────────
-  if (nodeTypeSet.has('company') && nodeTypeSet.has('fund')) {
-    for (const c of companyRows) {
-      for (const f of c.eligible || []) {
-        if (nodeSet.has(`f_${f}`)) {
-          edges.push({ source: `c_${c.id}`, target: `f_${f}`, rel: 'eligible_for' });
-        }
-      }
-    }
-  }
+  // NOTE: eligible_for edges removed — replaced by scored fund_opportunity edges
+  // stored in graph_edges with matching_score and matching_criteria (migration 125+).
+  // The fund_opportunity edges are loaded in Step 1 with all other graph_edges.
 
   if (nodeTypeSet.has('company') && nodeTypeSet.has('sector')) {
     for (const c of companyRows) {

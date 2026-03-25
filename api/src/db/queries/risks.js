@@ -30,6 +30,7 @@ export async function getRiskData() {
              COUNT(*) AS event_count
       FROM events
       WHERE company_id IS NOT NULL
+        AND quarantined = FALSE
         AND event_date > NOW() - INTERVAL '1 year'
       GROUP BY company_id
     ),

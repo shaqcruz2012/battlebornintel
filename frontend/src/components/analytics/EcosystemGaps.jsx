@@ -1,6 +1,8 @@
 import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { MainGrid } from '../layout/AppShell';
+import { POLICY_GAPS } from '../../data/policyGaps';
+import { useEcosystemGaps } from '../../api/hooks.js';
 import styles from './EcosystemGaps.module.css';
 
 /* ── API fetch ────────────────────────────────────────────────────────────── */
@@ -244,10 +246,94 @@ function GapsTable({ gaps }) {
   );
 }
 
+/* ── CSV export ──────────────────────────────────────────────────────────── */
+
+function exportGapsCsv(gaps) {
+  const rows = [['Gap', 'Severity', 'Communities', 'Inter-Edges', 'Potential Bridges']];
+  (gaps ?? []).forEach((g) => {
+    rows.push([
+      `${g.communityAName} - ${g.communityBName}`,
+      g.gapSeverity.toFixed(1),
+      `${g.communityASize} + ${g.communityBSize}`,
+      g.interEdges,
+      g.potentialBridges?.map((b) => b.label).join('; ') ?? '',
+    ]);
+  });
+  const csv = rows.map((r) => r.join(',')).join('\n');
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'ecosystem-gaps.csv';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+/* ── Framework Gaps (policy overlay) ─────────────────────────────────────── */
+
+function FrameworkGapsSection({ gapMetrics }) {
+  return (
+    <div>
+      <h3 className={styles.sectionHeader}>Framework Gaps (Policy Analysis)</h3>
+      <p className={styles.sectionDesc}>
+        Research-validated policy gaps from Kauffman, EDA, NSF, SBA, and USDA frameworks.
+      </p>
+      <div className={styles.frameworkGaps}>
+        {POLICY_GAPS.map((gap, i) => {
+          const stageData = gapMetrics?.stageDistribution;
+          let realCount = null;
+          if (gap.id === 'vod' && stageData) {
+            realCount = stageData
+              .filter((s) => ['pre_seed', 'seed'].includes(s.stage))
+              .reduce((sum, s) => sum + (s.underfunded ?? 0), 0);
+          } else if (gap.id === 'seriesb' && gapMetrics) {
+            realCount = gapMetrics.seriesBCoverage ?? null;
+          }
+
+          return (
+            <div
+              key={gap.id}
+              className={styles.frameworkCard}
+              style={{ borderLeftColor: gap.color }}
+            >
+              <div className={styles.frameworkHeader}>
+                <span className={styles.frameworkName}>{gap.label}</span>
+                <span
+                  className={styles.severityBadge}
+                  style={{
+                    background:
+                      gap.severity === 'critical'
+                        ? '#E85D5D'
+                        : gap.severity === 'moderate'
+                          ? '#F5A623'
+                          : '#6B6A72',
+                  }}
+                >
+                  {gap.severity}
+                </span>
+              </div>
+              <p className={styles.frameworkDesc}>{gap.description}</p>
+              {realCount !== null && (
+                <div className={styles.validationRow}>
+                  Validated: {realCount} companies affected
+                </div>
+              )}
+              <div className={styles.frameworkSource}>
+                Source: {gap.frameworkSource}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 /* ── Main component ───────────────────────────────────────────────────────── */
 
 export function EcosystemGaps() {
   const { data, isLoading, error } = useStructuralHoles();
+  const { data: gapMetrics } = useEcosystemGaps();
 
   const bridges = data?.bridges ?? [];
   const islands = data?.islands ?? [];
@@ -298,10 +384,19 @@ export function EcosystemGaps() {
           <p className={styles.subtitle}>
             Structural hole analysis — bridges, isolated clusters, and missing connections
           </p>
+          <button
+            className={styles.exportBtn}
+            onClick={() => exportGapsCsv(gaps)}
+          >
+            Export CSV
+          </button>
         </div>
 
         {/* Stats */}
         <StatsStrip stats={stats} />
+
+        {/* Framework Gaps — research-validated policy gaps */}
+        <FrameworkGapsSection gapMetrics={gapMetrics} />
 
         {/* Bridge nodes */}
         <section>

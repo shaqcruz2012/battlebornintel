@@ -10,7 +10,8 @@ function parseGraphParams(req) {
     : ['company', 'fund', 'person', 'external', 'accelerator', 'ecosystem'];
   const yearMax = parseInt(req.query.yearMax || '2026', 10);
   const region = req.query.region || 'all';
-  return { nodeTypes, yearMax, region };
+  const includeOpportunities = req.query.opportunities === 'true' || req.query.opportunities === '1';
+  return { nodeTypes, yearMax, region, includeOpportunities };
 }
 
 router.get('/', async (req, res, next) => {

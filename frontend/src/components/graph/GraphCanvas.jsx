@@ -426,27 +426,29 @@ function useEdgeCanvas(canvasRef, edges, zoom, pan, w, h, {
 
         if (sx === 0 && sy === 0 && tx === 0 && ty === 0) continue;
 
-        const isOpportunity = e.category === 'opportunity' || e.rel === 'qualifies_for' || e.rel === 'fund_opportunity' || e.rel === 'potential_lp';
+        const isOpportunity = e.category === 'opportunity' || e.rel === 'qualifies_for' || e.rel === 'fund_opportunity' || e.rel === 'potential_lp' || e.rel === 'eligible_for';
         if (isOpportunity && !curShowOpp) continue;
+        if (!isOpportunity && curShowOpp && curOppFilter !== 'all') continue; // Hide historical when filtering specific opp type
         if (isOpportunity && curOppFilter === 'programs' && e.rel !== 'qualifies_for') continue;
-        if (isOpportunity && curOppFilter === 'funds' && e.rel !== 'fund_opportunity') continue;
+        if (isOpportunity && curOppFilter === 'funds' && e.rel !== 'fund_opportunity' && e.rel !== 'eligible_for') continue;
 
         const rc = REL_CFG[e.rel];
         const isHighlighted = curHL.has(e);
         const dimEdge = curSel && !isHighlighted;
 
-        const category = e.category || 'operational';
+        const category = e.category || 'historical';
         let categoryOpacity;
-        if (category === 'historical') {
-          categoryOpacity = curTooMany ? 0.18 : 0.25;
-        } else if (category === 'opportunity') {
-          categoryOpacity = 0.15;
+        if (isOpportunity && curShowOpp) {
+          // Opportunity edges prominent when toggle is ON
+          categoryOpacity = isHighlighted ? 0.9 : 0.6;
+        } else if (category === 'historical') {
+          categoryOpacity = curShowOpp ? 0.08 : (curTooMany ? 0.18 : 0.25);
         } else {
           categoryOpacity = curTooMany ? 0.22 : 0.35;
         }
 
         const edgeOpacity = isOpportunity
-          ? (e.opacity ?? (dimEdge ? 0.02 : 0.5))
+          ? (e.opacity ?? (dimEdge ? 0.02 : 0.65))
           : (dimEdge ? 0.03 : isHighlighted ? 0.9 : categoryOpacity);
         const edgeWidth = isOpportunity ? (isHighlighted ? 1.5 : 0.5) : (isHighlighted ? 2 : 0.5);
         const edgeColor = e.color || (isHighlighted ? (rc?.color || '#45D7C6') : (rc?.color || '#333'));

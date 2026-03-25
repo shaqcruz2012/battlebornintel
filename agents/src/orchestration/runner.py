@@ -6,6 +6,10 @@ from ..agents.company_analyst import CompanyAnalyst
 from ..agents.weekly_brief import WeeklyBrief
 from ..agents.risk_assessor import RiskAssessor
 from ..agents.pattern_detector import PatternDetector
+from ..agents.data_scout import DataScout
+from ..agents.fact_verifier import FactVerifier
+from ..agents.relationship_mapper import RelationshipMapper
+from ..agents.systematic_enricher import SystematicEnricher
 from ..ingestion.freshness import FreshnessChecker
 
 AGENT_REGISTRY = {
@@ -14,6 +18,10 @@ AGENT_REGISTRY = {
     "risk_assessor": RiskAssessor,
     "pattern_detector": PatternDetector,
     "freshness_checker": FreshnessChecker,
+    "data_scout": DataScout,
+    "fact_verifier": FactVerifier,
+    "relationship_mapper": RelationshipMapper,
+    "systematic_enricher": SystematicEnricher,
 }
 
 MAX_RETRIES = 2

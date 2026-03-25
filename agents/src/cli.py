@@ -6,8 +6,17 @@ Usage:
   python -m src.cli run risk_assessor
   python -m src.cli run pattern_detector
   python -m src.cli run freshness_checker
+  python -m src.cli run data_scout
+  python -m src.cli run fact_verifier --limit 20
+  python -m src.cli run relationship_mapper --id 4
+  python -m src.cli run systematic_enricher --limit 25
+  python -m src.cli campaign full     # Run full research campaign
+  python -m src.cli campaign refresh  # Freshness + verify only
+  python -m src.cli continuous 24     # Run 24/7 research cycle for 24 hours
+  python -m src.cli continuous 4      # Run for 4 hours
   python -m src.cli schedule          # Start the scheduler
   python -m src.cli audit             # Show recent agent runs
+  python -m src.cli rotation          # Show entity rotation stats
 """
 
 import asyncio
@@ -29,6 +38,10 @@ async def cmd_run():
         id_idx = sys.argv.index("--id") + 1
         if id_idx < len(sys.argv):
             kwargs["company_id"] = int(sys.argv[id_idx])
+    if "--limit" in sys.argv:
+        lim_idx = sys.argv.index("--limit") + 1
+        if lim_idx < len(sys.argv):
+            kwargs["limit"] = int(sys.argv[lim_idx])
 
     print(f"Running {agent_name}...")
     try:
@@ -73,6 +86,33 @@ async def cmd_audit():
     await close_pool()
 
 
+async def cmd_rotation():
+    from .orchestration.rotation import get_rotation_stats, get_next_batch
+
+    stats = await get_rotation_stats()
+    print("\nRotation Stats:")
+    print(f"  Total entities:     {stats['total']}")
+    print(f"  Ever queried:       {stats['ever_queried']}")
+    print(f"  Queried this week:  {stats['queried_this_week']}")
+    print(f"  Queried today:      {stats['queried_today']}")
+    if stats["oldest_query"]:
+        print(f"  Oldest query:       {stats['oldest_query']}")
+    if stats["newest_query"]:
+        print(f"  Newest query:       {stats['newest_query']}")
+
+    next_batch = await get_next_batch(5)
+    if next_batch:
+        print(f"\nNext 5 to query:")
+        for e in next_batch:
+            last = e["last_queried_at"] or "never"
+            conf = e["confidence"] if e["confidence"] is not None else "unset"
+            print(f"  {e['canonical_id']} ({e['entity_type']}) conf={conf} last={last}")
+    else:
+        print("\nNo entities found in entity_registry.")
+
+    await close_pool()
+
+
 async def main():
     if len(sys.argv) < 2:
         print(__doc__)
@@ -81,8 +121,25 @@ async def main():
     cmd = sys.argv[1]
     if cmd == "run" and len(sys.argv) >= 3:
         await cmd_run()
+    elif cmd == "campaign":
+        mode = sys.argv[2] if len(sys.argv) >= 3 else "full"
+        from .orchestration.director import run_campaign as _run_campaign
+        try:
+            result = await _run_campaign(mode)
+            print(f"Campaign result: {result}")
+        finally:
+            await close_pool()
+    elif cmd == "continuous":
+        hours = int(sys.argv[2]) if len(sys.argv) >= 3 else 24
+        from .orchestration.continuous import run_continuous
+        try:
+            await run_continuous(max_hours=hours)
+        finally:
+            await close_pool()
     elif cmd == "schedule":
         await cmd_schedule()
+    elif cmd == "rotation":
+        await cmd_rotation()
     elif cmd == "audit":
         await cmd_audit()
     else:

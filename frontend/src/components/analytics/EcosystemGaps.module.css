@@ -368,6 +368,83 @@
   background: var(--accent-amber, #f0a500);
 }
 
+/* ── Export button ────────────────────────────────────── */
+
+.exportBtn {
+  background: var(--bg-card, #2A2A35);
+  color: var(--text-primary, #D4D0C8);
+  border: 1px solid var(--border-subtle, #3D3D48);
+  padding: 6px 14px;
+  border-radius: var(--radius-sm, 4px);
+  font-family: var(--font-mono);
+  font-size: var(--text-caption, 0.75rem);
+  cursor: pointer;
+  margin-left: auto;
+}
+
+.exportBtn:hover {
+  background: var(--bg-hover, #3D3D48);
+}
+
+/* ── Framework Gaps (policy overlay) ─────────────────── */
+
+.frameworkGaps {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.frameworkCard {
+  background: var(--bg-card, #18181F);
+  border-left: 3px solid;
+  border-radius: var(--radius-md, 6px);
+  padding: 12px 14px;
+}
+
+.frameworkHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.frameworkName {
+  font-weight: var(--weight-semibold, 600);
+  font-size: 0.85rem;
+  color: var(--text-primary, #D4D0C8);
+}
+
+.severityBadge {
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  padding: 2px 8px;
+  border-radius: 3px;
+  color: #fff;
+  letter-spacing: 0.5px;
+  font-family: var(--font-mono);
+}
+
+.frameworkDesc {
+  font-size: 0.75rem;
+  color: var(--text-secondary, #6B6A72);
+  margin: 4px 0 8px;
+  line-height: 1.4;
+}
+
+.validationRow {
+  font-size: 0.7rem;
+  color: var(--accent-teal, #4ECDC4);
+  font-family: var(--font-mono);
+  margin-bottom: 4px;
+}
+
+.frameworkSource {
+  font-size: 0.65rem;
+  color: var(--text-disabled, #3D3D48);
+  font-style: italic;
+}
+
 /* ── Loading / empty states ───────────────────────────── */
 
 .loading {

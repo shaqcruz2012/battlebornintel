@@ -38,7 +38,7 @@ export async function getStakeholderActivities(filters = {}) {
       split_part(e.location, ',', 1) AS city,
       TRIM(split_part(e.location, ',', 2)) AS region
     FROM events e
-    WHERE 1=1
+    WHERE e.quarantined = FALSE AND e.verified = TRUE
   `;
 
   const params = [];
@@ -128,8 +128,9 @@ export async function getCompanyActivities(companyId, limit = 20) {
       e.source_url,
       e.verified
     FROM events e
-    WHERE e.company_id = $1
-       OR LOWER(e.company_name) = (SELECT LOWER(name) FROM companies WHERE id = $1)
+    WHERE e.quarantined = FALSE AND e.verified = TRUE
+      AND (e.company_id = $1
+       OR LOWER(e.company_name) = (SELECT LOWER(name) FROM companies WHERE id = $1))
     ORDER BY e.event_date DESC
     LIMIT $2
   `;
@@ -154,7 +155,8 @@ export async function getActivitiesByLocationAndDateRange(location, startDate, e
       e.source_url,
       e.verified
     FROM events e
-    WHERE ($1 = 'all' OR LOWER(e.location) ILIKE $2)
+    WHERE e.quarantined = FALSE AND e.verified = TRUE
+      AND ($1 = 'all' OR LOWER(e.location) ILIKE $2)
       AND e.event_date >= $3::date
       AND e.event_date <= $4::date
     ORDER BY e.event_date DESC
@@ -179,6 +181,7 @@ export async function countActivitiesByType() {
       event_type AS activity_type,
       COUNT(*) AS count
     FROM events
+    WHERE quarantined = FALSE AND verified = TRUE
     GROUP BY event_type
     ORDER BY count DESC
   `;
@@ -196,7 +199,7 @@ export async function countActivitiesByLocation() {
       location,
       COUNT(*) AS count
     FROM events
-    WHERE location IS NOT NULL
+    WHERE location IS NOT NULL AND quarantined = FALSE
     GROUP BY location
     ORDER BY count DESC
   `;

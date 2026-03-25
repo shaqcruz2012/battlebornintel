@@ -1,6 +1,8 @@
 import express from 'express';
 import cors from 'cors';
 import compression from 'compression';
+import helmet from 'helmet';
+import crypto from 'crypto';
 import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { existsSync } from 'fs';
@@ -34,28 +36,66 @@ import subscribersRouter, { emailLogRouter } from './routes/subscribers.js';
 import investorsRouter from './routes/investors.js';
 import risksRouter from './routes/risks.js';
 import newsRouter, { setLastRefreshAt } from './routes/news.js';
+import ecosystemRouter from './routes/ecosystem.js';
 import { initTrackedCompanies, refreshNewsCache } from './services/newsAggregator.js';
 
 const app = express();
 
+// Trust first proxy (Railway, Nginx, etc.) so req.ip is correct
+app.set('trust proxy', 1);
+
 app.use(compression());
+
+// Security headers
+app.use(helmet({
+  contentSecurityPolicy: cfg.nodeEnv === 'production'
+    ? { directives: { defaultSrc: ["'self'"], scriptSrc: ["'self'"], styleSrc: ["'self'", "'unsafe-inline'"], imgSrc: ["'self'", 'data:', 'https:'], connectSrc: ["'self'"] } }
+    : false,
+  hsts: cfg.nodeEnv === 'production'
+    ? { maxAge: 31536000, includeSubDomains: true, preload: true }
+    : false,
+  crossOriginEmbedderPolicy: false,
+}));
+
 app.use(cors({
   origin: cfg.nodeEnv === 'production'
     ? (process.env.CORS_ORIGIN || 'https://battlebornintel.com')
     : true,
   credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'x-admin-key'],
+  maxAge: 86400,
 }));
-app.use(express.json());
 
-// ── Simple in-memory rate limiter (no extra deps) ───────────────────────────
+app.use(express.json({ limit: '1mb' }));
+app.use(express.urlencoded({ extended: false, limit: '1mb' }));
+
+// Request ID for tracing
+app.use((req, res, next) => {
+  req.id = crypto.randomUUID();
+  res.setHeader('X-Request-Id', req.id);
+  next();
+});
+
+// ── In-memory rate limiter with standard headers ────────────────────────────
 function makeRateLimiter({ windowMs = 60_000, max = 200, message = 'Too many requests' } = {}) {
   const counts = new Map();
-  setInterval(() => counts.clear(), windowMs).unref();
+  const windowStart = { value: Date.now() };
+  setInterval(() => { counts.clear(); windowStart.value = Date.now(); }, windowMs).unref();
   return (req, res, next) => {
     const key = req.ip || 'unknown';
     const current = (counts.get(key) || 0) + 1;
     counts.set(key, current);
-    if (current > max) return res.status(429).json({ error: message });
+    const remaining = Math.max(0, max - current);
+    const resetAt = Math.ceil((windowStart.value + windowMs) / 1000);
+    res.setHeader('RateLimit-Limit', max);
+    res.setHeader('RateLimit-Remaining', remaining);
+    res.setHeader('RateLimit-Reset', resetAt);
+    if (current > max) {
+      const retryAfter = Math.ceil((windowStart.value + windowMs - Date.now()) / 1000);
+      res.setHeader('Retry-After', Math.max(1, retryAfter));
+      return res.status(429).json({ error: message });
+    }
     next();
   };
 }
@@ -162,6 +202,9 @@ app.use('/api/opportunities',          publicLimit, cacheMiddleware('opportuniti
 app.use('/api/investors',              publicLimit, cacheMiddleware('investors',             300_000, { cacheControl: 'public, max-age=3600' }),  investorsRouter);
 // Frontier news feed
 app.use('/api/news', publicLimit, cacheMiddleware('news', 120_000, { cacheControl: 'public, max-age=120' }), newsRouter);
+
+// Ecosystem map routes
+app.use('/api/ecosystem', publicLimit, cacheMiddleware('ecosystem', 120_000, { cacheControl: 'public, max-age=120' }), ecosystemRouter);
 
 // Analytics routes (Phase 2 engines)
 app.use('/api/analytics', publicLimit, cacheMiddleware('analytics',           300_000, { cacheControl: 'public, max-age=300' }), analyticsRouter);
