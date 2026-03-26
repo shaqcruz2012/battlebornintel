@@ -5,14 +5,23 @@ import styles from './RiskIntelligencePanel.module.css';
 // ── Constants ────────────────────────────────────────────────────────────────
 
 const SIGNAL_ICONS = {
-  momentum_decay: '\u2935',       // ⤵
-  capital_concentration: '\u25C9', // ◉
-  ssbci_compliance: '\u23F1',      // ⏱
-  network_fragility: '\u26A0',     // ⚠
-  stale_intelligence: '\u25CC',    // ◌
-  investor_flight: '\u2191',       // ↑
-  sector_contagion: '\u2623',      // ☣
+  momentum_decay: '\u2935',         // ⤵
+  capital_concentration: '\u25C9',   // ◉
+  ssbci_compliance: '\u23F1',        // ⏱
+  network_fragility: '\u26A0',       // ⚠
+  stale_intelligence: '\u25CC',      // ◌
+  investor_flight: '\u2191',         // ↑
+  sector_contagion: '\u2623',        // ☣
+  ecosystem_velocity: '\u21C5',      // ⇅
+  stage_pipeline_health: '\u25A3',   // ▣
+  funding_gap: '\u2300',             // ⌀
 };
+
+const TEMPORAL_SIGNAL_TYPES = new Set([
+  'ecosystem_velocity',
+  'stage_pipeline_health',
+  'funding_gap',
+]);
 
 const SEVERITY_COLORS = {
   critical: '#ef4444',
@@ -102,14 +111,27 @@ function PortfolioRiskScore({ score, grade }) {
   );
 }
 
+function formatMetricValue(value) {
+  if (value == null) return '--';
+  return typeof value === 'number' ? value.toLocaleString() : String(value);
+}
+
+function thresholdRatio(value, threshold) {
+  if (threshold == null || threshold === 0) return 0;
+  return Math.min(Math.abs(value) / (Math.abs(threshold) * 2), 1);
+}
+
 function SignalCard({ signal, expanded, onToggle }) {
   const color = SEVERITY_COLORS[signal.severity];
   const icon = SIGNAL_ICONS[signal.signal_type] || '\u25CF';
-  const metricPct = Math.min(Math.abs(signal.metric_value) / Math.max(Math.abs(signal.threshold) * 2, 1) * 100, 100);
+  const metricPct = thresholdRatio(signal.metric_value, signal.threshold) * 100;
+  const isTemporal = TEMPORAL_SIGNAL_TYPES.has(signal.signal_type);
+  const breached = signal.threshold != null
+    && Math.abs(signal.metric_value) >= Math.abs(signal.threshold);
 
   return (
     <div
-      className={`${styles.signalCard} ${expanded ? styles.signalCardExpanded : ''}`}
+      className={`${styles.signalCard} ${expanded ? styles.signalCardExpanded : ''} ${isTemporal ? styles.signalCardTemporal : ''}`}
       style={{ borderLeftColor: color }}
       onClick={onToggle}
     >
@@ -122,12 +144,31 @@ function SignalCard({ signal, expanded, onToggle }) {
           {signal.severity}
         </span>
         <span className={styles.signalTitle}>{signal.title}</span>
+        {isTemporal && (
+          <span className={styles.temporalBadge}>TEMPORAL</span>
+        )}
+        {breached && (
+          <span className={styles.breachedBadge}>BREACH</span>
+        )}
       </div>
+
+      {/* Compact threshold summary visible when collapsed */}
+      {!expanded && signal.threshold != null && (
+        <div className={styles.signalCompactMetric}>
+          <span className={styles.compactValue} style={{ color }}>
+            {formatMetricValue(signal.metric_value)}
+          </span>
+          <span className={styles.compactThreshold}>
+            / {formatMetricValue(signal.threshold)} threshold
+          </span>
+        </div>
+      )}
 
       {expanded && (
         <div className={styles.signalExpanded}>
           <p className={styles.signalDescription}>{signal.description}</p>
 
+          {/* Metric vs Threshold comparison */}
           <div className={styles.signalMetricBar}>
             <span className={styles.metricLabel}>Value</span>
             <div className={styles.metricTrack}>
@@ -135,13 +176,30 @@ function SignalCard({ signal, expanded, onToggle }) {
                 className={styles.metricFill}
                 style={{ width: `${metricPct}%`, background: color }}
               />
+              {signal.threshold != null && (
+                <div
+                  className={styles.thresholdMarker}
+                  style={{ left: `${Math.min(50, 100)}%` }}
+                  title={`Threshold: ${signal.threshold}`}
+                />
+              )}
             </div>
             <span className={styles.metricValue} style={{ color }}>
-              {signal.metric_value}
+              {formatMetricValue(signal.metric_value)}
             </span>
           </div>
 
-          {signal.affected_entities.length > 0 && (
+          {signal.threshold != null && (
+            <div className={styles.thresholdRow}>
+              <span className={styles.thresholdLabel}>Threshold:</span>
+              <span className={styles.thresholdValue}>{formatMetricValue(signal.threshold)}</span>
+              <span className={breached ? styles.thresholdBreached : styles.thresholdOk}>
+                {breached ? 'BREACHED' : 'WITHIN'}
+              </span>
+            </div>
+          )}
+
+          {signal.affected_entities && signal.affected_entities.length > 0 && (
             <div className={styles.signalEntities}>
               {signal.affected_entities.slice(0, 8).map((e, i) => (
                 <span key={i} className={styles.entityTag}>{e.name}</span>
@@ -221,10 +279,17 @@ export function RiskIntelligencePanel({ companies = [] }) {
   const [expandedId, setExpandedId] = useState(null);
   const [activeFilter, setActiveFilter] = useState(null);
 
-  const filteredSignals = useMemo(() => {
-    if (!data?.signals) return [];
-    if (!activeFilter) return data.signals;
-    return data.signals.filter((s) => s.severity === activeFilter);
+  const { filteredSignals, temporalSignals } = useMemo(() => {
+    if (!data?.signals) return { filteredSignals: [], temporalSignals: [] };
+
+    const temporal = data.signals.filter((s) => TEMPORAL_SIGNAL_TYPES.has(s.signal_type));
+    const standard = data.signals.filter((s) => !TEMPORAL_SIGNAL_TYPES.has(s.signal_type));
+
+    const filtered = activeFilter
+      ? standard.filter((s) => s.severity === activeFilter)
+      : standard;
+
+    return { filteredSignals: filtered, temporalSignals: temporal };
   }, [data, activeFilter]);
 
   if (isLoading) {
@@ -252,6 +317,11 @@ export function RiskIntelligencePanel({ companies = [] }) {
           <span className={styles.title}>Risk Intelligence</span>
           <SeverityBadges counts={data.signal_counts} />
         </div>
+        {data.computed_at && (
+          <span className={styles.computedAt}>
+            {new Date(data.computed_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+          </span>
+        )}
       </div>
 
       {/* ── Body ── */}
@@ -264,12 +334,29 @@ export function RiskIntelligencePanel({ companies = [] }) {
 
         {/* ── Signal Cards ── */}
         <div className={styles.signalsSection}>
+          {/* ── Temporal Signals (prominent) ── */}
+          {temporalSignals.length > 0 && (
+            <div className={styles.temporalSection}>
+              <div className={styles.temporalHeader}>Temporal Signals</div>
+              <div className={styles.temporalList}>
+                {temporalSignals.map((signal) => (
+                  <SignalCard
+                    key={signal.id}
+                    signal={signal}
+                    expanded={expandedId === signal.id}
+                    onToggle={() => setExpandedId(expandedId === signal.id ? null : signal.id)}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+
           <div className={styles.filterBar}>
             <button
               className={`${styles.filterPill} ${!activeFilter ? styles.filterPillActive : ''}`}
               onClick={() => setActiveFilter(null)}
             >
-              All ({data.signal_counts.total})
+              All ({data.signal_counts.total - temporalSignals.length})
             </button>
             {SEVERITY_ORDER.map((sev) => {
               const count = data.signal_counts[sev] || 0;

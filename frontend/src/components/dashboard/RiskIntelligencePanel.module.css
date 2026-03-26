@@ -40,6 +40,13 @@
   margin-right: 6px;
 }
 
+.computedAt {
+  font-family: 'IBM Plex Mono', var(--font-mono), monospace;
+  font-size: 8px;
+  color: rgba(255, 255, 255, 0.3);
+  letter-spacing: 0.5px;
+}
+
 .severityBadges {
   display: flex;
   gap: 6px;
@@ -363,6 +370,153 @@
   background: rgba(69, 215, 198, 0.06);
   color: rgba(69, 215, 198, 0.7);
   border: 1px solid rgba(69, 215, 198, 0.12);
+}
+
+/* ── Temporal Signals (prominent callout) ───────────────── */
+
+.temporalSection {
+  margin-bottom: 8px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(69, 215, 198, 0.12);
+}
+
+.temporalHeader {
+  font-family: 'IBM Plex Mono', var(--font-mono), monospace;
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: #45d7c6;
+  margin-bottom: 6px;
+}
+
+.temporalHeader::before {
+  content: '\25B8';
+  font-size: 7px;
+  opacity: 0.7;
+  margin-right: 5px;
+}
+
+.temporalList {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.signalCardTemporal {
+  background: rgba(69, 215, 198, 0.03);
+  border-left-width: 3px;
+}
+
+.temporalBadge {
+  font-family: 'IBM Plex Mono', var(--font-mono), monospace;
+  font-size: 6px;
+  font-weight: 700;
+  padding: 1px 4px;
+  border-radius: 2px;
+  letter-spacing: 0.5px;
+  color: #45d7c6;
+  background: rgba(69, 215, 198, 0.08);
+  border: 1px solid rgba(69, 215, 198, 0.2);
+  flex-shrink: 0;
+}
+
+.breachedBadge {
+  font-family: 'IBM Plex Mono', var(--font-mono), monospace;
+  font-size: 6px;
+  font-weight: 700;
+  padding: 1px 4px;
+  border-radius: 2px;
+  letter-spacing: 0.5px;
+  color: #ef4444;
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  flex-shrink: 0;
+  animation: breachPulse 2s ease-in-out infinite;
+}
+
+@keyframes breachPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+/* ── Compact metric (collapsed view) ───────────────────── */
+
+.signalCompactMetric {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  margin-top: 3px;
+  padding-left: 24px;
+}
+
+.compactValue {
+  font-family: 'IBM Plex Mono', var(--font-mono), monospace;
+  font-size: 9px;
+  font-weight: 700;
+}
+
+.compactThreshold {
+  font-family: 'IBM Plex Mono', var(--font-mono), monospace;
+  font-size: 7px;
+  color: rgba(255, 255, 255, 0.25);
+}
+
+/* ── Threshold comparison row ──────────────────────────── */
+
+.thresholdMarker {
+  position: absolute;
+  top: -2px;
+  width: 1px;
+  height: 7px;
+  background: rgba(255, 255, 255, 0.4);
+  border-radius: 1px;
+}
+
+.thresholdRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+
+.thresholdLabel {
+  font-family: 'IBM Plex Mono', var(--font-mono), monospace;
+  font-size: 7px;
+  color: rgba(255, 255, 255, 0.3);
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.thresholdValue {
+  font-family: 'IBM Plex Mono', var(--font-mono), monospace;
+  font-size: 8px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.thresholdBreached {
+  font-family: 'IBM Plex Mono', var(--font-mono), monospace;
+  font-size: 6px;
+  font-weight: 700;
+  padding: 1px 5px;
+  border-radius: 2px;
+  color: #ef4444;
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  letter-spacing: 0.5px;
+}
+
+.thresholdOk {
+  font-family: 'IBM Plex Mono', var(--font-mono), monospace;
+  font-size: 6px;
+  font-weight: 700;
+  padding: 1px 5px;
+  border-radius: 2px;
+  color: #34c9a8;
+  background: rgba(52, 201, 168, 0.08);
+  border: 1px solid rgba(52, 201, 168, 0.2);
+  letter-spacing: 0.5px;
 }
 
 /* ── Risk Heatmap ───────────────────────────────────────── */
