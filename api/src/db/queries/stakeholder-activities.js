@@ -116,7 +116,12 @@ export async function getStakeholderActivities(filters = {}) {
  * Get recent activities for a specific company
  */
 export async function getCompanyActivities(companyId, limit = 20) {
+  // Use a CTE to resolve the company name once, then match by either
+  // company_id or company_name — avoids re-executing subquery per row.
   const sql = `
+    WITH target AS (
+      SELECT id, LOWER(name) AS lname FROM companies WHERE id = $1
+    )
     SELECT
       e.id,
       e.event_date AS date,
@@ -127,10 +132,9 @@ export async function getCompanyActivities(companyId, limit = 20) {
       e.source,
       e.source_url,
       e.verified
-    FROM events e
+    FROM events e, target t
     WHERE e.quarantined = FALSE AND e.verified = TRUE
-      AND (e.company_id = $1
-       OR LOWER(e.company_name) = (SELECT LOWER(name) FROM companies WHERE id = $1))
+      AND (e.company_id = t.id OR LOWER(e.company_name) = t.lname)
     ORDER BY e.event_date DESC
     LIMIT $2
   `;

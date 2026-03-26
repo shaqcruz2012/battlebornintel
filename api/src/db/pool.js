@@ -3,11 +3,11 @@ import cfg from '../config.js';
 
 const pool = new pg.Pool({
   connectionString: cfg.databaseUrl,
-  max: 30,
-  min: 5,
+  max: 20,                           // Railway Postgres allows ~20 concurrent connections
+  min: 2,                            // keep 2 warm connections; scale up on demand
   idleTimeoutMillis: 30_000,
-  connectionTimeoutMillis: 5_000,   // fail fast if DB unreachable
-  statement_timeout: 30_000,        // 30 s — graph + risk aggregations need headroom
+  connectionTimeoutMillis: 5_000,    // fail fast if DB unreachable
+  statement_timeout: 30_000,         // 30 s — graph + risk aggregations need headroom
   application_name: 'bbi-api',
 });
 
