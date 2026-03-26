@@ -7,6 +7,7 @@
 
 import pool from '../db/pool.js';
 import { getGraphData, getGraphMetrics } from '../db/queries/graph.js';
+import { resolveNodesFromRegistry } from '../db/queries/entities.js';
 
 /* ── 1. Burt's Constraint ─────────────────────────────────────────────────── */
 
@@ -319,10 +320,35 @@ export async function analyzeStructuralHoles() {
   // Fetch cached community assignments (and pagerank / betweenness)
   const { communities: cachedCommunities } = await getGraphMetrics();
 
-  // Build nodeMap for label lookups
+  // Build nodeMap for label lookups — use entity_registry for complete coverage
   const nodeMap = {};
   for (const n of nodes) {
     nodeMap[n.id] = n;
+  }
+  // Resolve any edge endpoints missing from the graph node list via entity_registry
+  const allEdgeIds = new Set();
+  for (const e of edges) {
+    const src = typeof e.source === 'object' ? e.source.id : e.source;
+    const tgt = typeof e.target === 'object' ? e.target.id : e.target;
+    if (!nodeMap[src]) allEdgeIds.add(src);
+    if (!nodeMap[tgt]) allEdgeIds.add(tgt);
+  }
+  if (allEdgeIds.size > 0) {
+    const resolved = await resolveNodesFromRegistry([...allEdgeIds]);
+    for (const [id, node] of resolved) {
+      if (!nodeMap[id]) nodeMap[id] = node;
+    }
+  }
+
+  // Resolve nodes from community assignments that aren't in nodeMap yet
+  if (cachedCommunities && Object.keys(cachedCommunities).length > 0) {
+    const communityNodeIds = Object.keys(cachedCommunities).filter(id => !nodeMap[id]);
+    if (communityNodeIds.length > 0) {
+      const communityResolved = await resolveNodesFromRegistry(communityNodeIds);
+      for (const [id, node] of communityResolved) {
+        if (!nodeMap[id]) nodeMap[id] = node;
+      }
+    }
   }
 
   // If cache is empty, compute communities on the fly
@@ -410,19 +436,108 @@ export async function analyzeStructuralHoles() {
     ? Math.round((constraintValues.reduce((s, v) => s + v, 0) / constraintValues.length) * 1000) / 1000
     : 0;
 
+  const stats = {
+    totalCommunities: communityIds.size,
+    avgConstraint,
+    bridgeCount: bridgeNodes.length,
+    islandCount: islands.length,
+    gapCount: gaps.length,
+    totalNodes: nodes.length,
+    totalEdges: edges.length,
+  };
+
+  // ── Trend tracking: compare with previous graph_statistics snapshot ──
+  let trends = null;
+  try {
+    const prevStats = await pool.query(
+      'SELECT total_nodes, total_edges, density, computed_at FROM graph_statistics ORDER BY computed_at DESC OFFSET 1 LIMIT 1'
+    );
+    const currStats = await pool.query(
+      'SELECT total_nodes, total_edges, density, computed_at FROM graph_statistics ORDER BY computed_at DESC LIMIT 1'
+    );
+
+    if (prevStats.rows.length > 0 && currStats.rows.length > 0) {
+      const prev = prevStats.rows[0];
+      const curr = currStats.rows[0];
+      const nodeDelta = curr.total_nodes - prev.total_nodes;
+      const edgeDelta = curr.total_edges - prev.total_edges;
+      const densityDelta = Math.round((curr.density - prev.density) * 1e8) / 1e8;
+
+      // Build interpretation
+      const parts = [];
+      if (nodeDelta !== 0) parts.push(`${nodeDelta > 0 ? '+' : ''}${nodeDelta} nodes`);
+      if (edgeDelta !== 0) parts.push(`${edgeDelta > 0 ? '+' : ''}${edgeDelta} edges`);
+      if (densityDelta > 0) parts.push('density increasing');
+      else if (densityDelta < 0) parts.push('density decreasing');
+
+      trends = {
+        bridgeCount: bridgeNodes.length,
+        islandCount: islands.length,
+        gapCount: gaps.length,
+        avgConstraint,
+        nodeDelta,
+        edgeDelta,
+        densityDelta,
+        previousSnapshot: prev.computed_at,
+        currentSnapshot: curr.computed_at,
+        interpretation: parts.length > 0
+          ? `Since last snapshot: ${parts.join(', ')}`
+          : 'No significant changes since last snapshot',
+      };
+    }
+  } catch (trendErr) {
+    // Non-fatal: trends are informational only
+    console.error('structural-holes: trend computation skipped:', trendErr.message);
+  }
+
+  // ── Connect to gap_interventions table ──
+  try {
+    const interventions = await pool.query(
+      'SELECT * FROM gap_interventions WHERE status != $1 ORDER BY created_at DESC',
+      ['rejected']
+    );
+
+    // Attach matching interventions to each gap
+    for (const gap of gaps) {
+      gap.interventions = interventions.rows.filter(i =>
+        i.target_community_a === String(gap.communityA) ||
+        i.target_community_b === String(gap.communityB)
+      );
+    }
+
+    // Auto-propose interventions for critical gaps without existing ones
+    for (const gap of gaps) {
+      if (gap.gapSeverity > 7 && (!gap.interventions || gap.interventions.length === 0)) {
+        const topBridge = gap.potentialBridges?.[0];
+        if (topBridge) {
+          await pool.query(
+            `INSERT INTO gap_interventions (gap_type, gap_name, proposed_bridge_id, target_community_a, target_community_b, proposed_by, notes)
+             VALUES ($1, $2, $3, $4, $5, $6, $7)
+             ON CONFLICT DO NOTHING`,
+            [
+              'structural',
+              `${gap.communityAName} \u2194 ${gap.communityBName}`,
+              topBridge.nodeId,
+              String(gap.communityA),
+              String(gap.communityB),
+              'auto_detector',
+              `Auto-proposed: severity ${gap.gapSeverity.toFixed(1)}, bridge constraint ${topBridge.constraint.toFixed(3)}`,
+            ]
+          );
+        }
+      }
+    }
+  } catch (interventionErr) {
+    // Non-fatal: interventions are supplementary
+    console.error('structural-holes: intervention lookup skipped:', interventionErr.message);
+  }
+
   return {
     bridges: bridgeNodes,
     islands,
     gaps,
     communityNames,
-    stats: {
-      totalCommunities: communityIds.size,
-      avgConstraint,
-      bridgeCount: bridgeNodes.length,
-      islandCount: islands.length,
-      gapCount: gaps.length,
-      totalNodes: nodes.length,
-      totalEdges: edges.length,
-    },
+    stats,
+    trends,
   };
 }
