@@ -22,26 +22,38 @@ export function computeGraphMetrics(nodes, edges) {
   ids.forEach((id, i) => { idx[id] = i; });
   const N = ids.length;
 
-  // Build adjacency list (undirected)
+  // Build weighted adjacency list (undirected)
+  // adj[i] stores neighbor indices; wadj[i] stores {neighbor, weight} for PageRank
   const adj = Array.from({ length: N }, () => []);
+  const wadj = Array.from({ length: N }, () => []);  // weighted adjacency
+  const outWeightSum = new Float64Array(N).fill(0);   // sum of outgoing weights per node
+
   for (const e of edges) {
     const si = idx[typeof e.source === 'object' ? e.source.id : e.source];
     const ti = idx[typeof e.target === 'object' ? e.target.id : e.target];
     if (si !== undefined && ti !== undefined && si !== ti) {
+      const w = parseFloat(e.weight) || 0.5;
       adj[si].push(ti);
       adj[ti].push(si);
+      wadj[si].push({ neighbor: ti, weight: w });
+      wadj[ti].push({ neighbor: si, weight: w });
+      outWeightSum[si] += w;
+      outWeightSum[ti] += w;
     }
   }
 
   // PageRank (power iteration, damping=0.85, 40 iterations)
+  // Distributes rank proportional to edge weight instead of equally
   const d = 0.85;
   let pr = new Float64Array(N).fill(1 / N);
   for (let iter = 0; iter < 40; iter++) {
     const next = new Float64Array(N).fill((1 - d) / N);
     for (let i = 0; i < N; i++) {
-      if (adj[i].length > 0) {
-        const share = pr[i] / adj[i].length;
-        for (const j of adj[i]) next[j] += d * share;
+      if (wadj[i].length > 0) {
+        const totalW = outWeightSum[i];
+        for (const { neighbor: j, weight: w } of wadj[i]) {
+          next[j] += d * pr[i] * (w / totalW);
+        }
       } else {
         for (let j = 0; j < N; j++) next[j] += (d * pr[i]) / N;
       }

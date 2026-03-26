@@ -321,6 +321,159 @@ function detectSectorContagion(companies) {
   return signals;
 }
 
+// ── Ecosystem Velocity ──────────────────────────────────────────────────────
+
+function daysSince(dateStr) {
+  if (!dateStr) return Infinity;
+  const d = new Date(dateStr);
+  return Math.floor((Date.now() - d.getTime()) / (1000 * 60 * 60 * 24));
+}
+
+function detectEcosystemVelocity(events) {
+  const signals = [];
+  if (!events || events.length === 0) return signals;
+
+  const thisMonth = events.filter(e => daysSince(e.event_date) <= 30).length;
+  const lastMonth = events.filter(e => daysSince(e.event_date) > 30 && daysSince(e.event_date) <= 60).length;
+  const twoMonthsAgo = events.filter(e => daysSince(e.event_date) > 60 && daysSince(e.event_date) <= 90).length;
+
+  const velocity = thisMonth - lastMonth;
+  const acceleration = velocity - (lastMonth - twoMonthsAgo);
+
+  if (acceleration < -5) {
+    signals.push({
+      id: 'ecosystem_deceleration',
+      signal_type: 'ecosystem_velocity',
+      severity: acceleration < -10 ? SEVERITY.CRITICAL : SEVERITY.HIGH,
+      title: 'Ecosystem Activity Decelerating',
+      description: `Activity dropped from ${twoMonthsAgo} to ${lastMonth} to ${thisMonth} events/month. Acceleration: ${acceleration}.`,
+      metric_value: acceleration,
+      threshold: -5,
+      recommendation: 'Investigate root cause of declining activity. Check if data collection has gaps or if ecosystem is genuinely slowing.',
+    });
+  }
+
+  return signals;
+}
+
+// ── Stage Pipeline Health ───────────────────────────────────────────────────
+
+function detectStagePipelineHealth(stageTransitions, stalledCompanies) {
+  const signals = [];
+
+  const transitionCount = (stageTransitions || []).length;
+  const stalledCount = (stalledCompanies || []).length;
+
+  if (stalledCount >= 5) {
+    const severity = stalledCount >= 20 ? SEVERITY.CRITICAL
+      : stalledCount >= 10 ? SEVERITY.HIGH
+      : SEVERITY.MEDIUM;
+
+    const names = stalledCompanies.slice(0, 5).map(c => c.label).join(', ');
+    const extra = stalledCount > 5 ? ` +${stalledCount - 5} more` : '';
+
+    signals.push({
+      id: 'stage_pipeline_stalled',
+      signal_type: 'stage_pipeline_health',
+      severity,
+      title: `Pipeline Stall: ${stalledCount} Companies Without Progress`,
+      description: `${stalledCount} companies have had no stage changes in 2+ years: ${names}${extra}. ` +
+        `Only ${transitionCount} stage transitions occurred in the last 6 months.`,
+      affected_entities: stalledCompanies.slice(0, 10).map(c => ({
+        id: c.canonical_id, name: c.label, type: 'company',
+      })),
+      metric_value: stalledCount,
+      threshold: 5,
+      recommendation: 'Review stalled companies for signs of quiet failure or data gaps. Consider targeted outreach to assess current status.',
+    });
+  }
+
+  if (transitionCount === 0) {
+    signals.push({
+      id: 'stage_pipeline_frozen',
+      signal_type: 'stage_pipeline_health',
+      severity: SEVERITY.HIGH,
+      title: 'Stage Pipeline Frozen',
+      description: 'Zero stage transitions detected in the last 6 months. Companies are not advancing through the funding pipeline.',
+      metric_value: 0,
+      threshold: 1,
+      recommendation: 'Investigate whether stage data is being collected. Check if accelerator programs and fund deployments are being tracked.',
+    });
+  }
+
+  return signals;
+}
+
+// ── Funding Gap ─────────────────────────────────────────────────────────────
+
+function detectFundingGap(companies, funds) {
+  const signals = [];
+
+  // Group companies by stage
+  const stageCompanies = {};
+  for (const c of companies) {
+    const stage = (c.stage || 'unknown').toLowerCase();
+    if (!stageCompanies[stage]) stageCompanies[stage] = [];
+    stageCompanies[stage].push(c);
+  }
+
+  // Determine fund coverage by stage (match fund_type to company stage)
+  const stageFundMap = {};
+  for (const f of funds) {
+    const fType = (f.fund_type || f.stage_focus || '').toLowerCase();
+    if (!stageFundMap[fType]) stageFundMap[fType] = [];
+    stageFundMap[fType].push(f);
+  }
+
+  // Check each stage for funding gaps
+  const stageAliases = {
+    'seed': ['seed', 'pre-seed', 'pre_seed'],
+    'series_a': ['series_a', 'series a'],
+    'series_b': ['series_b', 'series b'],
+    'series_c': ['series_c', 'series c', 'growth'],
+  };
+
+  for (const [stageKey, aliases] of Object.entries(stageAliases)) {
+    let companyCount = 0;
+    for (const alias of aliases) {
+      companyCount += (stageCompanies[alias] || []).length;
+    }
+    if (companyCount < 3) continue;
+
+    let investorCount = 0;
+    for (const alias of aliases) {
+      investorCount += (stageFundMap[alias] || []).length;
+    }
+
+    if (companyCount > 10 && investorCount < 2) {
+      signals.push({
+        id: `funding_gap_${stageKey}`,
+        signal_type: 'funding_gap',
+        severity: investorCount === 0 ? SEVERITY.CRITICAL : SEVERITY.HIGH,
+        title: `Funding Gap: ${stageKey.replace(/_/g, ' ')} Stage`,
+        description: `${companyCount} companies at ${stageKey.replace(/_/g, ' ')} stage but only ${investorCount} ` +
+          `fund${investorCount !== 1 ? 's' : ''} target this stage. Companies may lack viable funding pathways.`,
+        metric_value: companyCount,
+        threshold: 10,
+        recommendation: `Recruit investors focused on ${stageKey.replace(/_/g, ' ')} stage. Consider fund-of-funds or syndication strategies to fill the gap.`,
+      });
+    } else if (companyCount >= 5 && investorCount === 0) {
+      signals.push({
+        id: `funding_gap_${stageKey}`,
+        signal_type: 'funding_gap',
+        severity: SEVERITY.MEDIUM,
+        title: `Funding Gap: ${stageKey.replace(/_/g, ' ')} Stage`,
+        description: `${companyCount} companies at ${stageKey.replace(/_/g, ' ')} stage with zero dedicated fund coverage.`,
+        metric_value: companyCount,
+        threshold: 5,
+        recommendation: `Identify and attract investors for the ${stageKey.replace(/_/g, ' ')} stage to support pipeline progression.`,
+      });
+    }
+  }
+
+  return signals;
+}
+
 // ── Composite Score ──────────────────────────────────────────────────────────
 
 function computePortfolioRiskScore(signals, hhi) {
@@ -372,9 +525,15 @@ function riskGrade(score) {
  * @param {Array} data.funds - Fund allocation/deployment data
  * @param {Array} data.graph_metrics - Node-level PageRank/betweenness
  * @param {Array} data.edge_counts - Edge degree per node
+ * @param {Array} data.events - Recent events with event_date for velocity analysis
+ * @param {Array} data.stage_transitions - Stage change records from entity_state_history
+ * @param {Array} data.stalled_companies - Companies with no state changes in 2+ years
  * @returns {{ portfolioRiskScore: number, riskGrade: string, signalCounts: Object, signals: Array }}
  */
-export function computeRiskSignals({ companies = [], funds = [], graph_metrics = [], edge_counts = [] }) {
+export function computeRiskSignals({
+  companies = [], funds = [], graph_metrics = [], edge_counts = [],
+  events = [], stage_transitions = [], stalled_companies = [],
+}) {
   const signals = [
     ...detectMomentumDecay(companies),
     ...detectCapitalConcentration(companies),
@@ -383,6 +542,9 @@ export function computeRiskSignals({ companies = [], funds = [], graph_metrics =
     ...detectStaleIntelligence(companies),
     ...detectInvestorFlight(companies, funds),
     ...detectSectorContagion(companies),
+    ...detectEcosystemVelocity(events),
+    ...detectStagePipelineHealth(stage_transitions, stalled_companies),
+    ...detectFundingGap(companies, funds),
   ];
 
   // Sort by severity priority

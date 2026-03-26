@@ -58,7 +58,13 @@ export async function getRiskData() {
       'funds', COALESCE((SELECT json_agg(row_to_json(f)) FROM funds f), '[]'::json),
       'graph_metrics', COALESCE((SELECT json_agg(row_to_json(gm))
         FROM graph_metrics_cache gm), '[]'::json),
-      'edge_counts', COALESCE((SELECT json_agg(row_to_json(ec)) FROM edge_counts ec), '[]'::json)
+      'edge_counts', COALESCE((SELECT json_agg(row_to_json(ec)) FROM edge_counts ec), '[]'::json),
+      'events', COALESCE((SELECT json_agg(row_to_json(ev)) FROM (
+        SELECT id, event_date, event_type, company_id
+        FROM events
+        WHERE quarantined = FALSE
+          AND event_date > NOW() - INTERVAL '90 days'
+      ) ev), '[]'::json)
     ) AS payload
   `);
 

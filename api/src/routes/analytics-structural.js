@@ -46,6 +46,7 @@ router.get('/ecosystem-gaps', async (req, res, next) => {
           islandCount: analysis.stats.islandCount,
           gapCount: analysis.stats.gapCount,
         },
+        trends: analysis.trends,
       },
     });
   } catch (err) {

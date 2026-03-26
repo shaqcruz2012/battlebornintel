@@ -14,11 +14,12 @@ const CACHE_KEY_NODE = 'link-predictions:node:';
 const CACHE_TTL = 300_000; // 5 minutes
 
 const WEIGHTS = {
-  jaccard: 0.35,
+  jaccard: 0.25,
   sectorOverlap: 0.20,
   geoProximity: 0.15,
   recency: 0.15,
   typeCompatibility: 0.15,
+  edgeQuality: 0.10,
 };
 
 // Type pairs that commonly connect — higher = more likely
@@ -50,7 +51,8 @@ async function loadGraphData() {
   const [edgeResult, companyResult, fundResult, personResult, externalResult, accelResult, ecoResult] =
     await Promise.all([
       pool.query(
-        `SELECT source_id, target_id, rel, event_year, event_date
+        `SELECT source_id, target_id, rel, event_year, event_date,
+                COALESCE(weight, 0.5) AS weight, COALESCE(confidence, 0.5) AS confidence
          FROM graph_edges`
       ),
       pool.query(
@@ -147,11 +149,13 @@ async function loadGraphData() {
 }
 
 /**
- * Build an adjacency map and an edge-date map from raw edge rows.
+ * Build an adjacency map, edge-date map, and edge-attribute maps from raw edge rows.
  */
 function buildAdjacency(edges) {
-  const adj = new Map();       // nodeId -> Set of neighbor IDs
-  const edgeDates = new Map(); // "a|b" -> most recent date/year
+  const adj = new Map();          // nodeId -> Set of neighbor IDs
+  const edgeDates = new Map();    // "a|b" -> most recent date/year
+  const edgeWeights = new Map();  // "a|b" -> best weight (higher = stronger)
+  const edgeConfs = new Map();    // "a|b" -> best confidence
 
   for (const e of edges) {
     const s = e.source_id;
@@ -172,24 +176,54 @@ function buildAdjacency(edges) {
         : 0;
     const existing = edgeDates.get(pairKey) || 0;
     if (dateVal > existing) edgeDates.set(pairKey, dateVal);
+
+    // Track best weight and confidence per edge pair
+    const w = parseFloat(e.weight) || 0.5;
+    const c = parseFloat(e.confidence) || 0.5;
+    if (w > (edgeWeights.get(pairKey) || 0)) edgeWeights.set(pairKey, w);
+    if (c > (edgeConfs.get(pairKey) || 0)) edgeConfs.set(pairKey, c);
   }
 
-  return { adj, edgeDates };
+  return { adj, edgeDates, edgeWeights, edgeConfs };
 }
 
 /**
- * Compute Jaccard similarity: |intersection| / |union|
+ * Compute weighted Jaccard similarity.
+ * Each neighbor contributes its edge weight instead of a binary 1.
+ * For common neighbors, the contribution uses the average weight from both sides.
+ *
+ * Weighted Jaccard = sum(min-weight per common) / sum(max-weight per all)
+ *
+ * @param {Set} neighborsA  - neighbor set for node A
+ * @param {Set} neighborsC  - neighbor set for node C
+ * @param {string} nodeA    - id of node A
+ * @param {string} nodeC    - id of node C
+ * @param {Map} edgeWeights - pairKey -> weight
  */
-function jaccardScore(neighborsA, neighborsC) {
+function jaccardScore(neighborsA, neighborsC, nodeA, nodeC, edgeWeights) {
   if (neighborsA.size === 0 && neighborsC.size === 0) return 0;
-  let intersection = 0;
-  const smaller = neighborsA.size <= neighborsC.size ? neighborsA : neighborsC;
-  const larger = neighborsA.size <= neighborsC.size ? neighborsC : neighborsA;
-  for (const n of smaller) {
-    if (larger.has(n)) intersection++;
+
+  const getWeight = (a, b) => {
+    if (!edgeWeights) return 1;
+    const key = a < b ? `${a}|${b}` : `${b}|${a}`;
+    return edgeWeights.get(key) || 0.5;
+  };
+
+  // Collect all unique neighbors across both sets
+  const allNeighbors = new Set([...neighborsA, ...neighborsC]);
+  let minSum = 0;
+  let maxSum = 0;
+
+  for (const n of allNeighbors) {
+    const inA = neighborsA.has(n);
+    const inC = neighborsC.has(n);
+    const wA = inA ? getWeight(nodeA, n) : 0;
+    const wC = inC ? getWeight(nodeC, n) : 0;
+    minSum += Math.min(wA, wC);
+    maxSum += Math.max(wA, wC);
   }
-  const union = neighborsA.size + neighborsC.size - intersection;
-  return union === 0 ? 0 : intersection / union;
+
+  return maxSum === 0 ? 0 : minSum / maxSum;
 }
 
 /**
@@ -252,6 +286,19 @@ function typeCompatibilityScore(metaA, metaC) {
 }
 
 /**
+ * Compute edge quality score: average confidence of the bridge edges A-B and B-C.
+ */
+function edgeQualityScore(nodeA, nodeB, nodeC, edgeConfs) {
+  const getConf = (a, b) => {
+    const key = a < b ? `${a}|${b}` : `${b}|${a}`;
+    return edgeConfs.get(key) || 0.5;
+  };
+  const confAB = getConf(nodeA, nodeB);
+  const confBC = getConf(nodeB, nodeC);
+  return (confAB + confBC) / 2;
+}
+
+/**
  * Generate a natural-language opportunity summary explaining WHY
  * this predicted connection would be valuable.
  */
@@ -286,6 +333,9 @@ function generateOpportunitySummary(nodeA, nodeC, bridgeNode, features, score) {
   if (features.recency > 0.7) {
     parts.push(`Recent activity from the bridge connection suggests timely relevance.`);
   }
+  if (features.edgeQuality > 0.7) {
+    parts.push(`Bridge edges are high-confidence, indicating well-verified connections.`);
+  }
 
   // Closing with strength assessment
   if (score > 0.7) {
@@ -316,6 +366,7 @@ function generateReasoning(features, metaA, metaC, commonCount) {
 
   if (features.recency >= 0.7) parts.push('recent activity');
   if (features.typeCompatibility >= 0.8) parts.push(`strong ${metaA.type}-${metaC.type} affinity`);
+  if (features.edgeQuality >= 0.7) parts.push('high-confidence bridge edges');
 
   return parts.join(', ') || 'structural proximity';
 }
@@ -343,7 +394,7 @@ export async function predictMissingLinks({ limit = 50, minScore = 0.3 } = {}) {
   if (cached) return cached;
 
   const { edges, nodeMeta } = await loadGraphData();
-  const { adj, edgeDates } = buildAdjacency(edges);
+  const { adj, edgeDates, edgeWeights, edgeConfs } = buildAdjacency(edges);
 
   const predictions = [];
   const seen = new Set(); // track A-C pairs we've already scored
@@ -377,13 +428,14 @@ export async function predictMissingLinks({ limit = 50, minScore = 0.3 } = {}) {
 
         const neighborsC = adj.get(nodeC) || new Set();
 
-        // Compute features
+        // Compute features (weighted Jaccard + edge quality)
         const features = {
-          jaccard: jaccardScore(neighborsA || new Set(), neighborsC),
+          jaccard: jaccardScore(neighborsA || new Set(), neighborsC, nodeA, nodeC, edgeWeights),
           sectorOverlap: sectorOverlapScore(metaA, metaC),
           geoProximity: geoProximityScore(metaA, metaC),
           recency: recencyScore(nodeA, nodeB, nodeC, edgeDates),
           typeCompatibility: typeCompatibilityScore(metaA, metaC),
+          edgeQuality: edgeQualityScore(nodeA, nodeB, nodeC, edgeConfs),
         };
 
         const score =
@@ -391,7 +443,8 @@ export async function predictMissingLinks({ limit = 50, minScore = 0.3 } = {}) {
           features.sectorOverlap * WEIGHTS.sectorOverlap +
           features.geoProximity * WEIGHTS.geoProximity +
           features.recency * WEIGHTS.recency +
-          features.typeCompatibility * WEIGHTS.typeCompatibility;
+          features.typeCompatibility * WEIGHTS.typeCompatibility +
+          features.edgeQuality * WEIGHTS.edgeQuality;
 
         if (score >= minScore) {
           const commonCount = countCommon(neighborsA || new Set(), neighborsC);
@@ -409,6 +462,7 @@ export async function predictMissingLinks({ limit = 50, minScore = 0.3 } = {}) {
               geoProximity: Math.round(features.geoProximity * 1000) / 1000,
               recency: Math.round(features.recency * 1000) / 1000,
               typeCompatibility: Math.round(features.typeCompatibility * 1000) / 1000,
+              edgeQuality: Math.round(features.edgeQuality * 1000) / 1000,
             },
             reasoning: generateReasoning(features, metaA, metaC, commonCount),
             opportunity: generateOpportunitySummary(nodeAObj, nodeCObj, bridgeObj, features, score),
@@ -449,7 +503,7 @@ export async function predictLinksForNode(nodeId, { limit = 20, minScore = 0.3 }
   if (cached) return cached;
 
   const { edges, nodeMeta } = await loadGraphData();
-  const { adj, edgeDates } = buildAdjacency(edges);
+  const { adj, edgeDates, edgeWeights, edgeConfs } = buildAdjacency(edges);
 
   const neighborsTarget = adj.get(nodeId);
   if (!neighborsTarget) {
@@ -487,11 +541,12 @@ export async function predictLinksForNode(nodeId, { limit = 20, minScore = 0.3 }
       const neighborsC = adj.get(nodeC) || new Set();
 
       const features = {
-        jaccard: jaccardScore(neighborsTarget, neighborsC),
+        jaccard: jaccardScore(neighborsTarget, neighborsC, nodeId, nodeC, edgeWeights),
         sectorOverlap: sectorOverlapScore(metaTarget, metaC),
         geoProximity: geoProximityScore(metaTarget, metaC),
         recency: recencyScore(nodeId, nodeB, nodeC, edgeDates),
         typeCompatibility: typeCompatibilityScore(metaTarget, metaC),
+        edgeQuality: edgeQualityScore(nodeId, nodeB, nodeC, edgeConfs),
       };
 
       const score =
@@ -499,7 +554,8 @@ export async function predictLinksForNode(nodeId, { limit = 20, minScore = 0.3 }
         features.sectorOverlap * WEIGHTS.sectorOverlap +
         features.geoProximity * WEIGHTS.geoProximity +
         features.recency * WEIGHTS.recency +
-        features.typeCompatibility * WEIGHTS.typeCompatibility;
+        features.typeCompatibility * WEIGHTS.typeCompatibility +
+        features.edgeQuality * WEIGHTS.edgeQuality;
 
       if (score >= minScore) {
         const commonCount = countCommon(neighborsTarget, neighborsC);
@@ -517,6 +573,7 @@ export async function predictLinksForNode(nodeId, { limit = 20, minScore = 0.3 }
             geoProximity: Math.round(features.geoProximity * 1000) / 1000,
             recency: Math.round(features.recency * 1000) / 1000,
             typeCompatibility: Math.round(features.typeCompatibility * 1000) / 1000,
+            edgeQuality: Math.round(features.edgeQuality * 1000) / 1000,
           },
           reasoning: generateReasoning(features, metaTarget, metaC, commonCount),
           opportunity: generateOpportunitySummary(nodeAObj, nodeCObj, bridgeObj, features, score),
