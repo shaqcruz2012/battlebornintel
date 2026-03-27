@@ -30,7 +30,8 @@ export async function getEcosystemMap() {
     LEFT JOIN ecosystem_orgs eo ON er.source_table = 'ecosystem_orgs' AND er.source_table_id = eo.id
     LEFT JOIN programs p ON er.source_table = 'programs' AND er.source_table_id = p.id::text
     LEFT JOIN graph_funds gf ON er.source_table = 'graph_funds' AND er.source_table_id = gf.id
-    WHERE er.entity_type IN ('accelerator', 'fund', 'program', 'ecosystem_org', 'gov_agency', 'university')
+    WHERE er.merged_into IS NULL
+      AND er.entity_type IN ('accelerator', 'fund', 'program', 'ecosystem_org', 'gov_agency', 'university')
     ORDER BY er.entity_type, er.label
   `);
 

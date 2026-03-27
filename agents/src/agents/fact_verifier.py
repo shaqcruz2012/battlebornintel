@@ -58,6 +58,7 @@ class FactVerifier(BaseAgent):
                           er.source_table, er.source_table_id
                    FROM entity_registry er
                    WHERE (er.verified = FALSE OR er.confidence IS NULL OR er.confidence < 0.6)
+                   AND er.merged_into IS NULL
                    AND er.entity_type IN ('company', 'external', 'vc_firm', 'corporation')
                    ORDER BY er.confidence ASC NULLS FIRST
                    LIMIT $1""",

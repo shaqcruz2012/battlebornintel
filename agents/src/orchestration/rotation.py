@@ -16,6 +16,7 @@ async def get_next_batch(batch_size=DAILY_BATCH_SIZE):
     rows = await pool.fetch(
         """SELECT canonical_id, entity_type, label, confidence, verified, last_queried_at
            FROM entity_registry
+           WHERE merged_into IS NULL
            ORDER BY last_queried_at ASC NULLS FIRST, confidence ASC NULLS FIRST
            LIMIT $1""",
         batch_size,
@@ -35,5 +36,6 @@ async def get_rotation_stats():
             min(last_queried_at) AS oldest_query,
             max(last_queried_at) AS newest_query
         FROM entity_registry
+        WHERE merged_into IS NULL
     """)
     return dict(stats)

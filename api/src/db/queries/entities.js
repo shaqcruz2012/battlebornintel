@@ -15,18 +15,53 @@ export async function resolveNodesFromRegistry(nodeIds) {
 
   try {
     const { rows } = await pool.query(
-      `SELECT canonical_id, entity_type, label
+      `SELECT canonical_id, entity_type, label, merged_into
        FROM entity_registry
        WHERE canonical_id = ANY($1::text[])`,
       [uniqueIds]
     );
 
+    // Separate merged entities that need re-resolution
+    const mergedRedirects = [];
     for (const row of rows) {
-      nodeMap.set(row.canonical_id, {
-        id: row.canonical_id,
-        label: row.label,
-        type: row.entity_type,
-      });
+      if (row.merged_into) {
+        mergedRedirects.push(row.merged_into);
+      } else {
+        nodeMap.set(row.canonical_id, {
+          id: row.canonical_id,
+          label: row.label,
+          type: row.entity_type,
+        });
+      }
+    }
+
+    // Re-resolve primary entities for any merged duplicates
+    if (mergedRedirects.length > 0) {
+      const uniqueRedirects = [...new Set(mergedRedirects)].filter(id => !nodeMap.has(id));
+      if (uniqueRedirects.length > 0) {
+        const { rows: primaryRows } = await pool.query(
+          `SELECT canonical_id, entity_type, label
+           FROM entity_registry
+           WHERE canonical_id = ANY($1::text[]) AND merged_into IS NULL`,
+          [uniqueRedirects]
+        );
+        for (const pr of primaryRows) {
+          nodeMap.set(pr.canonical_id, {
+            id: pr.canonical_id,
+            label: pr.label,
+            type: pr.entity_type,
+          });
+        }
+      }
+      // Map merged IDs to their primary entity
+      for (const row of rows) {
+        if (row.merged_into && !nodeMap.has(row.canonical_id)) {
+          const primary = nodeMap.get(row.merged_into);
+          if (primary) {
+            nodeMap.set(row.canonical_id, primary);
+          }
+        }
+      }
     }
   } catch (err) {
     console.error('[entities] resolveNodesFromRegistry failed:', err.message);
@@ -61,7 +96,8 @@ export async function searchEntities(query, { types = [], limit = 20 } = {}) {
 
   let sql = `SELECT canonical_id, entity_type, label
              FROM entity_registry
-             WHERE search_vector @@ to_tsquery('english', $1)`;
+             WHERE search_vector @@ to_tsquery('english', $1)
+               AND merged_into IS NULL`;
   const params = [tsQuery];
 
   if (types.length > 0) {
@@ -93,6 +129,7 @@ export async function getRegistryStats() {
     const { rows } = await pool.query(
       `SELECT entity_type, COUNT(*) AS count, SUM(CASE WHEN verified THEN 1 ELSE 0 END) AS verified_count
        FROM entity_registry
+       WHERE merged_into IS NULL
        GROUP BY entity_type
        ORDER BY count DESC`
     );

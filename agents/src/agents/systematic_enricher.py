@@ -106,7 +106,8 @@ class SystematicEnricher(BaseAgent):
                LEFT JOIN externals e
                  ON er.source_table = 'externals'
                  AND er.source_table_id = e.id
-               WHERE er.entity_type IN ('company', 'external', 'accelerator')
+               WHERE er.merged_into IS NULL
+               AND er.entity_type IN ('company', 'external', 'accelerator')
                AND (
                  (er.source_table = 'companies'
                   AND (c.description IS NULL OR c.description = ''
