@@ -1,8 +1,8 @@
-import json
 from .base_agent import BaseAgent
+from .utils import extract_json, load_prompt, batch_async
 
 
-SYSTEM_PROMPT = """You are an expert startup ecosystem analyst for the Nevada (Battle Born) startup ecosystem.
+_SYSTEM_PROMPT_FALLBACK = """You are an expert startup ecosystem analyst for the Nevada (Battle Born) startup ecosystem.
 You produce concise, data-driven company analyses for government economic development stakeholders.
 
 Your analysis should follow the MIT REAP framework dimensions:
@@ -26,10 +26,11 @@ class CompanyAnalyst(BaseAgent):
         else:
             # Analyze all companies
             rows = await pool.fetch("SELECT id FROM companies ORDER BY id")
-            results = []
-            for row in rows:
-                r = await self._analyze_one(pool, row["id"])
-                results.append(r)
+            results = await batch_async(
+                lambda row: self._analyze_one(pool, row["id"]),
+                rows,
+                max_concurrency=3,
+            )
             return {"analyzed": len(results)}
 
     async def _analyze_one(self, pool, company_id: int):
@@ -92,15 +93,12 @@ Return JSON with these keys:
 - "reap_assessment": object with keys "inputs", "capacities", "outputs", "impact" (1 sentence each)
 - "recommendation": one-line investment/support recommendation"""
 
-        response_text = self.call_claude(SYSTEM_PROMPT, user_prompt)
+        system_prompt = load_prompt("company_analyst") or _SYSTEM_PROMPT_FALLBACK
+        response_text = self.call_claude(system_prompt, user_prompt)
 
         # Parse JSON from response
-        try:
-            # Try to extract JSON from response
-            start = response_text.find("{")
-            end = response_text.rfind("}") + 1
-            content = json.loads(response_text[start:end])
-        except (json.JSONDecodeError, ValueError):
+        content = extract_json(response_text)
+        if content is None:
             content = {"raw_analysis": response_text}
 
         await self.save_analysis(

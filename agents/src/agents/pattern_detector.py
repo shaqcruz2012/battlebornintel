@@ -1,8 +1,8 @@
-import json
 from .base_agent import BaseAgent
+from .utils import extract_json, load_prompt
 
 
-SYSTEM_PROMPT = """You are a graph analytics expert analyzing Nevada's startup ecosystem network.
+_SYSTEM_PROMPT_FALLBACK = """You are a graph analytics expert analyzing Nevada's startup ecosystem network.
 Identify structural patterns, emerging clusters, bridge companies, and temporal changes.
 Be specific with company names and metrics. Output valid JSON."""
 
@@ -24,6 +24,14 @@ class PatternDetector(BaseAgent):
                       ELSE NULL END AS INTEGER)
                WHERE gmc.computed_at = (SELECT MAX(computed_at) FROM graph_metrics_cache)"""
         )
+
+        if not metrics:
+            await self.save_analysis(
+                pool,
+                analysis_type="pattern_detection",
+                content={"raw_analysis": "No graph metrics available for analysis."},
+            )
+            return {"bridges": 0, "hubs": 0, "communities": 0}
 
         # Identify structural patterns
         bridges = [m for m in metrics if m["betweenness"] and m["betweenness"] > 60]
@@ -69,13 +77,11 @@ Return JSON with:
 - "anomalies": unexpected structural features
 - "recommendations": 2-3 ecosystem development suggestions based on structure"""
 
-        response_text = self.call_claude(SYSTEM_PROMPT, user_prompt)
+        system_prompt = load_prompt("pattern_detector") or _SYSTEM_PROMPT_FALLBACK
+        response_text = self.call_claude(system_prompt, user_prompt)
 
-        try:
-            start = response_text.find("{")
-            end = response_text.rfind("}") + 1
-            content = json.loads(response_text[start:end])
-        except (json.JSONDecodeError, ValueError):
+        content = extract_json(response_text)
+        if content is None:
             content = {"raw_analysis": response_text}
 
         await self.save_analysis(

@@ -534,6 +534,17 @@ class GraphFeatureAgent(BaseModelAgent):
         best_score = -1.0
         best_labels = None
 
+        if min_k >= max_k:
+            # Range is empty (e.g. n_samples=2, min_k=3 -> max_k=2)
+            logger.warning(
+                "k range empty (min_k=%d >= max_k=%d); assigning all to cluster 0.",
+                min_k, max_k,
+            )
+            labels = pd.Series(
+                np.zeros(n_samples, dtype=int), index=df.index, name="cluster"
+            )
+            return 1, 0.0, labels
+
         for k in range(min_k, max_k):
             km = KMeans(n_clusters=k, n_init=10, random_state=42)
             labels = km.fit_predict(X)

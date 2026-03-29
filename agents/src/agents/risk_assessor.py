@@ -1,8 +1,8 @@
-import json
 from .base_agent import BaseAgent
+from .utils import extract_json, load_prompt
 
 
-SYSTEM_PROMPT = """You are a risk analyst for Nevada's startup ecosystem investment portfolio.
+_SYSTEM_PROMPT_FALLBACK = """You are a risk analyst for Nevada's startup ecosystem investment portfolio.
 Identify and assess risks to public-private investment outcomes.
 Be specific with numbers and company names. Output valid JSON."""
 
@@ -61,14 +61,16 @@ Return JSON array of risk objects, each with:
 - "description": 2-3 sentence explanation
 - "recommendation": actionable mitigation step"""
 
-        response_text = self.call_claude(SYSTEM_PROMPT, user_prompt)
+        system_prompt = load_prompt("risk_assessor") or _SYSTEM_PROMPT_FALLBACK
+        response_text = self.call_claude(system_prompt, user_prompt)
 
-        try:
-            start = response_text.find("[")
-            end = response_text.rfind("]") + 1
-            risks = json.loads(response_text[start:end])
-        except (json.JSONDecodeError, ValueError):
+        parsed = extract_json(response_text)
+        if parsed is None:
             risks = [{"raw": response_text}]
+        elif isinstance(parsed, list):
+            risks = parsed
+        else:
+            risks = [parsed]
 
         await self.save_analysis(
             pool,

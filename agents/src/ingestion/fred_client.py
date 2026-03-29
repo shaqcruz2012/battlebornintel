@@ -84,24 +84,44 @@ class FredClient:
             "observation_end": end_date.isoformat(),
         }
 
+        max_retries = 2
+        retryable_codes = {429, 500, 502, 503}
+
         async with httpx.AsyncClient(timeout=30.0) as client:
-            try:
-                resp = await client.get(
-                    f"{FRED_BASE_URL}/series/observations",
-                    params=params,
-                )
-                resp.raise_for_status()
-            except httpx.HTTPStatusError as exc:
-                logger.error(
-                    "FRED API error for %s: %s %s",
-                    series_id,
-                    exc.response.status_code,
-                    exc.response.text[:200],
-                )
-                return []
-            except httpx.RequestError as exc:
-                logger.error("FRED request failed for %s: %s", series_id, exc)
-                return []
+            for attempt in range(max_retries + 1):
+                try:
+                    resp = await client.get(
+                        f"{FRED_BASE_URL}/series/observations",
+                        params=params,
+                    )
+                    resp.raise_for_status()
+                    break
+                except httpx.HTTPStatusError as exc:
+                    if exc.response.status_code in retryable_codes and attempt < max_retries:
+                        logger.warning(
+                            "FRED API transient error for %s (HTTP %d), retry %d/%d",
+                            series_id, exc.response.status_code,
+                            attempt + 1, max_retries,
+                        )
+                        await asyncio.sleep(2 * (attempt + 1))
+                        continue
+                    logger.error(
+                        "FRED API error for %s: %s %s",
+                        series_id,
+                        exc.response.status_code,
+                        exc.response.text[:200],
+                    )
+                    return []
+                except httpx.RequestError as exc:
+                    if attempt < max_retries:
+                        logger.warning(
+                            "FRED request error for %s (%s), retry %d/%d",
+                            series_id, exc, attempt + 1, max_retries,
+                        )
+                        await asyncio.sleep(2 * (attempt + 1))
+                        continue
+                    logger.error("FRED request failed for %s: %s", series_id, exc)
+                    return []
 
         data = resp.json()
         observations = data.get("observations", [])

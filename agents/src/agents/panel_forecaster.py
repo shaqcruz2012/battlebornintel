@@ -6,7 +6,6 @@ Writes results to scenario_results and registers itself in the models table.
 """
 
 import logging
-import math
 import time
 from datetime import date, datetime, timezone
 
@@ -15,6 +14,7 @@ import pandas as pd
 
 from .base_model_agent import BaseModelAgent
 from .status import AgentStatus
+from .utils import sanitize_value as _sanitize_value
 
 logger = logging.getLogger(__name__)
 
@@ -232,13 +232,6 @@ class PanelForecaster(BaseModelAgent):
             })
 
         return predictions
-
-
-def _sanitize_value(v):
-    """Clamp Inf/NaN to None so they don't corrupt the database."""
-    if v is None or math.isnan(v) or math.isinf(v):
-        return None
-    return v
 
 
 def _unit_for_metric(metric: str) -> str:

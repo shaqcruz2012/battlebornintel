@@ -235,6 +235,10 @@ class BLSIngestor(BaseModelAgent):
         for record in records:
             sector_id = naics_to_sector.get(record.industry_code)
             if not sector_id:
+                logger.debug(
+                    "Unmapped NAICS code '%s' (area=%s), skipping record",
+                    record.industry_code, record.area_fips,
+                )
                 continue
             rows.append((
                 "sector", sector_id, record.metric_name, record.value,
