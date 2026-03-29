@@ -14,6 +14,7 @@ import numpy as np
 import pandas as pd
 
 from .base_model_agent import BaseModelAgent
+from .status import AgentStatus
 
 logger = logging.getLogger(__name__)
 
@@ -43,6 +44,16 @@ class SurvivalAnalyzer(BaseModelAgent):
         super().__init__("survival_analyzer", model_version="1.0.0")
 
     async def run(self, pool, **kwargs):
+        """Run survival analysis on company stage transitions.
+
+        Builds a survival dataset from companies and timeline_events, fits
+        Kaplan-Meier curves by cohort (region, sector, accelerator participation),
+        fits a Cox Proportional Hazards model with network covariates, and
+        writes forward survival predictions to scenario_results.
+
+        Kwargs:
+            None -- all configuration is derived from database state.
+        """
         _t0 = time.perf_counter()
         logger.info("SurvivalAnalyzer.run starting.")
         model_id = await self.register_model(
@@ -82,7 +93,7 @@ class SurvivalAnalyzer(BaseModelAgent):
         if survival_df.empty or len(survival_df) < 5:
             logger.warning("Insufficient data for survival analysis (n=%d).",
                            len(survival_df))
-            return {"model_id": model_id, "records": 0, "status": "insufficient_data"}
+            return {"model_id": model_id, "records": 0, "status": AgentStatus.INSUFFICIENT_DATA}
 
         # Load graph features for network covariates
         graph_df = await self.load_graph_features(pool, node_types=["c"])
@@ -154,7 +165,7 @@ class SurvivalAnalyzer(BaseModelAgent):
             "cox_covariates": len(cox_results.get("hazard_ratios", {})),
             "predictions_written": rows_written,
             "elapsed_s": round(elapsed, 3),
-            "status": "completed",
+            "status": AgentStatus.COMPLETED,
         }
         logger.info("SurvivalAnalyzer completed in %.2fs: %s", elapsed, result)
         return result
@@ -433,7 +444,7 @@ class SurvivalAnalyzer(BaseModelAgent):
         ].copy().fillna(0)
 
         if len(cox_df) < 5:
-            return {"hazard_ratios": {}, "status": "insufficient_data"}
+            return {"hazard_ratios": {}, "status": AgentStatus.INSUFFICIENT_DATA}
 
         try:
             return self._cox_lifelines(cox_df, available_covs)
@@ -480,7 +491,7 @@ class SurvivalAnalyzer(BaseModelAgent):
             "n": len(df),
             "events": int(df["event"].sum()),
             "ci_quality": "exact",
-            "status": "completed",
+            "status": AgentStatus.COMPLETED,
         }
 
     @staticmethod
@@ -495,7 +506,7 @@ class SurvivalAnalyzer(BaseModelAgent):
         y = df["event"].values
 
         if y.sum() < 2 or (1 - y).sum() < 2:
-            return {"hazard_ratios": {}, "status": "insufficient_class_balance"}
+            return {"hazard_ratios": {}, "status": AgentStatus.INSUFFICIENT_CLASS_BALANCE}
 
         model = LogisticRegression(penalty="l2", C=1.0, max_iter=500)
         model.fit(X, y)
@@ -532,7 +543,7 @@ class SurvivalAnalyzer(BaseModelAgent):
                 "These are illustrative bounds, not statistically rigorous. "
                 "Install lifelines for exact CIs."
             ),
-            "status": "completed_fallback",
+            "status": AgentStatus.COMPLETED_FALLBACK,
         }
 
     # ------------------------------------------------------------------

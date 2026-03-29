@@ -19,6 +19,7 @@ import numpy as np
 import pandas as pd
 
 from .base_model_agent import BaseModelAgent
+from .status import AgentStatus
 
 logger = logging.getLogger(__name__)
 
@@ -92,12 +93,22 @@ class ScenarioSimulator(BaseModelAgent):
     # ==================================================================
 
     async def run(self, pool, **kwargs):
-        """Execute one or more scenario simulations.
+        """Execute one or more Monte Carlo scenario simulations.
 
-        kwargs:
-            scenario_key: str  -- key into PREBUILT_SCENARIOS (optional)
-            assumptions: dict  -- custom assumptions dict (optional)
-        If neither is provided, all pre-built scenarios are run.
+        Loads baseline company metrics, applies intervention effects, runs
+        N Monte Carlo simulations with stochastic noise, and persists
+        percentile-band results to scenario_results.
+
+        Kwargs:
+            scenario_key (str, optional): Key into PREBUILT_SCENARIOS
+                (e.g. "baseline", "ssbci_expansion", "accelerator_boost").
+                Runs only that scenario.
+            assumptions (dict, optional): Custom assumptions dict with keys
+                ``name``, ``description``, ``interventions`` (list),
+                ``horizon_quarters`` (int), and ``n_simulations`` (int).
+                Runs a single custom scenario.
+
+        If neither kwarg is provided, all pre-built scenarios are run.
         """
         _t0 = time.perf_counter()
         logger.info("ScenarioSimulator.run starting.")
@@ -143,7 +154,7 @@ class ScenarioSimulator(BaseModelAgent):
             "total_rows_written": total_rows,
             "scenario_ids": [r["scenario_id"] for r in results],
             "elapsed_s": round(elapsed, 3),
-            "status": "completed",
+            "status": AgentStatus.COMPLETED,
         }
         logger.info("ScenarioSimulator completed in %.2fs: %s", elapsed, summary)
         return summary
@@ -177,7 +188,7 @@ class ScenarioSimulator(BaseModelAgent):
         baseline = await self._load_baseline(pool)
         if baseline.empty:
             logger.warning("No baseline data available; skipping scenario '%s'.", name)
-            return {"scenario_id": None, "rows_written": 0, "status": "no_data"}
+            return {"scenario_id": None, "rows_written": 0, "status": AgentStatus.NO_DATA}
 
         # Defensive: replace Inf values in simulation metrics with NaN, then fill 0
         for metric in SIMULATION_METRICS:
@@ -244,7 +255,7 @@ class ScenarioSimulator(BaseModelAgent):
             "n_entities": baseline["entity_id"].nunique(),
             "n_simulations": n_sims,
             "horizon_quarters": horizon_q,
-            "status": "completed",
+            "status": AgentStatus.COMPLETED,
         }
 
         # Attach simulation diagnostics if available

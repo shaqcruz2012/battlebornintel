@@ -10,6 +10,15 @@ class FreshnessChecker(BaseAgent):
         super().__init__("freshness_checker")
 
     async def run(self, pool, days_threshold: int = 30):
+        """Run data freshness audit on company records.
+
+        Identifies companies whose ``updated_at`` timestamp exceeds the
+        staleness threshold and saves a freshness report to analysis_results.
+
+        Args:
+            days_threshold (int, optional): Number of days after which a
+                company record is considered stale. Defaults to 30.
+        """
         rows = await pool.fetch(
             """SELECT id, name, updated_at,
                       EXTRACT(DAY FROM NOW() - updated_at) as days_stale

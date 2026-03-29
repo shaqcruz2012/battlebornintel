@@ -14,6 +14,7 @@ import numpy as np
 import pandas as pd
 
 from .base_model_agent import BaseModelAgent
+from .status import AgentStatus
 
 logger = logging.getLogger(__name__)
 
@@ -29,6 +30,15 @@ class PanelForecaster(BaseModelAgent):
         super().__init__("panel_forecaster", model_version="1.0.0")
 
     async def run(self, pool, **kwargs):
+        """Run panel forecasting on all entities with sufficient time-series data.
+
+        Fits OLS linear trend models per entity per metric and generates
+        quarterly forward forecasts with confidence intervals. Results are
+        written to scenario_results.
+
+        Kwargs:
+            None -- all configuration is derived from database state.
+        """
         _t0 = time.perf_counter()
         logger.info("PanelForecaster.run starting.")
         # Register this model in the models table
@@ -49,7 +59,7 @@ class PanelForecaster(BaseModelAgent):
 
         if panel.empty:
             logger.warning("No metric_snapshots data found; returning empty forecast.")
-            return {"model_id": model_id, "forecasts": 0, "status": "no_data"}
+            return {"model_id": model_id, "forecasts": 0, "status": AgentStatus.NO_DATA}
 
         # Defensive: drop fully-NaN metric rows before fitting
         metric_cols = [m for m in PANEL_METRICS if m in panel.columns]
@@ -63,7 +73,7 @@ class PanelForecaster(BaseModelAgent):
 
         if panel.empty:
             logger.warning("Panel is empty after NaN filtering; no forecasts produced.")
-            return {"model_id": model_id, "forecasts": 0, "status": "no_data"}
+            return {"model_id": model_id, "forecasts": 0, "status": AgentStatus.NO_DATA}
 
         # Ensure date columns are proper datetime for arithmetic
         panel["period_start"] = pd.to_datetime(panel["period_start"])
@@ -96,7 +106,7 @@ class PanelForecaster(BaseModelAgent):
 
         if not all_predictions:
             logger.warning("Insufficient data to produce any forecasts.")
-            return {"model_id": model_id, "forecasts": 0, "status": "insufficient_data"}
+            return {"model_id": model_id, "forecasts": 0, "status": AgentStatus.INSUFFICIENT_DATA}
 
         predictions_df = pd.DataFrame(all_predictions)
 
@@ -124,7 +134,7 @@ class PanelForecaster(BaseModelAgent):
             "entities_modeled": entities_modeled,
             "forecasts": rows_written,
             "elapsed_s": round(elapsed, 3),
-            "status": "completed",
+            "status": AgentStatus.COMPLETED,
         }
 
         logger.info("PanelForecaster completed in %.2fs: %s", elapsed, result)

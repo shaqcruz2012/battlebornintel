@@ -16,6 +16,7 @@ import numpy as np
 import pandas as pd
 
 from .base_model_agent import BaseModelAgent
+from .status import AgentStatus
 
 logger = logging.getLogger(__name__)
 
@@ -47,6 +48,18 @@ class CausalEvaluator(BaseModelAgent):
         super().__init__("causal_evaluator", model_version="1.0.0")
 
     async def run(self, pool, **kwargs):
+        """Run causal treatment-effect estimation for ecosystem interventions.
+
+        Executes three analyses:
+        1. Accelerator Difference-in-Differences (DiD) with bootstrap CIs
+        2. SSBCI Fund Impact via Propensity Score Matching (PSM)
+        3. Network Spillover effects via OLS with neighbor covariates
+
+        Results are saved to analysis_results with analysis_type='causal_evaluation'.
+
+        Kwargs:
+            None -- all configuration is derived from database state.
+        """
         _t0 = time.perf_counter()
         logger.info("CausalEvaluator.run starting.")
         model_id = await self.register_model(
@@ -83,7 +96,7 @@ class CausalEvaluator(BaseModelAgent):
 
         if companies_df.empty or len(companies_df) < MIN_TREATMENT + MIN_CONTROL:
             logger.warning("Insufficient company data (n=%d).", len(companies_df))
-            return {"model_id": model_id, "status": "insufficient_data"}
+            return {"model_id": model_id, "status": AgentStatus.INSUFFICIENT_DATA}
 
         # Load graph edges
         edges_df = await self._load_graph_edges(pool)
@@ -122,14 +135,14 @@ class CausalEvaluator(BaseModelAgent):
             "companies_analyzed": len(companies_df),
             "analyses_completed": sum(
                 1 for a in results["analyses"].values()
-                if a.get("status") == "completed"
+                if a.get("status") == AgentStatus.COMPLETED
             ),
             "analyses_skipped": sum(
                 1 for a in results["analyses"].values()
-                if a.get("status") == "skipped"
+                if a.get("status") == AgentStatus.SKIPPED
             ),
             "elapsed_s": round(elapsed, 3),
-            "status": "completed",
+            "status": AgentStatus.COMPLETED,
         }
         logger.info("CausalEvaluator completed in %.2fs: %s", elapsed, result)
         return result
@@ -194,7 +207,7 @@ class CausalEvaluator(BaseModelAgent):
         Outcomes: funding_m change, employee change, stage progression.
         """
         if edges.empty:
-            return {"status": "skipped", "reason": "no graph edges available"}
+            return {"status": AgentStatus.SKIPPED, "reason": "no graph edges available"}
 
         # Find treated companies and their treatment timing
         accel_edges = edges[edges["rel"] == "accelerated_by"].copy()
@@ -213,7 +226,7 @@ class CausalEvaluator(BaseModelAgent):
 
         if len(treated_info) < MIN_TREATMENT:
             return {
-                "status": "skipped",
+                "status": AgentStatus.SKIPPED,
                 "reason": f"insufficient treated companies ({len(treated_info)} < {MIN_TREATMENT})",
             }
 
@@ -227,7 +240,7 @@ class CausalEvaluator(BaseModelAgent):
 
         if len(control) < MIN_CONTROL:
             return {
-                "status": "skipped",
+                "status": AgentStatus.SKIPPED,
                 "reason": f"insufficient control companies ({len(control)} < {MIN_CONTROL})",
             }
 
@@ -289,7 +302,7 @@ class CausalEvaluator(BaseModelAgent):
             }
 
         return {
-            "status": "completed",
+            "status": AgentStatus.COMPLETED,
             "n_treated": int(len(treated)),
             "n_control": int(len(control)),
             "cross_sectional_att": att_results,
@@ -335,10 +348,10 @@ class CausalEvaluator(BaseModelAgent):
         try:
             from sklearn.linear_model import LogisticRegression
         except ImportError:
-            return {"status": "skipped", "reason": "sklearn not available"}
+            return {"status": AgentStatus.SKIPPED, "reason": "sklearn not available"}
 
         if edges.empty:
-            return {"status": "skipped", "reason": "no graph edges available"}
+            return {"status": AgentStatus.SKIPPED, "reason": "no graph edges available"}
 
         # Find SSBCI-invested companies
         ssbci_edges = edges[
@@ -351,7 +364,7 @@ class CausalEvaluator(BaseModelAgent):
 
         if len(ssbci_company_nodes) < MIN_TREATMENT:
             return {
-                "status": "skipped",
+                "status": AgentStatus.SKIPPED,
                 "reason": f"insufficient SSBCI-invested companies ({len(ssbci_company_nodes)} < {MIN_TREATMENT})",
             }
 
@@ -365,7 +378,7 @@ class CausalEvaluator(BaseModelAgent):
 
         if len(control) < MIN_CONTROL:
             return {
-                "status": "skipped",
+                "status": AgentStatus.SKIPPED,
                 "reason": f"insufficient control companies ({len(control)} < {MIN_CONTROL})",
             }
 
@@ -374,7 +387,7 @@ class CausalEvaluator(BaseModelAgent):
         available_covs = [c for c in covariates if c in companies.columns]
 
         if not available_covs:
-            return {"status": "skipped", "reason": "no covariates available"}
+            return {"status": AgentStatus.SKIPPED, "reason": "no covariates available"}
 
         X = companies[available_covs].fillna(0).values
         y = companies["ssbci_treated"].values
@@ -382,7 +395,7 @@ class CausalEvaluator(BaseModelAgent):
         # Check class balance
         if y.sum() < MIN_TREATMENT or (1 - y).sum() < MIN_CONTROL:
             return {
-                "status": "skipped",
+                "status": AgentStatus.SKIPPED,
                 "reason": "insufficient class balance for propensity model",
             }
 
@@ -415,7 +428,7 @@ class CausalEvaluator(BaseModelAgent):
         # Nearest-neighbor matching with caliper
         pscore_std = pscore.std()
         if pscore_std == 0:
-            return {"status": "skipped", "reason": "zero variance in propensity scores"}
+            return {"status": AgentStatus.SKIPPED, "reason": "zero variance in propensity scores"}
 
         caliper = CALIPER_MULTIPLIER * pscore_std
 
@@ -443,7 +456,7 @@ class CausalEvaluator(BaseModelAgent):
 
         if len(matched_pairs) < MIN_MATCHED_PAIRS:
             return {
-                "status": "skipped",
+                "status": AgentStatus.SKIPPED,
                 "reason": f"insufficient matched pairs ({len(matched_pairs)} < {MIN_MATCHED_PAIRS})",
             }
 
@@ -498,7 +511,7 @@ class CausalEvaluator(BaseModelAgent):
             confidence_quality = "moderate"
 
         result = {
-            "status": "completed",
+            "status": AgentStatus.COMPLETED,
             "n_treated": int(len(matched_treated)),
             "n_control": int(len(matched_control)),
             "n_matched_pairs": len(matched_pairs),
@@ -530,10 +543,10 @@ class CausalEvaluator(BaseModelAgent):
         Regress company outcomes on own covariates + neighbor averages.
         """
         if edges.empty:
-            return {"status": "skipped", "reason": "no graph edges available"}
+            return {"status": AgentStatus.SKIPPED, "reason": "no graph edges available"}
 
         if graph_df.empty:
-            return {"status": "skipped", "reason": "no graph metrics available"}
+            return {"status": AgentStatus.SKIPPED, "reason": "no graph metrics available"}
 
         # Build 1-hop neighbor sets for company nodes
         company_nodes = set(companies["node_id"].values)
@@ -592,7 +605,7 @@ class CausalEvaluator(BaseModelAgent):
 
         if len(analysis_df) < MIN_REGRESSION_OBS:
             return {
-                "status": "skipped",
+                "status": AgentStatus.SKIPPED,
                 "reason": f"insufficient observations with neighbors ({len(analysis_df)} < {MIN_REGRESSION_OBS})",
             }
 
@@ -605,7 +618,7 @@ class CausalEvaluator(BaseModelAgent):
         spillover_available = [c for c in spillover_covariates if c in available_covs]
 
         if not spillover_available:
-            return {"status": "skipped", "reason": "no spillover covariates available"}
+            return {"status": AgentStatus.SKIPPED, "reason": "no spillover covariates available"}
 
         outcomes = ["funding_m", "employees"]
         outcome_labels = ["funding_m", "employees"]
@@ -619,10 +632,10 @@ class CausalEvaluator(BaseModelAgent):
                 spillover_results[label] = ols_result
 
         if not spillover_results:
-            return {"status": "no_spillover_data", "reason": "OLS fitting failed for all outcomes"}
+            return {"status": AgentStatus.NO_SPILLOVER_DATA, "reason": "OLS fitting failed for all outcomes"}
 
         return {
-            "status": "completed",
+            "status": AgentStatus.COMPLETED,
             "n_observations": int(len(analysis_df)),
             "mean_neighbor_count": float(analysis_df["neighbor_count"].mean()),
             "outcomes": spillover_results,
