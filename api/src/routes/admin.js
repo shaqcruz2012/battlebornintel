@@ -10,6 +10,7 @@ const router = Router();
 // Recompute all IRS scores and cache them
 router.post('/recompute-scores', async (req, res, next) => {
   try {
+    console.warn(`[ADMIN] ${req.path} initiated at ${new Date().toISOString()} from ${req.ip}`);
     const count = await recomputeAllScores();
     clearCache();
     res.json({ data: { companiesScored: count }, message: 'Scores recomputed' });
@@ -21,6 +22,7 @@ router.post('/recompute-scores', async (req, res, next) => {
 // Recompute graph metrics and cache them
 router.post('/recompute-graph', async (req, res, next) => {
   try {
+    console.warn(`[ADMIN] ${req.path} initiated at ${new Date().toISOString()} from ${req.ip}`);
     const count = await recomputeAndCacheMetrics();
     clearCache();
     res.json({ data: { nodesCached: count }, message: 'Graph metrics recomputed' });
@@ -32,6 +34,7 @@ router.post('/recompute-graph', async (req, res, next) => {
 // Recompute everything
 router.post('/recompute-all', async (req, res, next) => {
   try {
+    console.warn(`[ADMIN] ${req.path} initiated at ${new Date().toISOString()} from ${req.ip}`);
     const scores = await recomputeAllScores();
     const metrics = await recomputeAndCacheMetrics();
     await refreshIndicators();
@@ -48,6 +51,7 @@ router.post('/recompute-all', async (req, res, next) => {
 // Refresh economic indicators materialized view
 router.post('/refresh-indicators', async (req, res, next) => {
   try {
+    console.warn(`[ADMIN] ${req.path} initiated at ${new Date().toISOString()} from ${req.ip}`);
     await refreshIndicators();
     clearCache();
     res.json({ data: null, message: 'Economic indicators refreshed' });

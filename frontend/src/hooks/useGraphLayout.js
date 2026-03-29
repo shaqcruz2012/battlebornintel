@@ -20,6 +20,9 @@ export function useGraphLayout(nodes, edges, options = {}) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
   const workerRef = useRef(null);
+  const requestIdRef = useRef(0);
+  const lastMessageRef = useRef(null);
+  const retryCountRef = useRef(0);
 
   // Initialize worker on mount
   useEffect(() => {
@@ -75,9 +78,16 @@ export function useGraphLayout(nodes, edges, options = {}) {
 
     setIsLoading(true);
     setError(null);
+    retryCountRef.current = 0;
+
+    // Increment request ID to detect stale worker responses
+    requestIdRef.current += 1;
+    const currentRequest = requestIdRef.current;
 
     // Send work to worker
-    worker.postMessage({ nodes, edges, width, height, iterations });
+    const msg = { nodes, edges, width, height, iterations, requestId: currentRequest };
+    lastMessageRef.current = msg;
+    worker.postMessage(msg);
 
     // Handle worker response — supports progressive rendering via interim frames.
     // Interim frames are throttled with requestAnimationFrame to avoid flooding
@@ -95,9 +105,13 @@ export function useGraphLayout(nodes, edges, options = {}) {
     };
 
     const handleMessage = (e) => {
+      // Discard stale messages from a previous request
+      if (e.data.requestId !== requestIdRef.current) return;
+
       const { success, nodes: layoutNodes, error: workerError, interim } = e.data;
 
       if (success) {
+        retryCountRef.current = 0;
         if (interim) {
           // Buffer interim frames and flush at display refresh rate
           pendingInterim = layoutNodes;
@@ -119,9 +133,15 @@ export function useGraphLayout(nodes, edges, options = {}) {
     };
 
     const handleError = (err) => {
-      setError(err.message);
-      setLayout({ nodes, edges });
-      setIsLoading(false);
+      console.error('Graph worker error:', err);
+      if (retryCountRef.current < 1 && lastMessageRef.current) {
+        retryCountRef.current += 1;
+        worker.postMessage(lastMessageRef.current);
+      } else {
+        setError(err.message);
+        setLayout({ nodes, edges });
+        setIsLoading(false);
+      }
     };
 
     worker.addEventListener('message', handleMessage);

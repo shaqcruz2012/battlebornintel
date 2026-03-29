@@ -393,6 +393,8 @@ export function GraphCanvas({
 }) {
   const containerRef = useRef(null);
   const edgeCanvasRef = useRef(null);
+  const layoutRef = useRef(layout);
+  layoutRef.current = layout;
   const { width: winW, height: winH } = useWindowSize();
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
@@ -444,7 +446,7 @@ export function GraphCanvas({
 
   useEffect(() => {
     if (!focusNodeId) return;
-    const node = layout.nodes.find((n) => n.id === focusNodeId);
+    const node = layoutRef.current.nodes.find((n) => n.id === focusNodeId);
     if (!node) return;
     const targetZoom = Math.max(zoom, 1.8);
     setZoom(targetZoom);
@@ -452,7 +454,7 @@ export function GraphCanvas({
       x: w / 2 - (node.x || 0) * targetZoom,
       y: h / 2 - (node.y || 0) * targetZoom,
     });
-  }, [focusNodeId]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [focusNodeId, zoom, w, h]);
 
   const searchLower = searchTerm.toLowerCase();
   const matchesSearch = useCallback(

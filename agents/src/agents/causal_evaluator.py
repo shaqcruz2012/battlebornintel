@@ -619,7 +619,7 @@ class CausalEvaluator(BaseModelAgent):
                 spillover_results[label] = ols_result
 
         if not spillover_results:
-            return {"status": "skipped", "reason": "OLS fitting failed for all outcomes"}
+            return {"status": "no_spillover_data", "reason": "OLS fitting failed for all outcomes"}
 
         return {
             "status": "completed",

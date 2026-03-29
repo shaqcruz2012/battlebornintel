@@ -226,19 +226,22 @@ class BaseModelAgent(ABC):
                 float(row["confidence_hi"]) if pd.notna(row.get("confidence_hi")) else None,
             ))
 
-        # Batch insert using executemany (single round-trip per batch)
-        await pool.executemany(
-            """INSERT INTO scenario_results
-               (scenario_id, entity_type, entity_id, metric_name,
-                value, unit, period, confidence_lo, confidence_hi)
-               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-               ON CONFLICT (scenario_id, entity_type, entity_id, metric_name, period)
-               DO UPDATE SET value = EXCLUDED.value,
-                             unit = EXCLUDED.unit,
-                             confidence_lo = EXCLUDED.confidence_lo,
-                             confidence_hi = EXCLUDED.confidence_hi""",
-            rows,
-        )
+        # Batch insert using executemany in a transaction (single round-trip
+        # per batch; partial writes are rolled back on failure).
+        async with pool.acquire() as conn:
+            async with conn.transaction():
+                await conn.executemany(
+                    """INSERT INTO scenario_results
+                       (scenario_id, entity_type, entity_id, metric_name,
+                        value, unit, period, confidence_lo, confidence_hi)
+                       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+                       ON CONFLICT (scenario_id, entity_type, entity_id, metric_name, period)
+                       DO UPDATE SET value = EXCLUDED.value,
+                                     unit = EXCLUDED.unit,
+                                     confidence_lo = EXCLUDED.confidence_lo,
+                                     confidence_hi = EXCLUDED.confidence_hi""",
+                    rows,
+                )
 
         return len(rows)
 

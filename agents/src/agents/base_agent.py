@@ -1,10 +1,13 @@
 import json
+import logging
 from abc import ABC, abstractmethod
 from datetime import datetime, timezone
 
 import anthropic
 
 from ..db import get_pool
+
+logger = logging.getLogger(__name__)
 
 
 class BaseAgent(ABC):
@@ -40,13 +43,20 @@ class BaseAgent(ABC):
         max_tokens: int = 4096,
     ) -> str:
         """Call Claude API with structured prompts."""
-        response = self.client.messages.create(
-            model=model,
-            max_tokens=max_tokens,
-            system=system_prompt,
-            messages=[{"role": "user", "content": user_prompt}],
-        )
-        return response.content[0].text
+        try:
+            response = self.client.messages.create(
+                model=model,
+                max_tokens=max_tokens,
+                system=system_prompt,
+                messages=[{"role": "user", "content": user_prompt}],
+            )
+            if not response.content:
+                logger.warning("Claude API returned empty content for agent '%s'", self.agent_name)
+                return ""
+            return response.content[0].text
+        except Exception as e:
+            logger.error("Claude API call failed for agent '%s': %s", self.agent_name, e)
+            raise
 
     async def save_analysis(
         self,

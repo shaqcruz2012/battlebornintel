@@ -74,6 +74,9 @@ router.get('/compare', async (req, res, next) => {
     if (ids.some((n) => !isPosInt(n))) {
       return res.status(400).json({ error: 'ids must be comma-separated positive integers' });
     }
+    if (ids.length > 10) {
+      return res.status(400).json({ error: 'Maximum 10 scenarios for comparison' });
+    }
 
     const data = await compareScenarios(ids, metric.trim());
     res.json({ data });

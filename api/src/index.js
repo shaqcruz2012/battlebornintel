@@ -1,6 +1,8 @@
 import express from 'express';
 import cors from 'cors';
 import compression from 'compression';
+import helmet from 'helmet';
+import { randomUUID } from 'crypto';
 import cfg from './config.js';
 import pool from './db/pool.js';
 import { errorHandler } from './middleware/errorHandler.js';
@@ -23,6 +25,12 @@ import forecastsRouter from './routes/forecasts.js';
 
 const app = express();
 
+app.use(helmet());
+app.use((req, res, next) => {
+  req.id = req.headers['x-request-id'] || randomUUID();
+  res.setHeader('X-Request-ID', req.id);
+  next();
+});
 app.use(compression());
 app.use(cors({
   origin: process.env.CORS_ORIGIN || 'http://localhost:5173',

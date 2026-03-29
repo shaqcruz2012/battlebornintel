@@ -13,3 +13,12 @@ DATABASE_URL = os.getenv(
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
 API_BASE_URL = os.getenv("API_BASE_URL", "http://localhost:3001")
 FRED_API_KEY = os.getenv("FRED_API_KEY", "")
+
+# Validate critical configuration
+import logging
+_cfg_logger = logging.getLogger(__name__)
+
+if not ANTHROPIC_API_KEY:
+    _cfg_logger.warning("ANTHROPIC_API_KEY is not set — LLM agents will fail")
+if not DATABASE_URL:
+    _cfg_logger.error("DATABASE_URL is not set — all agents will fail")
