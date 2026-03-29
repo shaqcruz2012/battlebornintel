@@ -238,14 +238,14 @@ def accel_edges_sufficient():
         edges.append({
             "source_id": f"c_{i}", "target_id": "a_startupnv",
             "rel": "accelerated_by", "event_year": 2019 + (i % 4),
-            "matching_score": 0.9, "notes": None,
+            "matching_score": 0.9, "note": None,
         })
     # Some misc edges
     for i in range(7, 12):
         edges.append({
             "source_id": f"c_{i}", "target_id": f"c_{i+1}",
             "rel": "partners_with", "event_year": 2022,
-            "matching_score": 0.6, "notes": None,
+            "matching_score": 0.6, "note": None,
         })
     return pd.DataFrame(edges)
 
@@ -258,21 +258,21 @@ def ssbci_edges_sufficient():
         edges.append({
             "source_id": f"f_fund{i}", "target_id": f"c_{i}",
             "rel": "invested_in", "event_year": 2021 + (i % 3),
-            "matching_score": 0.9, "notes": None,
+            "matching_score": 0.9, "note": None,
         })
     # Non-fund investments
     for i in range(7, 10):
         edges.append({
             "source_id": f"x_vc{i}", "target_id": f"c_{i}",
             "rel": "invested_in", "event_year": 2023,
-            "matching_score": 0.8, "notes": None,
+            "matching_score": 0.8, "note": None,
         })
     # Misc edges for graph connectivity
     for i in range(1, 15):
         edges.append({
             "source_id": f"c_{i}", "target_id": f"c_{(i % 20) + 1}",
             "rel": "partners_with", "event_year": 2023,
-            "matching_score": 0.5, "notes": None,
+            "matching_score": 0.5, "note": None,
         })
     return pd.DataFrame(edges)
 
@@ -304,9 +304,9 @@ class TestAcceleratorDiD:
         # Only 2 accelerated_by edges
         edges = pd.DataFrame([
             {"source_id": "c_1", "target_id": "a_x", "rel": "accelerated_by",
-             "event_year": 2020, "matching_score": 0.9, "notes": None},
+             "event_year": 2020, "matching_score": 0.9, "note": None},
             {"source_id": "c_2", "target_id": "a_x", "rel": "accelerated_by",
-             "event_year": 2021, "matching_score": 0.8, "notes": None},
+             "event_year": 2021, "matching_score": 0.8, "note": None},
         ])
         result = _accelerator_did(large_companies_df, edges)
         assert result["status"] == "skipped"
@@ -459,7 +459,7 @@ class TestNetworkSpillover:
         graph_df = pd.DataFrame()
         edges = pd.DataFrame([
             {"source_id": "c_1", "target_id": "c_2", "rel": "partners_with",
-             "event_year": 2023, "matching_score": 0.5, "notes": None},
+             "event_year": 2023, "matching_score": 0.5, "note": None},
         ])
 
         # Replicate the check from _network_spillover

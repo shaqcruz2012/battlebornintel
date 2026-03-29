@@ -34,7 +34,7 @@ Read .claude/prompts/<relevant>.md for schema and patterns, then [task descripti
 
 ### Core entities
 - `companies` — id, name, slug, stage, sectors[], employees, funding_m, momentum, founded, city, region, status, eligible
-- `graph_edges` — source_id, target_id, rel, event_year, matching_score, notes
+- `graph_edges` — source_id, target_id, rel, event_year, note, weight, matching_score
 - `funds` / `ssbci_funds` — fund tracking with allocated_m, deployed_m, leverage_ratio
 - `regions` — name, level, fips_code, population, gdp_b, parent_id
 - `sectors` — name, slug, naics_codes[], maturity_stage, strategic_priority

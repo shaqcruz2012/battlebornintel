@@ -59,23 +59,23 @@ def sample_edges_df() -> pd.DataFrame:
     """DataFrame with 15 graph edges: 3 accelerated_by, 4 invested_in (2 from f_ funds), 8 misc."""
     edges = [
         # 3 accelerated_by edges
-        {"source_id": "c_1", "target_id": "a_startupnv", "rel": "accelerated_by", "event_year": 2020, "matching_score": 0.9, "notes": None},
-        {"source_id": "c_2", "target_id": "a_startupnv", "rel": "accelerated_by", "event_year": 2021, "matching_score": 0.85, "notes": None},
-        {"source_id": "c_3", "target_id": "a_techstars", "rel": "accelerated_by", "event_year": 2022, "matching_score": 0.88, "notes": None},
+        {"source_id": "c_1", "target_id": "a_startupnv", "rel": "accelerated_by", "event_year": 2020, "matching_score": 0.9, "note": None},
+        {"source_id": "c_2", "target_id": "a_startupnv", "rel": "accelerated_by", "event_year": 2021, "matching_score": 0.85, "note": None},
+        {"source_id": "c_3", "target_id": "a_techstars", "rel": "accelerated_by", "event_year": 2022, "matching_score": 0.88, "note": None},
         # 4 invested_in edges (2 from f_ funds)
-        {"source_id": "f_bbv", "target_id": "c_4", "rel": "invested_in", "event_year": 2021, "matching_score": 0.95, "notes": None},
-        {"source_id": "f_ssbci1", "target_id": "c_5", "rel": "invested_in", "event_year": 2022, "matching_score": 0.92, "notes": None},
-        {"source_id": "x_sequoia", "target_id": "c_6", "rel": "invested_in", "event_year": 2023, "matching_score": 0.80, "notes": None},
-        {"source_id": "x_a16z", "target_id": "c_7", "rel": "invested_in", "event_year": 2023, "matching_score": 0.78, "notes": None},
+        {"source_id": "f_bbv", "target_id": "c_4", "rel": "invested_in", "event_year": 2021, "matching_score": 0.95, "note": None},
+        {"source_id": "f_ssbci1", "target_id": "c_5", "rel": "invested_in", "event_year": 2022, "matching_score": 0.92, "note": None},
+        {"source_id": "x_sequoia", "target_id": "c_6", "rel": "invested_in", "event_year": 2023, "matching_score": 0.80, "note": None},
+        {"source_id": "x_a16z", "target_id": "c_7", "rel": "invested_in", "event_year": 2023, "matching_score": 0.78, "note": None},
         # 8 misc edges
-        {"source_id": "c_1", "target_id": "c_2", "rel": "partners_with", "event_year": 2022, "matching_score": 0.70, "notes": None},
-        {"source_id": "c_3", "target_id": "c_4", "rel": "partners_with", "event_year": 2023, "matching_score": 0.65, "notes": None},
-        {"source_id": "p_john", "target_id": "c_5", "rel": "founded_by", "event_year": 2019, "matching_score": 0.99, "notes": None},
-        {"source_id": "p_jane", "target_id": "c_6", "rel": "employed_at", "event_year": 2020, "matching_score": 0.90, "notes": None},
-        {"source_id": "c_7", "target_id": "s_tech", "rel": "qualifies_for", "event_year": 2022, "matching_score": 0.75, "notes": None},
-        {"source_id": "c_8", "target_id": "c_9", "rel": "partners_with", "event_year": 2023, "matching_score": 0.60, "notes": None},
-        {"source_id": "c_9", "target_id": "c_10", "rel": "partners_with", "event_year": 2024, "matching_score": 0.55, "notes": None},
-        {"source_id": "c_10", "target_id": "c_1", "rel": "partners_with", "event_year": 2024, "matching_score": 0.50, "notes": None},
+        {"source_id": "c_1", "target_id": "c_2", "rel": "partners_with", "event_year": 2022, "matching_score": 0.70, "note": None},
+        {"source_id": "c_3", "target_id": "c_4", "rel": "partners_with", "event_year": 2023, "matching_score": 0.65, "note": None},
+        {"source_id": "p_john", "target_id": "c_5", "rel": "founded_by", "event_year": 2019, "matching_score": 0.99, "note": None},
+        {"source_id": "p_jane", "target_id": "c_6", "rel": "employed_at", "event_year": 2020, "matching_score": 0.90, "note": None},
+        {"source_id": "c_7", "target_id": "s_tech", "rel": "qualifies_for", "event_year": 2022, "matching_score": 0.75, "note": None},
+        {"source_id": "c_8", "target_id": "c_9", "rel": "partners_with", "event_year": 2023, "matching_score": 0.60, "note": None},
+        {"source_id": "c_9", "target_id": "c_10", "rel": "partners_with", "event_year": 2024, "matching_score": 0.55, "note": None},
+        {"source_id": "c_10", "target_id": "c_1", "rel": "partners_with", "event_year": 2024, "matching_score": 0.50, "note": None},
     ]
     return pd.DataFrame(edges)
 

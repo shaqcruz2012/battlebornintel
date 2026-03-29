@@ -12,13 +12,13 @@ Use this when writing SQL migrations, queries, or any code touching the database
 id SERIAL PK, name TEXT, slug TEXT UNIQUE, stage TEXT, sectors TEXT[],
 employees INT, funding_m NUMERIC, momentum NUMERIC, founded INT,
 city TEXT, region TEXT, status TEXT (active/acquired/failed/ipo/merged/unknown),
-eligible BOOLEAN, created_at TIMESTAMPTZ, updated_at TIMESTAMPTZ
+eligible TEXT[] DEFAULT '{}', created_at TIMESTAMPTZ, updated_at TIMESTAMPTZ
 ```
 
 ### graph_edges
 ```sql
 id SERIAL PK, source_id TEXT, target_id TEXT, rel TEXT,
-event_year INT, matching_score NUMERIC, notes TEXT
+event_year INT, note TEXT, weight JSONB, matching_score NUMERIC(3,2), matching_criteria JSONB
 -- Node ID format: c_123, f_bbv, s_tech, r_nv, a_startupnv, p_john, x_tesla
 -- 21+ rel types: invested_in, accelerated_by, founded_by, employed_at, acquired, partners_with, qualifies_for, won_pitch, etc.
 ```

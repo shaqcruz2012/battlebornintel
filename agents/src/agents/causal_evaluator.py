@@ -170,13 +170,13 @@ class CausalEvaluator(BaseModelAgent):
     async def _load_graph_edges(self, pool) -> pd.DataFrame:
         """Load all graph edges."""
         rows = await pool.fetch(
-            """SELECT source_id, target_id, rel, event_year, matching_score, notes
+            """SELECT source_id, target_id, rel, event_year, matching_score, note
                FROM graph_edges"""
         )
         if not rows:
             return pd.DataFrame(
                 columns=["source_id", "target_id", "rel", "event_year",
-                         "matching_score", "notes"]
+                         "matching_score", "note"]
             )
         df = pd.DataFrame([dict(r) for r in rows])
         df["event_year"] = pd.to_numeric(df["event_year"], errors="coerce")
