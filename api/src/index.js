@@ -22,6 +22,7 @@ import opportunitiesRouter from './routes/opportunities.js';
 import indicatorsRouter from './routes/indicators.js';
 import scenariosRouter from './routes/scenarios.js';
 import forecastsRouter from './routes/forecasts.js';
+import graphAnalyticsRouter from './routes/graph-analytics.js';
 
 const app = express();
 
@@ -100,6 +101,7 @@ app.use('/api/opportunities',          publicLimit, cacheMiddleware('opportuniti
 app.use('/api/indicators',             publicLimit, cacheMiddleware('indicators',            120_000, { cacheControl: 'public, max-age=120' }),   indicatorsRouter);
 app.use('/api/scenarios',              publicLimit, cacheMiddleware('scenarios',             120_000, { cacheControl: 'public, max-age=120' }),   scenariosRouter);
 app.use('/api/forecasts',              publicLimit, cacheMiddleware('forecasts',             120_000, { cacheControl: 'public, max-age=120' }),   forecastsRouter);
+app.use('/api/graph-analytics',        publicLimit, cacheMiddleware('graphAnalytics',       120_000, { cacheControl: 'public, max-age=120' }),   graphAnalyticsRouter);
 // Admin routes: key-gated + strict rate limit
 app.use('/api/admin', adminLimit, requireAdminKey, adminRouter);
 

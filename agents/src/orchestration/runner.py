@@ -15,6 +15,7 @@ from ..ingestion.fred_ingestor import FredIngestor
 from ..agents.scenario_simulator import ScenarioSimulator
 from ..agents.causal_evaluator import CausalEvaluator
 from ..ingestion.bls_ingestor import BLSIngestor
+from ..agents.graph_feature_agent import GraphFeatureAgent
 
 AGENT_REGISTRY = {
     "company_analyst": CompanyAnalyst,
@@ -23,6 +24,7 @@ AGENT_REGISTRY = {
     "pattern_detector": PatternDetector,
     "panel_forecaster": PanelForecaster,
     "survival_analyzer": SurvivalAnalyzer,
+    "graph_feature_engineer": GraphFeatureAgent,
     "scenario_simulator": ScenarioSimulator,
     "causal_evaluator": CausalEvaluator,
     "freshness_checker": FreshnessChecker,
