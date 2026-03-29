@@ -230,7 +230,7 @@ class ScenarioSimulator(BaseModelAgent):
             "Scenario '%s' (id=%d): %d result rows written.",
             name, scenario_id, rows_written,
         )
-        return {
+        result = {
             "scenario_id": scenario_id,
             "rows_written": rows_written,
             "n_entities": baseline["entity_id"].nunique(),
@@ -238,6 +238,12 @@ class ScenarioSimulator(BaseModelAgent):
             "horizon_quarters": horizon_q,
             "status": "completed",
         }
+
+        # Attach simulation diagnostics if available
+        if "_diagnostics" in sim_results:
+            result["diagnostics"] = sim_results["_diagnostics"]
+
+        return result
 
     # ------------------------------------------------------------------
     # Data loading
@@ -549,6 +555,59 @@ class ScenarioSimulator(BaseModelAgent):
             results["_new_company_schedule"] = np.array(
                 [s["new_companies"] for s in schedule]
             )
+
+        # Simulation diagnostics
+        diagnostics: dict = {}
+
+        # Convergence check: compare median of first 500 sims vs all N sims
+        check_n = min(500, n_sims)
+        convergence_flags: dict = {}
+        for metric in SIMULATION_METRICS:
+            if metric not in results:
+                continue
+            sims = results[metric]  # (n_sims, n_entities, horizon_q)
+            last_q = horizon_q - 1
+            median_subset = float(np.median(sims[:check_n, :, last_q]))
+            median_all = float(np.median(sims[:, :, last_q]))
+            if median_all != 0:
+                pct_diff = abs(median_subset - median_all) / abs(median_all)
+            else:
+                pct_diff = abs(median_subset - median_all)
+            convergence_flags[metric] = {
+                "median_first_500": median_subset,
+                "median_all": median_all,
+                "pct_difference": float(pct_diff),
+                "potentially_unconverged": bool(pct_diff > 0.05),
+            }
+        diagnostics["convergence_check"] = convergence_flags
+
+        # Skewness of final quarter's distribution
+        skewness_flags: dict = {}
+        for metric in SIMULATION_METRICS:
+            if metric not in results:
+                continue
+            sims = results[metric]
+            last_q = horizon_q - 1
+            final_vals = sims[:, :, last_q].flatten()
+            n_vals = len(final_vals)
+            if n_vals > 2:
+                mean_v = float(np.mean(final_vals))
+                std_v = float(np.std(final_vals))
+                if std_v > 0:
+                    skew = float(
+                        np.mean(((final_vals - mean_v) / std_v) ** 3)
+                    )
+                else:
+                    skew = 0.0
+            else:
+                skew = 0.0
+            skewness_flags[metric] = {
+                "skewness": skew,
+                "normal_model_may_be_inappropriate": bool(abs(skew) > 1.0),
+            }
+        diagnostics["skewness"] = skewness_flags
+
+        results["_diagnostics"] = diagnostics
 
         return results
 

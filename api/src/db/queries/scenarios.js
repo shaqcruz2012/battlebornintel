@@ -13,7 +13,8 @@ export async function listScenarios({ page = 1, limit = 20 } = {}) {
     `SELECT s.id, s.name, s.description, s.base_period, s.status,
             s.assumptions, s.created_by, s.created_at, s.updated_at,
             m.name AS model_name,
-            COUNT(sr.id)::int AS result_count
+            COUNT(sr.id)::int AS result_count,
+            COUNT(*) OVER() AS total_count
      FROM scenarios s
      LEFT JOIN models m ON m.id = s.model_id
      LEFT JOIN scenario_results sr ON sr.scenario_id = s.id
@@ -23,11 +24,14 @@ export async function listScenarios({ page = 1, limit = 20 } = {}) {
     [limit, offset]
   );
 
-  const { rows: countRows } = await pool.query(
-    `SELECT COUNT(*)::int AS total FROM scenarios`
-  );
+  const total = rows.length > 0 ? parseInt(rows[0].total_count, 10) : 0;
 
-  return { rows, total: countRows[0].total };
+  // Remove total_count from individual row objects
+  for (const row of rows) {
+    delete row.total_count;
+  }
+
+  return { rows, total };
 }
 
 /**

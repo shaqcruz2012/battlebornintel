@@ -3,11 +3,15 @@ import pool from '../pool.js';
 export async function getAllCompanies({ stage, region, sector, search, sortBy } = {}) {
   let sql = `
     WITH latest_scores AS (
-      SELECT DISTINCT ON (company_id) company_id, irs_score, grade, triggers, dims
+      SELECT DISTINCT ON (company_id)
+        company_id, irs_score, grade, triggers, dims,
+        forward_score, forward_components, score_type
       FROM computed_scores
       ORDER BY company_id, computed_at DESC
     )
-    SELECT c.*, cs.irs_score, cs.grade, cs.triggers, cs.dims
+    SELECT c.*,
+      cs.irs_score, cs.grade, cs.triggers, cs.dims,
+      cs.forward_score, cs.forward_components, cs.score_type
     FROM companies c
     LEFT JOIN latest_scores cs ON cs.company_id = c.id
   `;
@@ -66,11 +70,15 @@ export async function getAllCompanies({ stage, region, sector, search, sortBy } 
 export async function getCompanyById(id) {
   const { rows } = await pool.query(
     `WITH latest_scores AS (
-       SELECT DISTINCT ON (company_id) company_id, irs_score, grade, triggers, dims
+       SELECT DISTINCT ON (company_id)
+         company_id, irs_score, grade, triggers, dims,
+         forward_score, forward_components, score_type
        FROM computed_scores
        ORDER BY company_id, computed_at DESC
      )
-     SELECT c.*, cs.irs_score, cs.grade, cs.triggers, cs.dims
+     SELECT c.*,
+       cs.irs_score, cs.grade, cs.triggers, cs.dims,
+       cs.forward_score, cs.forward_components, cs.score_type
      FROM companies c
      LEFT JOIN latest_scores cs ON cs.company_id = c.id
      WHERE c.id = $1`,
@@ -119,5 +127,8 @@ function formatCompany(row) {
     grade: row.grade || null,
     triggers: row.triggers || [],
     dims: row.dims || null,
+    forward_score: row.forward_score ?? null,
+    forward_components: row.forward_components ?? null,
+    score_type: row.score_type || 'heuristic',
   };
 }

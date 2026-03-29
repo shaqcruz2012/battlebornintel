@@ -149,7 +149,14 @@ class PanelForecaster(BaseModelAgent):
         t = np.array([(d - t0).days / 91.25 for d in dates])
         n = len(y)
 
+        # Stationarity check: coefficient of variation
+        y_mean = float(y.mean())
+        y_std = float(y.std())
+        cv = y_std / abs(y_mean) if y_mean != 0 else float("inf")
+        stationarity_warning = bool(cv > 2.0)
+
         # OLS: y = a + b*t
+        trend_not_significant = False
         try:
             X = np.column_stack([np.ones(n), t])
             beta, _, _, _ = np.linalg.lstsq(X, y, rcond=None)
@@ -161,10 +168,32 @@ class PanelForecaster(BaseModelAgent):
                 rse = float(np.sqrt(np.sum(resid ** 2) / (n - 2)))
             else:
                 rse = float(np.abs(y.mean()) * 0.1) if y.mean() != 0 else 1.0
+
+            # Trend significance check: t-statistic for slope coefficient
+            if n > 2 and rse > 0:
+                try:
+                    XtX_inv = np.linalg.inv(X.T @ X)
+                    se_beta1 = float(np.sqrt(XtX_inv[1, 1] * rse ** 2))
+                    t_stat = float(beta[1] / se_beta1) if se_beta1 > 0 else 0.0
+                except np.linalg.LinAlgError:
+                    t_stat = 0.0
+            else:
+                t_stat = 0.0
+            trend_not_significant = bool(abs(t_stat) < 1.96)
         except (np.linalg.LinAlgError, ValueError):
             # Fallback: flat forecast at last observed value
             beta = np.array([y[-1], 0.0])
             rse = float(np.abs(y.mean()) * 0.2) if y.mean() != 0 else 1.0
+            t_stat = 0.0
+            trend_not_significant = True
+
+        # Build metadata for diagnostics
+        metadata = {
+            "stationarity_warning": stationarity_warning,
+            "coefficient_of_variation": float(cv) if np.isfinite(cv) else None,
+            "trend_not_significant": trend_not_significant,
+            "slope_t_statistic": float(t_stat),
+        }
 
         # Generate future quarters
         last_date = dates.iloc[-1]
@@ -188,6 +217,7 @@ class PanelForecaster(BaseModelAgent):
                 "period": future_date,
                 "confidence_lo": pred - ci_width,
                 "confidence_hi": pred + ci_width,
+                "metadata": metadata,
             })
 
         return predictions

@@ -340,11 +340,11 @@ export async function getGraphMetrics() {
     // Table may not exist or be empty — return empty metrics so the
     // caller can fall back to live computation gracefully.
     console.error('[graph] graph_metrics_cache query failed:', err.message);
-    return { pagerank: {}, betweenness: {}, communities: {} };
+    return { pagerank: {}, betweenness: {}, communities: {}, coInvestmentDensity: {}, founderMobility: {}, structuralHole: {} };
   }
 
   if (!rows || rows.length === 0) {
-    return { pagerank: {}, betweenness: {}, communities: {} };
+    return { pagerank: {}, betweenness: {}, communities: {}, coInvestmentDensity: {}, founderMobility: {}, structuralHole: {} };
   }
 
   const pagerank = {};
@@ -364,5 +364,8 @@ export async function getGraphMetrics() {
     communities[r.node_id] = r.community_id;
   }
 
-  return { pagerank, betweenness, communities };
+  // Advanced network features are computed live (not stored in the cache table),
+  // so return empty containers here. The /api/graph/metrics endpoint falls back
+  // to live computation when the cache is empty, which populates these fully.
+  return { pagerank, betweenness, communities, coInvestmentDensity: {}, founderMobility: {}, structuralHole: {} };
 }

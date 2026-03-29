@@ -41,7 +41,7 @@ router.get('/metrics', async (req, res, next) => {
         console.error('[graph/metrics] Live computation failed:', computeErr.message);
         // Return empty metrics rather than crashing — the graph still renders
         return res.json({
-          data: { pagerank: {}, betweenness: {}, communities: {}, watchlist: [], numCommunities: 0 },
+          data: { pagerank: {}, betweenness: {}, communities: {}, watchlist: [], numCommunities: 0, coInvestmentDensity: {}, founderMobility: {}, structuralHole: {} },
           source: 'empty',
         });
       }

@@ -207,22 +207,14 @@ class BaseModelAgent(ABC):
                 scenario_id,
             )
 
-        count = 0
+        # Build all rows as a list of tuples for batch insert
+        rows = []
         for _, row in predictions_df.iterrows():
             period_val = row["period"]
             if not isinstance(period_val, date):
                 period_val = pd.Timestamp(period_val).date()
 
-            await pool.execute(
-                """INSERT INTO scenario_results
-                   (scenario_id, entity_type, entity_id, metric_name,
-                    value, unit, period, confidence_lo, confidence_hi)
-                   VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-                   ON CONFLICT (scenario_id, entity_type, entity_id, metric_name, period)
-                   DO UPDATE SET value = EXCLUDED.value,
-                                 unit = EXCLUDED.unit,
-                                 confidence_lo = EXCLUDED.confidence_lo,
-                                 confidence_hi = EXCLUDED.confidence_hi""",
+            rows.append((
                 scenario_id,
                 str(row["entity_type"]),
                 str(row["entity_id"]),
@@ -232,10 +224,23 @@ class BaseModelAgent(ABC):
                 period_val,
                 float(row["confidence_lo"]) if pd.notna(row.get("confidence_lo")) else None,
                 float(row["confidence_hi"]) if pd.notna(row.get("confidence_hi")) else None,
-            )
-            count += 1
+            ))
 
-        return count
+        # Batch insert using executemany (single round-trip per batch)
+        await pool.executemany(
+            """INSERT INTO scenario_results
+               (scenario_id, entity_type, entity_id, metric_name,
+                value, unit, period, confidence_lo, confidence_hi)
+               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+               ON CONFLICT (scenario_id, entity_type, entity_id, metric_name, period)
+               DO UPDATE SET value = EXCLUDED.value,
+                             unit = EXCLUDED.unit,
+                             confidence_lo = EXCLUDED.confidence_lo,
+                             confidence_hi = EXCLUDED.confidence_hi""",
+            rows,
+        )
+
+        return len(rows)
 
     async def register_model(
         self,

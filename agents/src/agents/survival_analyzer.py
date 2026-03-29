@@ -213,59 +213,72 @@ class SurvivalAnalyzer(BaseModelAgent):
             {r["company_id"] for r in accel_companies} if accel_companies else set()
         )
 
-        # Build survival records
+        # Build survival records using vectorized pandas operations
         current_year = date.today().year
-        records: list[dict] = []
 
-        for _, company in company_df.iterrows():
-            founded = int(company["founded"])
-            duration_years = current_year - founded
-            if duration_years <= 0:
-                continue
+        # Filter out companies with non-positive duration
+        company_df["founded_int"] = company_df["founded"].astype(int)
+        company_df["duration_years"] = current_year - company_df["founded_int"]
+        company_df = company_df[company_df["duration_years"] > 0].copy()
 
-            duration_quarters = min(duration_years * 4, 60)  # cap at 15 years
+        if company_df.empty:
+            return pd.DataFrame()
 
-            # Determine if a stage-transition event was observed:
-            # multiple funding events = evidence of stage progression
-            has_event = False
-            if (
-                not events_df.empty
-                and "company_id" in events_df.columns
-                and company["id"] in events_df["company_id"].values
-            ):
-                co_events = events_df[events_df["company_id"] == company["id"]]
-                funding_events = co_events[co_events["event_type"] == "funding"]
-                has_event = len(funding_events) >= 2
+        # Cap duration at 15 years (60 quarters)
+        company_df["duration_quarters"] = (
+            company_df["duration_years"] * 4
+        ).clip(upper=60)
 
-            # Also count companies whose current stage is >= milestone
-            current_stage_order = STAGE_ORDER.get(company["stage"], 0)
-            milestone_order = STAGE_ORDER.get(DEFAULT_EVENT_STAGE, 3)
-            if current_stage_order >= milestone_order:
-                has_event = True
-
-            # Primary sector
-            sectors = company.get("sectors")
-            primary_sector = (
-                sectors[0] if sectors and len(sectors) > 0 else "unknown"
+        # Vectorized event detection: count funding events per company
+        has_funding_event = pd.Series(False, index=company_df.index)
+        if (
+            not events_df.empty
+            and "company_id" in events_df.columns
+        ):
+            funding_counts = (
+                events_df[events_df["event_type"] == "funding"]
+                .groupby("company_id")
+                .size()
             )
+            company_df["_funding_count"] = (
+                company_df["id"].map(funding_counts).fillna(0).astype(int)
+            )
+            has_funding_event = company_df["_funding_count"] >= 2
+        else:
+            company_df["_funding_count"] = 0
 
-            records.append({
-                "entity_id": str(company["id"]),
-                "name": company["name"],
-                "duration_quarters": duration_quarters,
-                "event": 1 if has_event else 0,
-                "stage": company["stage"],
-                "primary_sector": primary_sector,
-                "region": company["region"],
-                "funding_m": float(company["funding_m"]),
-                "employees": int(company["employees"]),
-                "momentum": int(company.get("momentum", 0) or 0),
-                "has_accelerator": 1 if company["id"] in accel_ids else 0,
-                "log_funding": float(np.log1p(float(company["funding_m"]))),
-                "log_employees": float(np.log1p(int(company["employees"]))),
-            })
+        # Also flag companies whose current stage >= milestone
+        milestone_order = STAGE_ORDER.get(DEFAULT_EVENT_STAGE, 3)
+        company_df["_stage_order"] = company_df["stage"].map(STAGE_ORDER).fillna(0)
+        has_stage_event = company_df["_stage_order"] >= milestone_order
 
-        return pd.DataFrame(records)
+        company_df["event"] = (has_funding_event | has_stage_event).astype(int)
+
+        # Primary sector (first element of sectors array)
+        company_df["primary_sector"] = company_df["sectors"].apply(
+            lambda s: s[0] if s and len(s) > 0 else "unknown"
+        )
+
+        # Accelerator participation
+        company_df["has_accelerator"] = company_df["id"].isin(accel_ids).astype(int)
+
+        # Derived numeric columns
+        company_df["employees"] = company_df["employees"].fillna(0).astype(int)
+        company_df["momentum"] = company_df["momentum"].fillna(0).astype(int)
+        company_df["log_funding"] = np.log1p(company_df["funding_m"].astype(float))
+        company_df["log_employees"] = np.log1p(company_df["employees"].astype(float))
+
+        # Select and rename columns for the survival dataset
+        result = company_df[[
+            "id", "name", "duration_quarters", "event", "stage",
+            "primary_sector", "region", "funding_m", "employees",
+            "momentum", "has_accelerator", "log_funding", "log_employees",
+        ]].copy()
+        result = result.rename(columns={"id": "entity_id"})
+        result["entity_id"] = result["entity_id"].astype(str)
+        result["funding_m"] = result["funding_m"].astype(float)
+
+        return result.reset_index(drop=True)
 
     # ------------------------------------------------------------------
     # Kaplan-Meier
@@ -463,6 +476,7 @@ class SurvivalAnalyzer(BaseModelAgent):
             "concordance_index": float(cph.concordance_index_),
             "n": len(df),
             "events": int(df["event"].sum()),
+            "ci_quality": "exact",
             "status": "completed",
         }
 
@@ -501,6 +515,12 @@ class SurvivalAnalyzer(BaseModelAgent):
             "concordance_index": float(model.score(X, y)),
             "n": len(df),
             "events": int(df["event"].sum()),
+            "ci_quality": "approximate",
+            "methodology_note": (
+                "Confidence intervals computed using approximate SE=0.5. "
+                "These are illustrative bounds, not statistically rigorous. "
+                "Install lifelines for exact CIs."
+            ),
             "status": "completed_fallback",
         }
 

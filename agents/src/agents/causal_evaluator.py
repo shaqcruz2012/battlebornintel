@@ -259,7 +259,7 @@ class CausalEvaluator(BaseModelAgent):
             )
 
             att_results[label] = {
-                "att": float(att),
+                "cross_sectional_att": float(att),
                 "ci_95_lower": float(ci_lo),
                 "ci_95_upper": float(ci_hi),
                 "treated_mean": float(treated_mean),
@@ -267,11 +267,39 @@ class CausalEvaluator(BaseModelAgent):
                 "significant": bool(ci_lo > 0 or ci_hi < 0),
             }
 
+        # Balance diagnostics: standardized mean differences for covariates
+        balance_covariates = ["funding_m", "employees", "founded"]
+        balance_diagnostics: dict = {}
+        for cov in balance_covariates:
+            if cov not in companies.columns:
+                continue
+            t_vals = treated[cov].dropna()
+            c_vals = control[cov].dropna()
+            if len(t_vals) == 0 or len(c_vals) == 0:
+                continue
+            t_mean = float(t_vals.mean())
+            c_mean = float(c_vals.mean())
+            pooled_std = float(np.sqrt((t_vals.var() + c_vals.var()) / 2))
+            smd = (t_mean - c_mean) / pooled_std if pooled_std > 0 else 0.0
+            balance_diagnostics[cov] = {
+                "treated_mean": t_mean,
+                "control_mean": c_mean,
+                "standardized_mean_diff": float(smd),
+                "balanced": bool(abs(smd) < 0.1),
+            }
+
         return {
             "status": "completed",
             "n_treated": int(len(treated)),
             "n_control": int(len(control)),
-            "att": att_results,
+            "cross_sectional_att": att_results,
+            "balance_diagnostics": balance_diagnostics,
+            "methodology_note": (
+                "Cross-sectional comparison of treated vs control group outcomes. "
+                "True DiD requires pre-treatment and post-treatment observations "
+                "for the same units. This estimate may be biased by selection on "
+                "unobservables."
+            ),
         }
 
     @staticmethod
@@ -363,6 +391,27 @@ class CausalEvaluator(BaseModelAgent):
         pscore = model.predict_proba(X)[:, 1]
         companies["pscore"] = pscore
 
+        # Check logistic regression convergence
+        convergence_warning = None
+        if hasattr(model, "n_iter_") and model.n_iter_[0] >= model.max_iter:
+            convergence_warning = (
+                f"Logistic regression did not converge within {model.max_iter} "
+                "iterations. Propensity scores may be unreliable."
+            )
+
+        # Overlap check: proportion of treated units with pscore in [0.1, 0.9]
+        treated_pscores = pscore[y == 1]
+        overlap_proportion = float(
+            np.mean((treated_pscores >= 0.1) & (treated_pscores <= 0.9))
+        )
+        overlap_warning = None
+        if overlap_proportion < 0.5:
+            overlap_warning = (
+                f"Only {overlap_proportion:.1%} of treated units have propensity "
+                "scores in [0.1, 0.9]. The overlap (positivity) assumption may "
+                "be violated, leading to unreliable treatment effect estimates."
+            )
+
         # Nearest-neighbor matching with caliper
         pscore_std = pscore.std()
         if pscore_std == 0:
@@ -441,15 +490,21 @@ class CausalEvaluator(BaseModelAgent):
                 "significant": bool(ci_lo > 0 or ci_hi < 0),
             }
 
-        return {
+        result = {
             "status": "completed",
             "n_treated": int(len(matched_treated)),
             "n_control": int(len(matched_control)),
             "n_matched_pairs": len(matched_pairs),
             "caliper": float(caliper),
+            "overlap_proportion": overlap_proportion,
             "balance_diagnostics": balance,
             "att": att_results,
         }
+        if overlap_warning:
+            result["overlap_warning"] = overlap_warning
+        if convergence_warning:
+            result["convergence_warning"] = convergence_warning
+        return result
 
     # ------------------------------------------------------------------
     # Analysis 3: Network Spillover
