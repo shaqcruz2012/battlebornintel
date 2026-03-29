@@ -327,14 +327,15 @@ function SkeletonBlock({ lines = 3, width = '100%' }) {
 // ── Main component ──────────────────────────────────────────────────────────
 
 export function NarrativePanel({ companies = [], funds = [], activeSector = 'all', sectorStats: sectorStatsProp = [] }) {
-  const { data: briefResponse, isLoading: briefLoading } = useWeeklyBrief();
-  const { data: risksRaw, isLoading: risksLoading } = useRiskAssessments();
+  const { data: briefResponse, isLoading: briefLoading, isError: briefError } = useWeeklyBrief();
+  const { data: risksRaw, isLoading: risksLoading, isError: risksError } = useRiskAssessments();
 
   const briefData = briefResponse?.data;
   const risks = Array.isArray(risksRaw) ? risksRaw : [];
   const sectorStats = Array.isArray(sectorStatsProp) ? sectorStatsProp : [];
 
   const isLoading = briefLoading || risksLoading;
+  const isError = briefError || risksError;
 
   const sectorLabel = activeSector && activeSector !== 'all' ? activeSector : null;
 
@@ -400,6 +401,11 @@ export function NarrativePanel({ companies = [], funds = [], activeSector = 'all
             <SkeletonBlock lines={3} />
             <div style={{ height: 16 }} />
             <SkeletonBlock lines={3} />
+          </div>
+        ) : isError ? (
+          <div className={styles.loadingBlock} style={{ textAlign: 'center', padding: '2rem 1rem', color: 'var(--text-secondary)' }}>
+            <div style={{ marginBottom: '0.5rem', fontWeight: 600 }}>Unable to load intelligence brief</div>
+            <div style={{ fontSize: '0.85rem' }}>Data may be temporarily unavailable. Showing fallback analysis.</div>
           </div>
         ) : (
           <div className={styles.sectionList}>

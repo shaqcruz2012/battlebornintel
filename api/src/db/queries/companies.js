@@ -61,7 +61,7 @@ export async function getAllCompanies({ stage, region, sector, search, sortBy } 
     funding: 'c.funding_m DESC',
     name: 'c.name ASC',
   };
-  sql += ` ORDER BY ${orderMap[sortBy] || orderMap.irs}`;
+  sql += ` ORDER BY ${orderMap[sortBy] || orderMap.irs} LIMIT 500`;
 
   const { rows } = await pool.query(sql, params);
   return rows.map(formatCompany);

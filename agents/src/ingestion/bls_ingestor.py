@@ -200,7 +200,8 @@ class BLSIngestor(BaseModelAgent):
                     rows,
                 )
             except Exception as e:
-                logger.warning("Failed to store region records batch: %s", e)
+                logger.error("Failed to store region records batch: %s", e)
+                raise
 
         stored = len(rows)
         logger.info("Stored %d region metric snapshots", stored)
@@ -255,7 +256,8 @@ class BLSIngestor(BaseModelAgent):
                     rows,
                 )
             except Exception as e:
-                logger.warning("Failed to store sector records batch: %s", e)
+                logger.error("Failed to store sector records batch: %s", e)
+                raise
 
         stored = len(rows)
         logger.info("Stored %d sector metric snapshots", stored)

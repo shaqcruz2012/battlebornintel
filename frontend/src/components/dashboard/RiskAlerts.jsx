@@ -77,7 +77,7 @@ function aiRisksToAlerts(risks) {
 }
 
 export function RiskAlerts({ companies, funds = [] }) {
-  const { data: aiRisks } = useRiskAssessments();
+  const { data: aiRisks, isError } = useRiskAssessments();
 
   const aiAlerts = useMemo(() => aiRisksToAlerts(aiRisks), [aiRisks]);
   const fallbackAlerts = useMemo(
@@ -87,6 +87,17 @@ export function RiskAlerts({ companies, funds = [] }) {
 
   const alerts = aiAlerts || fallbackAlerts;
   const isAI = !!aiAlerts;
+
+  if (isError && alerts.length === 0) {
+    return (
+      <div className={styles.wrapper}>
+        <div className={styles.title}>Risk Alerts</div>
+        <div style={{ padding: '1rem', color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
+          Unable to load risk assessments. Please try again later.
+        </div>
+      </div>
+    );
+  }
 
   if (alerts.length === 0) return null;
 

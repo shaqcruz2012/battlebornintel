@@ -11,6 +11,11 @@ if (!databaseUrl && process.env.NODE_ENV !== 'test') {
   process.exit(1);
 }
 
+if (process.env.NODE_ENV === 'production' && !process.env.ADMIN_API_KEY) {
+  console.error('FATAL: ADMIN_API_KEY environment variable is required in production');
+  process.exit(1);
+}
+
 export default {
   port: parseInt(process.env.API_PORT || '3001', 10),
   databaseUrl: databaseUrl || '',

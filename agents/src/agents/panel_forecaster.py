@@ -6,6 +6,7 @@ Writes results to scenario_results and registers itself in the models table.
 """
 
 import logging
+import math
 import time
 from datetime import date, datetime, timezone
 
@@ -212,15 +213,22 @@ class PanelForecaster(BaseModelAgent):
                 "entity_type": "company",
                 "entity_id": entity_id,
                 "metric_name": f"{metric}_forecast",
-                "value": pred,
+                "value": _sanitize_value(pred),
                 "unit": _unit_for_metric(metric),
                 "period": future_date,
-                "confidence_lo": pred - ci_width,
-                "confidence_hi": pred + ci_width,
+                "confidence_lo": _sanitize_value(pred - ci_width),
+                "confidence_hi": _sanitize_value(pred + ci_width),
                 "metadata": metadata,
             })
 
         return predictions
+
+
+def _sanitize_value(v):
+    """Clamp Inf/NaN to None so they don't corrupt the database."""
+    if v is None or math.isnan(v) or math.isinf(v):
+        return None
+    return v
 
 
 def _unit_for_metric(metric: str) -> str:

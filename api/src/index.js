@@ -24,7 +24,10 @@ import forecastsRouter from './routes/forecasts.js';
 const app = express();
 
 app.use(compression());
-app.use(cors());
+app.use(cors({
+  origin: process.env.CORS_ORIGIN || 'http://localhost:5173',
+  credentials: true,
+}));
 app.use(express.json());
 
 // ── Simple in-memory rate limiter (no extra deps) ───────────────────────────
@@ -46,7 +49,7 @@ const adminLimit  = makeRateLimiter({ windowMs: 60_000, max: 10, message: 'Admin
 // ── Admin API key guard ─────────────────────────────────────────────────────
 function requireAdminKey(req, res, next) {
   const key = req.headers['x-admin-key'];
-  if (cfg.adminApiKey && key !== cfg.adminApiKey) {
+  if (!cfg.adminApiKey || key !== cfg.adminApiKey) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
   next();

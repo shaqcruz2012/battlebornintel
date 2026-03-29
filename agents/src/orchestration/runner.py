@@ -3,6 +3,7 @@
 import logging
 import traceback
 
+from ..db import close_pool
 from ..agents.company_analyst import CompanyAnalyst
 from ..agents.weekly_brief import WeeklyBrief
 from ..agents.risk_assessor import RiskAssessor
@@ -57,24 +58,27 @@ async def run_agent(agent_name: str, retries: int = MAX_RETRIES, **kwargs):
     agent_cls = AGENT_REGISTRY[agent_name]
     last_error = None
 
-    for attempt in range(1, retries + 1):
-        try:
-            agent = agent_cls()
-            result = await agent.execute(**kwargs)
-            print(f"[{agent_name}] completed: {result}")
+    try:
+        for attempt in range(1, retries + 1):
+            try:
+                agent = agent_cls()
+                result = await agent.execute(**kwargs)
+                print(f"[{agent_name}] completed: {result}")
 
-            # Auto-refresh materialized views after successful ingestion
-            if agent_name in _INGESTOR_AGENTS:
-                await _refresh_indicator_views()
+                # Auto-refresh materialized views after successful ingestion
+                if agent_name in _INGESTOR_AGENTS:
+                    await _refresh_indicator_views()
 
-            return result
-        except Exception as e:
-            last_error = e
-            print(f"[{agent_name}] attempt {attempt}/{retries} failed: {e}")
-            if attempt < retries:
-                print(f"[{agent_name}] retrying...")
-            else:
-                print(f"[{agent_name}] all retries exhausted")
-                traceback.print_exc()
+                return result
+            except Exception as e:
+                last_error = e
+                print(f"[{agent_name}] attempt {attempt}/{retries} failed: {e}")
+                if attempt < retries:
+                    print(f"[{agent_name}] retrying...")
+                else:
+                    print(f"[{agent_name}] all retries exhausted")
+                    traceback.print_exc()
 
-    raise last_error
+        raise last_error
+    finally:
+        await close_pool()

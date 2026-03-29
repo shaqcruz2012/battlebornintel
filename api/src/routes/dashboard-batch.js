@@ -40,11 +40,17 @@ router.get('/', async (req, res, next) => {
       filters: filtersStr,
     } = req.query;
 
-    // Parse filters if provided
+    // Parse filters if provided, whitelist allowed keys
     let filters = {};
+    const ALLOWED_FILTER_KEYS = ['stage', 'region', 'sector', 'search', 'sortBy'];
     if (filtersStr) {
       try {
-        filters = JSON.parse(filtersStr);
+        const parsed = JSON.parse(filtersStr);
+        const unknownKeys = Object.keys(parsed).filter(k => !ALLOWED_FILTER_KEYS.includes(k));
+        if (unknownKeys.length > 0) {
+          return res.status(400).json({ error: `Unknown filter keys: ${unknownKeys.join(', ')}` });
+        }
+        filters = parsed;
       } catch (e) {
         return res.status(400).json({ error: 'Invalid filters JSON' });
       }
@@ -141,9 +147,15 @@ router.get('/executives', async (req, res, next) => {
     const { filters: filtersStr } = req.query;
 
     let filters = {};
+    const ALLOWED_FILTER_KEYS = ['stage', 'region', 'sector', 'search', 'sortBy'];
     if (filtersStr) {
       try {
-        filters = JSON.parse(filtersStr);
+        const parsed = JSON.parse(filtersStr);
+        const unknownKeys = Object.keys(parsed).filter(k => !ALLOWED_FILTER_KEYS.includes(k));
+        if (unknownKeys.length > 0) {
+          return res.status(400).json({ error: `Unknown filter keys: ${unknownKeys.join(', ')}` });
+        }
+        filters = parsed;
       } catch (e) {
         return res.status(400).json({ error: 'Invalid filters JSON' });
       }
