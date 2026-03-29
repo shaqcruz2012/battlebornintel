@@ -67,10 +67,16 @@ export const api = {
 
   // Analysis
   getCompanyAnalysis: (id) =>
-    fetchJSON(`${BASE}/analysis/company/${id}`).then((r) => r.data),
+    fetchJSON(`${BASE}/analysis/company/${id}`).then((r) => r.data).catch((e) => {
+      if (e.message?.includes('404')) return null;
+      throw e;
+    }),
 
   getWeeklyBrief: (params = {}) =>
-    fetchJSON(`${BASE}/analysis/brief`, params).then((r) => r),
+    fetchJSON(`${BASE}/analysis/brief`, params).then((r) => r).catch((e) => {
+      if (e.message?.includes('404')) return { data: null };
+      throw e;
+    }),
 
   getWeeklyBriefByWeek: (weekStart) =>
     fetchJSON(`${BASE}/analysis/brief/${weekStart}`).then((r) => r.data),

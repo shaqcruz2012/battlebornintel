@@ -13,7 +13,7 @@ router.get('/company/:id', async (req, res, next) => {
     if (isNaN(id) || id <= 0) return res.status(400).json({ error: 'id must be a positive integer' });
     const data = await getCompanyAnalysis(id);
     if (!data)
-      return res.json({ data: null, message: 'No analysis available yet' });
+      return res.status(404).json({ error: 'No analysis available yet' });
     res.json({ data: data.content });
   } catch (err) {
     next(err);
@@ -24,7 +24,7 @@ router.get('/brief', async (req, res, next) => {
   try {
     const data = await getWeeklyBrief();
     if (!data)
-      return res.json({ data: null, message: 'No brief generated yet' });
+      return res.status(404).json({ error: 'No brief generated yet' });
     res.json({ data: data.content, generatedAt: data.created_at });
   } catch (err) {
     next(err);

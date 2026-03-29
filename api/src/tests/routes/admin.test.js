@@ -38,12 +38,13 @@ import { recomputeAndCacheMetrics } from '../../services/graphService.js';
 import { refreshIndicators } from '../../db/queries/indicators.js';
 import { getAgentStatus, getDataFreshness } from '../../db/queries/admin.js';
 import { clearCache } from '../../middleware/cache.js';
-import router from '../../routes/admin.js';
+import router, { resetAdminPostLimit } from '../../routes/admin.js';
 
 const app = createApp(router, '/api/admin');
 
 beforeEach(() => {
   vi.resetAllMocks();
+  resetAdminPostLimit();
 });
 
 describe('POST /api/admin/recompute-scores', () => {

@@ -35,14 +35,13 @@ describe('GET /api/analysis/company/:id', () => {
     expect(getCompanyAnalysis).toHaveBeenCalledWith(1);
   });
 
-  it('returns empty when no analysis exists', async () => {
+  it('returns 404 when no analysis exists', async () => {
     getCompanyAnalysis.mockResolvedValue(null);
 
     const res = await request(app).get('/api/analysis/company/999');
 
-    expect(res.status).toBe(200);
-    expect(res.body.data).toBeNull();
-    expect(res.body.message).toBe('No analysis available yet');
+    expect(res.status).toBe(404);
+    expect(res.body.error).toBe('No analysis available yet');
   });
 
   it('returns 400 for invalid id', async () => {
@@ -77,14 +76,13 @@ describe('GET /api/analysis/brief', () => {
     expect(getWeeklyBrief).toHaveBeenCalledOnce();
   });
 
-  it('returns null when no brief generated yet', async () => {
+  it('returns 404 when no brief generated yet', async () => {
     getWeeklyBrief.mockResolvedValue(null);
 
     const res = await request(app).get('/api/analysis/brief');
 
-    expect(res.status).toBe(200);
-    expect(res.body.data).toBeNull();
-    expect(res.body.message).toBe('No brief generated yet');
+    expect(res.status).toBe(404);
+    expect(res.body.error).toBe('No brief generated yet');
   });
 
   it('returns 500 on DB error', async () => {

@@ -7,8 +7,28 @@ import { clearCache } from '../middleware/cache.js';
 
 const router = Router();
 
+// Tighter rate limit for expensive POST operations (recompute/refresh).
+// These are CPU/DB-intensive: max 3 per 5 minutes per IP.
+const adminPostCounts = new Map();
+setInterval(() => adminPostCounts.clear(), 5 * 60_000).unref();
+
+/** Reset the admin POST rate limit counter (used in tests). */
+export function resetAdminPostLimit() {
+  adminPostCounts.clear();
+}
+
+function adminPostLimit(req, res, next) {
+  const key = req.ip;
+  const count = (adminPostCounts.get(key) || 0) + 1;
+  adminPostCounts.set(key, count);
+  if (count > 3) {
+    return res.status(429).json({ error: 'Too many admin operations. Try again in a few minutes.' });
+  }
+  next();
+}
+
 // Recompute all IRS scores and cache them
-router.post('/recompute-scores', async (req, res, next) => {
+router.post('/recompute-scores', adminPostLimit, async (req, res, next) => {
   try {
     console.warn(`[ADMIN] ${req.path} initiated at ${new Date().toISOString()} from ${req.ip}`);
     const count = await recomputeAllScores();
@@ -20,7 +40,7 @@ router.post('/recompute-scores', async (req, res, next) => {
 });
 
 // Recompute graph metrics and cache them
-router.post('/recompute-graph', async (req, res, next) => {
+router.post('/recompute-graph', adminPostLimit, async (req, res, next) => {
   try {
     console.warn(`[ADMIN] ${req.path} initiated at ${new Date().toISOString()} from ${req.ip}`);
     const count = await recomputeAndCacheMetrics();
@@ -32,7 +52,7 @@ router.post('/recompute-graph', async (req, res, next) => {
 });
 
 // Recompute everything
-router.post('/recompute-all', async (req, res, next) => {
+router.post('/recompute-all', adminPostLimit, async (req, res, next) => {
   try {
     console.warn(`[ADMIN] ${req.path} initiated at ${new Date().toISOString()} from ${req.ip}`);
     const scores = await recomputeAllScores();
@@ -49,7 +69,7 @@ router.post('/recompute-all', async (req, res, next) => {
 });
 
 // Refresh economic indicators materialized view
-router.post('/refresh-indicators', async (req, res, next) => {
+router.post('/refresh-indicators', adminPostLimit, async (req, res, next) => {
   try {
     console.warn(`[ADMIN] ${req.path} initiated at ${new Date().toISOString()} from ${req.ip}`);
     await refreshIndicators();

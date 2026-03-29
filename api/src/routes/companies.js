@@ -9,32 +9,10 @@ router.get('/', async (req, res, next) => {
     const { stage, region, sector, search, sortBy } = req.query;
     const data = await getAllCompanies({ stage, region, sector, search, sortBy });
 
-    // Enrich each company with forward score (best-effort, non-blocking)
-    const enriched = await Promise.all(
-      data.map(async (company) => {
-        try {
-          const forwardData = await computeForwardScore(company.id);
-          if (forwardData) {
-            return {
-              ...company,
-              forward_score: forwardData.forward_score,
-              forward_components: forwardData.components,
-              score_type: 'blended',
-            };
-          }
-        } catch {
-          // Forward score is additive — silently fall back
-        }
-        return {
-          ...company,
-          forward_score: null,
-          forward_components: null,
-          score_type: 'heuristic',
-        };
-      })
-    );
-
-    res.json({ data: enriched });
+    // forward_score, forward_components, and score_type are already
+    // populated from computed_scores via the CTE in getAllCompanies().
+    // No per-company re-computation needed.
+    res.json({ data });
   } catch (err) {
     next(err);
   }

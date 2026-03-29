@@ -28,24 +28,21 @@ describe('GET /api/companies', () => {
       { id: 2, name: 'Beta Inc', stage: 'series_a', momentum: 0.6 },
     ];
     getAllCompanies.mockResolvedValue(rows);
-    computeForwardScore.mockResolvedValue(null);
 
     const res = await request(app).get('/api/companies');
 
     expect(res.status).toBe(200);
     expect(res.body.data).toHaveLength(2);
     expect(res.body.data[0].name).toBe('Acme Corp');
-    expect(res.body.data[0].score_type).toBe('heuristic');
     expect(getAllCompanies).toHaveBeenCalledOnce();
   });
 
-  it('enriches companies with forward score when available', async () => {
-    const rows = [{ id: 1, name: 'Acme Corp', stage: 'seed' }];
+  it('returns forward_score from computed_scores CTE', async () => {
+    const rows = [{
+      id: 1, name: 'Acme Corp', stage: 'seed',
+      forward_score: 85, forward_components: { trend: 70 }, score_type: 'blended',
+    }];
     getAllCompanies.mockResolvedValue(rows);
-    computeForwardScore.mockResolvedValue({
-      forward_score: 85,
-      components: { growth: 0.9, retention: 0.8 },
-    });
 
     const res = await request(app).get('/api/companies');
 
@@ -56,7 +53,6 @@ describe('GET /api/companies', () => {
 
   it('passes search query param to getAllCompanies', async () => {
     getAllCompanies.mockResolvedValue([]);
-    computeForwardScore.mockResolvedValue(null);
 
     const res = await request(app).get('/api/companies?search=acme');
 
