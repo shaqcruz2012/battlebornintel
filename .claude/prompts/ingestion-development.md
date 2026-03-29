@@ -23,15 +23,25 @@ class MyIngestor(BaseModelAgent):
             await client.close()
 ```
 
-## metric_snapshots INSERT Pattern
-```sql
-INSERT INTO metric_snapshots
-  (entity_type, entity_id, metric_name, value, unit,
-   period_start, period_end, granularity, confidence, verified, agent_id)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-ON CONFLICT (entity_type, entity_id, metric_name, period_start, period_end)
-DO NOTHING
+## metric_snapshots Batch INSERT Pattern
+```python
+rows = []
+for record in records:
+    rows.append((entity_type, entity_id, metric_name, value, unit,
+                 period_start, period_end, granularity, confidence,
+                 verified, agent_id))
+
+await pool.executemany(
+    """INSERT INTO metric_snapshots
+       (entity_type, entity_id, metric_name, value, unit,
+        period_start, period_end, granularity, confidence, verified, agent_id)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+       ON CONFLICT (entity_type, entity_id, metric_name, period_start, period_end)
+       DO NOTHING""",
+    rows,
+)
 ```
+**Key**: Always use `executemany()` for batch inserts (not per-row `execute()`). One round-trip per batch vs N round-trips.
 
 ## Entity Type Conventions
 | entity_type | entity_id examples | Use case |

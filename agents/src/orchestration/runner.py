@@ -1,5 +1,6 @@
 """Agent execution with retry logic."""
 
+import logging
 import traceback
 
 from ..agents.company_analyst import CompanyAnalyst
@@ -30,6 +31,23 @@ AGENT_REGISTRY = {
 
 MAX_RETRIES = 2
 
+# Agents that write to metric_snapshots and require a materialized view refresh
+_INGESTOR_AGENTS = {"fred_ingestor", "bls_ingestor"}
+
+logger = logging.getLogger(__name__)
+
+
+async def _refresh_indicator_views():
+    """Refresh economic_indicators materialized views after ingestion."""
+    from ..db import get_pool
+
+    try:
+        pool = await get_pool()
+        await pool.execute("SELECT refresh_economic_indicators()")
+        logger.info("Refreshed economic_indicators materialized views")
+    except Exception as e:
+        logger.warning("Failed to refresh indicator views: %s", e)
+
 
 async def run_agent(agent_name: str, retries: int = MAX_RETRIES, **kwargs):
     """Run an agent with retry logic."""
@@ -44,6 +62,11 @@ async def run_agent(agent_name: str, retries: int = MAX_RETRIES, **kwargs):
             agent = agent_cls()
             result = await agent.execute(**kwargs)
             print(f"[{agent_name}] completed: {result}")
+
+            # Auto-refresh materialized views after successful ingestion
+            if agent_name in _INGESTOR_AGENTS:
+                await _refresh_indicator_views()
+
             return result
         except Exception as e:
             last_error = e
