@@ -16,6 +16,10 @@ SCHEDULES = [
     {"agent": "panel_forecaster", "cron": "0 5 * * 0", "desc": "Sunday 5 AM - panel metric forecasts"},
     {"agent": "survival_analyzer", "cron": "0 6 * * 0", "desc": "Sunday 6 AM - survival analysis"},
     {"agent": "freshness_checker", "cron": "0 1 * * *", "desc": "Daily 1 AM - freshness check"},
+    {"agent": "fred_ingestor", "cron": "0 2 * * 1", "desc": "Monday 2 AM - FRED macro data ingestion"},
+    {"agent": "bls_ingestor", "cron": "0 3 1 * *", "desc": "1st of month 3 AM - BLS QCEW employment/wages ingestion"},
+    {"agent": "scenario_simulator", "cron": "0 8 1 * *", "desc": "1st of month 8 AM - Monte Carlo scenario simulations"},
+    {"agent": "causal_evaluator", "cron": "0 7 1 * *", "desc": "1st of month 7 AM - causal inference (DiD, PSM, spillover)"},
 ]
 
 

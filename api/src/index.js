@@ -17,6 +17,9 @@ import adminRouter from './routes/admin.js';
 import dashboardBatchRouter from './routes/dashboard-batch.js';
 import stakeholderActivitiesRouter from './routes/stakeholder-activities.js';
 import opportunitiesRouter from './routes/opportunities.js';
+import indicatorsRouter from './routes/indicators.js';
+import scenariosRouter from './routes/scenarios.js';
+import forecastsRouter from './routes/forecasts.js';
 
 const app = express();
 
@@ -83,6 +86,9 @@ app.use('/api/constants',              publicLimit, cacheMiddleware('constants',
 app.use('/api/analysis',               publicLimit, cacheMiddleware('analysis',               60_000, { cacheControl: 'private, max-age=60' }),   analysisRouter);
 app.use('/api/stakeholder-activities', publicLimit, cacheMiddleware('stakeholderActivities',  60_000, { cacheControl: 'private, max-age=60' }),   stakeholderActivitiesRouter);
 app.use('/api/opportunities',          publicLimit, cacheMiddleware('opportunities',         300_000, { cacheControl: 'public, max-age=3600' }),  opportunitiesRouter);
+app.use('/api/indicators',             publicLimit, cacheMiddleware('indicators',            120_000, { cacheControl: 'public, max-age=120' }),   indicatorsRouter);
+app.use('/api/scenarios',              publicLimit, cacheMiddleware('scenarios',             120_000, { cacheControl: 'public, max-age=120' }),   scenariosRouter);
+app.use('/api/forecasts',              publicLimit, cacheMiddleware('forecasts',             120_000, { cacheControl: 'public, max-age=120' }),   forecastsRouter);
 // Admin routes: key-gated + strict rate limit
 app.use('/api/admin', adminLimit, requireAdminKey, adminRouter);
 

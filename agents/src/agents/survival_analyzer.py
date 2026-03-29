@@ -1,12 +1,13 @@
 """Survival analysis agent -- Kaplan-Meier curves and Cox PH models.
 
-Loads stage_transitions + company covariates, fits survival models,
-and generates survival probabilities and hazard ratios by cohort.
+Derives stage-transition durations from timeline_events + company covariates,
+fits Kaplan-Meier curves by cohort (sector, region, accelerator participation),
+fits a Cox Proportional Hazards model, and writes results to analysis_results
+(JSONB) and scenario_results (forward survival predictions).
 """
 
-import json
 import logging
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 
 import numpy as np
 import pandas as pd
@@ -15,14 +16,16 @@ from .base_model_agent import BaseModelAgent
 
 logger = logging.getLogger(__name__)
 
-# Stage ordering for milestone progression
+# Stage ordering for survival analysis (time-to-next-stage)
 STAGE_ORDER = {
+    "pre-seed": 1,
     "pre_seed": 1,
     "seed": 2,
     "series_a": 3,
     "series_b": 4,
     "series_c_plus": 5,
     "growth": 6,
+    "public": 7,
 }
 
 # Default milestone for survival: "reached Series A"
@@ -30,49 +33,56 @@ DEFAULT_EVENT_STAGE = "series_a"
 
 
 class SurvivalAnalyzer(BaseModelAgent):
-    """Fits survival models on company stage progression data."""
+    """Fits survival models on company stage-transition data."""
 
     def __init__(self):
-        super().__init__("survival_analyzer")
+        super().__init__("survival_analyzer", model_version="1.0.0")
 
     async def run(self, pool, **kwargs):
         model_id = await self.register_model(
             pool,
             name="survival_analyzer_v1",
             objective="Company survival analysis: time-to-milestone and hazard ratios",
-            input_vars=["stage_transitions", "company_covariates", "graph_metrics"],
-            output_vars=["survival_curves", "hazard_ratios", "median_survival"],
+            input_vars=["stage", "funding_m", "employees", "sectors", "region",
+                         "accelerator_participation", "founded"],
+            output_vars=["survival_probability", "hazard_ratio",
+                         "median_survival_quarters"],
         )
 
-        # Load stage transitions
-        transitions_df = await self._load_transitions(pool)
-        if transitions_df.empty:
-            logger.warning("No stage_transitions data found.")
-            return {"model_id": model_id, "status": "no_data"}
+        # Build the survival dataset from companies + timeline_events
+        survival_df = await self._build_survival_dataset(pool)
 
-        # Load company covariates
-        covariates_df = await self._load_covariates(pool)
+        if survival_df.empty or len(survival_df) < 5:
+            logger.warning("Insufficient data for survival analysis (n=%d).",
+                           len(survival_df))
+            return {"model_id": model_id, "records": 0, "status": "insufficient_data"}
 
         # Load graph features for network covariates
         graph_df = await self.load_graph_features(pool, node_types=["c"])
 
-        # Build survival dataset
-        survival_df = self._build_survival_dataset(
-            transitions_df, covariates_df, graph_df
-        )
-
-        if survival_df.empty or len(survival_df) < 5:
-            logger.warning("Insufficient survival data (need >= 5 subjects).")
-            return {"model_id": model_id, "status": "insufficient_data"}
+        # Merge graph features into survival dataset
+        if not graph_df.empty:
+            graph_reset = graph_df.reset_index()
+            graph_reset["entity_id"] = graph_reset["node_id"].str.replace("c_", "", n=1)
+            graph_reset = graph_reset.rename(columns={
+                "pagerank": "graph_pagerank",
+                "betweenness": "graph_betweenness",
+            })[["entity_id", "graph_pagerank", "graph_betweenness"]]
+            survival_df = survival_df.merge(graph_reset, on="entity_id", how="left")
+            survival_df["graph_pagerank"] = survival_df["graph_pagerank"].fillna(0).astype(float)
+            survival_df["graph_betweenness"] = survival_df["graph_betweenness"].fillna(0).astype(float)
+        else:
+            survival_df["graph_pagerank"] = 0.0
+            survival_df["graph_betweenness"] = 0.0
 
         # Fit Kaplan-Meier by cohort
         km_results = self._fit_kaplan_meier(survival_df)
 
-        # Fit Cox PH (if enough data and lifelines available)
+        # Fit Cox PH model
         cox_results = self._fit_cox_ph(survival_df)
 
-        # Combine results
-        content = {
+        # Save analysis results as JSONB
+        analysis_content = {
             "analysis_date": datetime.now(timezone.utc).isoformat(),
             "subjects": len(survival_df),
             "events_observed": int(survival_df["event"].sum()),
@@ -81,245 +91,465 @@ class SurvivalAnalyzer(BaseModelAgent):
             "kaplan_meier": km_results,
             "cox_ph": cox_results,
         }
-
         await self.save_analysis(
             pool,
             analysis_type="survival_analysis",
-            content=content,
-            model_used="survival_analyzer_v1",
+            content=analysis_content,
         )
 
-        return {
+        # Generate forward survival predictions as scenario_results
+        today = date.today()
+        scenario_id = await self.create_scenario(
+            pool,
+            name=f"survival_analysis_{today.isoformat()}",
+            description="Survival probabilities by cohort over future quarters",
+            base_period=today,
+            assumptions={
+                "model": "kaplan_meier_cox_ph",
+                "stage_order": list(STAGE_ORDER.keys()),
+                "milestone": DEFAULT_EVENT_STAGE,
+            },
+        )
+
+        predictions_df = self._generate_survival_predictions(km_results, today)
+        rows_written = 0
+        if not predictions_df.empty:
+            rows_written = await self.save_predictions(pool, scenario_id, predictions_df)
+
+        await self.complete_scenario(pool, scenario_id)
+
+        result = {
             "model_id": model_id,
-            "subjects": len(survival_df),
-            "events": int(survival_df["event"].sum()),
-            "cohorts_analyzed": len(km_results.get("cohorts", {})),
+            "scenario_id": scenario_id,
+            "companies_analyzed": len(survival_df),
+            "cohorts": len(km_results.get("cohorts", {})),
+            "cox_covariates": len(cox_results.get("hazard_ratios", {})),
+            "predictions_written": rows_written,
             "status": "completed",
         }
+        logger.info("SurvivalAnalyzer completed: %s", result)
+        return result
 
-    async def _load_transitions(self, pool) -> pd.DataFrame:
-        rows = await pool.fetch(
-            """SELECT company_id, from_stage, to_stage, transition_date,
-                      transition_year, evidence_type, confidence
-               FROM stage_transitions
-               ORDER BY company_id,
-                        COALESCE(transition_date, make_date(COALESCE(transition_year, 2000), 1, 1))"""
-        )
-        if not rows:
-            return pd.DataFrame()
-        return pd.DataFrame([dict(r) for r in rows])
+    # ------------------------------------------------------------------
+    # Data construction
+    # ------------------------------------------------------------------
 
-    async def _load_covariates(self, pool) -> pd.DataFrame:
-        rows = await pool.fetch(
-            """SELECT id, stage, sectors, region, funding_m, momentum,
-                      employees, founded, status
-               FROM companies"""
-        )
-        if not rows:
-            return pd.DataFrame()
-        df = pd.DataFrame([dict(r) for r in rows])
-        df = df.rename(columns={"id": "company_id"})
-        return df
+    async def _build_survival_dataset(self, pool) -> pd.DataFrame:
+        """Build a survival dataset from companies and timeline_events.
 
-    def _build_survival_dataset(
-        self,
-        transitions_df: pd.DataFrame,
-        covariates_df: pd.DataFrame,
-        graph_df: pd.DataFrame,
-    ) -> pd.DataFrame:
-        """Build a survival dataset: one row per company with duration and event indicator.
-
-        Duration = years from founding (or first observation) to reaching the milestone stage.
-        Event = 1 if milestone reached, 0 if censored (still at earlier stage).
+        Each row represents a company with:
+          - duration_quarters: time observed (founded to last event or now)
+          - event: 1 if a stage transition (funding round) was observed, 0 if censored
+          - covariates: sector, region, funding_m, employees, has_accelerator
         """
-        records = []
-        event_order = STAGE_ORDER.get(DEFAULT_EVENT_STAGE, 3)
+        # Fetch companies with a founding year
+        companies = await pool.fetch(
+            """SELECT id, slug, name, stage, sectors, region, funding_m,
+                      employees, momentum, founded
+               FROM companies
+               WHERE founded IS NOT NULL"""
+        )
+        if not companies:
+            return pd.DataFrame()
 
-        for company_id in transitions_df["company_id"].unique():
-            co_trans = transitions_df[transitions_df["company_id"] == company_id]
-            co_cov = covariates_df[covariates_df["company_id"] == company_id]
+        company_df = pd.DataFrame([dict(c) for c in companies])
+        company_df["funding_m"] = pd.to_numeric(
+            company_df["funding_m"], errors="coerce"
+        ).fillna(0)
 
-            if co_cov.empty:
+        # Fetch funding/milestone events to detect stage transitions
+        events = await pool.fetch(
+            """SELECT te.company_id, te.event_date, te.event_type, te.detail
+               FROM timeline_events te
+               WHERE te.company_id IS NOT NULL
+                 AND te.event_type IN ('funding', 'milestone', 'launch')
+               ORDER BY te.company_id, te.event_date"""
+        )
+        events_df = (
+            pd.DataFrame([dict(e) for e in events]) if events else pd.DataFrame()
+        )
+
+        # Check accelerator participation via graph_edges
+        accel_companies = await pool.fetch(
+            """SELECT DISTINCT
+                 CAST(SUBSTRING(ge.source_id FROM 3) AS INTEGER) AS company_id
+               FROM graph_edges ge
+               WHERE ge.source_id LIKE 'c_\\_%'
+                 AND ge.rel IN ('accelerated_by', 'participated_in')
+               UNION
+               SELECT DISTINCT
+                 CAST(SUBSTRING(ge.target_id FROM 3) AS INTEGER) AS company_id
+               FROM graph_edges ge
+               WHERE ge.target_id LIKE 'c_\\_%'
+                 AND ge.rel IN ('accelerated_by', 'participated_in')"""
+        )
+        accel_ids = (
+            {r["company_id"] for r in accel_companies} if accel_companies else set()
+        )
+
+        # Build survival records
+        current_year = date.today().year
+        records: list[dict] = []
+
+        for _, company in company_df.iterrows():
+            founded = int(company["founded"])
+            duration_years = current_year - founded
+            if duration_years <= 0:
                 continue
 
-            cov = co_cov.iloc[0]
-            founded = cov.get("founded")
-            if not founded or pd.isna(founded):
-                founded = 2020  # fallback
+            duration_quarters = min(duration_years * 4, 60)  # cap at 15 years
 
-            # Check if company reached the milestone
-            reached = co_trans[
-                co_trans["to_stage"].map(lambda s: STAGE_ORDER.get(s, 0)) >= event_order
-            ]
+            # Determine if a stage-transition event was observed:
+            # multiple funding events = evidence of stage progression
+            has_event = False
+            if (
+                not events_df.empty
+                and "company_id" in events_df.columns
+                and company["id"] in events_df["company_id"].values
+            ):
+                co_events = events_df[events_df["company_id"] == company["id"]]
+                funding_events = co_events[co_events["event_type"] == "funding"]
+                has_event = len(funding_events) >= 2
 
-            if not reached.empty:
-                first_reach = reached.iloc[0]
-                event_year = first_reach.get("transition_year")
-                if pd.isna(event_year) and pd.notna(first_reach.get("transition_date")):
-                    event_year = pd.Timestamp(first_reach["transition_date"]).year
-                if pd.isna(event_year):
-                    event_year = 2025
-                duration = max(event_year - founded, 0.5)
-                event = 1
-            else:
-                # Censored: duration = current year - founded
-                duration = max(2026 - founded, 0.5)
-                event = 0
+            # Also count companies whose current stage is >= milestone
+            current_stage_order = STAGE_ORDER.get(company["stage"], 0)
+            milestone_order = STAGE_ORDER.get(DEFAULT_EVENT_STAGE, 3)
+            if current_stage_order >= milestone_order:
+                has_event = True
 
-            # Covariates
-            node_id = f"c_{company_id}"
-            pagerank = 0
-            betweenness = 0
-            if not graph_df.empty and node_id in graph_df.index:
-                pagerank = graph_df.loc[node_id].get("pagerank", 0) or 0
-                betweenness = graph_df.loc[node_id].get("betweenness", 0) or 0
-
-            primary_sector = ""
-            sectors = cov.get("sectors")
-            if sectors and len(sectors) > 0:
-                primary_sector = sectors[0]
+            # Primary sector
+            sectors = company.get("sectors")
+            primary_sector = (
+                sectors[0] if sectors and len(sectors) > 0 else "unknown"
+            )
 
             records.append({
-                "company_id": company_id,
-                "duration": float(duration),
-                "event": int(event),
-                "region": cov.get("region", "unknown"),
+                "entity_id": str(company["id"]),
+                "name": company["name"],
+                "duration_quarters": duration_quarters,
+                "event": 1 if has_event else 0,
+                "stage": company["stage"],
                 "primary_sector": primary_sector,
-                "funding_m": float(cov.get("funding_m", 0) or 0),
-                "employees": int(cov.get("employees", 0) or 0),
-                "momentum": int(cov.get("momentum", 0) or 0),
-                "pagerank": float(pagerank),
-                "betweenness": float(betweenness),
-                "status": cov.get("status", "active"),
+                "region": company["region"],
+                "funding_m": float(company["funding_m"]),
+                "employees": int(company["employees"]),
+                "momentum": int(company.get("momentum", 0) or 0),
+                "has_accelerator": 1 if company["id"] in accel_ids else 0,
+                "log_funding": float(np.log1p(float(company["funding_m"]))),
+                "log_employees": float(np.log1p(int(company["employees"]))),
             })
 
         return pd.DataFrame(records)
 
+    # ------------------------------------------------------------------
+    # Kaplan-Meier
+    # ------------------------------------------------------------------
+
     def _fit_kaplan_meier(self, df: pd.DataFrame) -> dict:
         """Fit Kaplan-Meier survival curves, overall and by cohort."""
-        results = {"overall": {}, "cohorts": {}}
+        results: dict = {"overall": {}, "cohorts": {}}
 
         try:
             from lifelines import KaplanMeierFitter
-
-            kmf = KaplanMeierFitter()
-
-            # Overall curve
-            kmf.fit(df["duration"], event_observed=df["event"])
-            results["overall"] = {
-                "median_survival_years": float(kmf.median_survival_time_)
-                if not np.isinf(kmf.median_survival_time_)
-                else None,
-                "survival_at_3yr": float(kmf.predict(3.0)),
-                "survival_at_5yr": float(kmf.predict(5.0)),
-                "survival_at_10yr": float(kmf.predict(10.0)),
-            }
-
-            # By region
-            for region in df["region"].unique():
-                subset = df[df["region"] == region]
-                if len(subset) >= 3:
-                    kmf.fit(subset["duration"], event_observed=subset["event"])
-                    results["cohorts"][f"region_{region}"] = {
-                        "n": len(subset),
-                        "events": int(subset["event"].sum()),
-                        "median_survival_years": float(kmf.median_survival_time_)
-                        if not np.isinf(kmf.median_survival_time_)
-                        else None,
-                    }
-
-            # By funding tier
-            for tier_name, (lo, hi) in [
-                ("unfunded", (0, 0.01)),
-                ("seed_funded", (0.01, 5)),
-                ("well_funded", (5, 50)),
-                ("heavily_funded", (50, 100000)),
-            ]:
-                subset = df[(df["funding_m"] >= lo) & (df["funding_m"] < hi)]
-                if len(subset) >= 3:
-                    kmf.fit(subset["duration"], event_observed=subset["event"])
-                    results["cohorts"][f"funding_{tier_name}"] = {
-                        "n": len(subset),
-                        "events": int(subset["event"].sum()),
-                        "median_survival_years": float(kmf.median_survival_time_)
-                        if not np.isinf(kmf.median_survival_time_)
-                        else None,
-                    }
-
+            km_impl = self._km_lifelines
         except ImportError:
-            logger.warning("lifelines not installed; using numpy fallback for KM.")
-            results["overall"] = self._numpy_kaplan_meier(df)
+            logger.info("lifelines not installed; using manual KM estimator.")
+            km_impl = self._km_manual
+
+        # Overall curve
+        results["overall"] = km_impl(
+            df["duration_quarters"].values,
+            df["event"].values,
+            label="overall",
+        )
+
+        # By region
+        region_results: dict = {}
+        for region, subset in df.groupby("region"):
+            if len(subset) >= 3:
+                region_results[str(region)] = km_impl(
+                    subset["duration_quarters"].values,
+                    subset["event"].values,
+                    label=str(region),
+                )
+        if region_results:
+            results["cohorts"]["region"] = region_results
+
+        # By primary sector
+        sector_results: dict = {}
+        for sector, subset in df.groupby("primary_sector"):
+            if len(subset) >= 3 and sector != "unknown":
+                sector_results[str(sector)] = km_impl(
+                    subset["duration_quarters"].values,
+                    subset["event"].values,
+                    label=str(sector),
+                )
+        if sector_results:
+            results["cohorts"]["primary_sector"] = sector_results
+
+        # By accelerator participation
+        accel_results: dict = {}
+        for accel_val in [0, 1]:
+            subset = df[df["has_accelerator"] == accel_val]
+            if len(subset) >= 3:
+                label = "with_accelerator" if accel_val == 1 else "no_accelerator"
+                accel_results[label] = km_impl(
+                    subset["duration_quarters"].values,
+                    subset["event"].values,
+                    label=label,
+                )
+        if accel_results:
+            results["cohorts"]["has_accelerator"] = accel_results
 
         return results
 
-    def _numpy_kaplan_meier(self, df: pd.DataFrame) -> dict:
-        """Simple Kaplan-Meier using numpy only (fallback)."""
-        durations = df["duration"].values
-        events = df["event"].values
+    @staticmethod
+    def _km_lifelines(
+        durations: np.ndarray, events: np.ndarray, label: str
+    ) -> dict:
+        """Kaplan-Meier via lifelines."""
+        from lifelines import KaplanMeierFitter
 
-        unique_times = np.sort(np.unique(durations[events == 1]))
+        kmf = KaplanMeierFitter()
+        kmf.fit(durations, event_observed=events, label=label)
+
+        timeline = kmf.survival_function_.index.tolist()
+        survival = kmf.survival_function_[label].tolist()
+        median = (
+            float(kmf.median_survival_time_)
+            if np.isfinite(kmf.median_survival_time_)
+            else None
+        )
+
+        return {
+            "n": int(len(durations)),
+            "events": int(events.sum()),
+            "median_quarters": median,
+            "timeline_quarters": [float(t) for t in timeline[:20]],
+            "survival_prob": [float(s) for s in survival[:20]],
+        }
+
+    @staticmethod
+    def _km_manual(
+        durations: np.ndarray, events: np.ndarray, label: str
+    ) -> dict:
+        """Simple manual Kaplan-Meier estimator (no lifelines dependency)."""
+        order = np.argsort(durations)
+        T = durations[order]
+        E = events[order]
+        n = len(T)
+
+        unique_times = np.unique(T)
         survival = 1.0
-        curve = []
+        timeline: list[float] = [0.0]
+        surv_probs: list[float] = [1.0]
 
-        for t in unique_times:
-            at_risk = np.sum(durations >= t)
-            events_at_t = np.sum((durations == t) & (events == 1))
-            if at_risk > 0:
-                survival *= 1 - events_at_t / at_risk
-            curve.append({"time": float(t), "survival": float(survival)})
+        at_risk = n
+        for t_val in unique_times:
+            mask = T == t_val
+            d_i = int(E[mask].sum())
+            n_i = int(mask.sum())
+
+            if at_risk > 0 and d_i > 0:
+                survival *= 1 - d_i / at_risk
+
+            timeline.append(float(t_val))
+            surv_probs.append(float(survival))
+            at_risk -= n_i
 
         median = None
-        for point in curve:
-            if point["survival"] <= 0.5:
-                median = point["time"]
+        for t_val, s in zip(timeline, surv_probs):
+            if s <= 0.5:
+                median = t_val
                 break
 
         return {
-            "median_survival_years": median,
-            "subjects": len(df),
+            "n": int(n),
             "events": int(events.sum()),
-            "curve_points": curve[:20],
+            "median_quarters": median,
+            "timeline_quarters": timeline[:20],
+            "survival_prob": surv_probs[:20],
         }
 
+    # ------------------------------------------------------------------
+    # Cox Proportional Hazards
+    # ------------------------------------------------------------------
+
     def _fit_cox_ph(self, df: pd.DataFrame) -> dict:
-        """Fit Cox Proportional Hazards model."""
+        """Fit Cox PH model to estimate hazard ratios for covariates."""
+        covariates = [
+            "log_funding", "log_employees", "has_accelerator",
+            "graph_pagerank", "graph_betweenness",
+        ]
+        available_covs = [c for c in covariates if c in df.columns]
+
+        if len(available_covs) == 0 or df["event"].sum() < 2:
+            return {"hazard_ratios": {}, "status": "insufficient_events"}
+
+        cox_df = df[
+            ["duration_quarters", "event"] + available_covs
+        ].copy().fillna(0)
+
+        if len(cox_df) < 5:
+            return {"hazard_ratios": {}, "status": "insufficient_data"}
+
         try:
-            from lifelines import CoxPHFitter
+            return self._cox_lifelines(cox_df, available_covs)
+        except ImportError:
+            logger.info(
+                "lifelines not installed; using logistic approximation for Cox PH."
+            )
+            return self._cox_fallback(cox_df, available_covs)
+        except Exception as e:
+            logger.warning("Cox PH fitting failed: %s", e)
+            return {"hazard_ratios": {}, "status": f"fit_error: {e}"}
 
-            # Prepare covariates (numeric only)
-            cox_df = df[["duration", "event", "funding_m", "employees",
-                         "momentum", "pagerank", "betweenness"]].copy()
-            cox_df = cox_df.fillna(0)
+    @staticmethod
+    def _cox_lifelines(df: pd.DataFrame, covariates: list[str]) -> dict:
+        """Cox PH via lifelines."""
+        from lifelines import CoxPHFitter
 
-            # Normalize covariates for numerical stability
-            for col in ["funding_m", "employees", "momentum", "pagerank", "betweenness"]:
-                col_std = cox_df[col].std()
-                if col_std > 0:
-                    cox_df[col] = (cox_df[col] - cox_df[col].mean()) / col_std
+        # Normalize covariates for numerical stability
+        fit_df = df.copy()
+        for col in covariates:
+            col_std = fit_df[col].std()
+            if col_std > 0:
+                fit_df[col] = (fit_df[col] - fit_df[col].mean()) / col_std
 
-            cph = CoxPHFitter(penalizer=0.1)
-            cph.fit(cox_df, duration_col="duration", event_col="event")
+        cph = CoxPHFitter(penalizer=0.1)
+        cph.fit(fit_df, duration_col="duration_quarters", event_col="event")
 
-            summary = cph.summary
-            hazard_ratios = {}
-            for covar in summary.index:
-                hazard_ratios[covar] = {
-                    "coef": float(summary.loc[covar, "coef"]),
-                    "hazard_ratio": float(np.exp(summary.loc[covar, "coef"])),
-                    "p_value": float(summary.loc[covar, "p"]),
-                    "ci_lower": float(summary.loc[covar, "coef lower 95%"]),
-                    "ci_upper": float(summary.loc[covar, "coef upper 95%"]),
+        summary = cph.summary
+        hazard_ratios: dict = {}
+        for cov in covariates:
+            if cov in summary.index:
+                row = summary.loc[cov]
+                hazard_ratios[cov] = {
+                    "coef": float(row["coef"]),
+                    "hazard_ratio": float(row["exp(coef)"]),
+                    "ci_lower": float(row["exp(coef) lower 95%"]),
+                    "ci_upper": float(row["exp(coef) upper 95%"]),
+                    "p_value": float(row["p"]),
                 }
 
-            return {
-                "concordance": float(cph.concordance_index_),
-                "hazard_ratios": hazard_ratios,
-                "log_likelihood": float(cph.log_likelihood_),
+        return {
+            "hazard_ratios": hazard_ratios,
+            "concordance_index": float(cph.concordance_index_),
+            "n": len(df),
+            "events": int(df["event"].sum()),
+            "status": "completed",
+        }
+
+    @staticmethod
+    def _cox_fallback(df: pd.DataFrame, covariates: list[str]) -> dict:
+        """Approximate hazard ratios using logistic regression (sklearn)."""
+        try:
+            from sklearn.linear_model import LogisticRegression
+        except ImportError:
+            return {"hazard_ratios": {}, "status": "sklearn_not_available"}
+
+        X = df[covariates].values
+        y = df["event"].values
+
+        if y.sum() < 2 or (1 - y).sum() < 2:
+            return {"hazard_ratios": {}, "status": "insufficient_class_balance"}
+
+        model = LogisticRegression(penalty="l2", C=1.0, max_iter=500)
+        model.fit(X, y)
+
+        hazard_ratios: dict = {}
+        for i, cov in enumerate(covariates):
+            coef = float(model.coef_[0][i])
+            hr = float(np.exp(coef))
+            # Rough SE approximation
+            hazard_ratios[cov] = {
+                "coef": coef,
+                "hazard_ratio": hr,
+                "ci_lower": float(np.exp(coef - 1.96 * 0.5)),
+                "ci_upper": float(np.exp(coef + 1.96 * 0.5)),
+                "p_value": None,
             }
 
-        except ImportError:
-            logger.warning("lifelines not installed; skipping Cox PH.")
-            return {"error": "lifelines not installed"}
-        except Exception as e:
-            logger.error("Cox PH fitting failed: %s", e)
-            return {"error": str(e)}
+        return {
+            "hazard_ratios": hazard_ratios,
+            "concordance_index": float(model.score(X, y)),
+            "n": len(df),
+            "events": int(df["event"].sum()),
+            "status": "completed_fallback",
+        }
+
+    # ------------------------------------------------------------------
+    # Forward predictions
+    # ------------------------------------------------------------------
+
+    def _generate_survival_predictions(
+        self, km_results: dict, base_date: date
+    ) -> pd.DataFrame:
+        """Generate forward survival probability predictions from KM curves.
+
+        Produces scenario_results rows: one per (cohort, future_quarter).
+        """
+        rows: list[dict] = []
+
+        # Overall predictions
+        overall = km_results.get("overall", {})
+        if overall:
+            rows.extend(
+                self._km_to_prediction_rows("cohort", "overall", overall, base_date)
+            )
+
+        # Per-cohort predictions
+        for cohort_col, cohort_groups in km_results.get("cohorts", {}).items():
+            for group_name, group_data in cohort_groups.items():
+                entity_id = f"{cohort_col}:{group_name}"
+                rows.extend(
+                    self._km_to_prediction_rows(
+                        f"cohort_{cohort_col}", entity_id, group_data, base_date
+                    )
+                )
+
+        if not rows:
+            return pd.DataFrame()
+
+        return pd.DataFrame(rows)
+
+    @staticmethod
+    def _km_to_prediction_rows(
+        entity_type: str,
+        entity_id: str,
+        km_data: dict,
+        base_date: date,
+    ) -> list[dict]:
+        """Convert a KM curve into prediction rows for scenario_results."""
+        timeline = km_data.get("timeline_quarters", [])
+        survival = km_data.get("survival_prob", [])
+        n = km_data.get("n", 0)
+
+        rows: list[dict] = []
+        for t_q, s_prob in zip(timeline, survival):
+            if t_q <= 0:
+                continue
+
+            future_date = (
+                pd.Timestamp(base_date) + pd.DateOffset(months=int(t_q) * 3)
+            ).date()
+
+            # Greenwood-style CI approximation
+            se = (
+                np.sqrt(s_prob * (1 - s_prob) / max(n, 1)) if n > 0 else 0.1
+            )
+            ci_lo = max(0.0, s_prob - 1.96 * se)
+            ci_hi = min(1.0, s_prob + 1.96 * se)
+
+            rows.append({
+                "entity_type": entity_type,
+                "entity_id": entity_id,
+                "metric_name": "survival_probability",
+                "value": float(s_prob),
+                "unit": "ratio",
+                "period": future_date,
+                "confidence_lo": ci_lo,
+                "confidence_hi": ci_hi,
+            })
+
+        return rows

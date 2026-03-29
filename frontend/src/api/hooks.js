@@ -143,6 +143,82 @@ export function useStakeholderActivities(params = {}) {
 /** GOED dashboard summary — composes existing queries */
 const GOED_NODE_TYPES = ['company', 'fund', 'person', 'external', 'accelerator', 'ecosystem'];
 
+/** Economic indicators summary (latest + trend) */
+export function useIndicatorsSummary() {
+  return useQuery({
+    queryKey: ['indicators', 'summary'],
+    queryFn: () => api.getIndicatorsSummary(),
+    staleTime: 120_000,
+  });
+}
+
+/** Time series history for a single indicator */
+export function useIndicatorHistory(metric, params = {}) {
+  return useQuery({
+    queryKey: ['indicators', 'history', metric, params],
+    queryFn: () => api.getIndicatorHistory(metric, params),
+    enabled: !!metric,
+    staleTime: 120_000,
+  });
+}
+
+/** Macro indicators (FRED series) */
+export function useMacroIndicators(params = {}) {
+  return useQuery({
+    queryKey: ['indicators', 'macro', params],
+    queryFn: () => api.getMacroIndicators(params),
+    staleTime: 120_000,
+  });
+}
+
+/** Regional indicators (BLS employment/wages) */
+export function useRegionalIndicators(region) {
+  return useQuery({
+    queryKey: ['indicators', 'regional', region],
+    queryFn: () => api.getRegionalIndicators(region),
+    enabled: !!region,
+    staleTime: 120_000,
+  });
+}
+
+/** All scenarios (paginated) */
+export function useScenarios(params = {}) {
+  return useQuery({
+    queryKey: ['scenarios', params],
+    queryFn: () => api.getScenarios(params),
+    staleTime: 120_000,
+  });
+}
+
+/** Single scenario with results */
+export function useScenario(id) {
+  return useQuery({
+    queryKey: ['scenario', id],
+    queryFn: () => api.getScenario(id),
+    enabled: !!id,
+    staleTime: 120_000,
+  });
+}
+
+/** Latest forecasts for an entity */
+export function useForecasts(entityType, entityId) {
+  return useQuery({
+    queryKey: ['forecasts', entityType, entityId],
+    queryFn: () => api.getForecasts(entityType, entityId),
+    enabled: !!(entityType && entityId),
+    staleTime: 120_000,
+  });
+}
+
+/** Ecosystem-wide forecast summary */
+export function useEcosystemForecast() {
+  return useQuery({
+    queryKey: ['forecasts', 'ecosystem'],
+    queryFn: () => api.getEcosystemForecast(),
+    staleTime: 120_000,
+  });
+}
+
 export function useGoedSummary(region) {
   const fundsQuery = useFunds(region && region !== 'all' ? { region } : {});
   const graphQuery = useGraph(GOED_NODE_TYPES, 2026, region);

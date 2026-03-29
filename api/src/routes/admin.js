@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { recomputeAllScores } from '../services/scoringService.js';
 import { recomputeAndCacheMetrics } from '../services/graphService.js';
+import { refreshIndicators } from '../db/queries/indicators.js';
 
 const router = Router();
 
@@ -29,10 +30,21 @@ router.post('/recompute-all', async (req, res, next) => {
   try {
     const scores = await recomputeAllScores();
     const metrics = await recomputeAndCacheMetrics();
+    await refreshIndicators();
     res.json({
-      data: { companiesScored: scores, nodesCached: metrics },
+      data: { companiesScored: scores, nodesCached: metrics, indicatorsRefreshed: true },
       message: 'All computations complete',
     });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// Refresh economic indicators materialized view
+router.post('/refresh-indicators', async (req, res, next) => {
+  try {
+    await refreshIndicators();
+    res.json({ data: null, message: 'Economic indicators refreshed' });
   } catch (err) {
     next(err);
   }

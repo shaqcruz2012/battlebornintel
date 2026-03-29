@@ -9,6 +9,10 @@ from ..agents.pattern_detector import PatternDetector
 from ..agents.panel_forecaster import PanelForecaster
 from ..agents.survival_analyzer import SurvivalAnalyzer
 from ..ingestion.freshness import FreshnessChecker
+from ..ingestion.fred_ingestor import FredIngestor
+from ..agents.scenario_simulator import ScenarioSimulator
+from ..agents.causal_evaluator import CausalEvaluator
+from ..ingestion.bls_ingestor import BLSIngestor
 
 AGENT_REGISTRY = {
     "company_analyst": CompanyAnalyst,
@@ -17,7 +21,11 @@ AGENT_REGISTRY = {
     "pattern_detector": PatternDetector,
     "panel_forecaster": PanelForecaster,
     "survival_analyzer": SurvivalAnalyzer,
+    "scenario_simulator": ScenarioSimulator,
+    "causal_evaluator": CausalEvaluator,
     "freshness_checker": FreshnessChecker,
+    "fred_ingestor": FredIngestor,
+    "bls_ingestor": BLSIngestor,
 }
 
 MAX_RETRIES = 2

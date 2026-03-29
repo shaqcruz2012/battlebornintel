@@ -12,3 +12,4 @@ DATABASE_URL = os.getenv(
 )
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
 API_BASE_URL = os.getenv("API_BASE_URL", "http://localhost:3001")
+FRED_API_KEY = os.getenv("FRED_API_KEY", "")

@@ -91,4 +91,34 @@ export const api = {
   // GOED Summary
   getGoedSummary: () =>
     fetchJSON(`${BASE}/goed/summary`).then((r) => r.data),
+
+  // Economic Indicators
+  getIndicatorsSummary: () =>
+    fetchJSON(`${BASE}/indicators`).then((r) => r.data),
+
+  getIndicatorHistory: (metric, params = {}) =>
+    fetchJSON(`${BASE}/indicators/history/${metric}`, params).then((r) => r.data),
+
+  getMacroIndicators: (params = {}) =>
+    fetchJSON(`${BASE}/indicators/macro`, params).then((r) => r.data),
+
+  getRegionalIndicators: (region, params = {}) =>
+    fetchJSON(`${BASE}/indicators/regional/${region}`, params).then((r) => r.data),
+
+  // Scenarios
+  getScenarios: (params = {}) =>
+    fetchJSON(`${BASE}/scenarios`, params).then((r) => r),
+
+  getScenario: (id) =>
+    fetchJSON(`${BASE}/scenarios/${id}`).then((r) => r.data),
+
+  getScenarioResults: (id, filters = {}) =>
+    fetchJSON(`${BASE}/scenarios/${id}/results`, filters).then((r) => r.data),
+
+  // Forecasts
+  getForecasts: (entityType, entityId, params = {}) =>
+    fetchJSON(`${BASE}/scenarios/forecasts/${entityType}/${entityId}`, params).then((r) => r.data),
+
+  getEcosystemForecast: () =>
+    fetchJSON(`${BASE}/forecasts/ecosystem`).then((r) => r.data),
 };
