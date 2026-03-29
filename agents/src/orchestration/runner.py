@@ -6,6 +6,8 @@ from ..agents.company_analyst import CompanyAnalyst
 from ..agents.weekly_brief import WeeklyBrief
 from ..agents.risk_assessor import RiskAssessor
 from ..agents.pattern_detector import PatternDetector
+from ..agents.panel_forecaster import PanelForecaster
+from ..agents.survival_analyzer import SurvivalAnalyzer
 from ..ingestion.freshness import FreshnessChecker
 
 AGENT_REGISTRY = {
@@ -13,6 +15,8 @@ AGENT_REGISTRY = {
     "weekly_brief": WeeklyBrief,
     "risk_assessor": RiskAssessor,
     "pattern_detector": PatternDetector,
+    "panel_forecaster": PanelForecaster,
+    "survival_analyzer": SurvivalAnalyzer,
     "freshness_checker": FreshnessChecker,
 }
 

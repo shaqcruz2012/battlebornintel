@@ -13,6 +13,8 @@ SCHEDULES = [
     {"agent": "weekly_brief", "cron": "0 6 * * 1", "desc": "Monday 6 AM - weekly brief"},
     {"agent": "risk_assessor", "cron": "0 3 * * *", "desc": "Daily 3 AM - risk assessment"},
     {"agent": "pattern_detector", "cron": "0 4 * * 0", "desc": "Sunday 4 AM - pattern detection"},
+    {"agent": "panel_forecaster", "cron": "0 5 * * 0", "desc": "Sunday 5 AM - panel metric forecasts"},
+    {"agent": "survival_analyzer", "cron": "0 6 * * 0", "desc": "Sunday 6 AM - survival analysis"},
     {"agent": "freshness_checker", "cron": "0 1 * * *", "desc": "Daily 1 AM - freshness check"},
 ]
 
