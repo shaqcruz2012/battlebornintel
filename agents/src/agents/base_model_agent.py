@@ -1,6 +1,8 @@
 """Base class for statistical model agents (non-LLM)."""
 
 import json
+import logging
+import time
 from abc import ABC, abstractmethod
 from datetime import date, datetime, timezone
 from typing import Optional
@@ -9,6 +11,8 @@ import numpy as np
 import pandas as pd
 
 from ..db import get_pool
+
+logger = logging.getLogger(__name__)
 
 
 class BaseModelAgent(ABC):
@@ -31,14 +35,35 @@ class BaseModelAgent(ABC):
     # ------------------------------------------------------------------
 
     async def execute(self, **kwargs):
-        """Execute agent with audit trail."""
+        """Execute agent with audit trail and duration logging."""
         pool = await get_pool()
         self.run_id = await self._start_run(pool, kwargs)
+        t_start = time.perf_counter()
+        logger.info(
+            "Agent '%s' starting (run_id=%s).",
+            self.agent_name,
+            self.run_id,
+        )
         try:
             result = await self.run(pool, **kwargs)
+            elapsed = time.perf_counter() - t_start
+            logger.info(
+                "Agent '%s' completed in %.2fs (run_id=%s).",
+                self.agent_name,
+                elapsed,
+                self.run_id,
+            )
             await self._complete_run(pool, result)
             return result
         except Exception as e:
+            elapsed = time.perf_counter() - t_start
+            logger.error(
+                "Agent '%s' failed after %.2fs (run_id=%s): %s",
+                self.agent_name,
+                elapsed,
+                self.run_id,
+                e,
+            )
             await self._fail_run(pool, str(e))
             raise
 
@@ -162,10 +187,25 @@ class BaseModelAgent(ABC):
             raise ValueError(f"predictions_df missing columns: {missing}")
 
         if predictions_df.empty:
+            logger.warning(
+                "save_predictions called with empty DataFrame for scenario_id=%s; "
+                "skipping DB write.",
+                scenario_id,
+            )
             return 0
 
         # Replace inf with NaN for DB compatibility
         predictions_df = predictions_df.replace([np.inf, -np.inf], np.nan)
+
+        # Warn if a significant fraction of values are NaN (data quality signal)
+        nan_frac = predictions_df["value"].isna().mean()
+        if nan_frac > 0.5:
+            logger.warning(
+                "save_predictions: %.0f%% of 'value' entries are NaN for "
+                "scenario_id=%s — check upstream model output.",
+                nan_frac * 100,
+                scenario_id,
+            )
 
         count = 0
         for _, row in predictions_df.iterrows():

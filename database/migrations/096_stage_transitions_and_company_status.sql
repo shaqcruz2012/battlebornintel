@@ -34,6 +34,9 @@ CREATE INDEX IF NOT EXISTS idx_stage_trans_company ON stage_transitions(company_
 CREATE INDEX IF NOT EXISTS idx_stage_trans_to_stage ON stage_transitions(to_stage);
 CREATE INDEX IF NOT EXISTS idx_stage_trans_date ON stage_transitions(transition_date);
 
+CREATE UNIQUE INDEX IF NOT EXISTS idx_stage_transitions_unique
+  ON stage_transitions (company_id, to_stage, COALESCE(transition_year, 0));
+
 
 -- ============================================================
 -- SECTION 2: ADD status COLUMN TO companies

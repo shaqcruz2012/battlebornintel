@@ -11,6 +11,7 @@ Pre-built scenarios: baseline, ssbci_expansion, accelerator_boost.
 
 import json
 import logging
+import time
 from datetime import date, timedelta
 from typing import Any
 
@@ -98,6 +99,8 @@ class ScenarioSimulator(BaseModelAgent):
             assumptions: dict  -- custom assumptions dict (optional)
         If neither is provided, all pre-built scenarios are run.
         """
+        _t0 = time.perf_counter()
+        logger.info("ScenarioSimulator.run starting.")
         model_id = await self.register_model(
             pool,
             name="scenario_simulator_v1",
@@ -132,15 +135,17 @@ class ScenarioSimulator(BaseModelAgent):
                 res = await self.simulate_scenario(pool, template)
                 results.append(res)
 
+        elapsed = time.perf_counter() - _t0
         total_rows = sum(r.get("rows_written", 0) for r in results)
         summary = {
             "model_id": model_id,
             "scenarios_run": len(results),
             "total_rows_written": total_rows,
             "scenario_ids": [r["scenario_id"] for r in results],
+            "elapsed_s": round(elapsed, 3),
             "status": "completed",
         }
-        logger.info("ScenarioSimulator completed: %s", summary)
+        logger.info("ScenarioSimulator completed in %.2fs: %s", elapsed, summary)
         return summary
 
     # ==================================================================
@@ -173,6 +178,24 @@ class ScenarioSimulator(BaseModelAgent):
         if baseline.empty:
             logger.warning("No baseline data available; skipping scenario '%s'.", name)
             return {"scenario_id": None, "rows_written": 0, "status": "no_data"}
+
+        # Defensive: replace Inf values in simulation metrics with NaN, then fill 0
+        for metric in SIMULATION_METRICS:
+            if metric in baseline.columns:
+                inf_count = np.isinf(
+                    pd.to_numeric(baseline[metric], errors="coerce")
+                ).sum()
+                if inf_count:
+                    logger.warning(
+                        "simulate_scenario '%s': %d Inf values in baseline['%s'] "
+                        "replaced with 0.",
+                        name, int(inf_count), metric,
+                    )
+                baseline[metric] = (
+                    pd.to_numeric(baseline[metric], errors="coerce")
+                    .replace([np.inf, -np.inf], np.nan)
+                    .fillna(0)
+                )
 
         # 2. Load historical residuals / volatility for noise model
         noise_params = await self._estimate_noise(pool, baseline)

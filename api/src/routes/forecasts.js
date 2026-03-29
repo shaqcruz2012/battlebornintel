@@ -3,10 +3,23 @@ import pool from '../db/pool.js';
 
 const router = Router();
 
+// ---------------------------------------------------------------------------
+// Validation helpers
+// ---------------------------------------------------------------------------
+
+/** Return true if n is a safe positive integer (> 0, not NaN). */
+function isPosInt(n) {
+  return Number.isInteger(n) && n > 0;
+}
+
+// ---------------------------------------------------------------------------
+// Routes
+// ---------------------------------------------------------------------------
+
 router.get('/company/:id', async (req, res, next) => {
   try {
     const id = parseInt(req.params.id, 10);
-    if (isNaN(id) || id <= 0) return res.status(400).json({ error: 'id must be a positive integer' });
+    if (!isPosInt(id)) return res.status(400).json({ error: 'id must be a positive integer' });
     const { rows } = await pool.query(
       `SELECT sr.metric_name, sr.value, sr.unit, sr.period,
               sr.confidence_lo, sr.confidence_hi,

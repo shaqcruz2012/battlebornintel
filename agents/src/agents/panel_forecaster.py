@@ -6,6 +6,7 @@ Writes results to scenario_results and registers itself in the models table.
 """
 
 import logging
+import time
 from datetime import date, datetime, timezone
 
 import numpy as np
@@ -27,6 +28,8 @@ class PanelForecaster(BaseModelAgent):
         super().__init__("panel_forecaster", model_version="1.0.0")
 
     async def run(self, pool, **kwargs):
+        _t0 = time.perf_counter()
+        logger.info("PanelForecaster.run starting.")
         # Register this model in the models table
         model_id = await self.register_model(
             pool,
@@ -45,6 +48,20 @@ class PanelForecaster(BaseModelAgent):
 
         if panel.empty:
             logger.warning("No metric_snapshots data found; returning empty forecast.")
+            return {"model_id": model_id, "forecasts": 0, "status": "no_data"}
+
+        # Defensive: drop fully-NaN metric rows before fitting
+        metric_cols = [m for m in PANEL_METRICS if m in panel.columns]
+        before = len(panel)
+        panel = panel.dropna(subset=metric_cols, how="all")
+        dropped = before - len(panel)
+        if dropped:
+            logger.warning(
+                "PanelForecaster: dropped %d rows with all-NaN metric values.", dropped
+            )
+
+        if panel.empty:
+            logger.warning("Panel is empty after NaN filtering; no forecasts produced.")
             return {"model_id": model_id, "forecasts": 0, "status": "no_data"}
 
         # Ensure date columns are proper datetime for arithmetic
@@ -99,15 +116,17 @@ class PanelForecaster(BaseModelAgent):
         rows_written = await self.save_predictions(pool, scenario_id, predictions_df)
         await self.complete_scenario(pool, scenario_id)
 
+        elapsed = time.perf_counter() - _t0
         result = {
             "model_id": model_id,
             "scenario_id": scenario_id,
             "entities_modeled": entities_modeled,
             "forecasts": rows_written,
+            "elapsed_s": round(elapsed, 3),
             "status": "completed",
         }
 
-        logger.info("PanelForecaster completed: %s", result)
+        logger.info("PanelForecaster completed in %.2fs: %s", elapsed, result)
         return result
 
     def _forecast_metric(

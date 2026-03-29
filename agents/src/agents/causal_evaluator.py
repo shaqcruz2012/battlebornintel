@@ -9,6 +9,7 @@ All results are saved to analysis_results with analysis_type='causal_evaluation'
 """
 
 import logging
+import time
 from datetime import date, datetime, timezone
 
 import numpy as np
@@ -46,6 +47,8 @@ class CausalEvaluator(BaseModelAgent):
         super().__init__("causal_evaluator", model_version="1.0.0")
 
     async def run(self, pool, **kwargs):
+        _t0 = time.perf_counter()
+        logger.info("CausalEvaluator.run starting.")
         model_id = await self.register_model(
             pool,
             name="causal_evaluator_v1",
@@ -62,6 +65,22 @@ class CausalEvaluator(BaseModelAgent):
 
         # Load company data
         companies_df = await self._load_companies(pool)
+
+        # Defensive: remove rows with Inf in key numeric columns before analysis
+        if not companies_df.empty:
+            num_cols = ["log_funding", "log_employees", "funding_m", "employees", "momentum"]
+            available_num_cols = [c for c in num_cols if c in companies_df.columns]
+            if available_num_cols:
+                inf_mask = np.isinf(
+                    companies_df[available_num_cols].select_dtypes(include=[np.number])
+                ).any(axis=1)
+                if inf_mask.any():
+                    logger.warning(
+                        "CausalEvaluator: dropping %d rows with Inf values in numeric columns.",
+                        int(inf_mask.sum()),
+                    )
+                    companies_df = companies_df[~inf_mask]
+
         if companies_df.empty or len(companies_df) < MIN_TREATMENT + MIN_CONTROL:
             logger.warning("Insufficient company data (n=%d).", len(companies_df))
             return {"model_id": model_id, "status": "insufficient_data"}
@@ -97,6 +116,7 @@ class CausalEvaluator(BaseModelAgent):
             content=results,
         )
 
+        elapsed = time.perf_counter() - _t0
         result = {
             "model_id": model_id,
             "companies_analyzed": len(companies_df),
@@ -108,9 +128,10 @@ class CausalEvaluator(BaseModelAgent):
                 1 for a in results["analyses"].values()
                 if a.get("status") == "skipped"
             ),
+            "elapsed_s": round(elapsed, 3),
             "status": "completed",
         }
-        logger.info("CausalEvaluator completed: %s", result)
+        logger.info("CausalEvaluator completed in %.2fs: %s", elapsed, result)
         return result
 
     # ------------------------------------------------------------------

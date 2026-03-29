@@ -7,6 +7,7 @@ fits a Cox Proportional Hazards model, and writes results to analysis_results
 """
 
 import logging
+import time
 from datetime import date, datetime, timezone
 
 import numpy as np
@@ -39,6 +40,8 @@ class SurvivalAnalyzer(BaseModelAgent):
         super().__init__("survival_analyzer", model_version="1.0.0")
 
     async def run(self, pool, **kwargs):
+        _t0 = time.perf_counter()
+        logger.info("SurvivalAnalyzer.run starting.")
         model_id = await self.register_model(
             pool,
             name="survival_analyzer_v1",
@@ -51,6 +54,27 @@ class SurvivalAnalyzer(BaseModelAgent):
 
         # Build the survival dataset from companies + timeline_events
         survival_df = await self._build_survival_dataset(pool)
+
+        # Defensive: validate duration and event columns before fitting
+        if not survival_df.empty:
+            inf_mask = (
+                np.isinf(survival_df["duration_quarters"].replace([None], np.nan).astype(float))
+                if "duration_quarters" in survival_df.columns else pd.Series([], dtype=bool)
+            )
+            if inf_mask.any():
+                logger.warning(
+                    "SurvivalAnalyzer: %d rows with Inf duration_quarters dropped.",
+                    int(inf_mask.sum()),
+                )
+                survival_df = survival_df[~inf_mask]
+
+            nan_dur = survival_df["duration_quarters"].isna().sum()
+            if nan_dur:
+                logger.warning(
+                    "SurvivalAnalyzer: %d rows with NaN duration_quarters dropped.",
+                    int(nan_dur),
+                )
+                survival_df = survival_df.dropna(subset=["duration_quarters"])
 
         if survival_df.empty or len(survival_df) < 5:
             logger.warning("Insufficient data for survival analysis (n=%d).",
@@ -118,6 +142,7 @@ class SurvivalAnalyzer(BaseModelAgent):
 
         await self.complete_scenario(pool, scenario_id)
 
+        elapsed = time.perf_counter() - _t0
         result = {
             "model_id": model_id,
             "scenario_id": scenario_id,
@@ -125,9 +150,10 @@ class SurvivalAnalyzer(BaseModelAgent):
             "cohorts": len(km_results.get("cohorts", {})),
             "cox_covariates": len(cox_results.get("hazard_ratios", {})),
             "predictions_written": rows_written,
+            "elapsed_s": round(elapsed, 3),
             "status": "completed",
         }
-        logger.info("SurvivalAnalyzer completed: %s", result)
+        logger.info("SurvivalAnalyzer completed in %.2fs: %s", elapsed, result)
         return result
 
     # ------------------------------------------------------------------

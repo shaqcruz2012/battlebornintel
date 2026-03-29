@@ -9,6 +9,7 @@ with approximately a 6-month lag.
 """
 
 import logging
+import time
 from datetime import date, datetime, timezone
 
 from ..agents.base_model_agent import BaseModelAgent
@@ -76,6 +77,7 @@ class BLSIngestor(BaseModelAgent):
 
     async def run(self, pool, **kwargs):
         """Execute BLS QCEW data ingestion."""
+        _t0 = time.perf_counter()
         year = kwargs.get("year")
         quarter = kwargs.get("quarter")
 
@@ -123,8 +125,11 @@ class BLSIngestor(BaseModelAgent):
         finally:
             await client.close()
 
+        elapsed = time.perf_counter() - _t0
+        stats["elapsed_s"] = round(elapsed, 3)
         logger.info(
-            "BLS QCEW ingestion complete: %d region, %d sector records stored",
+            "BLS QCEW ingestion complete in %.2fs: %d region, %d sector records stored",
+            elapsed,
             stats["region_records"],
             stats["sector_records"],
         )

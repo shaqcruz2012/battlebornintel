@@ -1,6 +1,7 @@
 """FRED macro-economic data ingestion agent."""
 
 import logging
+import time
 from datetime import date, timedelta
 from dateutil.relativedelta import relativedelta
 
@@ -35,6 +36,9 @@ class FredIngestor(BaseModelAgent):
 
     async def run(self, pool, years_back: int = 5, **kwargs):
         """Fetch all configured FRED series and insert into metric_snapshots."""
+        _t0 = time.perf_counter()
+        logger.info("FredIngestor.run starting (years_back=%d).", years_back)
+
         if not self.client.available:
             logger.warning("FRED_API_KEY not configured — skipping FRED ingestion")
             return {"status": "skipped", "reason": "no_api_key"}
@@ -87,9 +91,14 @@ class FredIngestor(BaseModelAgent):
                 "FRED %s: inserted %d new data points", series_id, inserted
             )
 
-        logger.info("FRED ingestion complete: %d total new data points", total_inserted)
+        elapsed = time.perf_counter() - _t0
+        logger.info(
+            "FRED ingestion complete in %.2fs: %d total new data points",
+            elapsed, total_inserted,
+        )
         return {
             "status": "completed",
             "total_inserted": total_inserted,
             "series": series_results,
+            "elapsed_s": round(elapsed, 3),
         }

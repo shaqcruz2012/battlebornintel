@@ -1,5 +1,12 @@
 import pool from '../pool.js';
 
+/**
+ * List scenarios with pagination, including result counts and model metadata.
+ * @param {Object} [opts]
+ * @param {number} [opts.page=1]   - 1-based page number
+ * @param {number} [opts.limit=20] - rows per page (max 100 enforced by caller)
+ * @returns {Promise<{rows: Object[], total: number}>}
+ */
 export async function listScenarios({ page = 1, limit = 20 } = {}) {
   const offset = (page - 1) * limit;
   const { rows } = await pool.query(
@@ -23,6 +30,12 @@ export async function listScenarios({ page = 1, limit = 20 } = {}) {
   return { rows, total: countRows[0].total };
 }
 
+/**
+ * Fetch a single scenario by ID, including all its result rows.
+ * @param {number} id - scenario primary key
+ * @returns {Promise<Object|null>} scenario object with embedded `results` array,
+ *   or null if not found
+ */
 export async function getScenario(id) {
   const { rows: scenarioRows } = await pool.query(
     `SELECT s.*, m.name AS model_name, m.objective AS model_objective,
@@ -46,6 +59,15 @@ export async function getScenario(id) {
   return { ...scenarioRows[0], results };
 }
 
+/**
+ * Get filtered result rows for a scenario.
+ * @param {number} scenarioId - scenario primary key
+ * @param {Object} [filters]
+ * @param {string} [filters.entityType] - filter by entity_type (e.g. 'company')
+ * @param {string} [filters.metricName] - filter by metric_name
+ * @param {string} [filters.entityId]   - filter by entity_id
+ * @returns {Promise<Object[]>}
+ */
 export async function getScenarioResults(scenarioId, { entityType, metricName, entityId } = {}) {
   const conditions = ['sr.scenario_id = $1'];
   const params = [scenarioId];
@@ -76,6 +98,15 @@ export async function getScenarioResults(scenarioId, { entityType, metricName, e
   return rows;
 }
 
+/**
+ * Get the most recent forecast values for an entity across all completed scenarios.
+ * Uses DISTINCT ON to return only the latest scenario result per (metric, period) pair.
+ * @param {Object} opts
+ * @param {string}   opts.entityType   - entity type (e.g. 'company')
+ * @param {string}   opts.entityId     - entity identifier
+ * @param {string[]} [opts.metricNames] - optional allowlist of metric names
+ * @returns {Promise<Object[]>}
+ */
 export async function getLatestForecasts({ entityType, entityId, metricNames } = {}) {
   const conditions = [
     `sr.entity_type = $1`,
@@ -104,6 +135,12 @@ export async function getLatestForecasts({ entityType, entityId, metricNames } =
   return rows;
 }
 
+/**
+ * Compare results for a specific metric across multiple scenarios.
+ * @param {number[]} scenarioIds - array of scenario primary keys
+ * @param {string}   metricName  - metric to compare (e.g. 'funding_m_simulated')
+ * @returns {Promise<Object[]>} rows ordered by period then scenario_id
+ */
 export async function compareScenarios(scenarioIds, metricName) {
   const { rows } = await pool.query(
     `SELECT sr.scenario_id, s.name AS scenario_name,
@@ -120,6 +157,10 @@ export async function compareScenarios(scenarioIds, metricName) {
   return rows;
 }
 
+/**
+ * List all registered models ordered by name.
+ * @returns {Promise<Object[]>} model rows with input/output variable metadata
+ */
 export async function listModels() {
   const { rows } = await pool.query(
     `SELECT id, name, objective, input_variables, output_variables,

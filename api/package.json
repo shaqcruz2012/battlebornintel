@@ -5,7 +5,13 @@
   "private": true,
   "scripts": {
     "start": "node src/index.js",
-    "dev": "node --watch src/index.js"
+    "dev": "node --watch src/index.js",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "devDependencies": {
+    "vitest": "^3.0.0",
+    "supertest": "^7.0.0"
   },
   "dependencies": {
     "compression": "^1.8.1",
