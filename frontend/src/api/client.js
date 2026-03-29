@@ -88,10 +88,6 @@ export const api = {
   getStakeholderActivities: (params = {}) =>
     fetchJSON(`${BASE}/stakeholder-activities`, params).then((r) => r.data),
 
-  // GOED Summary
-  getGoedSummary: () =>
-    fetchJSON(`${BASE}/goed/summary`).then((r) => r.data),
-
   // Economic Indicators
   getIndicatorsSummary: () =>
     fetchJSON(`${BASE}/indicators`).then((r) => r.data),
