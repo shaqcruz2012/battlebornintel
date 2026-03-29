@@ -41,26 +41,28 @@ export async function listScenarios({ page = 1, limit = 20 } = {}) {
  *   or null if not found
  */
 export async function getScenario(id) {
-  const { rows: scenarioRows } = await pool.query(
-    `SELECT s.*, m.name AS model_name, m.objective AS model_objective,
-            m.input_variables, m.output_variables
-     FROM scenarios s
-     LEFT JOIN models m ON m.id = s.model_id
-     WHERE s.id = $1`,
-    [id]
-  );
-  if (!scenarioRows[0]) return null;
+  // Fetch scenario + model info and results in parallel (avoids N+1)
+  const [scenarioRes, resultsRes] = await Promise.all([
+    pool.query(
+      `SELECT s.*, m.name AS model_name, m.objective AS model_objective,
+              m.input_variables, m.output_variables
+       FROM scenarios s
+       LEFT JOIN models m ON m.id = s.model_id
+       WHERE s.id = $1`,
+      [id]
+    ),
+    pool.query(
+      `SELECT id, entity_type, entity_id, metric_name, value, unit,
+              period, confidence_lo, confidence_hi, created_at
+       FROM scenario_results
+       WHERE scenario_id = $1
+       ORDER BY entity_type, entity_id, metric_name, period`,
+      [id]
+    ),
+  ]);
 
-  const { rows: results } = await pool.query(
-    `SELECT id, entity_type, entity_id, metric_name, value, unit,
-            period, confidence_lo, confidence_hi, created_at
-     FROM scenario_results
-     WHERE scenario_id = $1
-     ORDER BY entity_type, entity_id, metric_name, period`,
-    [id]
-  );
-
-  return { ...scenarioRows[0], results };
+  if (!scenarioRes.rows[0]) return null;
+  return { ...scenarioRes.rows[0], results: resultsRes.rows };
 }
 
 /**

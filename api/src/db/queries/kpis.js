@@ -66,12 +66,18 @@ export async function getKpis({ stage, region, sector } = {}) {
         [companies.map(c => `c_${c.id}`)]
       );
       // Extract fund IDs from source_id (e.g., "f_bbv" -> "bbv", "f_fundnv" -> "fundnv")
-      const fundIds = investmentEdges.map(e => {
+      const fundIds = [];
+      for (const e of investmentEdges) {
         const match = e.source_id.match(/^f_(.+)$/);
-        return match ? match[1] : null;
-      }).filter(Boolean);
+        if (match) {
+          fundIds.push(match[1]);
+        } else {
+          console.warn(`[kpis] Unexpected source_id format in invested_in edge: ${e.source_id}`);
+        }
+      }
 
-      funds = allFunds.filter(f => fundIds.includes(f.id));
+      const fundIdSet = new Set(fundIds);
+      funds = allFunds.filter(f => fundIdSet.has(f.id));
     }
   } else {
     // No filter active → statewide totals use all funds
