@@ -29,9 +29,16 @@ vi.mock('../../db/queries/kpis.js', () => {
   };
 });
 
+vi.mock('../../db/queries/indicators.js', () => {
+  return {
+    getIndicatorsSummary: vi.fn(),
+  };
+});
+
 import { getAllCompanies } from '../../db/queries/companies.js';
 import { getAllFunds } from '../../db/queries/funds.js';
 import { getKpis, getSectorStats } from '../../db/queries/kpis.js';
+import { getIndicatorsSummary } from '../../db/queries/indicators.js';
 import router from '../../routes/dashboard-batch.js';
 
 const app = createApp(router, '/api/dashboard-batch');
@@ -60,6 +67,26 @@ describe('GET /api/dashboard-batch', () => {
     expect(res.body.data.kpis).toEqual(kpis);
     expect(res.body.data.funds).toEqual(funds);
     expect(res.body.data.sectors).toEqual(sectors);
+    // indicators default to off
+    expect(res.body.data.indicators).toBeUndefined();
+  });
+
+  it('includes indicators when requested', async () => {
+    const indicators = [{ metric: 'fedfunds', latest_value: 5.33 }];
+
+    getAllCompanies.mockResolvedValue([]);
+    getKpis.mockResolvedValue({});
+    getAllFunds.mockResolvedValue([]);
+    getSectorStats.mockResolvedValue([]);
+    getIndicatorsSummary.mockResolvedValue(indicators);
+
+    const res = await request(app).get(
+      '/api/dashboard-batch?indicators=true'
+    );
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.indicators).toEqual(indicators);
+    expect(getIndicatorsSummary).toHaveBeenCalled();
   });
 
   it('omits datasets when disabled via query params', async () => {
@@ -151,10 +178,12 @@ describe('GET /api/dashboard-batch/goed', () => {
     const kpis = { capital_deployed: 50 };
     const sectors = [{ name: 'mining_tech', count: 3 }];
     const companies = [{ id: 2, name: 'NevadaTech' }];
+    const indicators = [{ metric: 'nvurn', latest_value: 5.1 }];
 
     getKpis.mockResolvedValue(kpis);
     getSectorStats.mockResolvedValue(sectors);
     getAllCompanies.mockResolvedValue(companies);
+    getIndicatorsSummary.mockResolvedValue(indicators);
 
     const res = await request(app).get('/api/dashboard-batch/goed');
 
@@ -163,12 +192,14 @@ describe('GET /api/dashboard-batch/goed', () => {
     expect(res.body.data.kpis).toEqual(kpis);
     expect(res.body.data.sectors).toEqual(sectors);
     expect(res.body.data.companies).toEqual(companies);
+    expect(res.body.data.indicators).toEqual(indicators);
   });
 
   it('passes region filter to queries', async () => {
     getKpis.mockResolvedValue({});
     getSectorStats.mockResolvedValue([]);
     getAllCompanies.mockResolvedValue([]);
+    getIndicatorsSummary.mockResolvedValue([]);
 
     const res = await request(app).get('/api/dashboard-batch/goed?region=reno');
 
@@ -182,6 +213,7 @@ describe('GET /api/dashboard-batch/goed', () => {
     getKpis.mockRejectedValue(new Error('db error'));
     getSectorStats.mockRejectedValue(new Error('db error'));
     getAllCompanies.mockRejectedValue(new Error('db error'));
+    getIndicatorsSummary.mockRejectedValue(new Error('db error'));
 
     const res = await request(app).get('/api/dashboard-batch/goed');
 
@@ -189,5 +221,6 @@ describe('GET /api/dashboard-batch/goed', () => {
     expect(res.body.data.kpis).toEqual({});
     expect(res.body.data.sectors).toEqual([]);
     expect(res.body.data.companies).toEqual([]);
+    expect(res.body.data.indicators).toEqual([]);
   });
 });

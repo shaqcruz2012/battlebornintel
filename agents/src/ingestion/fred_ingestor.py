@@ -56,34 +56,27 @@ class FredIngestor(BaseModelAgent):
                 series_results[series_id] = 0
                 continue
 
-            inserted = 0
+            rows = []
             for obs in observations:
                 obs_date = date.fromisoformat(obs["date"])
                 p_end = _period_end(obs_date, granularity)
+                rows.append((
+                    entity_type, entity_id, series_id.lower(),
+                    obs["value"], unit, obs_date, p_end, granularity,
+                    self.agent_name, 1.0, True,
+                ))
 
-                result = await pool.execute(
-                    """INSERT INTO metric_snapshots
-                       (entity_type, entity_id, metric_name, value, unit,
-                        period_start, period_end, granularity, agent_id,
-                        confidence, verified)
-                       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-                       ON CONFLICT (entity_type, entity_id, metric_name, period_start, period_end)
-                       DO NOTHING""",
-                    entity_type,
-                    entity_id,
-                    series_id.lower(),
-                    obs["value"],
-                    unit,
-                    obs_date,
-                    p_end,
-                    granularity,
-                    self.agent_name,
-                    1.0,  # FRED is authoritative
-                    True,  # verified source
-                )
-                # asyncpg returns "INSERT 0 1" or "INSERT 0 0"
-                if result and result.endswith("1"):
-                    inserted += 1
+            await pool.executemany(
+                """INSERT INTO metric_snapshots
+                   (entity_type, entity_id, metric_name, value, unit,
+                    period_start, period_end, granularity, agent_id,
+                    confidence, verified)
+                   VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+                   ON CONFLICT (entity_type, entity_id, metric_name, period_start, period_end)
+                   DO NOTHING""",
+                rows,
+            )
+            inserted = len(rows)
 
             series_results[series_id] = inserted
             total_inserted += inserted

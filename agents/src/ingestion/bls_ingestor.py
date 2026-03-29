@@ -168,8 +168,7 @@ class BLSIngestor(BaseModelAgent):
     ) -> int:
         """Store region-level QCEW records into metric_snapshots."""
         period_start, period_end = _quarter_dates(year, quarter)
-        stored = 0
-
+        rows = []
         for record in records:
             region_name = FIPS_TO_REGION_NAME.get(record.area_fips)
             if not region_name:
@@ -181,9 +180,15 @@ class BLSIngestor(BaseModelAgent):
                     region_name,
                 )
                 continue
+            rows.append((
+                "region", entity_id, record.metric_name, record.value,
+                record.unit, period_start, period_end, "quarter",
+                0.95, False, "bls_ingestor",
+            ))
 
+        if rows:
             try:
-                await pool.execute(
+                await pool.executemany(
                     """INSERT INTO metric_snapshots
                        (entity_type, entity_id, metric_name, value, unit,
                         period_start, period_end, granularity, confidence,
@@ -192,25 +197,12 @@ class BLSIngestor(BaseModelAgent):
                        ON CONFLICT (entity_type, entity_id, metric_name,
                                     period_start, period_end)
                        DO NOTHING""",
-                    "region",
-                    entity_id,
-                    record.metric_name,
-                    record.value,
-                    record.unit,
-                    period_start,
-                    period_end,
-                    "quarter",
-                    0.95,
-                    False,
-                    "bls_ingestor",
+                    rows,
                 )
-                stored += 1
             except Exception as e:
-                logger.warning(
-                    "Failed to store region record %s/%s: %s",
-                    region_name, record.metric_name, e,
-                )
+                logger.warning("Failed to store region records batch: %s", e)
 
+        stored = len(rows)
         logger.info("Stored %d region metric snapshots", stored)
         return stored
 
@@ -238,14 +230,20 @@ class BLSIngestor(BaseModelAgent):
                 if code not in naics_to_sector:
                     naics_to_sector[code] = sector["id"]
 
-        stored = 0
+        rows = []
         for record in records:
             sector_id = naics_to_sector.get(record.industry_code)
             if not sector_id:
                 continue
+            rows.append((
+                "sector", sector_id, record.metric_name, record.value,
+                record.unit, period_start, period_end, "quarter",
+                0.95, False, "bls_ingestor",
+            ))
 
+        if rows:
             try:
-                await pool.execute(
+                await pool.executemany(
                     """INSERT INTO metric_snapshots
                        (entity_type, entity_id, metric_name, value, unit,
                         period_start, period_end, granularity, confidence,
@@ -254,24 +252,11 @@ class BLSIngestor(BaseModelAgent):
                        ON CONFLICT (entity_type, entity_id, metric_name,
                                     period_start, period_end)
                        DO NOTHING""",
-                    "sector",
-                    sector_id,
-                    record.metric_name,
-                    record.value,
-                    record.unit,
-                    period_start,
-                    period_end,
-                    "quarter",
-                    0.95,
-                    False,
-                    "bls_ingestor",
+                    rows,
                 )
-                stored += 1
             except Exception as e:
-                logger.warning(
-                    "Failed to store sector record %s/%s: %s",
-                    record.industry_code, record.metric_name, e,
-                )
+                logger.warning("Failed to store sector records batch: %s", e)
 
+        stored = len(rows)
         logger.info("Stored %d sector metric snapshots", stored)
         return stored
