@@ -8,6 +8,7 @@ import { SectorHeatStrip } from './SectorHeatStrip';
 import { SectorDetailDrawer } from './SectorDetailDrawer';
 import { MomentumTable } from './MomentumTable';
 import { NarrativePanel } from './NarrativePanel';
+import { DataQualityLegend } from './DataQualityLegend';
 
 function LoadingSkeleton() {
   return (
@@ -149,6 +150,7 @@ export function ExecutiveDashboard({ onViewChange }) {
           onViewAll={() => handleViewAllCompanies(selectedSector)}
         />
       )}
+      <DataQualityLegend />
     </MainGrid>
   );
 }

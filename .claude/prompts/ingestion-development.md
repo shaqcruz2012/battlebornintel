@@ -55,9 +55,10 @@ DO NOTHING
 - Metrics: bls_employment, bls_avg_weekly_wage, bls_establishments, bls_total_wages
 - ~6 month publication lag (fetches latest available quarter)
 
-### Freshness Checker (freshness.py)
+### Freshness Checker (freshness.py) — NOTE: inherits from BaseAgent, not BaseModelAgent
 - Audits data staleness across tables
-- Reports to analysis_results
+- Writes to analysis_results (not metric_snapshots)
+- Classified as an audit agent, not a data ingestor
 
 ## After Creating an Ingestor
 1. Add to runner.py AGENT_REGISTRY
