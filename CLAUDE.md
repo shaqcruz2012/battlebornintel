@@ -4,17 +4,26 @@ Regional innovation ecosystem intelligence platform for Nevada's startup/venture
 
 ## Context Routing
 
-> **For subagents and focused tasks**: Load only the relevant context file below instead of reading the full codebase. This saves 10-15K tokens per agent and prevents context exhaustion.
+> **CRITICAL**: Context exhaustion is the #1 cause of agent failure. Every file read costs tokens that can't be used for output. Route agents to the smallest context file that covers their task.
 
-| Task | Context File | When to Use |
-|------|-------------|-------------|
-| SQL, migrations, schema questions | `.claude/prompts/database-schema.md` | Writing queries, creating migrations, fixing schema issues |
-| Python agent creation/modification | `.claude/prompts/agent-development.md` | New agents, modifying BaseAgent/BaseModelAgent, scheduling |
-| Express API routes/queries | `.claude/prompts/api-development.md` | New endpoints, query functions, caching, middleware |
-| React components/hooks | `.claude/prompts/frontend-development.md` | New views, hooks, API client functions, D3 graph work |
-| Data ingestion pipelines | `.claude/prompts/ingestion-development.md` | FRED/BLS/Census ingestors, metric_snapshots writes |
+| Task | Context File | ~Tokens | When to Use |
+|------|-------------|---------|-------------|
+| SQL, migrations, schema | `.claude/prompts/database-schema.md` | 1.5K | Writing queries, creating migrations, schema questions |
+| Python agents | `.claude/prompts/agent-development.md` | 1.5K | New agents, BaseAgent/BaseModelAgent, scheduling |
+| Express API | `.claude/prompts/api-development.md` | 2K | New endpoints, query functions, caching, middleware |
+| React frontend | `.claude/prompts/frontend-development.md` | 2K | New views, hooks, API client, D3 graph work |
+| Data ingestion | `.claude/prompts/ingestion-development.md` | 1.5K | FRED/BLS ingestors, metric_snapshots writes |
+| Multi-file tasks | `.claude/prompts/team-pattern.md` | 2K | 4-agent team workflow, context budgets |
+| Code quality | `.claude/prompts/optimization-agent.md` | 2K | Best practices, quality scoring, anti-patterns |
 
-**Subagent prompt pattern** (saves context):
+### Agent Context Rules
+1. **Builders read max 3 files** — more than this causes context exhaustion
+2. **Planners research, Builders write** — never combine both in one agent
+3. **Pre-digest context** — paste relevant snippets into prompts instead of having agents read files
+4. **Multi-domain tasks split per domain** — one agent for Python, another for JS, another for frontend
+5. **Schema verification uses migrations** — never trust docs alone, always check actual CREATE TABLE
+
+### Subagent prompt pattern:
 ```
 Read .claude/prompts/<relevant>.md for schema and patterns, then [task description].
 ```
@@ -102,7 +111,11 @@ pandas, numpy, statsmodels, lifelines, scikit-learn, networkx, httpx, asyncpg
 | `/api/indicators` | 120s | Economic indicators (FRED/BLS) |
 | `/api/scenarios` | 120s | Scenario CRUD + results |
 | `/api/forecasts` | 120s | Entity forecasts from scenario_results |
-| `/api/admin` | N/A | Key-gated admin (recompute, refresh) |
+| `/api/opportunities` | 300s | Opportunity matching + scoring |
+| `/api/stakeholder-activities` | 300s | Stakeholder activity feed |
+| `/api/dashboard-batch` | 120s | Batched dashboard data |
+| `/api/constants` | 600s | Static reference data |
+| `/api/admin` | N/A | Key-gated admin (recompute, refresh, cache clear) |
 
 ## Common Patterns
 
