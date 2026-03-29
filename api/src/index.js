@@ -7,6 +7,8 @@ import cfg from './config.js';
 import pool from './db/pool.js';
 import { errorHandler } from './middleware/errorHandler.js';
 import { cacheMiddleware, getCacheStats } from './middleware/cache.js';
+import { requestLogger } from './middleware/requestLogger.js';
+import logger from './logger.js';
 
 import companiesRouter from './routes/companies.js';
 import fundsRouter from './routes/funds.js';
@@ -32,6 +34,7 @@ app.use((req, res, next) => {
   res.setHeader('X-Request-ID', req.id);
   next();
 });
+app.use(requestLogger);
 app.use(compression());
 app.use(cors({
   origin: process.env.CORS_ORIGIN || 'http://localhost:5173',
@@ -111,6 +114,25 @@ app.use('/api/dashboard-batch', publicLimit, dashboardBatchRouter);
 // Error handler
 app.use(errorHandler);
 
-app.listen(cfg.port, () => {
-  console.log(`BBI API listening on port ${cfg.port}`);
+const server = app.listen(cfg.port, () => {
+  logger.info('BBI API listening', { port: cfg.port });
 });
+
+async function shutdown(signal) {
+  logger.info('Shutdown initiated', { signal });
+  server.close(() => {
+    logger.info('HTTP server closed');
+    pool.end().then(() => {
+      logger.info('Database pool closed');
+      process.exit(0);
+    }).catch(() => process.exit(1));
+  });
+  // Force exit after 10s if graceful shutdown hangs
+  setTimeout(() => {
+    logger.error('Forced shutdown after timeout');
+    process.exit(1);
+  }, 10_000).unref();
+}
+
+process.on('SIGTERM', () => shutdown('SIGTERM'));
+process.on('SIGINT', () => shutdown('SIGINT'));

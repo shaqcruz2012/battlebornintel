@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { getAllCompanies, getCompanyById } from '../db/queries/companies.js';
 import { computeForwardScore } from '../engine/scoring.js';
+import { NotFoundError, ValidationError } from '../errors.js';
 
 const router = Router();
 
@@ -21,9 +22,9 @@ router.get('/', async (req, res, next) => {
 router.get('/:id', async (req, res, next) => {
   try {
     const id = parseInt(req.params.id, 10);
-    if (isNaN(id) || id <= 0) return res.status(400).json({ error: 'id must be a positive integer' });
+    if (isNaN(id) || id <= 0) throw new ValidationError('id must be a positive integer');
     const data = await getCompanyById(id);
-    if (!data) return res.status(404).json({ error: 'Company not found' });
+    if (!data) throw new NotFoundError('Company not found');
 
     // Enrich single company with forward score
     try {

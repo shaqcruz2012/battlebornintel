@@ -4,16 +4,16 @@ import {
   getWeeklyBrief,
   getRiskAssessments,
 } from '../db/queries/analysis.js';
+import { NotFoundError, ValidationError } from '../errors.js';
 
 const router = Router();
 
 router.get('/company/:id', async (req, res, next) => {
   try {
     const id = parseInt(req.params.id, 10);
-    if (isNaN(id) || id <= 0) return res.status(400).json({ error: 'id must be a positive integer' });
+    if (isNaN(id) || id <= 0) throw new ValidationError('id must be a positive integer');
     const data = await getCompanyAnalysis(id);
-    if (!data)
-      return res.status(404).json({ error: 'No analysis available yet' });
+    if (!data) throw new NotFoundError('No analysis available yet');
     res.json({ data: data.content });
   } catch (err) {
     next(err);
@@ -23,8 +23,7 @@ router.get('/company/:id', async (req, res, next) => {
 router.get('/brief', async (req, res, next) => {
   try {
     const data = await getWeeklyBrief();
-    if (!data)
-      return res.status(404).json({ error: 'No brief generated yet' });
+    if (!data) throw new NotFoundError('No brief generated yet');
     res.json({ data: data.content, generatedAt: data.created_at });
   } catch (err) {
     next(err);
