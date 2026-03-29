@@ -62,3 +62,11 @@ pool = await get_pool()  # asyncpg pool, auto-configured from DATABASE_URL env
 - Use `pd.to_numeric(df[col], errors="coerce")` for safe numeric conversion
 - Use `np.log1p()` for log-transforming financial data (handles zeros)
 - Stage ordering: pre_seed=1, seed=2, series_a=3, series_b=4, series_c_plus=5, growth=6, public=7
+
+## Governance (see `.claude/prompts/agent-governance.md`)
+- **Autonomy tiers**: Tier 0 (read-only) → Tier 4 (human-only). New agents start at Tier 0.
+- **Five-stage loop**: Observe → Interpret → Propose → Authorize → Execute
+- **No agent should both define policy and execute side effects**
+- **Store quality metadata**: `confidence`, `verified`, `source_id`, `agent_id` on every write
+- **Idempotent writes**: `ON CONFLICT DO NOTHING` or `DO UPDATE` on every INSERT
+- **Audit trail**: Every run auto-logged in `agent_runs`; results in `analysis_results` or `scenario_results`

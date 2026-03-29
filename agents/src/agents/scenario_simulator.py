@@ -420,10 +420,17 @@ class ScenarioSimulator(BaseModelAgent):
                     # Each quarter, a fraction of annual capacity graduates
                     quarterly_grads = max(capacity // 4, 1)
                     schedule[q]["new_companies"] += quarterly_grads
-                    # Existing companies near the accelerator region get a
-                    # small momentum boost (spillover)
+                    # Grads that raise funding inject capital into ecosystem
+                    funded_grads = quarterly_grads * ACCELERATOR_FUNDING_PROB
+                    schedule[q]["funding_m_add"] = (
+                        schedule[q]["funding_m_add"]
+                        + funded_grads * 1.5 * irs_weights  # ~$1.5M avg seed
+                    )
+                    # Existing companies near the accelerator get a
+                    # momentum boost (spillover) scaled by advance probability
                     schedule[q]["momentum_add"] = (
-                        schedule[q]["momentum_add"] + 2.0 * irs_weights
+                        schedule[q]["momentum_add"]
+                        + 2.0 * ACCELERATOR_ADVANCE_PROB * irs_weights
                     )
 
             elif iv_type == "interest_rate_change":

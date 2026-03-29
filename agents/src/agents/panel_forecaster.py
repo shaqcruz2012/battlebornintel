@@ -223,11 +223,11 @@ class PanelForecaster(BaseModelAgent):
         return predictions
 
 
-def _unit_for_metric(metric: str) -> str | None:
+def _unit_for_metric(metric: str) -> str:
     """Map metric names to their units."""
     units = {
         "funding_m": "usd_millions",
         "employees": "count",
         "momentum": "percent",
     }
-    return units.get(metric)
+    return units.get(metric, "units")

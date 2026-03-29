@@ -15,6 +15,7 @@ Regional innovation ecosystem intelligence platform for Nevada's startup/venture
 | Data ingestion | `.claude/prompts/ingestion-development.md` | 1.5K | FRED/BLS ingestors, metric_snapshots writes |
 | Multi-file tasks | `.claude/prompts/team-pattern.md` | 2K | 4-agent team workflow, context budgets |
 | Code quality | `.claude/prompts/optimization-agent.md` | 2K | Best practices, quality scoring, anti-patterns |
+| Agent governance | `.claude/prompts/agent-governance.md` | 2K | Autonomy tiers, review patterns, control rules, data doctrine |
 
 ### Agent Context Rules
 1. **Builders read max 3 files** — more than this causes context exhaustion

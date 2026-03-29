@@ -103,7 +103,7 @@ export const api = {
 
   // Scenarios
   getScenarios: (params = {}) =>
-    fetchJSON(`${BASE}/scenarios`, params).then((r) => r),
+    fetchJSON(`${BASE}/scenarios`, params).then((r) => r.data),
 
   getScenario: (id) =>
     fetchJSON(`${BASE}/scenarios/${id}`).then((r) => r.data),
