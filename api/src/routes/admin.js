@@ -3,6 +3,7 @@ import { recomputeAllScores } from '../services/scoringService.js';
 import { recomputeAndCacheMetrics } from '../services/graphService.js';
 import { refreshIndicators } from '../db/queries/indicators.js';
 import { getAgentStatus, getDataFreshness } from '../db/queries/admin.js';
+import { clearCache } from '../middleware/cache.js';
 
 const router = Router();
 
@@ -10,6 +11,7 @@ const router = Router();
 router.post('/recompute-scores', async (req, res, next) => {
   try {
     const count = await recomputeAllScores();
+    clearCache();
     res.json({ data: { companiesScored: count }, message: 'Scores recomputed' });
   } catch (err) {
     next(err);
@@ -20,6 +22,7 @@ router.post('/recompute-scores', async (req, res, next) => {
 router.post('/recompute-graph', async (req, res, next) => {
   try {
     const count = await recomputeAndCacheMetrics();
+    clearCache();
     res.json({ data: { nodesCached: count }, message: 'Graph metrics recomputed' });
   } catch (err) {
     next(err);
@@ -32,6 +35,7 @@ router.post('/recompute-all', async (req, res, next) => {
     const scores = await recomputeAllScores();
     const metrics = await recomputeAndCacheMetrics();
     await refreshIndicators();
+    clearCache();
     res.json({
       data: { companiesScored: scores, nodesCached: metrics, indicatorsRefreshed: true },
       message: 'All computations complete',
@@ -45,6 +49,7 @@ router.post('/recompute-all', async (req, res, next) => {
 router.post('/refresh-indicators', async (req, res, next) => {
   try {
     await refreshIndicators();
+    clearCache();
     res.json({ data: null, message: 'Economic indicators refreshed' });
   } catch (err) {
     next(err);

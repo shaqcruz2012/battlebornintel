@@ -5,9 +5,9 @@ Use this when creating or modifying Python agents in `agents/src/`.
 ## Base Classes
 
 ### BaseAgent (LLM agents) — `agents/src/agents/base_agent.py`
-- Constructor: `__init__(agent_name, model="claude-sonnet-4-20250514")`
+- Constructor: `__init__(agent_name)`
 - Lifecycle: `execute(**kwargs)` -> `run(pool, **kwargs)` (abstract)
-- LLM call: `self.call_model(system_prompt, user_prompt)` -> str
+- LLM call: `self.call_claude(system_prompt, user_prompt, model="claude-sonnet-4-20250514", max_tokens=4096)` -> str
 - Persistence: `self.save_analysis(pool, analysis_type, content, entity_type, entity_id)`
 - Audit: auto-logged to `agent_runs` table
 

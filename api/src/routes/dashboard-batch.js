@@ -109,7 +109,7 @@ router.get('/', async (req, res, next) => {
     if (shouldFetchFunds) response.funds = funds;
     if (shouldFetchSectors) response.sectors = sectors;
 
-    res.json(response);
+    res.json({ data: response });
   } catch (err) {
     next(err);
   }
@@ -144,7 +144,7 @@ router.get('/executives', async (req, res, next) => {
       }),
     ]);
 
-    res.json({ companies, kpis });
+    res.json({ data: { companies, kpis } });
   } catch (err) {
     next(err);
   }
@@ -178,7 +178,7 @@ router.get('/goed', async (req, res, next) => {
       }),
     ]);
 
-    res.json({ kpis, sectors, companies });
+    res.json({ data: { kpis, sectors, companies } });
   } catch (err) {
     next(err);
   }

@@ -161,7 +161,7 @@ function EditorsNote({ note }) {
 }
 
 export function WeeklyBriefView() {
-  const { weeks, isLoading } = useWeeklyBriefs(52);
+  const { weeks, isLoading, error } = useWeeklyBriefs(52);
   const [filteredWeeks, setFilteredWeeks] = useState([]);
   const [filterType, setFilterType] = useState('all');
   const [showScrollTop, setShowScrollTop] = useState(false);
@@ -196,6 +196,18 @@ export function WeeklyBriefView() {
     (w) => w.weekStart === currentWeekDate
   );
   const isCurrentWeekVisible = currentWeekIndex >= 0;
+
+  if (error) {
+    return (
+      <MainGrid>
+        <div className={styles.emptyState}>
+          <div className={styles.emptyContent}>
+            Failed to load weekly briefs. Please try again.
+          </div>
+        </div>
+      </MainGrid>
+    );
+  }
 
   return (
     <MainGrid>

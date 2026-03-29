@@ -84,7 +84,6 @@ router.get('/', async (req, res, next) => {
     };
 
     res.json({
-      success: true,
       data,
       meta: {
         count: data.length,
@@ -96,11 +95,7 @@ router.get('/', async (req, res, next) => {
     });
   } catch (err) {
     console.error('[stakeholder-activities] GET / failed:', err.message);
-    res.status(500).json({
-      success: false,
-      error: 'Failed to fetch stakeholder activities',
-      message: process.env.NODE_ENV !== 'production' ? err.message : undefined,
-    });
+    next(err);
   }
 });
 
@@ -128,17 +123,12 @@ router.get('/company/:companyId', async (req, res, next) => {
     }
 
     res.json({
-      success: true,
       data,
       meta: { count: data.length },
     });
   } catch (err) {
     console.error('[stakeholder-activities] GET /company/:companyId failed:', err.message);
-    res.status(500).json({
-      success: false,
-      error: 'Failed to fetch company activities',
-      message: process.env.NODE_ENV !== 'production' ? err.message : undefined,
-    });
+    next(err);
   }
 });
 
@@ -166,7 +156,6 @@ router.get('/location/:location', async (req, res, next) => {
     }
 
     res.json({
-      success: true,
       data,
       meta: {
         count: data.length,
@@ -179,11 +168,7 @@ router.get('/location/:location', async (req, res, next) => {
     });
   } catch (err) {
     console.error('[stakeholder-activities] GET /location/:location failed:', err.message);
-    res.status(500).json({
-      success: false,
-      error: 'Failed to fetch activities by location',
-      message: process.env.NODE_ENV !== 'production' ? err.message : undefined,
-    });
+    next(err);
   }
 });
 
@@ -196,7 +181,6 @@ router.get('/stats/by-type', async (req, res, next) => {
     const data = await countActivitiesByType();
 
     res.json({
-      success: true,
       data,
     });
   } catch (err) {
@@ -213,7 +197,6 @@ router.get('/stats/by-location', async (req, res, next) => {
     const data = await countActivitiesByLocation();
 
     res.json({
-      success: true,
       data,
     });
   } catch (err) {

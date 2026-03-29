@@ -230,5 +230,6 @@ export function useGoedSummary(region) {
     companies: companiesQuery.data || [],
     isLoading:
       fundsQuery.isLoading || graphQuery.isLoading || companiesQuery.isLoading,
+    error: fundsQuery.error || graphQuery.error || companiesQuery.error || null,
   };
 }
