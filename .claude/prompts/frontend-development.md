@@ -36,7 +36,7 @@ export function useThings(filters = {}) {
 }
 ```
 
-## Available Hooks
+## Available Hooks (24 total)
 | Hook | Data | Stale Time |
 |------|------|-----------|
 | useCompanies(filters) | Company list with IRS scores | 300s |
@@ -44,9 +44,14 @@ export function useThings(filters = {}) {
 | useFunds(filters) | Fund deployment data | 300s |
 | useGraph(nodeTypes, yearMax, region) | Graph nodes + edges | 300s |
 | useGraphMetrics(nodeTypes) | PageRank, betweenness, communities | 300s |
-| useKPIs(sector) | Aggregate KPIs | 120s |
-| useTimeline(startWeek, endWeek) | Timeline events | 120s |
-| useAnalysisBrief() | Weekly AI brief | 60s |
+| useKpis(filters) | Aggregate KPIs | 120s |
+| useSectorStats(filters) | Sector statistics | 120s |
+| useTimeline(params) | Timeline events | 120s |
+| useConstants() | Static reference data | 600s |
+| useCompanyAnalysis(companyId) | AI company narrative | 60s |
+| useWeeklyBrief() | Latest weekly AI brief | 60s |
+| useWeeklyBriefWeek(weekStart) | Brief for specific week | 60s |
+| useWeeklyBriefRange(params) | Brief history range | 60s |
 | useRiskAssessments() | Risk analysis | 300s |
 | useStakeholderActivities(params) | Activity feed | 300s |
 | useIndicatorsSummary() | Economic indicators overview | 120s |
@@ -57,7 +62,7 @@ export function useThings(filters = {}) {
 | useScenario(id) | Single scenario + results | 120s |
 | useForecasts(entityType, entityId) | Entity forecasts | 120s |
 | useEcosystemForecast() | Ecosystem-wide forecast | 120s |
-| useGoedSummary(region) | Composite GOED dashboard | — |
+| useGoedSummary(region) | Composite GOED dashboard (composed hook) | — |
 
 ## Graph Visualization
 - D3 force-directed graph with canvas edge rendering
