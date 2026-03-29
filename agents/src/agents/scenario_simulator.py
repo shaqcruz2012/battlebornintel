@@ -210,6 +210,14 @@ class ScenarioSimulator(BaseModelAgent):
             baseline, noise_params, intervention_schedule, horizon_q, n_sims
         )
 
+        # Extract target region from interventions (default to "nevada")
+        target_region = "nevada"
+        for iv in interventions:
+            if iv.get("region"):
+                target_region = iv["region"]
+                break
+        sim_results["_target_region"] = target_region
+
         # 5. Aggregate across simulations -> percentile bands
         aggregated = self._aggregate_simulations(sim_results, baseline, horizon_q)
 
@@ -518,7 +526,8 @@ class ScenarioSimulator(BaseModelAgent):
 
             # Simple growth rate from baseline (quarterly)
             # Use a small positive drift based on historical mean change
-            growth_rate = mu / max(np.abs(base_vals).mean(), 0.01)
+            baseline_mean = np.abs(base_vals).mean()
+            growth_rate = mu / max(baseline_mean, 1.0) if baseline_mean > 1e-6 else 0.0
             growth_rate = np.clip(growth_rate, -0.10, 0.15)  # cap extreme growth
 
             # Forward propagation
@@ -688,7 +697,7 @@ class ScenarioSimulator(BaseModelAgent):
                 period_date = _quarter_offset_to_date(today, q + 1)
                 rows.append({
                     "entity_type": "region",
-                    "entity_id": "nevada",
+                    "entity_id": sim_results.get("_target_region", "nevada"),
                     "metric_name": "new_companies_simulated",
                     "value": float(cumulative),
                     "unit": "count",
@@ -709,13 +718,14 @@ class ScenarioSimulator(BaseModelAgent):
 # Module-level helpers
 # ======================================================================
 
-def _unit_for_metric(metric: str) -> str | None:
+def _unit_for_metric(metric: str) -> str:
+    """Map metric names to their units."""
     units = {
         "funding_m": "usd_millions",
         "employees": "count",
         "momentum": "percent",
     }
-    return units.get(metric)
+    return units.get(metric, "units")
 
 
 def _quarter_offset_to_date(ref: date, quarters_ahead: int) -> date:

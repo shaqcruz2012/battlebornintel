@@ -302,7 +302,15 @@ class BaseModelAgent(ABC):
         base_period: date,
         assumptions: dict | None = None,
     ) -> int:
-        """Create a scenario entry and return its id."""
+        """Create a scenario entry and return its id.
+
+        Raises ValueError if register_model() has not been called first.
+        """
+        if self.model_id is None:
+            raise ValueError(
+                f"Agent '{self.agent_name}' must call register_model() before "
+                "create_scenario(). model_id is None."
+            )
         row = await pool.fetchrow(
             """INSERT INTO scenarios
                (name, description, base_period, model_id, assumptions, status, created_by)

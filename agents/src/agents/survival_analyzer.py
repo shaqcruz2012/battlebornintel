@@ -32,6 +32,9 @@ STAGE_ORDER = {
 # Default milestone for survival: "reached Series A"
 DEFAULT_EVENT_STAGE = "series_a"
 
+# Maximum KM timeline data points to include in results
+MAX_KM_TIMELINE_POINTS = 40
+
 
 class SurvivalAnalyzer(BaseModelAgent):
     """Fits survival models on company stage-transition data."""
@@ -243,7 +246,7 @@ class SurvivalAnalyzer(BaseModelAgent):
             company_df["_funding_count"] = (
                 company_df["id"].map(funding_counts).fillna(0).astype(int)
             )
-            has_funding_event = company_df["_funding_count"] >= 2
+            has_funding_event = company_df["_funding_count"] >= 1
         else:
             company_df["_funding_count"] = 0
 
@@ -364,8 +367,8 @@ class SurvivalAnalyzer(BaseModelAgent):
             "n": int(len(durations)),
             "events": int(events.sum()),
             "median_quarters": median,
-            "timeline_quarters": [float(t) for t in timeline[:20]],
-            "survival_prob": [float(s) for s in survival[:20]],
+            "timeline_quarters": [float(t) for t in timeline[:MAX_KM_TIMELINE_POINTS]],
+            "survival_prob": [float(s) for s in survival[:MAX_KM_TIMELINE_POINTS]],
         }
 
     @staticmethod
@@ -406,8 +409,8 @@ class SurvivalAnalyzer(BaseModelAgent):
             "n": int(n),
             "events": int(events.sum()),
             "median_quarters": median,
-            "timeline_quarters": timeline[:20],
-            "survival_prob": surv_probs[:20],
+            "timeline_quarters": timeline[:MAX_KM_TIMELINE_POINTS],
+            "survival_prob": surv_probs[:MAX_KM_TIMELINE_POINTS],
         }
 
     # ------------------------------------------------------------------
@@ -501,12 +504,20 @@ class SurvivalAnalyzer(BaseModelAgent):
         for i, cov in enumerate(covariates):
             coef = float(model.coef_[0][i])
             hr = float(np.exp(coef))
-            # Rough SE approximation
+            # SE approximation: use 1/sqrt(n_events) as baseline,
+            # scaled by covariate variance for better coverage
+            n_events = int(df["event"].sum())
+            base_se = 1.0 / max(np.sqrt(n_events), 1.0)
+            # Scale SE by inverse of covariate std (wider CI for low-variance covariates)
+            cov_std = float(df[cov].std()) if cov in df.columns else 1.0
+            se = base_se / max(cov_std, 0.01)
+            se = np.clip(se, 0.05, 2.0)  # bound to reasonable range
             hazard_ratios[cov] = {
                 "coef": coef,
                 "hazard_ratio": hr,
-                "ci_lower": float(np.exp(coef - 1.96 * 0.5)),
-                "ci_upper": float(np.exp(coef + 1.96 * 0.5)),
+                "ci_lower": float(np.exp(coef - 1.96 * se)),
+                "ci_upper": float(np.exp(coef + 1.96 * se)),
+                "se": float(se),
                 "p_value": None,
             }
 

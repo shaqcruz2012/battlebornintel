@@ -20,9 +20,9 @@ PANEL_METRICS = ["funding_m", "employees", "momentum"]
 FORECAST_QUARTERS = 4
 
 
-def _unit_for_metric(metric: str) -> str | None:
+def _unit_for_metric(metric: str) -> str:
     units = {"funding_m": "usd_millions", "employees": "count", "momentum": "percent"}
-    return units.get(metric)
+    return units.get(metric, "units")
 
 
 def _forecast_metric(entity_id, metric, series):
@@ -248,3 +248,15 @@ class TestForecastMetric:
             assert pred["confidence_hi"] > pred["value"], (
                 f"CI upper {pred['confidence_hi']} should be > value {pred['value']}"
             )
+
+    def test_unit_for_metric_known(self):
+        """Known metrics return correct units."""
+        assert _unit_for_metric("funding_m") == "usd_millions"
+        assert _unit_for_metric("employees") == "count"
+        assert _unit_for_metric("momentum") == "percent"
+
+    def test_unit_for_metric_unknown_returns_default(self):
+        """Unknown metrics return 'units' instead of None."""
+        assert _unit_for_metric("unknown_metric") == "units"
+        assert _unit_for_metric("") == "units"
+        assert _unit_for_metric("custom") == "units"

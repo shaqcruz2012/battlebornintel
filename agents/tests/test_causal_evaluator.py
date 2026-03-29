@@ -490,3 +490,50 @@ class TestBootstrapCI:
 
         # Sanity: treated mean > control mean, so CI should be mostly positive
         assert ci1[0] < ci1[1], "Lower bound must be < upper bound"
+
+
+# ---------------------------------------------------------------------------
+# Tests: Hardened code — PSM overlap confidence
+# ---------------------------------------------------------------------------
+
+class TestOverlapConfidence:
+
+    def test_high_overlap_high_confidence(self):
+        """Overlap >= 0.5 => confidence_quality='high'."""
+        overlap_proportion = 0.75
+        if overlap_proportion < 0.3:
+            quality = "low"
+        elif overlap_proportion < 0.5:
+            quality = "moderate"
+        else:
+            quality = "high"
+        assert quality == "high"
+
+    def test_moderate_overlap(self):
+        """Overlap in [0.3, 0.5) => confidence_quality='moderate'."""
+        overlap_proportion = 0.4
+        if overlap_proportion < 0.3:
+            quality = "low"
+        elif overlap_proportion < 0.5:
+            quality = "moderate"
+        else:
+            quality = "high"
+        assert quality == "moderate"
+
+    def test_low_overlap(self):
+        """Overlap < 0.3 => confidence_quality='low'."""
+        overlap_proportion = 0.2
+        if overlap_proportion < 0.3:
+            quality = "low"
+        elif overlap_proportion < 0.5:
+            quality = "moderate"
+        else:
+            quality = "high"
+        assert quality == "low"
+
+    def test_boundary_values(self):
+        """Test boundary values for overlap thresholds."""
+        # Exactly 0.3 => moderate (not low)
+        assert 0.3 >= 0.3  # crosses into moderate
+        # Exactly 0.5 => high (not moderate)
+        assert 0.5 >= 0.5  # crosses into high

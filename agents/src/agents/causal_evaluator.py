@@ -490,6 +490,13 @@ class CausalEvaluator(BaseModelAgent):
                 "significant": bool(ci_lo > 0 or ci_hi < 0),
             }
 
+        # Downgrade confidence when overlap is poor
+        confidence_quality = "high"
+        if overlap_proportion < 0.3:
+            confidence_quality = "low"
+        elif overlap_proportion < 0.5:
+            confidence_quality = "moderate"
+
         result = {
             "status": "completed",
             "n_treated": int(len(matched_treated)),
@@ -497,6 +504,7 @@ class CausalEvaluator(BaseModelAgent):
             "n_matched_pairs": len(matched_pairs),
             "caliper": float(caliper),
             "overlap_proportion": overlap_proportion,
+            "confidence_quality": confidence_quality,
             "balance_diagnostics": balance,
             "att": att_results,
         }

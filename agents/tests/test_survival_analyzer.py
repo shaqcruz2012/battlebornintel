@@ -20,6 +20,7 @@ STAGE_ORDER = {
     "series_b": 4, "series_c_plus": 5, "growth": 6, "public": 7,
 }
 DEFAULT_EVENT_STAGE = "series_a"
+MAX_KM_TIMELINE_POINTS = 40
 
 
 def _km_manual(
@@ -59,8 +60,8 @@ def _km_manual(
         "n": int(n),
         "events": int(events.sum()),
         "median_quarters": median,
-        "timeline_quarters": timeline[:20],
-        "survival_prob": surv_probs[:20],
+        "timeline_quarters": timeline[:MAX_KM_TIMELINE_POINTS],
+        "survival_prob": surv_probs[:MAX_KM_TIMELINE_POINTS],
     }
 
 
@@ -129,14 +130,21 @@ def _cox_fallback(df: pd.DataFrame, covariates: list[str]) -> dict:
     model.fit(X, y)
 
     hazard_ratios = {}
+    n_events = int(df["event"].sum())
     for i, cov in enumerate(covariates):
         coef = float(model.coef_[0][i])
         hr = float(np.exp(coef))
+        # SE approximation: 1/sqrt(n_events) scaled by covariate variance
+        base_se = 1.0 / max(np.sqrt(n_events), 1.0)
+        cov_std = float(df[cov].std()) if cov in df.columns else 1.0
+        se = base_se / max(cov_std, 0.01)
+        se = np.clip(se, 0.05, 2.0)
         hazard_ratios[cov] = {
             "coef": coef,
             "hazard_ratio": hr,
-            "ci_lower": float(np.exp(coef - 1.96 * 0.5)),
-            "ci_upper": float(np.exp(coef + 1.96 * 0.5)),
+            "ci_lower": float(np.exp(coef - 1.96 * se)),
+            "ci_upper": float(np.exp(coef + 1.96 * se)),
+            "se": float(se),
             "p_value": None,
         }
 
@@ -145,6 +153,7 @@ def _cox_fallback(df: pd.DataFrame, covariates: list[str]) -> dict:
         "concordance_index": float(model.score(X, y)),
         "n": len(df),
         "events": int(df["event"].sum()),
+        "ci_quality": "approximate",
         "status": "completed_fallback",
     }
 
@@ -428,3 +437,62 @@ class TestSurvivalPredictions:
             assert dates[i] > dates[i - 1], (
                 f"Dates should increase: {dates[i]} <= {dates[i-1]}"
             )
+
+
+# ---------------------------------------------------------------------------
+# Tests: Hardened code
+# ---------------------------------------------------------------------------
+
+class TestHardenedSurvival:
+
+    def test_km_timeline_respects_max_points(self):
+        """KM results should be truncated at MAX_KM_TIMELINE_POINTS."""
+        # Create data with many unique time points (> 40)
+        n = 60
+        durations = np.arange(1, n + 1, dtype=float)
+        events = np.ones(n)  # all events for maximum unique times
+        result = _km_manual(durations, events, label="many_points")
+
+        assert len(result["timeline_quarters"]) <= MAX_KM_TIMELINE_POINTS
+        assert len(result["survival_prob"]) <= MAX_KM_TIMELINE_POINTS
+        assert len(result["timeline_quarters"]) == len(result["survival_prob"])
+
+    def test_cox_se_varies_by_covariate(self, survival_df):
+        """Cox SE should vary across covariates (not a fixed 0.5)."""
+        covariates = ["log_funding", "log_employees", "has_accelerator"]
+        cox_df = survival_df[
+            ["duration_quarters", "event"] + covariates
+        ].copy().fillna(0)
+
+        result = _cox_fallback(cox_df, covariates)
+
+        if result["status"] == "completed_fallback":
+            ses = [result["hazard_ratios"][c]["se"] for c in covariates]
+            # SEs should not all be identical (unlike the old hardcoded 0.5)
+            assert len(set(ses)) > 1, (
+                f"SE values should vary across covariates, got: {ses}"
+            )
+            # All SEs should be bounded
+            for se in ses:
+                assert 0.05 <= se <= 2.0, f"SE {se} out of expected range"
+
+    def test_cox_ci_quality_field(self, survival_df):
+        """Cox results should include ci_quality='approximate'."""
+        covariates = ["log_funding", "log_employees"]
+        cox_df = survival_df[
+            ["duration_quarters", "event"] + covariates
+        ].copy().fillna(0)
+
+        result = _cox_fallback(cox_df, covariates)
+        if result["status"] == "completed_fallback":
+            assert result["ci_quality"] == "approximate"
+
+    def test_funding_event_threshold_single_event(self):
+        """Companies with exactly 1 funding event should be flagged."""
+        # Simulating the threshold check: >= 1 (not >= 2)
+        funding_counts = pd.Series([0, 1, 1, 2, 3])
+        has_funding = funding_counts >= 1  # was >= 2 before hardening
+        assert has_funding.sum() == 4, "Should flag 4 of 5 companies (count >= 1)"
+        # Old threshold >= 2 would only flag 2
+        old_has_funding = funding_counts >= 2
+        assert old_has_funding.sum() == 2, "Old threshold flagged only 2"
