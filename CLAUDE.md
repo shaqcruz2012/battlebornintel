@@ -46,7 +46,7 @@ Read .claude/prompts/<relevant>.md for schema and patterns, then [task descripti
 - `companies` — id, name, slug, stage, sectors[], employees, funding_m, momentum, founded, city, region, status, eligible
 - `graph_edges` — source_id, target_id, rel, event_year, note, weight, matching_score
 - `funds` / `ssbci_funds` — fund tracking with allocated_m, deployed_m, leverage_ratio
-- `regions` — name, level, fips_code, population, gdp_b, parent_id
+- `regions` — name, level, fips, iso_code, population, gdp_b, parent_id
 - `sectors` — name, slug, naics_codes[], maturity_stage, strategic_priority
 - `universities` — name, research_budget_m, tech_transfer_office, spinout_count
 - `programs` — name, program_type (grant/loan/equity/accelerator_cohort/...), budget_m
@@ -56,10 +56,16 @@ Read .claude/prompts/<relevant>.md for schema and patterns, then [task descripti
 - `scenarios` — id, name, description, base_period (DATE), model_id (FK), assumptions (JSONB), status, created_by
 - `scenario_results` — scenario_id, entity_type, entity_id, metric_name, value, unit, period (DATE), confidence_lo, confidence_hi
 - `models` — id, name, objective, input_variables (JSONB), output_variables (JSONB), version, is_active
-- `stage_transitions` — company_id, from_stage, to_stage, transition_date, confidence
+- `stage_transitions` — id, company_id, from_stage, to_stage, transition_date, transition_year, confidence, evidence_type, evidence_source, created_at
 - `analysis_results` — analysis_type, entity_type, entity_id, content (JSONB), model_used, agent_run_id
 - `computed_scores` — company_id, irs_score, dim scores
 - `graph_metrics_cache` — node_id, pagerank, betweenness, community_id, computed_at
+- `computed_scores_history` — mirrors computed_scores with archived_at for time-series tracking
+
+### Auth & audit tables
+- `users` — id, email, password_hash, display_name, role (admin/analyst/viewer/service_account), is_active, mfa_secret, mfa_enabled
+- `sessions` — id (UUID), user_id, token_hash, ip_address, user_agent, expires_at
+- `audit_log` — id, user_id, action, resource_type, resource_id, ip_address, user_agent, details (JSONB), created_at
 
 ### Materialized views
 - `economic_indicators_latest` — filtered metric_snapshots for macro series
