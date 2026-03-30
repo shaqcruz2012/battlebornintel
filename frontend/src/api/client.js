@@ -78,15 +78,6 @@ export const api = {
       throw e;
     }),
 
-  getWeeklyBriefByWeek: (weekStart) =>
-    fetchJSON(`${BASE}/analysis/brief/${weekStart}`).then((r) => r.data),
-
-  getWeeklyBriefRange: (startWeek, endWeek) =>
-    fetchJSON(`${BASE}/analysis/brief`, {
-      weekStart: startWeek,
-      weekEnd: endWeek,
-    }).then((r) => r),
-
   getRiskAssessments: () =>
     fetchJSON(`${BASE}/analysis/risks`).then((r) => r.data),
 

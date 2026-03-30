@@ -32,7 +32,7 @@ app.use(helmet());
 app.use((req, res, next) => {
   req.id = req.headers['x-request-id'] || randomUUID();
   res.setHeader('X-Request-ID', req.id);
-  runWithRequestContext(req.id, next);
+  runWithRequestContext(req.id, () => next());
 });
 app.use(requestLogger);
 app.use(compression());
