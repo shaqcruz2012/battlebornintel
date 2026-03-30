@@ -24,6 +24,8 @@ from ..ingestion.uspto_ingestor import UsptoIngestor
 from ..ingestion.nsf_ingestor import NsfIngestor
 from ..ingestion.nvsos_ingestor import NvsosIngestor
 from ..agents.graph_feature_agent import GraphFeatureAgent
+from ..agents.feature_discovery_agent import FeatureDiscoveryAgent
+from ..agents.node_discovery_agent import NodeDiscoveryAgent
 
 AGENT_REGISTRY = {
     "company_analyst": CompanyAnalyst,
@@ -43,6 +45,8 @@ AGENT_REGISTRY = {
     "uspto_ingestor": UsptoIngestor,
     "nsf_ingestor": NsfIngestor,
     "nvsos_ingestor": NvsosIngestor,
+    "feature_discovery": FeatureDiscoveryAgent,
+    "node_discovery": NodeDiscoveryAgent,
 }
 
 MAX_RETRIES = 2
@@ -54,12 +58,14 @@ AGENT_TIMEOUTS = {
     "weekly_brief": 120,         # 2 min
     "risk_assessor": 120,        # 2 min
     "pattern_detector": 120,     # 2 min
+    "node_discovery": 300,       # 5 min (LLM + graph queries)
     # Statistical agents
     "panel_forecaster": 300,     # 5 min
     "survival_analyzer": 300,    # 5 min
     "causal_evaluator": 300,     # 5 min
     "scenario_simulator": 300,   # 5 min
     "graph_feature_engineer": 300,  # 5 min
+    "feature_discovery": 300,        # 5 min
     # Ingestion agents
     "freshness_checker": 60,     # 1 min
     "fred_ingestor": 180,        # 3 min

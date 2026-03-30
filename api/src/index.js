@@ -28,6 +28,7 @@ import forecastsRouter from './routes/forecasts.js';
 import graphAnalyticsRouter from './routes/graph-analytics.js';
 import temporalRouter from './routes/temporal.js';
 import graphAnalysisDetailRouter from './routes/graph-analysis.js';
+import featureIngestionRouter from './routes/feature-ingestion.js';
 import authRouter from './routes/auth.js';
 import { optionalAuth } from './middleware/auth.js';
 
@@ -142,6 +143,7 @@ apiRouter.use('/graph',                  publicLimit, cacheMiddleware('graphTemp
 apiRouter.use('/graph-analysis',         publicLimit, cacheMiddleware('graphAnalysisDetail', 120_000, { cacheControl: 'public, max-age=120' }),   graphAnalysisDetailRouter);
 // Admin routes: key-gated + strict rate limit
 apiRouter.use('/admin', adminLimit, requireAdminKey, adminRouter);
+apiRouter.use('/features', adminLimit, requireAdminKey, featureIngestionRouter);
 
 // High-impact batch endpoint for dashboard
 apiRouter.use('/dashboard-batch', publicLimit, dashboardBatchRouter);
