@@ -314,6 +314,21 @@ async def fetch_policy_opportunities(pool, limit: int = 5) -> list:
 # 9. compute_ssbci_deployment
 # ---------------------------------------------------------------------------
 
+def prepare_company_covariates(df):
+    """Add standard derived columns for statistical modeling.
+
+    Adds: primary_sector, log_funding, log_employees.
+    Modifies df in-place and returns it.
+    """
+    import numpy as np
+    df["primary_sector"] = df["sectors"].apply(
+        lambda s: s[0] if s and len(s) > 0 else "unknown"
+    )
+    df["log_funding"] = np.log1p(df["funding_m"])
+    df["log_employees"] = np.log1p(df["employees"])
+    return df
+
+
 def compute_ssbci_deployment(funds: list) -> dict:
     """Compute SSBCI deployment statistics from a funds list.
 

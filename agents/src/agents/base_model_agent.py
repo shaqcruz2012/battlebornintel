@@ -4,18 +4,18 @@ import json
 import logging
 import time
 from abc import ABC, abstractmethod
-from datetime import date, datetime, timezone
-from typing import Optional
+from datetime import date
 
 import numpy as np
 import pandas as pd
 
 from ..db import get_pool
+from ._audit_mixin import AuditMixin
 
 logger = logging.getLogger(__name__)
 
 
-class BaseModelAgent(ABC):
+class BaseModelAgent(AuditMixin, ABC):
     """Base class for statistical/ML model agents.
 
     Parallels BaseAgent but does not require Claude API calls.
@@ -27,8 +27,11 @@ class BaseModelAgent(ABC):
     def __init__(self, agent_name: str, model_version: str = "1.0.0"):
         self.agent_name = agent_name
         self.model_version = model_version
-        self.run_id: Optional[int] = None
-        self.model_id: Optional[int] = None
+        self.run_id: int | None = None
+        self.model_id: int | None = None
+
+    def _model_label(self) -> str:
+        return f"{self.agent_name}_v{self.model_version}"
 
     # ------------------------------------------------------------------
     # Execution lifecycle (mirrors BaseAgent.execute)
@@ -37,7 +40,7 @@ class BaseModelAgent(ABC):
     async def execute(self, **kwargs):
         """Execute agent with audit trail and duration logging."""
         pool = await get_pool()
-        self.run_id = await self._start_run(pool, kwargs)
+        await self._start_run(pool, kwargs)
         t_start = time.perf_counter()
         logger.info(
             "Agent '%s' starting (run_id=%s).",
@@ -273,30 +276,6 @@ class BaseModelAgent(ABC):
         self.model_id = row["id"]
         return self.model_id
 
-    async def save_analysis(
-        self,
-        pool,
-        analysis_type: str,
-        content: dict,
-        entity_type: str | None = None,
-        entity_id: str | None = None,
-    ):
-        """Save analysis result to analysis_results table (JSONB).
-
-        Mirrors BaseAgent.save_analysis but uses the agent name as model_used.
-        """
-        await pool.execute(
-            """INSERT INTO analysis_results
-               (analysis_type, entity_type, entity_id, content, model_used, agent_run_id)
-               VALUES ($1, $2, $3, $4, $5, $6)""",
-            analysis_type,
-            entity_type,
-            entity_id,
-            json.dumps(content, default=str),
-            f"{self.agent_name}_v{self.model_version}",
-            self.run_id,
-        )
-
     async def create_scenario(
         self,
         pool,
@@ -335,35 +314,3 @@ class BaseModelAgent(ABC):
             scenario_id,
         )
 
-    # ------------------------------------------------------------------
-    # Audit trail (reuses same agent_runs table as BaseAgent)
-    # ------------------------------------------------------------------
-
-    async def _start_run(self, pool, params: dict) -> int:
-        row = await pool.fetchrow(
-            """INSERT INTO agent_runs (agent_name, status, input_params)
-               VALUES ($1, 'running', $2)
-               RETURNING id""",
-            self.agent_name,
-            json.dumps(params, default=str),
-        )
-        return row["id"]
-
-    async def _complete_run(self, pool, result):
-        summary = str(result)[:500] if result else None
-        await pool.execute(
-            """UPDATE agent_runs
-               SET status = 'completed', completed_at = NOW(), output_summary = $2
-               WHERE id = $1""",
-            self.run_id,
-            summary,
-        )
-
-    async def _fail_run(self, pool, error: str):
-        await pool.execute(
-            """UPDATE agent_runs
-               SET status = 'failed', completed_at = NOW(), error_message = $2
-               WHERE id = $1""",
-            self.run_id,
-            error[:1000],
-        )

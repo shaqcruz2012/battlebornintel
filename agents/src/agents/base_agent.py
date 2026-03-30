@@ -1,13 +1,12 @@
 import asyncio
-import json
 import logging
 import os
 from abc import ABC, abstractmethod
-from datetime import datetime, timezone
 
 import anthropic
 
 from ..db import get_pool
+from ._audit_mixin import AuditMixin
 from .constants import DEFAULT_LLM_MODEL
 
 _DEFAULT_MODEL = os.environ.get("CLAUDE_MODEL", DEFAULT_LLM_MODEL)
@@ -18,7 +17,7 @@ _BASE_BACKOFF = 1  # seconds
 logger = logging.getLogger(__name__)
 
 
-class BaseAgent(ABC):
+class BaseAgent(AuditMixin, ABC):
     """Base class for all BBI AI agents."""
 
     def __init__(self, agent_name: str, model: str | None = None):
@@ -27,10 +26,13 @@ class BaseAgent(ABC):
         self.client = anthropic.Anthropic()
         self.run_id = None
 
+    def _model_label(self) -> str:
+        return self.model
+
     async def execute(self, **kwargs):
         """Execute agent with audit trail."""
         pool = await get_pool()
-        self.run_id = await self._start_run(pool, kwargs)
+        await self._start_run(pool, kwargs)
         try:
             result = await self.run(pool, **kwargs)
             await self._complete_run(pool, result)
@@ -95,54 +97,3 @@ class BaseAgent(ABC):
                 raise
         raise last_exc  # type: ignore[misc]
 
-    async def save_analysis(
-        self,
-        pool,
-        analysis_type: str,
-        content: dict,
-        entity_type: str | None = None,
-        entity_id: str | None = None,
-        model_used: str | None = None,
-    ):
-        """Save analysis result to database."""
-        model_used = model_used or self.model
-        await pool.execute(
-            """INSERT INTO analysis_results
-               (analysis_type, entity_type, entity_id, content, model_used, agent_run_id)
-               VALUES ($1, $2, $3, $4, $5, $6)""",
-            analysis_type,
-            entity_type,
-            entity_id,
-            json.dumps(content),
-            model_used,
-            self.run_id,
-        )
-
-    async def _start_run(self, pool, params):
-        row = await pool.fetchrow(
-            """INSERT INTO agent_runs (agent_name, status, input_params)
-               VALUES ($1, 'running', $2)
-               RETURNING id""",
-            self.agent_name,
-            json.dumps(params, default=str),
-        )
-        return row["id"]
-
-    async def _complete_run(self, pool, result):
-        summary = str(result)[:500] if result else None
-        await pool.execute(
-            """UPDATE agent_runs
-               SET status = 'completed', completed_at = NOW(), output_summary = $2
-               WHERE id = $1""",
-            self.run_id,
-            summary,
-        )
-
-    async def _fail_run(self, pool, error):
-        await pool.execute(
-            """UPDATE agent_runs
-               SET status = 'failed', completed_at = NOW(), error_message = $2
-               WHERE id = $1""",
-            self.run_id,
-            error[:1000],
-        )

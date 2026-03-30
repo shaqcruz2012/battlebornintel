@@ -44,7 +44,7 @@ class CompanyAnalyst(BaseAgent):
         super().__init__("company_analyst")
 
     async def run(self, pool, company_id: int | None = None):
-        if company_id:
+        if company_id is not None:
             return await self._analyze_one(pool, company_id)
         else:
             # Analyze all companies

@@ -4,7 +4,6 @@ import asyncio
 import json
 import logging
 import time
-from ..db import close_pool
 from ..agents.company_analyst import CompanyAnalyst
 from ..agents.weekly_brief import WeeklyBrief
 from ..agents.risk_assessor import RiskAssessor
@@ -135,78 +134,76 @@ async def run_agent(agent_name: str, retries: int = MAX_RETRIES, **kwargs):
     timeout = AGENT_TIMEOUTS.get(agent_name, DEFAULT_TIMEOUT)
     last_error = None
 
-    try:
-        for attempt in range(1, retries + 1):
-            start_time = time.perf_counter()
-            try:
-                agent = agent_cls()
-                result = await asyncio.wait_for(
-                    agent.execute(**kwargs), timeout=timeout
-                )
-                duration_ms = int((time.perf_counter() - start_time) * 1000)
-                await _store_duration(agent.run_id, duration_ms)
-                logger.info("[%s] completed in %dms: %s", agent_name, duration_ms, result)
-
-                # Auto-refresh materialized views after successful ingestion
-                if agent_name in _INGESTOR_AGENTS:
-                    await _refresh_indicator_views()
-
-                return result
-            except asyncio.TimeoutError:
-                duration_ms = int((time.perf_counter() - start_time) * 1000)
-                if hasattr(agent, 'run_id') and agent.run_id:
-                    await _store_duration(agent.run_id, duration_ms)
-                last_error = asyncio.TimeoutError(
-                    f"Agent '{agent_name}' timed out after {timeout}s"
-                )
-                logger.error(
-                    "Agent '%s' timed out after %ds (attempt %d/%d)",
-                    agent_name, timeout, attempt, retries,
-                )
-                if attempt < retries:
-                    backoff = 2 ** attempt
-                    logger.info("[%s] retrying in %ds...", agent_name, backoff)
-                    await asyncio.sleep(backoff)
-                else:
-                    logger.error("[%s] all retries exhausted", agent_name)
-            except (ValueError, KeyError, TypeError, AttributeError) as e:
-                # Permanent errors — don't retry
-                duration_ms = int((time.perf_counter() - start_time) * 1000)
-                if hasattr(agent, 'run_id') and agent.run_id:
-                    await _store_duration(agent.run_id, duration_ms)
-                logger.error(
-                    "Agent '%s' hit permanent error (no retry): %s: %s",
-                    agent_name, type(e).__name__, e,
-                )
-                last_error = e
-                break
-            except Exception as e:
-                duration_ms = int((time.perf_counter() - start_time) * 1000)
-                if hasattr(agent, 'run_id') and agent.run_id:
-                    await _store_duration(agent.run_id, duration_ms)
-                last_error = e
-                logger.warning(
-                    "Agent '%s' attempt %d/%d failed: %s: %s",
-                    agent_name, attempt, retries, type(e).__name__, e,
-                )
-                if attempt < retries:
-                    backoff = 2 ** attempt
-                    logger.info("[%s] retrying in %ds...", agent_name, backoff)
-                    await asyncio.sleep(backoff)
-                else:
-                    logger.error("[%s] all retries exhausted", agent_name)
-
-        # Record permanently failed run in dead letter queue
-        from ..db import get_pool
+    agent = None
+    for attempt in range(1, retries + 1):
+        start_time = time.perf_counter()
         try:
-            pool = await get_pool()
-            run_id = kwargs.get("run_id")
-            await _record_dead_letter(
-                pool, agent_name, run_id, last_error, kwargs, retries
+            agent = agent_cls()
+            result = await asyncio.wait_for(
+                agent.execute(**kwargs), timeout=timeout
             )
-        except Exception as dl_err:
-            logger.warning("Dead letter recording failed: %s", dl_err)
+            duration_ms = int((time.perf_counter() - start_time) * 1000)
+            await _store_duration(agent.run_id, duration_ms)
+            logger.info("[%s] completed in %dms: %s", agent_name, duration_ms, result)
 
-        raise last_error
-    finally:
-        await close_pool()
+            # Auto-refresh materialized views after successful ingestion
+            if agent_name in _INGESTOR_AGENTS:
+                await _refresh_indicator_views()
+
+            return result
+        except asyncio.TimeoutError:
+            duration_ms = int((time.perf_counter() - start_time) * 1000)
+            if agent is not None and getattr(agent, 'run_id', None):
+                await _store_duration(agent.run_id, duration_ms)
+            last_error = asyncio.TimeoutError(
+                f"Agent '{agent_name}' timed out after {timeout}s"
+            )
+            logger.error(
+                "Agent '%s' timed out after %ds (attempt %d/%d)",
+                agent_name, timeout, attempt, retries,
+            )
+            if attempt < retries:
+                backoff = 2 ** attempt
+                logger.info("[%s] retrying in %ds...", agent_name, backoff)
+                await asyncio.sleep(backoff)
+            else:
+                logger.error("[%s] all retries exhausted", agent_name)
+        except (ValueError, KeyError, TypeError, AttributeError) as e:
+            # Permanent errors — don't retry
+            duration_ms = int((time.perf_counter() - start_time) * 1000)
+            if agent is not None and getattr(agent, 'run_id', None):
+                await _store_duration(agent.run_id, duration_ms)
+            logger.error(
+                "Agent '%s' hit permanent error (no retry): %s: %s",
+                agent_name, type(e).__name__, e,
+            )
+            last_error = e
+            break
+        except Exception as e:
+            duration_ms = int((time.perf_counter() - start_time) * 1000)
+            if agent is not None and getattr(agent, 'run_id', None):
+                await _store_duration(agent.run_id, duration_ms)
+            last_error = e
+            logger.warning(
+                "Agent '%s' attempt %d/%d failed: %s: %s",
+                agent_name, attempt, retries, type(e).__name__, e,
+            )
+            if attempt < retries:
+                backoff = 2 ** attempt
+                logger.info("[%s] retrying in %ds...", agent_name, backoff)
+                await asyncio.sleep(backoff)
+            else:
+                logger.error("[%s] all retries exhausted", agent_name)
+
+    # Record permanently failed run in dead letter queue
+    from ..db import get_pool
+    try:
+        pool = await get_pool()
+        run_id = getattr(agent, 'run_id', None) if agent is not None else None
+        await _record_dead_letter(
+            pool, agent_name, run_id, last_error, kwargs, retries
+        )
+    except Exception as dl_err:
+        logger.warning("Dead letter recording failed: %s", dl_err)
+
+    raise last_error

@@ -9,10 +9,9 @@ Generates forward-looking simulations for ecosystem interventions by:
 Pre-built scenarios: baseline, ssbci_expansion, accelerator_boost.
 """
 
-import json
 import logging
 import time
-from datetime import date, timedelta
+from datetime import date
 from typing import Any
 
 import numpy as np

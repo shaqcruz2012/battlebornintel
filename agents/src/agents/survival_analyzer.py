@@ -17,6 +17,7 @@ import pandas as pd
 from .base_model_agent import BaseModelAgent
 from .constants import STAGE_ORDER
 from .status import AgentStatus
+from .utils import prepare_company_covariates
 
 logger = logging.getLogger(__name__)
 
@@ -257,19 +258,15 @@ class SurvivalAnalyzer(BaseModelAgent):
 
         company_df["event"] = (has_funding_event | has_stage_event).astype(int)
 
-        # Primary sector (first element of sectors array)
-        company_df["primary_sector"] = company_df["sectors"].apply(
-            lambda s: s[0] if s and len(s) > 0 else "unknown"
-        )
-
         # Accelerator participation
         company_df["has_accelerator"] = company_df["id"].isin(accel_ids).astype(int)
 
         # Derived numeric columns
         company_df["employees"] = company_df["employees"].fillna(0).astype(int)
         company_df["momentum"] = company_df["momentum"].fillna(0).astype(int)
-        company_df["log_funding"] = np.log1p(company_df["funding_m"].astype(float))
-        company_df["log_employees"] = np.log1p(company_df["employees"].astype(float))
+        company_df["funding_m"] = company_df["funding_m"].astype(float)
+        company_df["employees"] = company_df["employees"].astype(float)
+        prepare_company_covariates(company_df)
 
         # Select and rename columns for the survival dataset
         result = company_df[[

@@ -1,5 +1,6 @@
 """Node Discovery Agent — identifies missing nodes and edges in the knowledge graph."""
 
+import asyncio
 import json
 import logging
 import re
@@ -35,10 +36,12 @@ class NodeDiscoveryAgent(BaseAgent):
         super().__init__(self.name)
 
     async def run(self, pool, **kwargs):
-        orphans = await self._find_orphans(pool)
-        missing_intermediaries = await self._find_missing_intermediaries(pool)
-        text_snippets = await self._collect_text_snippets(pool)
-        existing_names = await self._get_existing_node_names(pool)
+        orphans, missing_intermediaries, text_snippets, existing_names = await asyncio.gather(
+            self._find_orphans(pool),
+            self._find_missing_intermediaries(pool),
+            self._collect_text_snippets(pool),
+            self._get_existing_node_names(pool),
+        )
 
         # Use Claude to extract implied entities from text
         extracted = await self._extract_entities(text_snippets, existing_names)
@@ -130,19 +133,21 @@ class NodeDiscoveryAgent(BaseAgent):
 
     async def _collect_text_snippets(self, pool):
         """Gather text fields that may mention untracked entities."""
-        edge_notes = await pool.fetch("""
-            SELECT source_id, target_id, rel, note
-            FROM graph_edges
-            WHERE note IS NOT NULL AND note != ''
-            LIMIT 200
-        """)
-        timeline = await pool.fetch("""
-            SELECT entity_type, entity_id, event_type, detail
-            FROM timeline_events
-            WHERE detail IS NOT NULL AND detail != ''
-            ORDER BY event_date DESC
-            LIMIT 200
-        """)
+        edge_notes, timeline = await asyncio.gather(
+            pool.fetch("""
+                SELECT source_id, target_id, rel, note
+                FROM graph_edges
+                WHERE note IS NOT NULL AND note != ''
+                LIMIT 200
+            """),
+            pool.fetch("""
+                SELECT entity_type, entity_id, event_type, detail
+                FROM timeline_events
+                WHERE detail IS NOT NULL AND detail != ''
+                ORDER BY event_date DESC
+                LIMIT 200
+            """),
+        )
         snippets = []
         for r in edge_notes:
             snippets.append(

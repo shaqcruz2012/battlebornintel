@@ -17,6 +17,7 @@ import numpy as np
 import pandas as pd
 
 from .base_model_agent import BaseModelAgent
+from .utils import prepare_company_covariates
 from .constants import (
     BOOTSTRAP_ITERATIONS,
     CALIPER_MULTIPLIER,
@@ -160,13 +161,7 @@ class CausalEvaluator(BaseModelAgent):
         df["stage_num"] = df["stage"].map(STAGE_ORDER).fillna(0).astype(int)
         df["entity_id"] = df["id"].astype(str)
         df["node_id"] = "c_" + df["id"].astype(str)
-        df["log_funding"] = np.log1p(df["funding_m"])
-        df["log_employees"] = np.log1p(df["employees"])
-
-        # Primary sector
-        df["primary_sector"] = df["sectors"].apply(
-            lambda s: s[0] if s and len(s) > 0 else "unknown"
-        )
+        prepare_company_covariates(df)
 
         return df
 
