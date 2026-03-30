@@ -1,17 +1,22 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useFilters } from '../../hooks/useFilters';
-import { useCompanies, useKpis, useSectorStats, useFunds, useWeeklyBrief } from '../../api/hooks';
+import { useCompanies, useKpis, useSectorStats, useFunds, useWeeklyBrief, useStakeholderActivities } from '../../api/hooks';
 import { MainGrid } from '../layout/AppShell';
 import { KpiDetailPanel } from './KpiDetailPanel';
 import { SectorDetailDrawer } from './SectorDetailDrawer';
 import { MomentumTable } from './MomentumTable';
 import { LiveActivityFeed } from './LiveActivityFeed';
 import { RiskIntelligencePanel } from './RiskIntelligencePanel';
+import { PulseOverlay } from './PulseOverlay';
+import { useEcosystemVelocity } from '../../hooks/useEcosystemVelocity';
 import styles from './TerminalGrid.module.css';
 
 // ── KPI key/label mapping for terminal readout ─────────────────────────────
 
 const KPI_KEYS = [
+  { key: 'trackedFunding', label: 'TRCK.FUND', sortKey: 'trackedFunding', prefix: '$', suffix: 'M', decimals: 1 },
+  { key: 'publicCapitalShare', label: 'PUB.CAP%', sortKey: 'publicCap', prefix: '', suffix: '%', decimals: 1 },
+  { key: 'dealOrigination', label: 'DEAL.ORIG', sortKey: 'dealOrig', prefix: '', suffix: '%', decimals: 0 },
   { key: 'capitalDeployed', label: 'CAP.DEPLOY', sortKey: 'funding', prefix: '$', suffix: 'M', decimals: 1 },
   { key: 'ssbciCapitalDeployed', label: 'SSBCI.CAP', sortKey: 'ssbci', prefix: '$', suffix: 'M', decimals: 1 },
   { key: 'privateLeverage', label: 'PRIV.LEV', sortKey: 'leverage', prefix: '', suffix: 'x', decimals: 1 },
@@ -182,8 +187,11 @@ export function ExecutiveDashboard({ onViewChange }) {
     filters.region && filters.region !== 'all' ? { region: filters.region } : {}
   );
   const { data: briefResponse } = useWeeklyBrief();
+  const { data: activities = [] } = useStakeholderActivities({ limit: 20 });
 
   const briefData = briefResponse?.data;
+
+  const velocity = useEcosystemVelocity({ activities, sectorStats, kpis });
 
   const isLoading = loadingCompanies || loadingKpis || loadingSectors;
 
@@ -192,29 +200,35 @@ export function ExecutiveDashboard({ onViewChange }) {
     [briefData, companies, funds, sectorStats, filters.sector]
   );
 
+  const handleViewAllCompanies = useCallback((sector) => {
+    if (sector) setSector(sector);
+    if (onViewChange) onViewChange('companies');
+    setSelectedSector(null);
+  }, [setSector, onViewChange]);
+
+  const handleKpiClick = useCallback((sortKey, kpiKey) => {
+    setSortBy(sortKey);
+    setActiveKpi(prev => prev === kpiKey ? null : kpiKey);
+  }, [setSortBy]);
+
+  const handleSectorClick = useCallback((sector) => {
+    setSector(sector);
+    setSelectedSector(prev => prev === sector ? null : sector);
+  }, [setSector]);
+
+  const handleKpiClose = useCallback(() => setActiveKpi(null), []);
+  const handleSectorClose = useCallback(() => setSelectedSector(null), []);
+  const handleSectorReset = useCallback(() => { setSector('all'); setSelectedSector(null); }, [setSector]);
+
   if (isLoading) {
     return <LoadingSkeleton />;
   }
 
-  const handleViewAllCompanies = (sector) => {
-    if (sector) setSector(sector);
-    if (onViewChange) onViewChange('companies');
-    setSelectedSector(null);
-  };
-
-  const handleKpiClick = (sortKey, kpiKey) => {
-    setSortBy(sortKey);
-    setActiveKpi(activeKpi === kpiKey ? null : kpiKey);
-  };
-
-  const handleSectorClick = (sector) => {
-    setSector(sector);
-    setSelectedSector((prev) => (prev === sector ? null : sector));
-  };
-
   return (
     <MainGrid>
-      <div className={styles.terminalGrid}>
+      <div className={styles.terminalGridWrapper}>
+        <PulseOverlay score={velocity.score} tier={velocity.tier} />
+        <div className={`${styles.terminalGrid} ${styles.terminalGridPulsing}`} style={velocity.cssVars}>
         {/* ═══ PANEL 1: KPI TERMINAL (top-left) ═══ */}
         <div className={styles.panel}>
           <div className={styles.panelHeader}>
@@ -251,7 +265,7 @@ export function ExecutiveDashboard({ onViewChange }) {
               <div className={styles.sectorHeatGrid}>
                 <div
                   className={`${styles.sectorBlock} ${filters.sector === 'all' ? styles.sectorBlockActive : ''}`}
-                  onClick={() => { setSector('all'); setSelectedSector(null); }}
+                  onClick={handleSectorReset}
                 >
                   <span className={styles.sectorName}>ALL</span>
                 </div>
@@ -364,6 +378,7 @@ export function ExecutiveDashboard({ onViewChange }) {
           </div>
         </div>
       </div>
+      </div>
 
       {/* ── Risk Intelligence ── */}
       <RiskIntelligencePanel companies={companies} />
@@ -376,7 +391,7 @@ export function ExecutiveDashboard({ onViewChange }) {
           funds={funds}
           companies={companies}
           sectorStats={sectorStats}
-          onClose={() => setActiveKpi(null)}
+          onClose={handleKpiClose}
         />
       )}
       {selectedSector && (
@@ -384,7 +399,7 @@ export function ExecutiveDashboard({ onViewChange }) {
           sector={selectedSector}
           companies={companies}
           sectorStats={sectorStats}
-          onClose={() => setSelectedSector(null)}
+          onClose={handleSectorClose}
           onViewAll={() => handleViewAllCompanies(selectedSector)}
         />
       )}

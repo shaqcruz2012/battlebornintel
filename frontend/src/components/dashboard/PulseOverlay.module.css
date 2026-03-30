@@ -1,0 +1,21 @@
+.readout {
+  position: absolute;
+  top: -18px;
+  right: 2px;
+  font-family: 'IBM Plex Mono', var(--font-mono), monospace;
+  font-size: 9px;
+  font-weight: 500;
+  letter-spacing: 2px;
+  color: rgba(69, 215, 198, 0.35);
+  z-index: 1;
+  pointer-events: none;
+  user-select: none;
+}
+
+.score {
+  color: rgba(69, 215, 198, 0.5);
+}
+
+.tierLow      { color: rgba(255, 255, 255, 0.15); }
+.tierModerate { color: rgba(69, 215, 198, 0.35); }
+.tierHigh     { color: rgba(69, 215, 198, 0.55); }

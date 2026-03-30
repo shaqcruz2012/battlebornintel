@@ -10,6 +10,12 @@ from ..agents.data_scout import DataScout
 from ..agents.fact_verifier import FactVerifier
 from ..agents.relationship_mapper import RelationshipMapper
 from ..agents.systematic_enricher import SystematicEnricher
+from ..agents.schema_auditor import SchemaAuditor
+from ..agents.data_quality_analyst import DataQualityAnalyst
+from ..agents.graph_integrity_checker import GraphIntegrityChecker
+from ..agents.regional_data_ingestor import RegionalDataIngestor
+from ..agents.funding_round_ingestor import FundingRoundIngestor
+from ..agents.research_director import ResearchDirector
 from ..ingestion.freshness import FreshnessChecker
 
 AGENT_REGISTRY = {
@@ -22,6 +28,12 @@ AGENT_REGISTRY = {
     "fact_verifier": FactVerifier,
     "relationship_mapper": RelationshipMapper,
     "systematic_enricher": SystematicEnricher,
+    "schema_auditor": SchemaAuditor,
+    "data_quality_analyst": DataQualityAnalyst,
+    "graph_integrity_checker": GraphIntegrityChecker,
+    "regional_data_ingestor": RegionalDataIngestor,
+    "funding_round_ingestor": FundingRoundIngestor,
+    "research_director": ResearchDirector,
 }
 
 MAX_RETRIES = 2
@@ -39,7 +51,7 @@ async def run_agent(agent_name: str, retries: int = MAX_RETRIES, **kwargs):
         try:
             agent = agent_cls()
             result = await agent.execute(**kwargs)
-            print(f"[{agent_name}] completed: {result}")
+            print(f"[{agent_name}] completed: {str(result)[:500].encode('ascii', 'replace').decode()}")
             return result
         except Exception as e:
             last_error = e

@@ -1,8 +1,9 @@
+import { Resend } from 'resend';
 import pool from '../db/pool.js';
 import cfg from '../config.js';
 
-// For dev: just log to console + database
-// For production: use SMTP/SendGrid/SES based on config
+const resend = cfg.resendApiKey ? new Resend(cfg.resendApiKey) : null;
+
 export async function sendEmail({ to, subject, html, text, type = 'notification' }) {
   const subscriberRow = await pool.query(
     'SELECT id FROM email_subscribers WHERE email = $1 AND is_active = true',
@@ -10,7 +11,6 @@ export async function sendEmail({ to, subject, html, text, type = 'notification'
   );
   const subscriberId = subscriberRow.rows[0]?.id || null;
 
-  // Log the email attempt
   const { rows } = await pool.query(
     `INSERT INTO email_log (subscriber_id, email_type, subject, status)
      VALUES ($1, $2, $3, 'queued') RETURNING id`,
@@ -19,11 +19,15 @@ export async function sendEmail({ to, subject, html, text, type = 'notification'
   const logId = rows[0].id;
 
   try {
-    if (cfg.smtpHost) {
-      // Production: use nodemailer with SMTP
-      // await transporter.sendMail({ from: cfg.emailFrom, to, subject, html, text });
+    if (resend) {
+      await resend.emails.send({
+        from: cfg.emailFrom,
+        to,
+        subject,
+        html: html || undefined,
+        text: text || undefined,
+      });
     } else {
-      // Dev mode: log to console
       console.log(`[email] TO: ${to} | SUBJECT: ${subject}`);
       console.log(`[email] Body preview: ${(text || '').substring(0, 200)}...`);
     }

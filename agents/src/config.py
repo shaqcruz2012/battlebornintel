@@ -12,3 +12,7 @@ DATABASE_URL = os.getenv(
 )
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
 API_BASE_URL = os.getenv("API_BASE_URL", "http://localhost:3001")
+
+# Free public data APIs
+FRED_API_KEY = os.getenv("FRED_API_KEY", "")  # https://fred.stlouisfed.org/docs/api/api_key.html
+BLS_API_KEY = os.getenv("BLS_API_KEY", "")    # https://data.bls.gov/registrationEngine/

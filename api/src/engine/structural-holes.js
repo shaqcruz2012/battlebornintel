@@ -56,23 +56,35 @@ export function computeConstraints(nodes, edges) {
     }
 
     const neighbors = Object.keys(adj[i]);
+
+    // Nodes with degree 1 always have constraint 1.0 (single neighbor)
+    if (neighbors.length <= 1) {
+      constraints[i] = 1;
+      continue;
+    }
+
+    // Pre-compute proportional tie strengths (p_iq) once for all neighbors
+    const totalWi = totalW[i];
+    const p_i = {};  // neighbor -> proportional weight
+    for (const q of neighbors) {
+      p_i[q] = adj[i][q] / totalWi;
+    }
+
     let C_i = 0;
 
     for (const j of neighbors) {
-      const p_ij = adj[i][j] / totalW[i];
-
       // Indirect path contribution: Σ_q (p_iq * p_qj)  for q ≠ i, q ≠ j
       let indirect = 0;
       for (const q of neighbors) {
         if (q === j) continue;
-        const p_iq = adj[i][q] / totalW[i];
         const p_qj = (adj[q] && adj[q][j] && totalW[q])
           ? adj[q][j] / totalW[q]
           : 0;
-        indirect += p_iq * p_qj;
+        if (p_qj === 0) continue;
+        indirect += p_i[q] * p_qj;
       }
 
-      C_i += (p_ij + indirect) ** 2;
+      C_i += (p_i[j] + indirect) ** 2;
     }
 
     constraints[i] = Math.min(C_i, 1);  // cap at 1

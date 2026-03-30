@@ -1,8 +1,14 @@
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo, useState, useEffect, useCallback, memo } from 'react';
 import { KpiCard } from './KpiCard';
 import styles from './KpiStrip.module.css';
 
 const TOOLTIPS = {
+  trackedFunding:
+    'Total funding across all tracked Nevada ecosystem companies (all rounds). Derived from Crunchbase, SEC filings, and press releases. Click for funding distribution analysis.',
+  publicCapitalShare:
+    'Percentage of total tracked funding contributed directly by public institutions (GOED, accelerators, federal programs). T-GNN analysis shows public entities contribute ~0.4% of capital but originate 15–20% of deals through pipeline signaling.',
+  dealOrigination:
+    'Percentage of funded companies that had prior accelerator or ecosystem org connections before receiving institutional capital. Derived from graph multi-hop traversal of accelerator → company → fund investment paths.',
   capitalDeployed:
     'Total capital deployed across ecosystem funds into tracked Nevada companies. Includes both SSBCI-backed and private venture funds. Click to see fund-level deployment matrix and GOED action items.',
   ssbciCapitalDeployed:
@@ -15,6 +21,18 @@ const TOOLTIPS = {
     'Composite ecosystem health index: 40% average momentum + 30% top-performer density + 30% hot-sector exposure. Captures breadth and depth of innovation activity for federal partnership narratives.',
 };
 
+// Card definitions — one source of truth for the strip layout
+const CARD_DEFS = [
+  { key: 'trackedFunding',      sortKey: 'trackedFunding', label: 'Tracked Funding',      prefix: '$', suffix: 'M', decimals: 1, sparkColor: 'var(--accent-teal)',    sparkSeed: [4000, 6000, 8000, 10000, 12000] },
+  { key: 'publicCapitalShare',  sortKey: 'publicCap',      label: 'Public Capital Share',  prefix: '',  suffix: '%', decimals: 1, sparkColor: 'var(--accent-blue)',    sparkSeed: [0.2, 0.3, 0.35, 0.4] },
+  { key: 'dealOrigination',     sortKey: 'dealOrig',       label: 'Deal Origination',      prefix: '',  suffix: '%', decimals: 0, sparkColor: 'var(--accent-gold)',    sparkSeed: [10, 12, 15, 18] },
+  { key: 'capitalDeployed',     sortKey: 'funding',        label: 'Capital Deployed',      prefix: '$', suffix: 'M', decimals: 1, sparkColor: undefined,               sparkSeed: [12, 18, 22, 28, 35, 40] },
+  { key: 'ssbciCapitalDeployed',sortKey: 'ssbci',          label: 'SSBCI Capital',         prefix: '$', suffix: 'M', decimals: 1, sparkColor: 'var(--accent-blue)',    sparkSeed: [8, 12, 15, 18, 22] },
+  { key: 'privateLeverage',     sortKey: 'leverage',       label: 'Private Leverage',      prefix: '',  suffix: 'x', decimals: 1, sparkColor: 'var(--accent-gold)',    sparkSeed: [2, 3.5, 4, 5, 6] },
+  { key: 'ecosystemCapacity',   sortKey: 'employees',      label: 'Ecosystem Capacity',    prefix: '',  suffix: '',  decimals: 0, sparkColor: undefined,               sparkSeed: [800, 1200, 1600, 2000] },
+  { key: 'innovationIndex',     sortKey: 'momentum',       label: 'Innovation Index',      prefix: '',  suffix: '',  decimals: 0, sparkColor: 'var(--status-success)', sparkSeed: [40, 50, 55, 60] },
+];
+
 function formatTimestamp() {
   const now = new Date();
   const h = String(now.getHours()).padStart(2, '0');
@@ -25,31 +43,40 @@ function formatTimestamp() {
   return `${month} ${day}  ${h}:${m}:${s} PST`;
 }
 
-export function KpiStrip({ kpis, activeSortBy, onSortChange, onKpiClick, activeKpi }) {
+export const KpiStrip = memo(function KpiStrip({ kpis, activeSortBy, onSortChange, onKpiClick, activeKpi }) {
   const [timestamp, setTimestamp] = useState(formatTimestamp);
 
-  // Update timestamp every 30 seconds for a "live" feel
   useEffect(() => {
-    const interval = setInterval(() => {
-      setTimestamp(formatTimestamp());
-    }, 30000);
+    const interval = setInterval(() => setTimestamp(formatTimestamp()), 30000);
     return () => clearInterval(interval);
   }, []);
 
-  // Synthetic sparkline data (memoized to prevent child re-renders)
-  const sparkCapital = useMemo(() => [12, 18, 22, 28, 35, 40, kpis?.capitalDeployed?.value || 0], [kpis?.capitalDeployed?.value]);
-  const sparkSsbciCapital = useMemo(() => [8, 12, 15, 18, 22, kpis?.ssbciCapitalDeployed?.value || 0], [kpis?.ssbciCapitalDeployed?.value]);
-  const sparkLeverage = useMemo(() => [2, 3.5, 4, 5, 6, kpis?.privateLeverage?.value || 0], [kpis?.privateLeverage?.value]);
-  const sparkCapacity = useMemo(() => [800, 1200, 1600, 2000, kpis?.ecosystemCapacity?.value || 0], [kpis?.ecosystemCapacity?.value]);
-  const sparkMomentum = useMemo(() => [40, 50, 55, 60, kpis?.innovationIndex?.value || 0], [kpis?.innovationIndex?.value]);
-
-  const handleKpiCardClick = (sortKey, kpiKey) => {
+  // Stable click handler — card identity is passed via arguments
+  const handleKpiCardClick = useCallback((sortKey, kpiKey) => {
     onSortChange(sortKey);
     if (onKpiClick) {
-      // Toggle: clicking the active KPI closes the panel
-      onKpiClick(activeKpi === kpiKey ? null : kpiKey);
+      onKpiClick(prev => prev === kpiKey ? null : kpiKey);
     }
-  };
+  }, [onSortChange, onKpiClick]);
+
+  // Build stable per-card callbacks (one useCallback per card via useMemo of the array)
+  const cardClickHandlers = useMemo(
+    () => Object.fromEntries(
+      CARD_DEFS.map(d => [d.key, () => handleKpiCardClick(d.sortKey, d.key)])
+    ),
+    [handleKpiCardClick]
+  );
+
+  // Build sparkline data arrays (memoized per-card value)
+  const sparklines = useMemo(() => {
+    const out = {};
+    for (const d of CARD_DEFS) {
+      out[d.key] = [...d.sparkSeed, kpis?.[d.key]?.value || 0];
+    }
+    return out;
+    // Re-derive only when the KPI values object changes
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [kpis]);
 
   if (!kpis) return null;
 
@@ -63,73 +90,28 @@ export function KpiStrip({ kpis, activeSortBy, onSortChange, onKpiClick, activeK
         </span>
       </div>
       <div className={styles.strip}>
-        <KpiCard
-          label={kpis.capitalDeployed?.label || 'Capital Deployed'}
-          value={kpis.capitalDeployed?.value || 0}
-          prefix="$"
-          suffix="M"
-          decimals={1}
-          secondary={kpis.capitalDeployed?.secondary || ''}
-          sparkData={sparkCapital}
-          active={activeSortBy === 'funding'}
-          onClick={() => handleKpiCardClick('funding', 'capitalDeployed')}
-          tooltip={TOOLTIPS.capitalDeployed}
-          quality={kpis.capitalDeployed?.quality}
-          dataQualityNote={kpis.capitalDeployed?.dataQualityNote}
-        />
-        <KpiCard
-          label={kpis.ssbciCapitalDeployed?.label || 'SSBCI Capital'}
-          value={kpis.ssbciCapitalDeployed?.value || 0}
-          prefix="$"
-          suffix="M"
-          decimals={1}
-          secondary={kpis.ssbciCapitalDeployed?.secondary || ''}
-          sparkData={sparkSsbciCapital}
-          sparkColor="var(--accent-blue)"
-          active={activeSortBy === 'ssbci'}
-          onClick={() => handleKpiCardClick('ssbci', 'ssbciCapitalDeployed')}
-          tooltip={TOOLTIPS.ssbciCapitalDeployed}
-          quality={kpis.ssbciCapitalDeployed?.quality}
-          dataQualityNote={kpis.ssbciCapitalDeployed?.dataQualityNote}
-        />
-        <KpiCard
-          label={kpis.privateLeverage?.label || 'Private Leverage'}
-          value={kpis.privateLeverage?.value || 0}
-          suffix="x"
-          decimals={1}
-          secondary={kpis.privateLeverage?.secondary || ''}
-          sparkData={sparkLeverage}
-          sparkColor="var(--accent-gold)"
-          active={activeSortBy === 'leverage'}
-          onClick={() => handleKpiCardClick('leverage', 'privateLeverage')}
-          tooltip={TOOLTIPS.privateLeverage}
-          quality={kpis.privateLeverage?.quality}
-          dataQualityNote={kpis.privateLeverage?.dataQualityNote}
-        />
-        <KpiCard
-          label={kpis.ecosystemCapacity?.label || 'Ecosystem Capacity'}
-          value={kpis.ecosystemCapacity?.value || 0}
-          secondary={kpis.ecosystemCapacity?.secondary || ''}
-          sparkData={sparkCapacity}
-          active={activeSortBy === 'employees'}
-          onClick={() => handleKpiCardClick('employees', 'ecosystemCapacity')}
-          tooltip={TOOLTIPS.ecosystemCapacity}
-          quality={kpis.ecosystemCapacity?.quality}
-          dataQualityNote={kpis.ecosystemCapacity?.dataQualityNote}
-        />
-        <KpiCard
-          label={kpis.innovationIndex?.label || 'Innovation Index'}
-          value={kpis.innovationIndex?.value || 0}
-          secondary={kpis.innovationIndex?.secondary || ''}
-          sparkData={sparkMomentum}
-          sparkColor="var(--status-success)"
-          active={activeSortBy === 'momentum'}
-          onClick={() => handleKpiCardClick('momentum', 'innovationIndex')}
-          tooltip={TOOLTIPS.innovationIndex}
-          quality={kpis.innovationIndex?.quality}
-          dataQualityNote={kpis.innovationIndex?.dataQualityNote}
-        />
+        {CARD_DEFS.map(d => {
+          const kpi = kpis[d.key];
+          return (
+            <KpiCard
+              key={d.key}
+              label={kpi?.label || d.label}
+              value={kpi?.value || 0}
+              prefix={d.prefix}
+              suffix={d.suffix}
+              decimals={d.decimals}
+              secondary={kpi?.secondary || ''}
+              sparkData={sparklines[d.key]}
+              sparkColor={d.sparkColor}
+              active={activeSortBy === d.sortKey}
+              onClick={cardClickHandlers[d.key]}
+              tooltip={TOOLTIPS[d.key]}
+              quality={kpi?.quality}
+              dataQualityNote={kpi?.dataQualityNote}
+            />
+          );
+        })}
       </div>
     </div>
   );
-}
+});

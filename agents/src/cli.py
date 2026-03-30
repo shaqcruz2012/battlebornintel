@@ -46,7 +46,7 @@ async def cmd_run():
     print(f"Running {agent_name}...")
     try:
         result = await run_agent(agent_name, **kwargs)
-        print(f"Result: {result}")
+        print(f"Result: {str(result)[:1000].encode('ascii', 'replace').decode()}")
     finally:
         await close_pool()
 

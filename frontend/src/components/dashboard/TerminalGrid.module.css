@@ -1,7 +1,11 @@
 /* ── Bloomberg Terminal 4-Panel Grid ────────────────────── */
 
-.terminalGrid {
+.terminalGridWrapper {
   grid-column: 1 / -1;
+  position: relative;
+}
+
+.terminalGrid {
   display: grid;
   grid-template-columns: 1fr 1fr;
   grid-template-rows: 1fr 1fr;
@@ -9,9 +13,12 @@
   background: #1c2733;
   border: 1px solid #1c2733;
   border-radius: 4px;
-  overflow: hidden;
   height: calc(100vh - 120px);
   min-height: 600px;
+}
+
+.terminalGridPulsing {
+  animation: ecosystemPulse var(--pulse-duration, 6s) ease-in-out infinite;
 }
 
 /* ── Panel base ────────────────────────────────────────── */
@@ -23,6 +30,11 @@
   overflow: hidden;
   min-height: 0;
 }
+
+.panel:first-child { border-radius: 4px 0 0 0; }
+.panel:nth-child(2) { border-radius: 0 4px 0 0; }
+.panel:nth-child(3) { border-radius: 0 0 0 4px; }
+.panel:nth-child(4) { border-radius: 0 0 4px 0; }
 
 .panelHeader {
   display: flex;

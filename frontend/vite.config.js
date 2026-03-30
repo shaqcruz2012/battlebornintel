@@ -25,12 +25,37 @@ export default defineConfig({
             return 'query';
           }
 
+          // ── Vendor: Three.js + 3D force graph (only for GalaxyView) ──────
+          // Three.js is ~600 kB min — isolating it lets the 2D graph load fast
+          // while the 3D galaxy view pulls this chunk on demand.
+          if (
+            id.includes('node_modules/three') ||
+            id.includes('node_modules/3d-force-graph') ||
+            id.includes('node_modules/three-forcegraph') ||
+            id.includes('node_modules/three-render-objects')
+          ) {
+            return 'three-vendor';
+          }
+
+          // ── Feature: GalaxyView (3D) — split from the 2D graph chunk ─────
+          if (
+            id.includes('/components/graph/GalaxyView') ||
+            id.includes('/components/graph/GalaxyHud')
+          ) {
+            return 'galaxy';
+          }
+
           // ── Vendor: D3 (only loaded when graph tab is opened) ─────────────
           // D3 is only imported by graph-related files, but splitting it into
           // its own chunk lets the browser cache it independently and allows
           // the graph lazy chunk to stay small.
           if (id.includes('node_modules/d3') || id.includes('node_modules/d3-')) {
             return 'd3';
+          }
+
+          // ── Feature: KPI detail panels (lazy-loaded on click) ────────────
+          if (id.includes('/components/dashboard/kpi-details/')) {
+            return 'kpi-details';
           }
 
           // ── Feature: graph components (lazy-loaded together) ──────────────

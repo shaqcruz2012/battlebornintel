@@ -59,6 +59,18 @@
   50% { opacity: 1; }
 }
 
+@keyframes ecosystemPulse {
+  0%, 100% {
+    background-color: #1c2733;
+    box-shadow: inset 0 0 0 1px #1c2733, 0 0 0 0 transparent;
+  }
+  50% {
+    background-color: var(--pulse-color, #1c2733);
+    box-shadow: inset 0 0 1px 1px var(--pulse-color, #1c2733),
+                0 0 var(--pulse-glow-radius, 12px) var(--pulse-color, transparent);
+  }
+}
+
 /* ── Utility classes ────────────────────────────────────── */
 
 .animate-fade-in {

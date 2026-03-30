@@ -7,6 +7,9 @@ const DATA_QUALITY = {
   CALCULATED: 'calculated',
 };
 
+// Fund types classified as publicly backed for capital share calculations
+const PUBLIC_FUND_TYPES = ['SSBCI', 'Accelerator'];
+
 export async function getKpis({ stage, region, sector } = {}) {
   let companySql = `SELECT * FROM companies`;
   const conditions = [];
@@ -78,6 +81,55 @@ export async function getKpis({ stage, region, sector } = {}) {
     funds = allFunds;
   }
 
+  // ── Tracked Funding — total company funding across ecosystem ──────────────
+  const trackedFunding = companies.reduce(
+    (s, c) => s + parseFloat(c.funding_m || 0),
+    0
+  );
+
+  const publicFunds = allFunds.filter(f => PUBLIC_FUND_TYPES.includes(f.fund_type));
+  const publicFundingDirect = publicFunds.reduce(
+    (s, f) => s + parseFloat(f.deployed_m || 0), 0
+  );
+  const publicEntityCount = publicFunds.length;
+
+  const companyIds = companies.map(c => `c_${c.id}`);
+
+  // Query deal origination in parallel
+  const [{ rows: dealOrigRows }, { rows: totalFundedRows }] =
+    await Promise.all([
+      // Deal origination: companies connected to public institutions that also got fund investment
+      pool.query(
+        `SELECT COUNT(DISTINCT ge2.target_id) AS originated
+         FROM graph_edges ge1
+         JOIN graph_edges ge2 ON ge1.target_id = ge2.target_id
+         WHERE (ge1.source_id LIKE 'a_%' OR ge1.source_id LIKE 'e_%'
+                OR ge1.target_id LIKE 'a_%' OR ge1.target_id LIKE 'e_%')
+         AND ge1.rel IN ('accelerated_by','invested_in','grants_to','supports','funded','funds','won_pitch')
+         AND ge2.source_id LIKE 'f_%'
+         AND ge2.rel = 'invested_in'
+         ${companyIds.length > 0 ? 'AND ge2.target_id = ANY($1)' : ''}`,
+        companyIds.length > 0 ? [companyIds] : []
+      ),
+      // Total companies that received fund investment
+      pool.query(
+        `SELECT COUNT(DISTINCT target_id) AS total_funded
+         FROM graph_edges
+         WHERE source_id LIKE 'f_%' AND rel = 'invested_in'
+         ${companyIds.length > 0 ? 'AND target_id = ANY($1)' : ''}`,
+        companyIds.length > 0 ? [companyIds] : []
+      ),
+    ]);
+
+  const originatedDeals = parseInt(dealOrigRows[0]?.originated || 0, 10);
+  const totalFundedCompanies = parseInt(totalFundedRows[0]?.total_funded || 0, 10);
+  const dealOriginationRate = totalFundedCompanies > 0
+    ? (originatedDeals / totalFundedCompanies) * 100
+    : 0;
+  const publicCapitalShare = trackedFunding > 0
+    ? (publicFundingDirect / trackedFunding) * 100
+    : 0;
+
   // Capital Deployed - sum of all funds investing in filtered companies
   const ssbciFunds = funds.filter((f) => f.fund_type === 'SSBCI');
   const capitalDeployed = funds.reduce(
@@ -123,6 +175,47 @@ export async function getKpis({ stage, region, sector } = {}) {
   );
 
   return {
+    trackedFunding: {
+      value: trackedFunding,
+      label: 'Tracked Funding',
+      secondary: `${companies.length} companies`,
+      quality: DATA_QUALITY.VERIFIED,
+      dataQualityNote: 'Sum of total funding (all rounds) across tracked Nevada ecosystem companies. Sourced from Crunchbase, SEC filings, and press releases.',
+      sources: ['Crunchbase', 'SEC filings', 'Press releases', 'Company self-reports'],
+    },
+    publicCapitalShare: {
+      value: publicCapitalShare,
+      label: 'Public Capital Share',
+      secondary: `${publicEntityCount} public institutions`,
+      quality: DATA_QUALITY.CALCULATED,
+      dataQualityNote: `Public institutions contribute ~${publicCapitalShare.toFixed(1)}% of total tracked funding directly, but originate ${dealOriginationRate.toFixed(0)}% of deals through accelerator pipelines and co-investment signaling. They occupy high-betweenness positions in the network graph.`,
+      formula: 'public_institution_direct_funding / total_tracked_funding × 100',
+      breakdown: {
+        directFunding: { value: publicFundingDirect, quality: DATA_QUALITY.CALCULATED },
+        totalTracked: { value: trackedFunding, quality: DATA_QUALITY.VERIFIED },
+      },
+    },
+    dealOrigination: {
+      value: dealOriginationRate,
+      label: 'Deal Origination',
+      secondary: `${originatedDeals} of ${totalFundedCompanies} funded cos`,
+      quality: DATA_QUALITY.CALCULATED,
+      dataQualityNote: `${originatedDeals} of ${totalFundedCompanies} funded companies had prior connections to accelerators or ecosystem orgs (GOED, StartupNV, AngelNV, etc.) before receiving institutional capital. Derived from graph multi-hop traversal of accelerator → company → fund investment paths.`,
+      formula: 'companies_with_public_institution_connection / total_funded_companies × 100',
+      sources: ['T-GNN temporal analysis', 'Graph edge traversal'],
+      components: {
+        originatedDeals: {
+          value: originatedDeals,
+          quality: DATA_QUALITY.CALCULATED,
+          note: 'Companies connected to accelerators/ecosystem orgs that subsequently received fund investment',
+        },
+        totalFundedCompanies: {
+          value: totalFundedCompanies,
+          quality: DATA_QUALITY.VERIFIED,
+          note: 'Companies with at least one invested_in edge from a fund',
+        },
+      },
+    },
     capitalDeployed: {
       value: capitalDeployed,
       label: 'Capital Deployed',

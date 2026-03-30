@@ -25,9 +25,6 @@ export default {
   nodeEnv,
   adminApiKey: process.env.ADMIN_API_KEY || null,
   jwtSecret,
-  smtpHost: process.env.SMTP_HOST || null,
-  smtpPort: parseInt(process.env.SMTP_PORT, 10) || 587,
-  smtpUser: process.env.SMTP_USER || null,
-  smtpPass: process.env.SMTP_PASS || null,
-  emailFrom: process.env.EMAIL_FROM || 'noreply@battlebornintel.com',
+  resendApiKey: process.env.RESEND_API_KEY || null,
+  emailFrom: process.env.EMAIL_FROM || 'onboarding@resend.dev',
 };

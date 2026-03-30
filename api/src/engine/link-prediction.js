@@ -11,6 +11,7 @@ import * as cache from '../utils/cache.js';
 
 const CACHE_KEY_ALL = 'link-predictions:all';
 const CACHE_KEY_NODE = 'link-predictions:node:';
+const CACHE_KEY_GRAPH = 'link-predictions:graph-data';
 const CACHE_TTL = 300_000; // 5 minutes
 
 const WEIGHTS = {
@@ -43,6 +44,33 @@ const TYPE_COMPAT = {
   'person|fund': 0.5,
   'fund|person': 0.5,
 };
+
+// Type pairs worth computing link predictions for (skip low-value combos)
+const PREDICTABLE_TYPE_PAIRS = new Set([
+  'fund|company', 'company|fund',
+  'company|company',
+  'accelerator|company', 'company|accelerator',
+  'ecosystem|company', 'company|ecosystem',
+  'person|company', 'company|person',
+  'external|company', 'company|external',
+  'fund|accelerator', 'accelerator|fund',
+  'fund|fund',
+  'fund|ecosystem', 'ecosystem|fund',
+  'person|fund', 'fund|person',
+]);
+
+/**
+ * Load all edges and node metadata from the database.
+ * Results are cached for CACHE_TTL so multiple prediction calls
+ * (e.g. all-graph + per-node) reuse the same loaded data.
+ */
+async function loadGraphDataCached() {
+  const cached = cache.get(CACHE_KEY_GRAPH);
+  if (cached) return cached;
+  const data = await loadGraphData();
+  cache.set(CACHE_KEY_GRAPH, data, CACHE_TTL);
+  return data;
+}
 
 /**
  * Load all edges and node metadata from the database.
@@ -393,12 +421,15 @@ export async function predictMissingLinks({ limit = 50, minScore = 0.3 } = {}) {
   const cached = cache.get(cacheKey);
   if (cached) return cached;
 
-  const { edges, nodeMeta } = await loadGraphData();
+  const { edges, nodeMeta } = await loadGraphDataCached();
   const { adj, edgeDates, edgeWeights, edgeConfs } = buildAdjacency(edges);
 
   const predictions = [];
   const seen = new Set(); // track A-C pairs we've already scored
   let totalOpenTriads = 0;
+
+  // Early termination: once we have enough high-scoring predictions, stop
+  const earlyTerminationThreshold = limit * 2;
 
   // For each node B, look at all pairs of B's neighbors (A, C)
   for (const [nodeB, neighborsB] of adj) {
@@ -425,6 +456,10 @@ export async function predictMissingLinks({ limit = 50, minScore = 0.3 } = {}) {
         const metaA = nodeMeta.get(nodeA);
         const metaC = nodeMeta.get(nodeC);
         if (!metaA || !metaC) continue;
+
+        // Pre-filter: skip type pairs that don't produce useful predictions
+        const typePair = `${metaA.type}|${metaC.type}`;
+        if (!PREDICTABLE_TYPE_PAIRS.has(typePair)) continue;
 
         const neighborsC = adj.get(nodeC) || new Set();
 
@@ -470,6 +505,9 @@ export async function predictMissingLinks({ limit = 50, minScore = 0.3 } = {}) {
         }
       }
     }
+
+    // Early termination: if we have enough high-scoring candidates, stop exploring
+    if (predictions.length >= earlyTerminationThreshold) break;
   }
 
   // Sort descending by score
@@ -502,7 +540,7 @@ export async function predictLinksForNode(nodeId, { limit = 20, minScore = 0.3 }
   const cached = cache.get(cacheKey);
   if (cached) return cached;
 
-  const { edges, nodeMeta } = await loadGraphData();
+  const { edges, nodeMeta } = await loadGraphDataCached();
   const { adj, edgeDates, edgeWeights, edgeConfs } = buildAdjacency(edges);
 
   const neighborsTarget = adj.get(nodeId);
