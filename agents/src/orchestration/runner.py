@@ -1,7 +1,9 @@
 """Agent execution with retry logic and per-agent timeouts."""
 
 import asyncio
+import json
 import logging
+import time
 import traceback
 
 from ..db import close_pool
@@ -73,6 +75,36 @@ async def _refresh_indicator_views():
         logger.warning("Failed to refresh indicator views: %s", e)
 
 
+async def _store_duration(run_id, duration_ms):
+    """Store execution duration on the agent_runs record."""
+    from ..db import get_pool
+
+    try:
+        pool = await get_pool()
+        await pool.execute(
+            "UPDATE agent_runs SET duration_ms = $2 WHERE id = $1",
+            run_id,
+            duration_ms,
+        )
+    except Exception as e:
+        logger.warning("Failed to store duration_ms for run %s: %s", run_id, e)
+
+
+async def _record_dead_letter(pool, agent_name, run_id, error, kwargs, attempts):
+    """Record permanently failed agent run in dead letter queue."""
+    try:
+        await pool.execute(
+            """INSERT INTO agent_dead_letters
+               (agent_type, agent_run_id, error_message, error_class,
+                input_params, attempts, first_failed_at, last_failed_at)
+               VALUES ($1, $2, $3, $4, $5::jsonb, $6, NOW(), NOW())""",
+            agent_name, run_id, str(error), type(error).__name__,
+            json.dumps(kwargs) if kwargs else None, attempts
+        )
+    except Exception as e:
+        logger.warning("Failed to record dead letter: %s", e)
+
+
 async def run_agent(agent_name: str, retries: int = MAX_RETRIES, **kwargs):
     """Run an agent with retry logic."""
     if agent_name not in AGENT_REGISTRY:
@@ -84,12 +116,15 @@ async def run_agent(agent_name: str, retries: int = MAX_RETRIES, **kwargs):
 
     try:
         for attempt in range(1, retries + 1):
+            start_time = time.perf_counter()
             try:
                 agent = agent_cls()
                 result = await asyncio.wait_for(
                     agent.execute(**kwargs), timeout=timeout
                 )
-                print(f"[{agent_name}] completed: {result}")
+                duration_ms = int((time.perf_counter() - start_time) * 1000)
+                await _store_duration(agent.run_id, duration_ms)
+                print(f"[{agent_name}] completed in {duration_ms}ms: {result}")
 
                 # Auto-refresh materialized views after successful ingestion
                 if agent_name in _INGESTOR_AGENTS:
@@ -97,6 +132,9 @@ async def run_agent(agent_name: str, retries: int = MAX_RETRIES, **kwargs):
 
                 return result
             except asyncio.TimeoutError:
+                duration_ms = int((time.perf_counter() - start_time) * 1000)
+                if hasattr(agent, 'run_id') and agent.run_id:
+                    await _store_duration(agent.run_id, duration_ms)
                 last_error = asyncio.TimeoutError(
                     f"Agent '{agent_name}' timed out after {timeout}s"
                 )
@@ -117,6 +155,9 @@ async def run_agent(agent_name: str, retries: int = MAX_RETRIES, **kwargs):
                 else:
                     print(f"[{agent_name}] all retries exhausted")
             except Exception as e:
+                duration_ms = int((time.perf_counter() - start_time) * 1000)
+                if hasattr(agent, 'run_id') and agent.run_id:
+                    await _store_duration(agent.run_id, duration_ms)
                 last_error = e
                 print(f"[{agent_name}] attempt {attempt}/{retries} failed: {e}")
                 if attempt < retries:
@@ -126,6 +167,17 @@ async def run_agent(agent_name: str, retries: int = MAX_RETRIES, **kwargs):
                 else:
                     print(f"[{agent_name}] all retries exhausted")
                     traceback.print_exc()
+
+        # Record permanently failed run in dead letter queue
+        from ..db import get_pool
+        try:
+            pool = await get_pool()
+            run_id = kwargs.get("run_id")
+            await _record_dead_letter(
+                pool, agent_name, run_id, last_error, kwargs, retries
+            )
+        except Exception as dl_err:
+            logger.warning("Dead letter recording failed: %s", dl_err)
 
         raise last_error
     finally:

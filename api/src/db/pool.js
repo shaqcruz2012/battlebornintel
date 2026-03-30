@@ -11,8 +11,41 @@ const pool = new pg.Pool({
   application_name: 'bbi-api',
 });
 
+// Connection lifecycle tracking
+let totalConnections = 0;
+let activeConnections = 0;
+let connectionErrors = 0;
+
+pool.on('connect', () => {
+  totalConnections++;
+  activeConnections++;
+});
+
+pool.on('acquire', () => {
+  // Connection checked out from pool
+});
+
+pool.on('release', () => {
+  // Connection returned to pool
+});
+
+pool.on('remove', () => {
+  activeConnections--;
+});
+
 pool.on('error', (err) => {
+  connectionErrors++;
   console.error('Unexpected pool error:', err);
 });
+
+export function getPoolStats() {
+  return {
+    total: pool.totalCount,
+    idle: pool.idleCount,
+    waiting: pool.waitingCount,
+    totalConnections,
+    connectionErrors,
+  };
+}
 
 export default pool;

@@ -4,6 +4,7 @@ import { recomputeAndCacheMetrics } from '../services/graphService.js';
 import { refreshIndicators } from '../db/queries/indicators.js';
 import { getAgentStatus, getDataFreshness } from '../db/queries/admin.js';
 import { clearCache } from '../middleware/cache.js';
+import { getPoolStats } from '../db/pool.js';
 
 const router = Router();
 
@@ -98,6 +99,12 @@ router.get('/data-freshness', async (req, res, next) => {
   } catch (err) {
     next(err);
   }
+});
+
+// Pool health stats
+router.get('/pool-stats', async (req, res) => {
+  const stats = getPoolStats();
+  res.json({ data: stats });
 });
 
 export default router;
