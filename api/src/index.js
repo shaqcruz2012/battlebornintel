@@ -8,7 +8,7 @@ import pool from './db/pool.js';
 import { errorHandler } from './middleware/errorHandler.js';
 import { cacheMiddleware, getCacheStats } from './middleware/cache.js';
 import { requestLogger } from './middleware/requestLogger.js';
-import logger from './logger.js';
+import logger, { runWithRequestContext } from './logger.js';
 
 import companiesRouter from './routes/companies.js';
 import fundsRouter from './routes/funds.js';
@@ -32,7 +32,7 @@ app.use(helmet());
 app.use((req, res, next) => {
   req.id = req.headers['x-request-id'] || randomUUID();
   res.setHeader('X-Request-ID', req.id);
-  next();
+  runWithRequestContext(req.id, next);
 });
 app.use(requestLogger);
 app.use(compression());

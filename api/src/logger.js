@@ -1,6 +1,18 @@
+import { AsyncLocalStorage } from 'node:async_hooks';
+
 const LOG_LEVEL = process.env.LOG_LEVEL || 'info';
 const LEVELS = { error: 0, warn: 1, info: 2, debug: 3 };
 const currentLevel = LEVELS[LOG_LEVEL] ?? LEVELS.info;
+
+const requestContext = new AsyncLocalStorage();
+
+export function runWithRequestContext(requestId, fn) {
+  return requestContext.run({ requestId }, fn);
+}
+
+export function getRequestId() {
+  return requestContext.getStore()?.requestId || null;
+}
 
 function log(level, message, meta = {}) {
   if (LEVELS[level] > currentLevel) return;
@@ -10,6 +22,10 @@ function log(level, message, meta = {}) {
     message,
     ...meta,
   };
+  const reqId = getRequestId();
+  if (reqId && !meta.request_id) {
+    entry.request_id = reqId;
+  }
   // Error objects need special serialization
   if (meta.error instanceof Error) {
     entry.error = {

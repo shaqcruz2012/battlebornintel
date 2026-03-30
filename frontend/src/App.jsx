@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, lazy, Suspense } from 'react';
 import { FilterProvider } from './hooks/useFilters';
+import { ToastProvider } from './contexts/ToastContext';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { AppShell } from './components/layout/AppShell';
 import { Header } from './components/layout/Header';
@@ -44,6 +45,7 @@ export default function App() {
 
   return (
     <ErrorBoundary>
+      <ToastProvider>
       <FilterProvider>
         <AppShell>
           <Header activeView={view} onViewChange={setView} />
@@ -71,6 +73,7 @@ export default function App() {
           </ErrorBoundary>
         </AppShell>
       </FilterProvider>
+      </ToastProvider>
     </ErrorBoundary>
   );
 }
