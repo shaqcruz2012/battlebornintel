@@ -6,6 +6,7 @@ import { getAgentStatus, getDataFreshness } from '../db/queries/admin.js';
 import { clearCache } from '../middleware/cache.js';
 import { getPoolStats } from '../db/pool.js';
 import { logger } from '../logger.js';
+import { logAuditEvent, AuditAction } from '../services/auditService.js';
 
 const router = Router();
 
@@ -35,6 +36,7 @@ router.post('/recompute-scores', adminPostLimit, async (req, res, next) => {
     logger.warn(`[ADMIN] ${req.path} initiated at ${new Date().toISOString()} from ${req.ip}`);
     const count = await recomputeAllScores();
     clearCache();
+    logAuditEvent(req.user?.id, AuditAction.ADMIN_RECOMPUTE, 'scores', null, { companiesScored: count }, req);
     res.json({ data: { companiesScored: count }, message: 'Scores recomputed' });
   } catch (err) {
     next(err);
@@ -47,6 +49,7 @@ router.post('/recompute-graph', adminPostLimit, async (req, res, next) => {
     logger.warn(`[ADMIN] ${req.path} initiated at ${new Date().toISOString()} from ${req.ip}`);
     const count = await recomputeAndCacheMetrics();
     clearCache();
+    logAuditEvent(req.user?.id, AuditAction.ADMIN_RECOMPUTE, 'graph', null, { nodesCached: count }, req);
     res.json({ data: { nodesCached: count }, message: 'Graph metrics recomputed' });
   } catch (err) {
     next(err);
@@ -61,6 +64,7 @@ router.post('/recompute-all', adminPostLimit, async (req, res, next) => {
     const metrics = await recomputeAndCacheMetrics();
     await refreshIndicators();
     clearCache();
+    logAuditEvent(req.user?.id, AuditAction.ADMIN_RECOMPUTE, 'all', null, { companiesScored: scores, nodesCached: metrics }, req);
     res.json({
       data: { companiesScored: scores, nodesCached: metrics, indicatorsRefreshed: true },
       message: 'All computations complete',
@@ -76,6 +80,7 @@ router.post('/refresh-indicators', adminPostLimit, async (req, res, next) => {
     logger.warn(`[ADMIN] ${req.path} initiated at ${new Date().toISOString()} from ${req.ip}`);
     await refreshIndicators();
     clearCache();
+    logAuditEvent(req.user?.id, AuditAction.ADMIN_REFRESH, 'indicators', null, null, req);
     res.json({ data: null, message: 'Economic indicators refreshed' });
   } catch (err) {
     next(err);

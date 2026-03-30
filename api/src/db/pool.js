@@ -2,6 +2,11 @@ import pg from 'pg';
 import cfg from '../config.js';
 import { logger } from '../logger.js';
 
+// SSL configuration for production/staging environments
+const sslConfig = process.env.DB_SSL === 'true'
+  ? { rejectUnauthorized: process.env.DB_SSL_REJECT_UNAUTHORIZED !== 'false' }
+  : undefined;
+
 const pool = new pg.Pool({
   connectionString: cfg.databaseUrl,
   max: 20,
@@ -10,6 +15,7 @@ const pool = new pg.Pool({
   connectionTimeoutMillis: 2_000,   // fail fast if DB unreachable
   statement_timeout: 10_000,        // 10 s hard cap per query
   application_name: 'bbi-api',
+  ...(sslConfig && { ssl: sslConfig }),
 });
 
 // Connection lifecycle tracking

@@ -8,6 +8,7 @@ import pool from './db/pool.js';
 import { errorHandler } from './middleware/errorHandler.js';
 import { cacheMiddleware, getCacheStats } from './middleware/cache.js';
 import { requestLogger } from './middleware/requestLogger.js';
+import { enforceHttps, securityHeaders } from './middleware/security.js';
 import logger, { runWithRequestContext } from './logger.js';
 
 import companiesRouter from './routes/companies.js';
@@ -25,10 +26,29 @@ import indicatorsRouter from './routes/indicators.js';
 import scenariosRouter from './routes/scenarios.js';
 import forecastsRouter from './routes/forecasts.js';
 import graphAnalyticsRouter from './routes/graph-analytics.js';
+import authRouter from './routes/auth.js';
+import { optionalAuth } from './middleware/auth.js';
 
 const app = express();
 
-app.use(helmet());
+app.use(enforceHttps);
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],  // needed for inline styles in React
+      imgSrc: ["'self'", "data:"],
+      connectSrc: ["'self'", process.env.CORS_ORIGIN || 'http://localhost:5173'],
+      fontSrc: ["'self'"],
+      objectSrc: ["'none'"],
+      frameAncestors: ["'none'"],
+    },
+  },
+  hsts: { maxAge: 31536000, includeSubDomains: true, preload: true },
+  referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
+}));
+app.use(securityHeaders);
 app.use((req, res, next) => {
   req.id = req.headers['x-request-id'] || randomUUID();
   res.setHeader('X-Request-ID', req.id);
@@ -71,6 +91,12 @@ function requireAdminKey(req, res, next) {
 // All API routes are mounted on a sub-router, which is then mounted at both
 // /api (backwards compat) and /api/v1 (versioned).
 const apiRouter = express.Router();
+
+// Auth routes (login/logout/me — no auth required for login)
+apiRouter.use('/auth', authRouter);
+
+// Optional auth on all routes — sets req.user if valid token present
+apiRouter.use(optionalAuth);
 
 // Health check
 apiRouter.get('/health', async (req, res) => {
