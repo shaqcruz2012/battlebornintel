@@ -72,7 +72,7 @@ describe('GET /api/analysis/brief', () => {
 
     expect(res.status).toBe(200);
     expect(res.body.data).toEqual(brief.content);
-    expect(res.body.generatedAt).toBe('2026-03-28T06:00:00Z');
+    expect(res.body.generated_at).toBe('2026-03-28T06:00:00Z');
     expect(getWeeklyBrief).toHaveBeenCalledOnce();
   });
 

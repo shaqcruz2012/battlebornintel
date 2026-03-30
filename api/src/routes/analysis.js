@@ -24,7 +24,7 @@ router.get('/brief', async (req, res, next) => {
   try {
     const data = await getWeeklyBrief();
     if (!data) throw new NotFoundError('No brief generated yet');
-    res.json({ data: data.content, generatedAt: data.created_at });
+    res.json({ data: data.content, generated_at: data.created_at });
   } catch (err) {
     next(err);
   }

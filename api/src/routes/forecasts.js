@@ -41,6 +41,9 @@ router.get('/company/:id', async (req, res, next) => {
 router.get('/sector/:slug', async (req, res, next) => {
   try {
     const slug = req.params.slug;
+    if (!slug || !/^[a-z0-9_-]+$/i.test(slug) || slug.length > 100) {
+      return res.status(400).json({ error: 'Invalid slug parameter' });
+    }
     const { rows } = await pool.query(
       `SELECT sr.metric_name,
               sr.period,
