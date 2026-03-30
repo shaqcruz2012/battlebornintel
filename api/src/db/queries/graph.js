@@ -32,10 +32,10 @@ export async function getGraphData({ nodeTypes = [], yearMax = 2026, region, inc
   const yearParam = parseInt(yearMax, 10) || 2026;
   const edgeQuery = includeOpportunities
     ? `SELECT source_id, target_id, rel, event_year, event_date, note, matching_score,
-              edge_category, edge_style, edge_color, edge_opacity, source_url
+              edge_category, edge_style, edge_color, edge_opacity, source_url, capital_m, impact_type
        FROM graph_edges WHERE event_year <= $1::int`
     : `SELECT source_id, target_id, rel, event_year, event_date, note, matching_score,
-              edge_category, edge_style, edge_color, edge_opacity, source_url
+              edge_category, edge_style, edge_color, edge_opacity, source_url, capital_m, impact_type
        FROM graph_edges WHERE event_year <= $1::int
          AND (edge_category IS NULL OR edge_category != 'opportunity')`;
   const edgeRows = (await pool.query(edgeQuery, [yearParam])).rows;
@@ -92,7 +92,8 @@ export async function getGraphData({ nodeTypes = [], yearMax = 2026, region, inc
     const params = regionFilter ? [companyIdsForDetail, region] : [companyIdsForDetail];
     detailQueries.push(
       pool.query(
-        `SELECT id, name, stage, funding_m, momentum, employees, city, region, sectors, eligible, founded
+        `SELECT id, name, stage, funding_m, momentum, employees, city, region, sectors, eligible, founded,
+                location_class, outcome_status, confidence
          FROM companies WHERE id = ANY($1::int[])${regionClause}`,
         params
       ).then(r => ({ type: 'company', rows: r.rows }))
@@ -211,6 +212,9 @@ export async function getGraphData({ nodeTypes = [], yearMax = 2026, region, inc
         region: c.region,
         sector: c.sectors,
         founded: c.founded,
+        locationClass: c.location_class,
+        outcomeStatus: c.outcome_status,
+        confidence: c.confidence ? parseFloat(c.confidence) : null,
       });
     }
   }
@@ -339,6 +343,8 @@ export async function getGraphData({ nodeTypes = [], yearMax = 2026, region, inc
     if (e.edge_style) edge.style = e.edge_style;
     if (e.edge_color) edge.color = e.edge_color;
     if (e.edge_opacity != null) edge.opacity = e.edge_opacity;
+    if (e.capital_m != null) edge.capitalM = parseFloat(e.capital_m);
+    if (e.impact_type) edge.impactType = e.impact_type;
     edges.push(edge);
   }
   // placeholderCount tracked for diagnostics; omitted from production logs
