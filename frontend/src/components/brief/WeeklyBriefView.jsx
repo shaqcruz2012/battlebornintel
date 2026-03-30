@@ -148,6 +148,7 @@ function EditorsNote({ note }) {
       <button
         className={styles.editorsNoteToggle}
         onClick={() => setOpen((v) => !v)}
+        type="button"
         aria-expanded={open}
       >
         <span className={styles.editorsNoteLabel}>Editor's Note</span>
@@ -161,7 +162,7 @@ function EditorsNote({ note }) {
 }
 
 export function WeeklyBriefView() {
-  const { weeks, isLoading } = useWeeklyBriefs(52);
+  const { weeks, isLoading, error } = useWeeklyBriefs(52);
   const [filteredWeeks, setFilteredWeeks] = useState([]);
   const [filterType, setFilterType] = useState('all');
   const [showScrollTop, setShowScrollTop] = useState(false);
@@ -197,6 +198,18 @@ export function WeeklyBriefView() {
   );
   const isCurrentWeekVisible = currentWeekIndex >= 0;
 
+  if (error) {
+    return (
+      <MainGrid>
+        <div className={styles.emptyState}>
+          <div className={styles.emptyContent}>
+            Failed to load weekly briefs. Please try again.
+          </div>
+        </div>
+      </MainGrid>
+    );
+  }
+
   return (
     <MainGrid>
       <div
@@ -215,7 +228,7 @@ export function WeeklyBriefView() {
           </p>
           <div className={styles.controls}>
             {!isCurrentWeekVisible && (
-              <button className={styles.button} onClick={() => {
+              <button className={styles.button} type="button" onClick={() => {
                 setFilterType('all');
                 setTimeout(() => {
                   scrollContainerRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
@@ -226,6 +239,7 @@ export function WeeklyBriefView() {
             )}
             <button
               className={styles.button}
+              type="button"
               onClick={() => window.print()}
               title="Print or save as PDF"
             >
@@ -243,6 +257,7 @@ export function WeeklyBriefView() {
                 key={type.id}
                 className={`${styles.chip} ${filterType === type.id ? styles.active : ''}`}
                 onClick={() => setFilterType(type.id)}
+                type="button"
                 title={`Filter by ${type.label}`}
               >
                 {type.label}
@@ -307,6 +322,7 @@ export function WeeklyBriefView() {
         <button
           className={`${styles.scrollToTop} ${showScrollTop ? styles.visible : ''}`}
           onClick={scrollToTop}
+          type="button"
           title="Scroll to top"
           aria-label="Scroll to top"
         >

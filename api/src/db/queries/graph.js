@@ -1,4 +1,5 @@
 import pool from '../pool.js';
+import { logger } from '../../logger.js';
 
 export async function getGraphData({ nodeTypes = [], yearMax = 2026, region } = {}) {
   const nodes = [];
@@ -276,7 +277,7 @@ export async function getGraphData({ nodeTypes = [], yearMax = 2026, region } = 
     edges.push(edge);
   }
   if (placeholderCount > 0) {
-    console.log(`[graph] Added ${placeholderCount} placeholder nodes for edges with missing endpoints`);
+    logger.info(`[graph] Added ${placeholderCount} placeholder nodes for edges with missing endpoints`);
   }
 
   // Derived edges — all from already-loaded data, no extra queries
@@ -339,12 +340,12 @@ export async function getGraphMetrics() {
   } catch (err) {
     // Table may not exist or be empty — return empty metrics so the
     // caller can fall back to live computation gracefully.
-    console.error('[graph] graph_metrics_cache query failed:', err.message);
-    return { pagerank: {}, betweenness: {}, communities: {} };
+    logger.error('[graph] graph_metrics_cache query failed:', err.message);
+    return { pagerank: {}, betweenness: {}, communities: {}, coInvestmentDensity: {}, founderMobility: {}, structuralHole: {} };
   }
 
   if (!rows || rows.length === 0) {
-    return { pagerank: {}, betweenness: {}, communities: {} };
+    return { pagerank: {}, betweenness: {}, communities: {}, coInvestmentDensity: {}, founderMobility: {}, structuralHole: {} };
   }
 
   const pagerank = {};
@@ -364,5 +365,8 @@ export async function getGraphMetrics() {
     communities[r.node_id] = r.community_id;
   }
 
-  return { pagerank, betweenness, communities };
+  // Advanced network features are computed live (not stored in the cache table),
+  // so return empty containers here. The /api/graph/metrics endpoint falls back
+  // to live computation when the cache is empty, which populates these fully.
+  return { pagerank, betweenness, communities, coInvestmentDensity: {}, founderMobility: {}, structuralHole: {} };
 }

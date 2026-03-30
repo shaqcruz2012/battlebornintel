@@ -1,0 +1,145 @@
+/* ScenarioPanel styles */
+.statusBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.emptyChart {
+  padding: 16px;
+  text-align: center;
+  color: var(--text-secondary, #888);
+  font-size: 0.85rem;
+}
+
+.chartContainer {
+  width: 100%;
+  min-height: 160px;
+}
+
+.chartLegend {
+  display: flex;
+  gap: 12px;
+  padding: 4px 0 8px;
+  font-size: 0.75rem;
+  color: var(--text-secondary, #888);
+}
+
+.legendItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.legendSwatch {
+  display: inline-block;
+  width: 10px;
+  height: 3px;
+  border-radius: 1px;
+}
+
+.detailPanel {
+  padding: 16px;
+}
+
+.emptyState {
+  text-align: center;
+  padding: 32px 16px;
+  color: var(--text-secondary, #888);
+}
+
+.detailHeader {
+  margin-bottom: 16px;
+}
+
+.detailTitle {
+  margin: 0 0 4px;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.detailDesc {
+  margin: 8px 0 0;
+  font-size: 0.85rem;
+  color: var(--text-secondary, #888);
+  line-height: 1.4;
+}
+
+.detailMeta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  margin-bottom: 16px;
+  font-size: 0.8rem;
+  color: var(--text-secondary, #888);
+}
+
+.metaItem {
+  white-space: nowrap;
+}
+
+.chartSection {
+  margin-bottom: 16px;
+}
+
+.sectionHeading {
+  margin: 0 0 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-secondary, #888);
+}
+
+.tableSection {
+  overflow-x: auto;
+}
+
+.metricsTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8rem;
+}
+
+.metricsTable th,
+.metricsTable td {
+  padding: 6px 8px;
+  text-align: left;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.metricsTable th {
+  font-weight: 600;
+  color: var(--text-secondary, #888);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.metricName {
+  font-weight: 500;
+}
+
+.numCell {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.positive {
+  color: var(--accent-green, #4ade80);
+}
+
+.negative {
+  color: var(--accent-red, #f87171);
+}
+
+.delta {
+  font-size: 0.7rem;
+  opacity: 0.8;
+  margin-left: 4px;
+}

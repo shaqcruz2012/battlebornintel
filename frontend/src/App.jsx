@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, lazy, Suspense } from 'react';
 import { FilterProvider } from './hooks/useFilters';
+import { ToastProvider } from './contexts/ToastContext';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { AppShell } from './components/layout/AppShell';
 import { Header } from './components/layout/Header';
@@ -13,9 +14,11 @@ const GraphView = lazy(() => import('./components/graph/GraphView').then(m => ({
 const CompaniesView = lazy(() => import('./components/companies/CompaniesView').then(m => ({ default: m.CompaniesView })));
 const FundsView = lazy(() => import('./components/funds/FundsView').then(m => ({ default: m.FundsView })));
 const StakeholderFeedView = lazy(() => import('./components/feed/StakeholderFeedView').then(m => ({ default: m.StakeholderFeedView })));
+const ScenariosView = lazy(() => import('./components/scenarios/ScenariosView').then(m => ({ default: m.ScenariosView })));
+const IndicatorsView = lazy(() => import('./components/indicators/IndicatorsView').then(m => ({ default: m.IndicatorsView })));
 
 const TabFallback = () => (
-  <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-secondary)' }}>
+  <div role="status" aria-busy="true" style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-secondary)' }}>
     Loading...
   </div>
 );
@@ -42,6 +45,7 @@ export default function App() {
 
   return (
     <ErrorBoundary>
+      <ToastProvider>
       <FilterProvider>
         <AppShell>
           <Header activeView={view} onViewChange={setView} />
@@ -53,7 +57,7 @@ export default function App() {
           />
 
           <ErrorBoundary key={view}>
-            <div className="fade-in">
+            <main className="fade-in" aria-label="Dashboard content">
               {view === 'executive' && <ExecutiveDashboard onViewChange={setView} />}
               <Suspense fallback={<TabFallback />}>
                 {view === 'brief' && <WeeklyBriefView />}
@@ -62,11 +66,14 @@ export default function App() {
                 {view === 'goed' && <GoedView />}
                 {view === 'feed' && <StakeholderFeedView />}
                 {view === 'graph' && <GraphView />}
+                {view === 'scenarios' && <ScenariosView />}
+                {view === 'indicators' && <IndicatorsView />}
               </Suspense>
-            </div>
+            </main>
           </ErrorBoundary>
         </AppShell>
       </FilterProvider>
+      </ToastProvider>
     </ErrorBoundary>
   );
 }

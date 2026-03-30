@@ -3,11 +3,15 @@ import pool from '../pool.js';
 export async function getAllCompanies({ stage, region, sector, search, sortBy } = {}) {
   let sql = `
     WITH latest_scores AS (
-      SELECT DISTINCT ON (company_id) company_id, irs_score, grade, triggers, dims
+      SELECT DISTINCT ON (company_id)
+        company_id, irs_score, grade, triggers, dims,
+        forward_score, forward_components, score_type
       FROM computed_scores
       ORDER BY company_id, computed_at DESC
     )
-    SELECT c.*, cs.irs_score, cs.grade, cs.triggers, cs.dims
+    SELECT c.*,
+      cs.irs_score, cs.grade, cs.triggers, cs.dims,
+      cs.forward_score, cs.forward_components, cs.score_type
     FROM companies c
     LEFT JOIN latest_scores cs ON cs.company_id = c.id
   `;
@@ -57,44 +61,48 @@ export async function getAllCompanies({ stage, region, sector, search, sortBy } 
     funding: 'c.funding_m DESC',
     name: 'c.name ASC',
   };
-  sql += ` ORDER BY ${orderMap[sortBy] || orderMap.irs}`;
+  sql += ` ORDER BY ${orderMap[sortBy] || orderMap.irs} LIMIT 500`;
 
   const { rows } = await pool.query(sql, params);
   return rows.map(formatCompany);
 }
 
 export async function getCompanyById(id) {
-  const { rows } = await pool.query(
-    `WITH latest_scores AS (
-       SELECT DISTINCT ON (company_id) company_id, irs_score, grade, triggers, dims
-       FROM computed_scores
-       ORDER BY company_id, computed_at DESC
-     )
-     SELECT c.*, cs.irs_score, cs.grade, cs.triggers, cs.dims
-     FROM companies c
-     LEFT JOIN latest_scores cs ON cs.company_id = c.id
-     WHERE c.id = $1`,
-    [id]
-  );
-  if (rows.length === 0) return null;
-
-  const company = formatCompany(rows[0]);
-
-  // Get edges
   const nodeId = `c_${id}`;
-  const { rows: edges } = await pool.query(
-    `SELECT * FROM graph_edges WHERE source_id = $1 OR target_id = $1`,
-    [nodeId]
-  );
-  company.edges = edges;
 
-  // Get listings
-  const { rows: listings } = await pool.query(
-    `SELECT * FROM listings WHERE company_id = $1`,
-    [id]
-  );
-  company.listings = listings;
+  // Fetch company + scores, edges, and listings in parallel (avoids N+1)
+  const [companyRes, edgesRes, listingsRes] = await Promise.all([
+    pool.query(
+      `WITH latest_scores AS (
+         SELECT DISTINCT ON (company_id)
+           company_id, irs_score, grade, triggers, dims,
+           forward_score, forward_components, score_type
+         FROM computed_scores
+         ORDER BY company_id, computed_at DESC
+       )
+       SELECT c.*,
+         cs.irs_score, cs.grade, cs.triggers, cs.dims,
+         cs.forward_score, cs.forward_components, cs.score_type
+       FROM companies c
+       LEFT JOIN latest_scores cs ON cs.company_id = c.id
+       WHERE c.id = $1`,
+      [id]
+    ),
+    pool.query(
+      `SELECT * FROM graph_edges WHERE source_id = $1 OR target_id = $1`,
+      [nodeId]
+    ),
+    pool.query(
+      `SELECT * FROM listings WHERE company_id = $1`,
+      [id]
+    ),
+  ]);
 
+  if (companyRes.rows.length === 0) return null;
+
+  const company = formatCompany(companyRes.rows[0]);
+  company.edges = edgesRes.rows;
+  company.listings = listingsRes.rows;
   return company;
 }
 
@@ -119,5 +127,8 @@ function formatCompany(row) {
     grade: row.grade || null,
     triggers: row.triggers || [],
     dims: row.dims || null,
+    forward_score: row.forward_score ?? null,
+    forward_components: row.forward_components ?? null,
+    score_type: row.score_type || 'heuristic',
   };
 }

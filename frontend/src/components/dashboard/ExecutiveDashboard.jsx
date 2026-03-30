@@ -8,6 +8,7 @@ import { SectorHeatStrip } from './SectorHeatStrip';
 import { SectorDetailDrawer } from './SectorDetailDrawer';
 import { MomentumTable } from './MomentumTable';
 import { NarrativePanel } from './NarrativePanel';
+import { DataQualityLegend } from './DataQualityLegend';
 
 function LoadingSkeleton() {
   return (
@@ -62,7 +63,7 @@ export function ExecutiveDashboard({ onViewChange }) {
   const [selectedSector, setSelectedSector] = useState(null);
   const [activeKpi, setActiveKpi] = useState(null);
 
-  const { data: companies = [], isLoading: loadingCompanies } = useCompanies({
+  const { data: companies = [], isLoading: loadingCompanies, error: companiesError } = useCompanies({
     stage: filters.stage,
     region: filters.region,
     sector: filters.sector,
@@ -70,13 +71,13 @@ export function ExecutiveDashboard({ onViewChange }) {
     sortBy: filters.sortBy,
   });
 
-  const { data: kpis, isLoading: loadingKpis } = useKpis({
+  const { data: kpis, isLoading: loadingKpis, error: kpisError } = useKpis({
     stage: filters.stage,
     region: filters.region,
     sector: filters.sector,
   });
 
-  const { data: sectorStats = [], isLoading: loadingSectors } = useSectorStats();
+  const { data: sectorStats = [], isLoading: loadingSectors, error: sectorsError } = useSectorStats();
   const { data: funds = [] } = useFunds(
     filters.region && filters.region !== 'all' ? { region: filters.region } : {}
   );
@@ -85,6 +86,21 @@ export function ExecutiveDashboard({ onViewChange }) {
 
   if (isLoading) {
     return <LoadingSkeleton />;
+  }
+
+  if (companiesError || kpisError || sectorsError) {
+    return (
+      <MainGrid>
+        <div style={{
+          gridColumn: '1 / -1',
+          textAlign: 'center',
+          padding: 'var(--space-3xl)',
+          color: 'var(--text-secondary)',
+        }}>
+          Failed to load dashboard data. Please try again.
+        </div>
+      </MainGrid>
+    );
   }
 
   const handleViewAllCompanies = (sector) => {
@@ -134,6 +150,7 @@ export function ExecutiveDashboard({ onViewChange }) {
           onViewAll={() => handleViewAllCompanies(selectedSector)}
         />
       )}
+      <DataQualityLegend />
     </MainGrid>
   );
 }

@@ -13,7 +13,7 @@ router.get('/', async (req, res, next) => {
   try {
     const { limit, type } = req.query;
     const data = await getTimeline({
-      limit: limit ? parseInt(limit, 10) : 30,
+      limit: Math.min(limit ? parseInt(limit, 10) : 30, 500),
       type,
     });
     res.json({ data });

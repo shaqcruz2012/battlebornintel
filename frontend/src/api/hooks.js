@@ -102,26 +102,6 @@ export function useWeeklyBrief(params = {}) {
   });
 }
 
-/** Weekly brief for specific week */
-export function useWeeklyBriefWeek(weekStart) {
-  return useQuery({
-    queryKey: ['analysis', 'brief', weekStart],
-    queryFn: () => api.getWeeklyBriefByWeek(weekStart),
-    enabled: !!weekStart,
-    staleTime: 300_000,
-  });
-}
-
-/** Weekly brief range (e.g., past year) */
-export function useWeeklyBriefRange(startWeek, endWeek) {
-  return useQuery({
-    queryKey: ['analysis', 'brief', 'range', startWeek, endWeek],
-    queryFn: () => api.getWeeklyBriefRange(startWeek, endWeek),
-    enabled: !!(startWeek && endWeek),
-    staleTime: 300_000,
-  });
-}
-
 /** Risk assessments */
 export function useRiskAssessments() {
   return useQuery({
@@ -143,6 +123,121 @@ export function useStakeholderActivities(params = {}) {
 /** GOED dashboard summary — composes existing queries */
 const GOED_NODE_TYPES = ['company', 'fund', 'person', 'external', 'accelerator', 'ecosystem'];
 
+/** Economic indicators summary (latest + trend) */
+export function useIndicatorsSummary() {
+  return useQuery({
+    queryKey: ['indicators', 'summary'],
+    queryFn: () => api.getIndicatorsSummary(),
+    staleTime: 120_000,
+  });
+}
+
+/** Time series history for a single indicator */
+export function useIndicatorHistory(metric, params = {}) {
+  return useQuery({
+    queryKey: ['indicators', 'history', metric, params],
+    queryFn: () => api.getIndicatorHistory(metric, params),
+    enabled: !!metric,
+    staleTime: 120_000,
+  });
+}
+
+/** Macro indicators (FRED series) */
+export function useMacroIndicators(params = {}) {
+  return useQuery({
+    queryKey: ['indicators', 'macro', params],
+    queryFn: () => api.getMacroIndicators(params),
+    staleTime: 120_000,
+  });
+}
+
+/** Regional indicators (BLS employment/wages) */
+export function useRegionalIndicators(region) {
+  return useQuery({
+    queryKey: ['indicators', 'regional', region],
+    queryFn: () => api.getRegionalIndicators(region),
+    enabled: !!region,
+    staleTime: 120_000,
+  });
+}
+
+/** All scenarios (paginated) */
+export function useScenarios(params = {}) {
+  return useQuery({
+    queryKey: ['scenarios', params],
+    queryFn: () => api.getScenarios(params),
+    staleTime: 120_000,
+  });
+}
+
+/** Single scenario with results */
+export function useScenario(id) {
+  return useQuery({
+    queryKey: ['scenario', id],
+    queryFn: () => api.getScenario(id),
+    enabled: !!id,
+    staleTime: 120_000,
+  });
+}
+
+/** Latest forecasts for an entity */
+export function useForecasts(entityType, entityId) {
+  return useQuery({
+    queryKey: ['forecasts', entityType, entityId],
+    queryFn: () => api.getForecasts(entityType, entityId),
+    enabled: !!(entityType && entityId),
+    staleTime: 120_000,
+  });
+}
+
+/** Ecosystem-wide forecast summary */
+export function useEcosystemForecast() {
+  return useQuery({
+    queryKey: ['forecasts', 'ecosystem'],
+    queryFn: () => api.getEcosystemForecast(),
+    staleTime: 120_000,
+  });
+}
+
+/** Temporal graph snapshot at a specific date */
+export function useTemporalGraph(date, nodeTypes, region) {
+  return useQuery({
+    queryKey: ['graph', 'temporal', date, nodeTypes, region],
+    queryFn: () => api.getTemporalGraph(date, nodeTypes, region),
+    enabled: !!date,
+    staleTime: 300_000,
+  });
+}
+
+/** Node feature vectors for ML/visualization */
+export function useNodeFeatures() {
+  return useQuery({
+    queryKey: ['graph', 'nodeFeatures'],
+    queryFn: () => api.getNodeFeatures(),
+    staleTime: 300_000,
+  });
+}
+
+/** Metrics history time-series for a specific node */
+export function useNodeMetricsHistory(nodeId) {
+  return useQuery({
+    queryKey: ['graph', 'metricsHistory', nodeId],
+    queryFn: () => api.getNodeMetricsHistory(nodeId),
+    enabled: !!nodeId,
+    staleTime: 120_000,
+  });
+}
+
+/** Stage transitions for a company */
+export function useStageTransitions(companyId) {
+  return useQuery({
+    queryKey: ['stageTransitions', companyId],
+    queryFn: () => api.getStageTransitions(companyId),
+    enabled: !!companyId,
+    staleTime: 120_000,
+  });
+}
+
 export function useGoedSummary(region) {
   const fundsQuery = useFunds(region && region !== 'all' ? { region } : {});
   const graphQuery = useGraph(GOED_NODE_TYPES, 2026, region);
@@ -154,5 +249,6 @@ export function useGoedSummary(region) {
     companies: companiesQuery.data || [],
     isLoading:
       fundsQuery.isLoading || graphQuery.isLoading || companiesQuery.isLoading,
+    error: fundsQuery.error || graphQuery.error || companiesQuery.error || null,
   };
 }

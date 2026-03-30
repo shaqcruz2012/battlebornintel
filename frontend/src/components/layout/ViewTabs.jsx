@@ -11,6 +11,8 @@ const VIEWS = [
   { id: 'goed', label: 'GOED' },
   { id: 'feed', label: 'Activity Feed' },
   { id: 'graph', label: 'Graph Intelligence' },
+  { id: 'scenarios', label: 'Scenarios' },
+  { id: 'indicators', label: 'Indicators' },
 ];
 
 const GRAPH_DEFAULT_NODE_TYPES = [

@@ -3,6 +3,7 @@ import pool from '../pool.js';
 const THRESHOLDS = { excellent: 0.85, good: 0.70, fair: 0.50 };
 const FUND_THRESHOLDS = { excellent: 0.80, good: 0.65, fair: 0.50 };
 
+/** Classify a matching score into a quality tier (excellent/good/fair/poor). */
 function classifyMatch(score, isFund = false) {
   const t = isFund ? FUND_THRESHOLDS : THRESHOLDS;
   if (score >= t.excellent) return 'excellent';
@@ -11,6 +12,7 @@ function classifyMatch(score, isFund = false) {
   return 'poor';
 }
 
+/** Format a raw opportunity row into the API response shape with computed match quality. */
 function formatOpportunity(row) {
   const score = parseFloat(row.matching_score);
   const isFund = row.rel === 'fund_opportunity';

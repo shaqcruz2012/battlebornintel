@@ -87,7 +87,7 @@ export async function preloadDataFiles(files = ['companies', 'graphEntities', 'e
   try {
     await Promise.all(promises);
   } catch (error) {
-    console.warn('Error preloading data files:', error);
+    console.debug('Error preloading data files:', error);
   }
 }
 

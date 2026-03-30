@@ -1,0 +1,238 @@
+/* ── CommunityPanel — cluster sidebar ── */
+
+.panel {
+  width: 320px;
+  flex-shrink: 0;
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  max-height: calc(100vh - 200px);
+  display: flex;
+  flex-direction: column;
+  border-left: 2px solid rgba(69, 215, 198, 0.15);
+}
+
+/* Custom scrollbar */
+.list::-webkit-scrollbar {
+  width: 4px;
+}
+
+.list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.list::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 2px;
+}
+
+.list::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+/* ── Header ── */
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-lg) var(--space-xl);
+  border-bottom: 1px solid var(--border-subtle);
+  background: linear-gradient(180deg, rgba(69, 215, 198, 0.03) 0%, transparent 100%);
+  flex-shrink: 0;
+}
+
+.headerTitle {
+  font-family: var(--font-heading);
+  font-size: 14px;
+  font-weight: var(--weight-semibold);
+  color: var(--text-primary);
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+}
+
+.headerStats {
+  font-size: 10px;
+  color: var(--text-disabled);
+  font-family: 'SF Mono', 'Cascadia Code', 'Consolas', monospace;
+  font-weight: var(--weight-medium);
+}
+
+/* ── Scrollable list ── */
+
+.list {
+  overflow-y: auto;
+  flex: 1;
+  padding: var(--space-sm);
+}
+
+/* ── Community card ── */
+
+.communityCard {
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  margin-bottom: var(--space-sm);
+  background: var(--bg-card);
+  transition: border-color var(--transition-fast);
+}
+
+.communityCard:hover {
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.cardHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.cardHeaderLeft {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.colorSwatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  flex-shrink: 0;
+  box-shadow: 0 0 6px rgba(255, 255, 255, 0.08);
+}
+
+.communityLabel {
+  font-size: 12px;
+  font-weight: var(--weight-semibold);
+  color: var(--text-primary);
+  letter-spacing: -0.1px;
+}
+
+.memberCount {
+  font-size: 10px;
+  color: var(--text-disabled);
+  font-family: 'SF Mono', 'Cascadia Code', 'Consolas', monospace;
+  background: rgba(255, 255, 255, 0.04);
+  padding: 1px 6px;
+  border-radius: 2px;
+}
+
+.chevron {
+  font-size: 9px;
+  color: var(--text-disabled);
+  transition: transform var(--transition-fast);
+}
+
+.chevronOpen {
+  transform: rotate(180deg);
+}
+
+/* ── Card body (expanded) ── */
+
+.cardBody {
+  padding: 0 12px 10px;
+}
+
+/* ── Member row ── */
+
+.memberRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: 5px 0;
+  font-size: 11px;
+  color: var(--text-secondary);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.memberRow:last-of-type {
+  border-bottom: none;
+}
+
+.memberRow:hover {
+  color: var(--text-primary);
+  padding-left: 4px;
+}
+
+.typeIcon {
+  font-size: 10px;
+  flex-shrink: 0;
+  width: 14px;
+  text-align: center;
+}
+
+.memberName {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: var(--weight-medium);
+}
+
+.prValue {
+  font-family: 'SF Mono', 'Cascadia Code', 'Consolas', monospace;
+  font-size: 9px;
+  color: var(--accent-teal);
+  flex-shrink: 0;
+}
+
+.moreCount {
+  font-size: 10px;
+  color: var(--text-disabled);
+  text-align: center;
+  padding: var(--space-sm) 0;
+  font-family: 'SF Mono', 'Cascadia Code', 'Consolas', monospace;
+}
+
+/* ── Sector breakdown ── */
+
+.sectorBreakdown {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.sectorBadge {
+  font-size: 9px;
+  color: var(--text-disabled);
+  background: rgba(255, 255, 255, 0.04);
+  padding: 2px 6px;
+  border-radius: 2px;
+  letter-spacing: 0.3px;
+  white-space: nowrap;
+}
+
+.sectorBadge strong {
+  color: var(--text-secondary);
+  font-weight: var(--weight-semibold);
+  margin-left: 2px;
+}
+
+/* ── Empty state ── */
+
+.empty {
+  padding: var(--space-3xl) var(--space-xl);
+  text-align: center;
+  color: var(--text-disabled);
+  font-size: 12px;
+  font-style: italic;
+}
+
+/* ── Responsive ── */
+
+@media (max-width: 1200px) {
+  .panel {
+    width: 100%;
+    max-height: 350px;
+    border-left: none;
+    border-top: 2px solid rgba(69, 215, 198, 0.15);
+  }
+}

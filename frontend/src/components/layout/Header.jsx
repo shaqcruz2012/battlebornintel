@@ -20,19 +20,20 @@ export function Header() {
   const { filters, setRegion, setStage, setSearch } = useFilters();
 
   return (
-    <header className={styles.header}>
+    <header className={styles.header} role="banner">
       <div className={styles.brand}>
         <h1 className={styles.title}>Battle Born Intelligence</h1>
         <span className={styles.subtitle}>Nevada Startup Ecosystem</span>
       </div>
 
-      <div className={styles.controls}>
+      <nav className={styles.controls} aria-label="Filters">
         <input
           className={styles.searchInput}
           type="text"
           placeholder="Search companies..."
           value={filters.search}
           onChange={(e) => setSearch(e.target.value)}
+          aria-label="Search companies"
         />
         <span className={styles.divider} />
         {REGIONS.map((r) => (
@@ -52,7 +53,7 @@ export function Header() {
             onClick={() => setStage(s.value)}
           />
         ))}
-      </div>
+      </nav>
     </header>
   );
 }

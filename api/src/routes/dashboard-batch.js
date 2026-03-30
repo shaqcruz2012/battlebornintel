@@ -5,11 +5,13 @@
  */
 
 import { Router } from 'express';
+import { logger } from '../logger.js';
 import { cacheMiddleware } from '../middleware/cache.js';
 import { getAllCompanies, getCompanyById } from '../db/queries/companies.js';
 import { getAllFunds } from '../db/queries/funds.js';
 import { getKpis } from '../db/queries/kpis.js';
 import { getSectorStats } from '../db/queries/kpis.js';
+import { getIndicatorsSummary } from '../db/queries/indicators.js';
 
 const router = Router();
 
@@ -25,6 +27,7 @@ router.use(cacheMiddleware('dashboard-batch', 300000, { cacheControl: 'public, m
  * - kpis: boolean (default true) - fetch KPI aggregates
  * - funds: boolean (default true) - fetch funds list
  * - sectors: boolean (default true) - fetch sector stats
+ * - indicators: boolean (default false) - fetch economic indicators summary
  * - filters: JSON string - pass to companies query
  */
 router.get('/', async (req, res, next) => {
@@ -34,14 +37,21 @@ router.get('/', async (req, res, next) => {
       kpis: includeKpis = 'true',
       funds: includeFunds = 'true',
       sectors: includeSectors = 'true',
+      indicators: includeIndicators = 'false',
       filters: filtersStr,
     } = req.query;
 
-    // Parse filters if provided
+    // Parse filters if provided, whitelist allowed keys
     let filters = {};
+    const ALLOWED_FILTER_KEYS = ['stage', 'region', 'sector', 'search', 'sortBy'];
     if (filtersStr) {
       try {
-        filters = JSON.parse(filtersStr);
+        const parsed = JSON.parse(filtersStr);
+        const unknownKeys = Object.keys(parsed).filter(k => !ALLOWED_FILTER_KEYS.includes(k));
+        if (unknownKeys.length > 0) {
+          return res.status(400).json({ error: `Unknown filter keys: ${unknownKeys.join(', ')}` });
+        }
+        filters = parsed;
       } catch (e) {
         return res.status(400).json({ error: 'Invalid filters JSON' });
       }
@@ -52,6 +62,7 @@ router.get('/', async (req, res, next) => {
     const shouldFetchKpis = includeKpis === 'true';
     const shouldFetchFunds = includeFunds === 'true';
     const shouldFetchSectors = includeSectors === 'true';
+    const shouldFetchIndicators = includeIndicators === 'true';
 
     // Execute all requested queries in parallel
     const promises = [];
@@ -59,7 +70,7 @@ router.get('/', async (req, res, next) => {
     if (shouldFetchCompanies) {
       promises.push(
         getAllCompanies(filters).catch(err => {
-          console.error('Companies query error:', err);
+          logger.error('Companies query error:', err);
           return [];
         })
       );
@@ -70,7 +81,7 @@ router.get('/', async (req, res, next) => {
     if (shouldFetchKpis) {
       promises.push(
         getKpis(filters).catch(err => {
-          console.error('KPIs query error:', err);
+          logger.error('KPIs query error:', err);
           return {};
         })
       );
@@ -81,7 +92,7 @@ router.get('/', async (req, res, next) => {
     if (shouldFetchFunds) {
       promises.push(
         getAllFunds().catch(err => {
-          console.error('Funds query error:', err);
+          logger.error('Funds query error:', err);
           return [];
         })
       );
@@ -92,7 +103,7 @@ router.get('/', async (req, res, next) => {
     if (shouldFetchSectors) {
       promises.push(
         getSectorStats().catch(err => {
-          console.error('Sector stats query error:', err);
+          logger.error('Sector stats query error:', err);
           return [];
         })
       );
@@ -100,7 +111,18 @@ router.get('/', async (req, res, next) => {
       promises.push(Promise.resolve(null));
     }
 
-    const [companies, kpis, funds, sectors] = await Promise.all(promises);
+    if (shouldFetchIndicators) {
+      promises.push(
+        getIndicatorsSummary().catch(err => {
+          logger.error('Indicators query error:', err);
+          return [];
+        })
+      );
+    } else {
+      promises.push(Promise.resolve(null));
+    }
+
+    const [companies, kpis, funds, sectors, indicators] = await Promise.all(promises);
 
     // Build response object only with requested data
     const response = {};
@@ -108,8 +130,9 @@ router.get('/', async (req, res, next) => {
     if (shouldFetchKpis) response.kpis = kpis;
     if (shouldFetchFunds) response.funds = funds;
     if (shouldFetchSectors) response.sectors = sectors;
+    if (shouldFetchIndicators) response.indicators = indicators;
 
-    res.json(response);
+    res.json({ data: response });
   } catch (err) {
     next(err);
   }
@@ -125,9 +148,15 @@ router.get('/executives', async (req, res, next) => {
     const { filters: filtersStr } = req.query;
 
     let filters = {};
+    const ALLOWED_FILTER_KEYS = ['stage', 'region', 'sector', 'search', 'sortBy'];
     if (filtersStr) {
       try {
-        filters = JSON.parse(filtersStr);
+        const parsed = JSON.parse(filtersStr);
+        const unknownKeys = Object.keys(parsed).filter(k => !ALLOWED_FILTER_KEYS.includes(k));
+        if (unknownKeys.length > 0) {
+          return res.status(400).json({ error: `Unknown filter keys: ${unknownKeys.join(', ')}` });
+        }
+        filters = parsed;
       } catch (e) {
         return res.status(400).json({ error: 'Invalid filters JSON' });
       }
@@ -135,16 +164,16 @@ router.get('/executives', async (req, res, next) => {
 
     const [companies, kpis] = await Promise.all([
       getAllCompanies(filters).catch(err => {
-        console.error('Companies query error:', err);
+        logger.error('Companies query error:', err);
         return [];
       }),
       getKpis(filters).catch(err => {
-        console.error('KPIs query error:', err);
+        logger.error('KPIs query error:', err);
         return {};
       }),
     ]);
 
-    res.json({ companies, kpis });
+    res.json({ data: { companies, kpis } });
   } catch (err) {
     next(err);
   }
@@ -163,22 +192,26 @@ router.get('/goed', async (req, res, next) => {
 
     const filters = region && region !== 'all' ? { region } : {};
 
-    const [kpis, sectors, companies] = await Promise.all([
+    const [kpis, sectors, companies, indicators] = await Promise.all([
       getKpis(filters).catch(err => {
-        console.error('KPIs query error:', err);
+        logger.error('KPIs query error:', err);
         return {};
       }),
       getSectorStats(filters).catch(err => {
-        console.error('Sector stats query error:', err);
+        logger.error('Sector stats query error:', err);
         return [];
       }),
       getAllCompanies(filters).catch(err => {
-        console.error('Companies query error:', err);
+        logger.error('Companies query error:', err);
+        return [];
+      }),
+      getIndicatorsSummary().catch(err => {
+        logger.error('Indicators query error:', err);
         return [];
       }),
     ]);
 
-    res.json({ kpis, sectors, companies });
+    res.json({ data: { kpis, sectors, companies, indicators } });
   } catch (err) {
     next(err);
   }

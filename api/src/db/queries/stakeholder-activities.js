@@ -1,4 +1,5 @@
 import pool from '../pool.js';
+import { logger } from '../../logger.js';
 
 /**
  * Get stakeholder activities (from timeline events and analysis results)
@@ -191,24 +192,30 @@ export async function getStakeholderActivities(filters = {}) {
       const { rows } = await pool.query(countSql, params);
       return parseInt(rows[0].total, 10);
     } catch (error) {
-      console.error('Error counting stakeholder activities:', error);
+      logger.error('Error counting stakeholder activities:', error);
       throw error;
     }
   }
 
-  // Wrap the filtered query with COUNT(*) OVER() so we get the total
-  // matching rows and paginated data in a single round-trip.
-  let finalSql = `SELECT *, COUNT(*) OVER() AS _total_count FROM (${sql}) _filtered ORDER BY date DESC`;
+  // Run paginated data query and total count query in parallel to avoid
+  // the COUNT(*) OVER() window function which forces a full scan.
+  const countSql = `SELECT COUNT(*) AS total FROM (${sql}) _filtered`;
+  const countParams = [...params];
 
+  let dataSql = `SELECT * FROM (${sql}) _filtered ORDER BY date DESC`;
   if (limit != null) {
-    finalSql += ` LIMIT $${paramIndex}`;
+    dataSql += ` LIMIT $${paramIndex}`;
     params.push(limit);
   }
 
   try {
-    const { rows } = await pool.query(finalSql, params);
-    const totalCount = rows.length > 0 ? parseInt(rows[0]._total_count, 10) : 0;
-    const mappedRows = rows.map((row) => ({
+    const [dataResult, countResult] = await Promise.all([
+      pool.query(dataSql, params),
+      pool.query(countSql, countParams),
+    ]);
+
+    const totalCount = parseInt(countResult.rows[0]?.total || '0', 10);
+    const mappedRows = dataResult.rows.map((row) => ({
       id: row.id,
       date: row.date,
       activity_type: row.activity_type,
@@ -222,7 +229,7 @@ export async function getStakeholderActivities(filters = {}) {
     }));
     return { rows: mappedRows, totalCount };
   } catch (error) {
-    console.error('Error fetching stakeholder activities:', error);
+    logger.error('Error fetching stakeholder activities:', error);
     throw error;
   }
 }

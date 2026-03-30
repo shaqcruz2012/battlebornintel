@@ -393,6 +393,8 @@ export function GraphCanvas({
 }) {
   const containerRef = useRef(null);
   const edgeCanvasRef = useRef(null);
+  const layoutRef = useRef(layout);
+  layoutRef.current = layout;
   const { width: winW, height: winH } = useWindowSize();
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
@@ -444,7 +446,7 @@ export function GraphCanvas({
 
   useEffect(() => {
     if (!focusNodeId) return;
-    const node = layout.nodes.find((n) => n.id === focusNodeId);
+    const node = layoutRef.current.nodes.find((n) => n.id === focusNodeId);
     if (!node) return;
     const targetZoom = Math.max(zoom, 1.8);
     setZoom(targetZoom);
@@ -452,7 +454,7 @@ export function GraphCanvas({
       x: w / 2 - (node.x || 0) * targetZoom,
       y: h / 2 - (node.y || 0) * targetZoom,
     });
-  }, [focusNodeId]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [focusNodeId, zoom, w, h]);
 
   const searchLower = searchTerm.toLowerCase();
   const matchesSearch = useCallback(
@@ -522,41 +524,58 @@ export function GraphCanvas({
     if (!el) return;
 
     const typeColor = NODE_CFG[node.type]?.color || '#888';
-    let metricsHtml = '';
 
+    // Build tooltip using DOM API to avoid XSS via innerHTML
+    el.textContent = '';
+
+    const header = document.createElement('div');
+    header.className = styles.tooltipHeader;
+
+    const nameDiv = document.createElement('div');
+    nameDiv.className = styles.tooltipName;
+    nameDiv.textContent = node.label ?? '';
+    header.appendChild(nameDiv);
+
+    const typeDiv = document.createElement('div');
+    typeDiv.className = styles.tooltipType;
+    typeDiv.style.color = typeColor;
+    typeDiv.textContent = `${NODE_CFG[node.type]?.icon ?? ''} ${NODE_CFG[node.type]?.label ?? node.type}`;
+    header.appendChild(typeDiv);
+
+    el.appendChild(header);
+
+    // Collect metric entries
+    const metricParts = [];
     if (node.type === 'company') {
-      const parts = [];
-      if (node.funding) parts.push({ label: 'Funding', value: fmt(node.funding) });
-      if (node.stage)   parts.push({ label: 'Stage',   value: node.stage.replace(/_/g, ' ') });
-      if (node.employees) parts.push({ label: 'Emp',   value: String(node.employees) });
-      if (node.momentum)  parts.push({ label: 'MTM',   value: String(node.momentum) });
-      metricsHtml = parts.map(m =>
-        `<div class="${styles.tooltipMetric}">` +
-        `<span class="${styles.tooltipMetricLabel}">${m.label}</span>` +
-        `<span class="${styles.tooltipMetricValue}">${m.value}</span>` +
-        `</div>`
-      ).join('');
+      if (node.funding) metricParts.push({ label: 'Funding', value: fmt(node.funding) });
+      if (node.stage)   metricParts.push({ label: 'Stage',   value: node.stage.replace(/_/g, ' ') });
+      if (node.employees) metricParts.push({ label: 'Emp',   value: String(node.employees) });
+      if (node.momentum)  metricParts.push({ label: 'MTM',   value: String(node.momentum) });
     }
 
     const pr = metrics?.pagerank?.[node.id];
     if (pr !== undefined) {
-      metricsHtml +=
-        `<div class="${styles.tooltipMetric}">` +
-        `<span class="${styles.tooltipMetricLabel}">PR</span>` +
-        `<span class="${styles.tooltipMetricValue}">${pr.toFixed(2)}</span>` +
-        `</div>`;
+      metricParts.push({ label: 'PR', value: pr.toFixed(2) });
     }
 
-    el.innerHTML =
-      `<div class="${styles.tooltipHeader}">` +
-        `<div class="${styles.tooltipName}">${node.label ?? ''}</div>` +
-        `<div class="${styles.tooltipType}" style="color:${typeColor}">` +
-          `${NODE_CFG[node.type]?.icon ?? ''} ${NODE_CFG[node.type]?.label ?? node.type}` +
-        `</div>` +
-      `</div>` +
-      (metricsHtml
-        ? `<div class="${styles.tooltipMetrics}">${metricsHtml}</div>`
-        : '');
+    if (metricParts.length > 0) {
+      const metricsDiv = document.createElement('div');
+      metricsDiv.className = styles.tooltipMetrics;
+      metricParts.forEach(m => {
+        const row = document.createElement('div');
+        row.className = styles.tooltipMetric;
+        const lbl = document.createElement('span');
+        lbl.className = styles.tooltipMetricLabel;
+        lbl.textContent = m.label;
+        const val = document.createElement('span');
+        val.className = styles.tooltipMetricValue;
+        val.textContent = m.value;
+        row.appendChild(lbl);
+        row.appendChild(val);
+        metricsDiv.appendChild(row);
+      });
+      el.appendChild(metricsDiv);
+    }
 
     el.style.left = `${clientX + 14}px`;
     el.style.top  = `${clientY - 10}px`;
@@ -774,6 +793,7 @@ export function GraphCanvas({
           onClick={() => setZoom((z) => Math.min(3, z + 0.2))}
           type="button"
           title="Zoom in"
+          aria-label="Zoom in"
         >
           +
         </button>
@@ -782,6 +802,7 @@ export function GraphCanvas({
           onClick={() => setZoom((z) => Math.max(0.3, z - 0.2))}
           type="button"
           title="Zoom out"
+          aria-label="Zoom out"
         >
           -
         </button>
@@ -790,6 +811,7 @@ export function GraphCanvas({
           onClick={fitAll}
           type="button"
           title="Reset view"
+          aria-label="Reset view"
         >
           &#x27F2;
         </button>

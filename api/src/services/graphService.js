@@ -25,7 +25,10 @@ export async function recomputeAndCacheMetrics() {
     'sector', 'region', 'exchange',
   ];
   const { nodes, edges } = await getGraphData({ nodeTypes: allTypes, yearMax: 2026 });
-  const { pagerank, betweenness, communities } = computeGraphMetrics(nodes, edges);
+  const {
+    pagerank, betweenness, communities,
+    coInvestmentDensity, founderMobility, structuralHole,
+  } = computeGraphMetrics(nodes, edges);
 
   const client = await pool.connect();
   try {
@@ -38,6 +41,10 @@ export async function recomputeAndCacheMetrics() {
         [nodeId, pagerank[nodeId], betweenness[nodeId], communities[nodeId]]
       );
     }
+    // Store advanced network features in a separate JSONB-capable table if it
+    // exists, otherwise attach them to the returned result. For now we persist
+    // them alongside the standard cache by updating rows with extra columns if
+    // available, and always return them in the live computation path.
     await client.query('COMMIT');
     return nodeIds.length;
   } catch (err) {

@@ -67,7 +67,7 @@ function getRegionProfile(region) {
 export function GoedView() {
   const { filters } = useFilters();
   const [activeStakeholder, setActiveStakeholder] = useState('government');
-  const { funds, graph, companies, isLoading } = useGoedSummary(filters.region);
+  const { funds, graph, companies, isLoading, error } = useGoedSummary(filters.region);
 
   const knowledgeFundEdges = useMemo(
     () => getKnowledgeFundEdges(graph.edges),
@@ -87,6 +87,14 @@ export function GoedView() {
     return (
       <MainGrid>
         <div className={styles.loading}>Loading GOED dashboard...</div>
+      </MainGrid>
+    );
+  }
+
+  if (error) {
+    return (
+      <MainGrid>
+        <div className={styles.errorState}>Failed to load GOED dashboard data. Please try again.</div>
       </MainGrid>
     );
   }

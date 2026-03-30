@@ -343,6 +343,7 @@ self.addEventListener('message', (e) => {
     width = 1200,
     height = 700,
     iterations = 600,
+    requestId,
   } = e.data;
 
   try {
@@ -366,6 +367,7 @@ self.addEventListener('message', (e) => {
         success: true,
         interim: true,
         nodes: serializeNodes(currentNodes),
+        requestId,
       });
     }, INTERIM_EVERY);
 
@@ -375,6 +377,7 @@ self.addEventListener('message', (e) => {
       success: true,
       interim: true,
       nodes: serializeNodes(sim.nodes),
+      requestId,
     });
 
     // ── Pass 2: refinement (remaining iterations) ─────────────────────────
@@ -387,6 +390,7 @@ self.addEventListener('message', (e) => {
         success: true,
         interim: true,
         nodes: serializeNodes(currentNodes),
+        requestId,
       });
     }, INTERIM_EVERY);
 
@@ -395,8 +399,9 @@ self.addEventListener('message', (e) => {
       success: true,
       interim: false,
       nodes: serializeNodes(sim.nodes),
+      requestId,
     });
   } catch (error) {
-    self.postMessage({ success: false, error: error.message });
+    self.postMessage({ success: false, error: error.message, requestId });
   }
 });

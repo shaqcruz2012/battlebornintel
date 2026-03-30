@@ -137,5 +137,126 @@ export function computeGraphMetrics(nodes, edges) {
 
   watchlist.sort((a, b) => b.priority - a.priority);
 
-  return { pagerank, betweenness, communities, watchlist, numCommunities: nextCid };
+  // --- Co-Investment Density ---
+  // For each company node, count how many of its investor neighbors also invest
+  // in other companies in the graph.
+  const coInvestmentDensity = {};
+  // Build a set of investor node indices → set of company indices they invest in
+  // "invested_in" edges go from fund/investor → company
+  const investorToCompanies = {}; // investorIdx → Set<companyIdx>
+  for (const e of edges) {
+    if (e.rel !== 'invested_in') continue;
+    const si = idx[typeof e.source === 'object' ? e.source.id : e.source];
+    const ti = idx[typeof e.target === 'object' ? e.target.id : e.target];
+    if (si === undefined || ti === undefined) continue;
+    // source = investor, target = company
+    const targetNode = nodeMap[ids[ti]];
+    if (!targetNode || targetNode.type !== 'company') continue;
+    if (!investorToCompanies[si]) investorToCompanies[si] = new Set();
+    investorToCompanies[si].add(ti);
+  }
+  // For each company, find its investors and check co-investment
+  ids.forEach((id, i) => {
+    const n = nodeMap[id];
+    if (!n || n.type !== 'company') return;
+    // Find all investors of this company
+    const investors = [];
+    for (const [invIdx, compSet] of Object.entries(investorToCompanies)) {
+      if (compSet.has(i)) investors.push(parseInt(invIdx));
+    }
+    if (investors.length === 0) { coInvestmentDensity[id] = 0; return; }
+    let coInvestors = 0;
+    for (const invIdx of investors) {
+      const compSet = investorToCompanies[invIdx];
+      // Check if this investor invests in OTHER companies (not just this one)
+      for (const cIdx of compSet) {
+        if (cIdx !== i) { coInvestors++; break; }
+      }
+    }
+    coInvestmentDensity[id] = Math.round((coInvestors / investors.length) * 100) / 100;
+  });
+
+  // --- Founder Mobility Score ---
+  // For each company, count people connected via founded_by / employed_at edges
+  // who also connect to OTHER companies.
+  const founderMobility = {};
+  // Build person → set of companies they connect to (via founded_by, employed_at)
+  const personToCompanies = {}; // personId → Set<companyId>
+  for (const e of edges) {
+    if (e.rel !== 'founded_by' && e.rel !== 'employed_at' && e.rel !== 'founder_of') continue;
+    const srcId = typeof e.source === 'object' ? e.source.id : e.source;
+    const tgtId = typeof e.target === 'object' ? e.target.id : e.target;
+    const srcNode = nodeMap[srcId];
+    const tgtNode = nodeMap[tgtId];
+    if (!srcNode || !tgtNode) continue;
+    // Determine which is the person and which is the company
+    let personId, companyId;
+    if (srcNode.type === 'person' && tgtNode.type === 'company') {
+      personId = srcId; companyId = tgtId;
+    } else if (srcNode.type === 'company' && tgtNode.type === 'person') {
+      personId = tgtId; companyId = srcId;
+    } else if (srcNode.type === 'company' && tgtNode.type === 'company') {
+      // founded_by can link company→company in some schemas; skip
+      continue;
+    } else {
+      continue;
+    }
+    if (!personToCompanies[personId]) personToCompanies[personId] = new Set();
+    personToCompanies[personId].add(companyId);
+  }
+  ids.forEach((id) => {
+    const n = nodeMap[id];
+    if (!n || n.type !== 'company') return;
+    // Find all people connected to this company
+    const people = [];
+    for (const [pId, compSet] of Object.entries(personToCompanies)) {
+      if (compSet.has(id)) people.push(pId);
+    }
+    if (people.length === 0) { founderMobility[id] = 0; return; }
+    let multiCompanyPeople = 0;
+    for (const pId of people) {
+      if (personToCompanies[pId].size > 1) multiCompanyPeople++;
+    }
+    founderMobility[id] = Math.round((multiCompanyPeople / people.length) * 100) / 100;
+  });
+
+  // --- Structural Hole Score (Burt's constraint) ---
+  // For each node, measure how much it bridges disconnected parts of the network.
+  // constraint(i) = sum_j (p_ij + sum_q p_iq * p_qj)^2
+  // structural_hole_score = 1 - constraint (normalized to 0-1)
+  const structuralHole = {};
+  const rawConstraint = new Float64Array(N);
+  for (let i = 0; i < N; i++) {
+    const neighbors = adj[i];
+    const deg = neighbors.length;
+    if (deg === 0) { rawConstraint[i] = 1; continue; } // isolated = max constraint
+    // p_ij = 1 / degree(i) for each neighbor j (unweighted)
+    const p_ij = 1 / deg;
+    const neighborSet = new Set(neighbors);
+    let constraint = 0;
+    for (const j of neighbors) {
+      // Direct proportion
+      let indirect = 0;
+      // sum_q p_iq * p_qj where q is a common neighbor of i and j (q != i, q != j)
+      for (const q of neighbors) {
+        if (q === j) continue;
+        // p_qj = 1/degree(q) if j is neighbor of q, else 0
+        if (adj[q].includes(j)) {
+          indirect += p_ij * (1 / adj[q].length);
+        }
+      }
+      const total = p_ij + indirect;
+      constraint += total * total;
+    }
+    rawConstraint[i] = Math.min(constraint, 1); // clamp to [0,1]
+  }
+  // Normalize: structural_hole_score = 1 - constraint
+  ids.forEach((id, i) => {
+    structuralHole[id] = Math.round((1 - rawConstraint[i]) * 100) / 100;
+  });
+
+  return {
+    pagerank, betweenness, communities, watchlist, numCommunities: nextCid,
+    coInvestmentDensity, founderMobility, structuralHole,
+  };
 }

@@ -1,0 +1,231 @@
+/* ── Indicators View: economic health dashboard ─────── */
+
+.wrapper {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xl);
+  padding: var(--space-lg) 0;
+}
+
+/* ── Summary cards grid ──────────────────────────────── */
+
+.indicatorGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 1px;
+  background: var(--border-grid);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.indicatorCard {
+  background: var(--bg-elevated);
+  padding: var(--space-lg) var(--space-xl);
+  cursor: pointer;
+  transition:
+    background var(--transition-fast),
+    box-shadow var(--transition-fast);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.indicatorCard:hover {
+  background: var(--bg-hover, rgba(255, 255, 255, 0.04));
+}
+
+.indicatorCardActive {
+  background: var(--bg-active-row);
+  box-shadow: inset 0 -2px 0 var(--accent-teal);
+}
+
+.indicatorName {
+  font-family: var(--font-body);
+  font-size: var(--text-micro);
+  font-weight: var(--weight-semibold);
+  color: var(--text-disabled);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.indicatorValueRow {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-sm);
+}
+
+.indicatorValue {
+  font-family: var(--font-mono);
+  font-size: var(--text-card-numeric-sm);
+  font-weight: var(--weight-semibold);
+  color: var(--accent-teal);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+  line-height: var(--leading-tight);
+}
+
+.indicatorChange {
+  font-family: var(--font-mono);
+  font-size: var(--text-caption-sm);
+  font-weight: var(--weight-semibold);
+  font-variant-numeric: tabular-nums;
+}
+
+.trendArrow {
+  font-size: var(--text-caption-sm);
+  margin-right: var(--space-2xs);
+}
+
+.positive {
+  color: var(--accent-green, #4ade80);
+}
+
+.negative {
+  color: var(--accent-red, #f87171);
+}
+
+.neutral {
+  color: var(--text-secondary);
+}
+
+/* ── History panel ───────────────────────────────────── */
+
+.historyPanel {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: var(--space-xl);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+}
+
+.historyTitle {
+  font-family: var(--font-heading);
+  font-size: var(--text-h2);
+  font-weight: var(--weight-semibold);
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.historySubtitle {
+  font-family: var(--font-body);
+  font-size: var(--text-micro);
+  font-weight: var(--weight-semibold);
+  color: var(--text-disabled);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin: 0;
+}
+
+.historyTable {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.historyTh {
+  font-family: var(--font-body);
+  font-size: var(--text-micro);
+  font-weight: var(--weight-semibold);
+  color: var(--text-disabled);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  text-align: left;
+  padding: var(--space-sm);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.historyTh:not(:first-child) {
+  text-align: right;
+}
+
+.historyTd {
+  padding: var(--space-xs) var(--space-sm);
+  font-family: var(--font-mono);
+  font-size: var(--text-caption-sm);
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+  vertical-align: middle;
+  border-bottom: 1px solid var(--border-grid, rgba(255,255,255,0.04));
+}
+
+.historyTd:not(:first-child) {
+  text-align: right;
+}
+
+.historyDate {
+  font-family: var(--font-body);
+  color: var(--text-primary);
+}
+
+/* ── Empty / placeholder states ──────────────────────── */
+
+.emptyState {
+  text-align: center;
+  padding: var(--space-2xl) var(--space-lg);
+  color: var(--text-disabled);
+  font-family: var(--font-body);
+  font-size: var(--text-caption-sm);
+  font-style: italic;
+}
+
+/* ── Loading skeleton ────────────────────────────────── */
+
+.loadingWrapper {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xl);
+  padding: var(--space-lg) 0;
+}
+
+.skeletonGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 1px;
+  background: var(--border-grid);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.skeletonCell {
+  height: 90px;
+  background: var(--bg-card);
+}
+
+.skeletonPanel {
+  height: 300px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+}
+
+/* ── Responsive ──────────────────────────────────────── */
+
+@media (max-width: 1200px) {
+  .indicatorGrid {
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  }
+}
+
+@media (max-width: 768px) {
+  .indicatorGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .historyTable {
+    font-size: var(--text-micro);
+  }
+}
+
+@media (max-width: 480px) {
+  .indicatorGrid {
+    grid-template-columns: 1fr;
+  }
+}
