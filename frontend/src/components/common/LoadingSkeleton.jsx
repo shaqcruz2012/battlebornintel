@@ -11,7 +11,7 @@ export function LoadingSkeleton({ variant = 'card', rows = 3, className = '' }) 
 
   if (variant === 'text') {
     return (
-      <div className={className} style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+      <div className={className} role="status" aria-busy="true" aria-label="Loading content" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         {Array.from({ length: rows }, (_, i) => (
           <div key={i} style={{
             ...baseStyle,
@@ -25,7 +25,7 @@ export function LoadingSkeleton({ variant = 'card', rows = 3, className = '' }) 
 
   if (variant === 'table') {
     return (
-      <div className={className} style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+      <div className={className} role="status" aria-busy="true" aria-label="Loading content" style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
         {Array.from({ length: rows }, (_, i) => (
           <div key={i} style={{ ...baseStyle, height: 40 }} />
         ))}
@@ -35,7 +35,7 @@ export function LoadingSkeleton({ variant = 'card', rows = 3, className = '' }) 
 
   // Default: card
   return (
-    <div className={className} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+    <div className={className} role="status" aria-busy="true" aria-label="Loading content" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
       {Array.from({ length: rows }, (_, i) => (
         <div key={i} style={{ ...baseStyle, height: 80, padding: 16 }} />
       ))}

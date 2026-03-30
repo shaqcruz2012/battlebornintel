@@ -387,6 +387,7 @@ const CategorySection = memo(function CategorySection({
       <button
         className={styles.sectionHeader}
         onClick={() => setCollapsed((c) => !c)}
+        type="button"
         aria-expanded={!collapsed}
       >
         <span
@@ -507,6 +508,7 @@ export function StakeholderActivityFeed() {
             key={cat.id}
             className={`${styles.categoryTab}${selectedCategory === cat.id ? ` ${styles.active}` : ''}`}
             onClick={() => setSelectedCategory(cat.id)}
+            type="button"
             aria-pressed={selectedCategory === cat.id}
           >
             {cat.label}
@@ -522,6 +524,7 @@ export function StakeholderActivityFeed() {
             key={r.id}
             className={`${styles.regionTab}${selectedRegion === r.id ? ` ${styles.active}` : ''}`}
             onClick={() => setSelectedRegion(r.id)}
+            type="button"
             aria-pressed={selectedRegion === r.id}
           >
             {r.label}
@@ -545,6 +548,7 @@ export function StakeholderActivityFeed() {
             <button
               className={styles.clearSearch}
               onClick={() => setSearchQuery('')}
+              type="button"
               aria-label="Clear search"
             >
               &times;

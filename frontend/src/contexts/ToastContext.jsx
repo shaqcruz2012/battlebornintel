@@ -37,7 +37,7 @@ export function useToast() {
 function ToastContainer({ toasts, onDismiss }) {
   if (toasts.length === 0) return null;
   return (
-    <div style={{
+    <div role="alert" aria-live="polite" style={{
       position: 'fixed', bottom: 20, right: 20, zIndex: 9999,
       display: 'flex', flexDirection: 'column', gap: 8, maxWidth: 400,
     }}>
@@ -53,7 +53,7 @@ function ToastContainer({ toasts, onDismiss }) {
           boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
         }}>
           <span>{t.message}</span>
-          <button onClick={() => onDismiss(t.id)} style={{
+          <button type="button" aria-label="Dismiss notification" onClick={() => onDismiss(t.id)} style={{
             background: 'none', border: 'none', color: '#fff',
             cursor: 'pointer', marginLeft: 12, fontSize: 16, padding: 0,
           }}>&times;</button>

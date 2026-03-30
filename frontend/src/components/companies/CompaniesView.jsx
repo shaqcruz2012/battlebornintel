@@ -193,6 +193,7 @@ export function CompaniesView() {
             placeholder="Search companies..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
+            aria-label="Search companies"
           />
 
           <span className={styles.separator} />

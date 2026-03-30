@@ -793,6 +793,7 @@ export function GraphCanvas({
           onClick={() => setZoom((z) => Math.min(3, z + 0.2))}
           type="button"
           title="Zoom in"
+          aria-label="Zoom in"
         >
           +
         </button>
@@ -801,6 +802,7 @@ export function GraphCanvas({
           onClick={() => setZoom((z) => Math.max(0.3, z - 0.2))}
           type="button"
           title="Zoom out"
+          aria-label="Zoom out"
         >
           -
         </button>
@@ -809,6 +811,7 @@ export function GraphCanvas({
           onClick={fitAll}
           type="button"
           title="Reset view"
+          aria-label="Reset view"
         >
           &#x27F2;
         </button>

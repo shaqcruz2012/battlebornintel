@@ -18,7 +18,7 @@ const ScenariosView = lazy(() => import('./components/scenarios/ScenariosView').
 const IndicatorsView = lazy(() => import('./components/indicators/IndicatorsView').then(m => ({ default: m.IndicatorsView })));
 
 const TabFallback = () => (
-  <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-secondary)' }}>
+  <div role="status" aria-busy="true" style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-secondary)' }}>
     Loading...
   </div>
 );
@@ -57,7 +57,7 @@ export default function App() {
           />
 
           <ErrorBoundary key={view}>
-            <div className="fade-in">
+            <main className="fade-in" aria-label="Dashboard content">
               {view === 'executive' && <ExecutiveDashboard onViewChange={setView} />}
               <Suspense fallback={<TabFallback />}>
                 {view === 'brief' && <WeeklyBriefView />}
@@ -69,7 +69,7 @@ export default function App() {
                 {view === 'scenarios' && <ScenariosView />}
                 {view === 'indicators' && <IndicatorsView />}
               </Suspense>
-            </div>
+            </main>
           </ErrorBoundary>
         </AppShell>
       </FilterProvider>

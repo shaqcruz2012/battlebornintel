@@ -34,7 +34,7 @@ export function useGraphLayout(nodes, edges, options = {}) {
           { type: 'module' }
         );
       } catch {
-        console.warn('Web Worker not supported, falling back to main thread');
+        console.debug('Web Worker not supported, falling back to main thread');
       }
     }
 

@@ -129,7 +129,7 @@ export function GraphView() {
         <div className={styles.errorState}>
           <h3>Graph data unavailable</h3>
           <p>{graphError?.message || metricsError?.message || 'An unexpected error occurred.'}</p>
-          <button onClick={() => window.location.reload()}>Retry</button>
+          <button type="button" onClick={() => window.location.reload()}>Retry</button>
         </div>
       </div>
     );
