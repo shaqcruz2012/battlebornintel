@@ -1,4 +1,5 @@
 import pool from '../pool.js';
+import { logger } from '../../logger.js';
 
 /**
  * Get stakeholder activities (from timeline events and analysis results)
@@ -191,7 +192,7 @@ export async function getStakeholderActivities(filters = {}) {
       const { rows } = await pool.query(countSql, params);
       return parseInt(rows[0].total, 10);
     } catch (error) {
-      console.error('Error counting stakeholder activities:', error);
+      logger.error('Error counting stakeholder activities:', error);
       throw error;
     }
   }
@@ -228,7 +229,7 @@ export async function getStakeholderActivities(filters = {}) {
     }));
     return { rows: mappedRows, totalCount };
   } catch (error) {
-    console.error('Error fetching stakeholder activities:', error);
+    logger.error('Error fetching stakeholder activities:', error);
     throw error;
   }
 }

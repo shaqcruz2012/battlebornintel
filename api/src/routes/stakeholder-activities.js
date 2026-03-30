@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { logger } from '../logger.js';
 import {
   getStakeholderActivities,
   getCompanyActivities,
@@ -69,7 +70,7 @@ router.get('/', async (req, res, next) => {
     });
 
     if (data.length === 0) {
-      console.warn(
+      logger.warn(
         '[stakeholder-activities] Empty results for filters:',
         JSON.stringify(filterParams),
       );
@@ -94,7 +95,7 @@ router.get('/', async (req, res, next) => {
       },
     });
   } catch (err) {
-    console.error('[stakeholder-activities] GET / failed:', err.message);
+    logger.error('[stakeholder-activities] GET / failed:', err.message);
     next(err);
   }
 });
@@ -119,7 +120,7 @@ router.get('/company/:companyId', async (req, res, next) => {
     );
 
     if (data.length === 0) {
-      console.warn(`[stakeholder-activities] No activities found for company ${parsedCompanyId}`);
+      logger.warn(`[stakeholder-activities] No activities found for company ${parsedCompanyId}`);
     }
 
     res.json({
@@ -127,7 +128,7 @@ router.get('/company/:companyId', async (req, res, next) => {
       meta: { count: data.length },
     });
   } catch (err) {
-    console.error('[stakeholder-activities] GET /company/:companyId failed:', err.message);
+    logger.error('[stakeholder-activities] GET /company/:companyId failed:', err.message);
     next(err);
   }
 });
@@ -150,7 +151,7 @@ router.get('/location/:location', async (req, res, next) => {
     const data = await getActivitiesByLocationAndDateRange(location, startDate, endDate);
 
     if (data.length === 0) {
-      console.warn(
+      logger.warn(
         `[stakeholder-activities] No activities for location="${location}" between ${startDate} and ${endDate}`,
       );
     }
@@ -167,7 +168,7 @@ router.get('/location/:location', async (req, res, next) => {
       },
     });
   } catch (err) {
-    console.error('[stakeholder-activities] GET /location/:location failed:', err.message);
+    logger.error('[stakeholder-activities] GET /location/:location failed:', err.message);
     next(err);
   }
 });

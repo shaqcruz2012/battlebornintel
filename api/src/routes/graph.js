@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { logger } from '../logger.js';
 import { getGraphData, getGraphMetrics } from '../db/queries/graph.js';
 import { computeAndReturnMetrics } from '../services/graphService.js';
 import { cacheMiddleware } from '../middleware/cache.js';
@@ -38,7 +39,7 @@ router.get('/metrics', async (req, res, next) => {
         const live = await computeAndReturnMetrics(nodeTypes);
         return res.json({ data: live, source: 'computed' });
       } catch (computeErr) {
-        console.error('[graph/metrics] Live computation failed:', computeErr.message);
+        logger.error('[graph/metrics] Live computation failed:', computeErr.message);
         // Return empty metrics rather than crashing — the graph still renders
         return res.json({
           data: { pagerank: {}, betweenness: {}, communities: {}, watchlist: [], numCommunities: 0, coInvestmentDensity: {}, founderMobility: {}, structuralHole: {} },

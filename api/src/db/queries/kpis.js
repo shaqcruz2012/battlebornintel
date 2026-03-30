@@ -1,4 +1,5 @@
 import pool from '../pool.js';
+import { logger } from '../../logger.js';
 
 // Data quality constants
 const DATA_QUALITY = {
@@ -72,7 +73,7 @@ export async function getKpis({ stage, region, sector } = {}) {
         if (match) {
           fundIds.push(match[1]);
         } else {
-          console.warn(`[kpis] Unexpected source_id format in invested_in edge: ${e.source_id}`);
+          logger.warn(`[kpis] Unexpected source_id format in invested_in edge: ${e.source_id}`);
         }
       }
 

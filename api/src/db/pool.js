@@ -1,5 +1,6 @@
 import pg from 'pg';
 import cfg from '../config.js';
+import { logger } from '../logger.js';
 
 const pool = new pg.Pool({
   connectionString: cfg.databaseUrl,
@@ -35,7 +36,7 @@ pool.on('remove', () => {
 
 pool.on('error', (err) => {
   connectionErrors++;
-  console.error('Unexpected pool error:', err);
+  logger.error('Unexpected pool error:', { error: err });
 });
 
 export function getPoolStats() {

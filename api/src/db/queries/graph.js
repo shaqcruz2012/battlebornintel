@@ -1,4 +1,5 @@
 import pool from '../pool.js';
+import { logger } from '../../logger.js';
 
 export async function getGraphData({ nodeTypes = [], yearMax = 2026, region } = {}) {
   const nodes = [];
@@ -276,7 +277,7 @@ export async function getGraphData({ nodeTypes = [], yearMax = 2026, region } = 
     edges.push(edge);
   }
   if (placeholderCount > 0) {
-    console.log(`[graph] Added ${placeholderCount} placeholder nodes for edges with missing endpoints`);
+    logger.info(`[graph] Added ${placeholderCount} placeholder nodes for edges with missing endpoints`);
   }
 
   // Derived edges — all from already-loaded data, no extra queries
@@ -339,7 +340,7 @@ export async function getGraphMetrics() {
   } catch (err) {
     // Table may not exist or be empty — return empty metrics so the
     // caller can fall back to live computation gracefully.
-    console.error('[graph] graph_metrics_cache query failed:', err.message);
+    logger.error('[graph] graph_metrics_cache query failed:', err.message);
     return { pagerank: {}, betweenness: {}, communities: {}, coInvestmentDensity: {}, founderMobility: {}, structuralHole: {} };
   }
 

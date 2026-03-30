@@ -5,6 +5,7 @@
  */
 
 import { Router } from 'express';
+import { logger } from '../logger.js';
 import { cacheMiddleware } from '../middleware/cache.js';
 import { getAllCompanies, getCompanyById } from '../db/queries/companies.js';
 import { getAllFunds } from '../db/queries/funds.js';
@@ -69,7 +70,7 @@ router.get('/', async (req, res, next) => {
     if (shouldFetchCompanies) {
       promises.push(
         getAllCompanies(filters).catch(err => {
-          console.error('Companies query error:', err);
+          logger.error('Companies query error:', err);
           return [];
         })
       );
@@ -80,7 +81,7 @@ router.get('/', async (req, res, next) => {
     if (shouldFetchKpis) {
       promises.push(
         getKpis(filters).catch(err => {
-          console.error('KPIs query error:', err);
+          logger.error('KPIs query error:', err);
           return {};
         })
       );
@@ -91,7 +92,7 @@ router.get('/', async (req, res, next) => {
     if (shouldFetchFunds) {
       promises.push(
         getAllFunds().catch(err => {
-          console.error('Funds query error:', err);
+          logger.error('Funds query error:', err);
           return [];
         })
       );
@@ -102,7 +103,7 @@ router.get('/', async (req, res, next) => {
     if (shouldFetchSectors) {
       promises.push(
         getSectorStats().catch(err => {
-          console.error('Sector stats query error:', err);
+          logger.error('Sector stats query error:', err);
           return [];
         })
       );
@@ -113,7 +114,7 @@ router.get('/', async (req, res, next) => {
     if (shouldFetchIndicators) {
       promises.push(
         getIndicatorsSummary().catch(err => {
-          console.error('Indicators query error:', err);
+          logger.error('Indicators query error:', err);
           return [];
         })
       );
@@ -163,11 +164,11 @@ router.get('/executives', async (req, res, next) => {
 
     const [companies, kpis] = await Promise.all([
       getAllCompanies(filters).catch(err => {
-        console.error('Companies query error:', err);
+        logger.error('Companies query error:', err);
         return [];
       }),
       getKpis(filters).catch(err => {
-        console.error('KPIs query error:', err);
+        logger.error('KPIs query error:', err);
         return {};
       }),
     ]);
@@ -193,19 +194,19 @@ router.get('/goed', async (req, res, next) => {
 
     const [kpis, sectors, companies, indicators] = await Promise.all([
       getKpis(filters).catch(err => {
-        console.error('KPIs query error:', err);
+        logger.error('KPIs query error:', err);
         return {};
       }),
       getSectorStats(filters).catch(err => {
-        console.error('Sector stats query error:', err);
+        logger.error('Sector stats query error:', err);
         return [];
       }),
       getAllCompanies(filters).catch(err => {
-        console.error('Companies query error:', err);
+        logger.error('Companies query error:', err);
         return [];
       }),
       getIndicatorsSummary().catch(err => {
-        console.error('Indicators query error:', err);
+        logger.error('Indicators query error:', err);
         return [];
       }),
     ]);
