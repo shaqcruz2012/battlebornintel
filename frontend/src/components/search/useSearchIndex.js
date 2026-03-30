@@ -1,4 +1,4 @@
-import { useCallback, useRef } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useFilters } from '../../hooks/useFilters.jsx';
 import { api } from '../../api/client.js';
@@ -209,6 +209,13 @@ export function useSearchIndex() {
     },
     [queryClient, scheduleFetch, region]
   );
+
+  // Clean up debounce timer on unmount
+  useEffect(() => {
+    return () => {
+      clearTimeout(debounceTimer.current);
+    };
+  }, []);
 
   return { search };
 }

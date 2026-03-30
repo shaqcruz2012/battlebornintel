@@ -31,10 +31,21 @@ function nodeRadius(node, pagerank) {
   return 5;
 }
 
-function nodeColor(node, colorMode, communities) {
+const KMEANS_COLORS = [
+  '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7',
+  '#DDA0DD', '#98D8C8', '#F7DC6F', '#BB8FCE', '#85C1E9',
+  '#82E0AA', '#F0B27A', '#AEB6BF', '#D7BDE2', '#A3E4D7',
+];
+
+function nodeColor(node, colorMode, communities, kmeansMap) {
   if (colorMode === 'community' && communities) {
     const cid = communities[node.id];
     return cid !== undefined ? COMM_COLORS[cid % COMM_COLORS.length] : '#555';
+  }
+  if (colorMode === 'attribute' && kmeansMap) {
+    const kmData = kmeansMap[node.id];
+    if (kmData) return KMEANS_COLORS[kmData.cluster % KMEANS_COLORS.length];
+    return '#555';
   }
   return NODE_CFG[node.type]?.color || '#888';
 }
@@ -66,40 +77,51 @@ function computeExpandOffsets(selectedNode, connectedIds, nodes, edges, zoom) {
   const sel = nodes.find((n) => n.id === selectedNode);
   if (!sel) return {};
 
-  // Find neighbors (exclude the selected node itself)
   const neighborIds = [...connectedIds].filter((id) => id !== selectedNode);
   const neighbors = neighborIds.map((id) => nodes.find((n) => n.id === id)).filter(Boolean);
   if (neighbors.length === 0) return {};
 
   const cx = sel.x || 0;
   const cy = sel.y || 0;
-
-  // Desired spread radius — 50% wider to prevent overlap on dense clusters.
-  // Scales inversely with zoom (closer zoom = less spread needed).
-  const spreadRadius = Math.max(90, 180 / Math.max(zoom, 0.4));
-
-  const offsets = {};
   const count = neighbors.length;
 
-  for (let i = 0; i < count; i++) {
-    const n = neighbors[i];
-    const nx = n.x || 0;
-    const ny = n.y || 0;
-    const dx = nx - cx;
-    const dy = ny - cy;
-    const dist = Math.sqrt(dx * dx + dy * dy);
+  // Scale spread radius based on neighbor count and zoom level.
+  // More neighbors = wider spread. Zoom in = less spread needed.
+  const baseRadius = Math.max(120, 60 + count * 12);
+  const spreadRadius = baseRadius / Math.max(zoom, 0.3);
 
-    // If nodes are too close (< spreadRadius), push them out radially
-    if (dist < spreadRadius) {
-      // Use the natural angle if there's any distance, otherwise distribute evenly
-      const angle = dist > 5
-        ? Math.atan2(dy, dx)
-        : (2 * Math.PI * i) / count - Math.PI / 2;
-      const targetDist = spreadRadius + (i % 2) * 30; // stagger for readability
-      const targetX = cx + Math.cos(angle) * targetDist;
-      const targetY = cy + Math.sin(angle) * targetDist;
-      offsets[n.id] = { dx: targetX - nx, dy: targetY - ny };
-    }
+  // Sort neighbors by angle from center for even distribution
+  const withAngle = neighbors.map(n => {
+    const dx = (n.x || 0) - cx;
+    const dy = (n.y || 0) - cy;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    const angle = Math.atan2(dy, dx);
+    return { n, dx, dy, dist, angle };
+  }).sort((a, b) => a.angle - b.angle);
+
+  const offsets = {};
+
+  for (let i = 0; i < withAngle.length; i++) {
+    const { n, dist, angle: naturalAngle } = withAngle[i];
+
+    // If already far enough, skip
+    if (dist > spreadRadius * 1.2) continue;
+
+    // Distribute evenly around the circle if nodes are bunched,
+    // but preserve natural angle direction if there's enough separation
+    const evenAngle = (2 * Math.PI * i) / count - Math.PI / 2;
+    const angle = dist > spreadRadius * 0.5
+      ? naturalAngle  // far enough — keep natural direction
+      : dist > 10
+        ? naturalAngle * 0.6 + evenAngle * 0.4  // blend natural + even
+        : evenAngle;  // very close — distribute evenly
+
+    // Stagger radii in rings so labels don't overlap
+    const ring = i % 3;  // 3 rings: inner, mid, outer
+    const targetDist = spreadRadius + ring * 35;
+    const targetX = cx + Math.cos(angle) * targetDist;
+    const targetY = cy + Math.sin(angle) * targetDist;
+    offsets[n.id] = { dx: targetX - (n.x || 0), dy: targetY - (n.y || 0) };
   }
   return offsets;
 }
@@ -161,9 +183,10 @@ const EdgeLine = memo(function EdgeLine({ sx, sy, tx, ty, color, strokeWidth, da
   );
 });
 
-const EdgeLabel = memo(function EdgeLabel({ sx, sy, tx, ty, label, val, relColor }) {
-  const mx = (sx + tx) / 2;
-  const my = (sy + ty) / 2;
+const EdgeLabel = memo(function EdgeLabel({ sx, sy, tx, ty, label, val, relColor, offsetT = 0.5 }) {
+  // Position directly on the edge line at offsetT
+  const mx = sx + (tx - sx) * offsetT;
+  const my = sy + (ty - sy) * offsetT;
   const labelWidth = Math.max(60, label.length * 5 + 16);
   const halfW = labelWidth / 2;
 
@@ -450,7 +473,8 @@ function useEdgeCanvas(canvasRef, edges, zoom, pan, w, h, {
         const edgeOpacity = isOpportunity
           ? (e.opacity ?? (dimEdge ? 0.02 : 0.65))
           : (dimEdge ? 0.03 : isHighlighted ? 0.9 : categoryOpacity);
-        const edgeWidth = isOpportunity ? (isHighlighted ? 1.5 : 0.5) : (isHighlighted ? 2 : 0.5);
+        const capitalWidth = e.capitalM > 0 ? Math.max(1, Math.log10(e.capitalM + 1)) : 0;
+        const edgeWidth = isOpportunity ? (isHighlighted ? 1.5 : 0.5) : (isHighlighted ? Math.max(2, capitalWidth * 1.5) : Math.max(0.5, capitalWidth));
         const edgeColor = e.color || (isHighlighted ? (rc?.color || '#45D7C6') : (rc?.color || '#333'));
 
         const key = `${edgeColor}|${edgeOpacity.toFixed(2)}|${edgeWidth}`;
@@ -506,6 +530,7 @@ export function GraphCanvas({
   nodeDegreeMap = {},
   selectedCluster = null,
   onSelectCluster,
+  kmeansMap = {},
 }) {
   const containerRef = useRef(null);
   const edgeCanvasRef = useRef(null);
@@ -704,6 +729,9 @@ export function GraphCanvas({
       if (node.stage)   parts.push({ label: 'Stage',   value: node.stage.replace(/_/g, ' ') });
       if (node.employees) parts.push({ label: 'Emp',   value: String(node.employees) });
       if (node.momentum)  parts.push({ label: 'MTM',   value: String(node.momentum) });
+      if (node.locationClass) parts.push({ label: 'Loc', value: node.locationClass });
+      if (node.outcomeStatus) parts.push({ label: 'Status', value: node.outcomeStatus });
+      if (node.confidence != null) parts.push({ label: 'Conf', value: `${Math.round(node.confidence * 100)}%` });
       // Detail zoom: show extra fields inline
       if (zoomTier === 'detail') {
         if (node.sectors) parts.push({ label: 'Sectors', value: (Array.isArray(node.sectors) ? node.sectors.join(', ') : String(node.sectors)) });
@@ -1032,7 +1060,10 @@ export function GraphCanvas({
   if (!nodes || nodes.length === 0) {
     return (
       <div className={styles.canvasWrap} ref={containerRef}>
-        <div style={{
+        <div
+          role="status"
+          aria-busy={layoutSettled === false}
+          style={{
           padding: 40,
           color: 'var(--text-disabled)',
           textAlign: 'center',
@@ -1064,6 +1095,8 @@ export function GraphCanvas({
     <div
       className={styles.canvasWrap}
       ref={containerRef}
+      role="img"
+      aria-label="Nevada innovation ecosystem network graph showing relationships between companies, funds, and stakeholders"
       onMouseDown={handleMouseDown}
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
@@ -1097,16 +1130,30 @@ export function GraphCanvas({
 
         <g transform={`translate(${pan.x},${pan.y}) scale(${zoom})`}>
 
-          {/* Edge labels — only shown when a node is clicked (its edges get labels) */}
-          {selectedNode && visibleEdges.map((e, i) => {
-              const isHighlighted = highlightedEdges.has(e);
-              if (!isHighlighted) return null;
+          {/* Edge labels — only shown for low-degree nodes (≤8 edges).
+              Dense nodes use the NodeDetail panel for readable connection info. */}
+          {selectedNode && (() => {
+              const highlighted = visibleEdges.filter(e => highlightedEdges.has(e));
+              if (highlighted.length > 8) return null; // too dense — NodeDetail panel handles it
+              const labelled = highlighted;
+              const selId = selectedNode.id;
+              return labelled.map((e, i) => {
               const val = edgeValueMap.get(e) || '';
+              const srcId = typeof e.source === 'object' ? e.source.id : e.source;
+              const tgtId = typeof e.target === 'object' ? e.target.id : e.target;
               const sx = e.source.x || 0;
               const sy = e.source.y || 0;
               const tx = e.target.x || 0;
               const ty = e.target.y || 0;
               const rc = REL_CFG[e.rel];
+
+              // Place label 65% along edge from selected node toward the other node
+              // Combined with 18px perpendicular offset, this keeps labels clear of both node names
+              const isSourceSelected = srcId === selId;
+              const offsetT = isSourceSelected ? 0.65 : 0.35;
+
+              const midX = sx + (tx - sx) * offsetT;
+              const midY = sy + (ty - sy) * offsetT;
 
               return (
                 <EdgeLabel
@@ -1115,9 +1162,11 @@ export function GraphCanvas({
                   label={edgeLabelText(e)}
                   val={val}
                   relColor={rc?.color}
+                  offsetT={offsetT}
                 />
               );
-            })}
+            });
+            })()}
 
           {/* Galaxy-view community labels — large prominent labels when zoomed way out.
               At galaxy zoom, individual nodes are hidden, so community names serve as
@@ -1274,7 +1323,7 @@ export function GraphCanvas({
           {/* Nodes — viewport-culled: only nodes within visible pan/zoom bounds are rendered */}
           {visibleNodes.map((n) => {
             const r = nodeRadius(n, metrics?.pagerank);
-            const fill = nodeColor(n, colorMode, metrics?.communities);
+            const fill = nodeColor(n, colorMode, metrics?.communities, kmeansMap);
             const isSelected = selectedNode === n.id;
             const isConnected = connectedIds.has(n.id);
             const dimBySearch = searchTerm && !matchesSearch(n);
@@ -1386,6 +1435,10 @@ export function GraphCanvas({
         className={styles.tooltip}
         style={{ display: 'none', position: 'fixed' }}
       />
+
+      <div style={{ position: 'absolute', width: '1px', height: '1px', padding: 0, margin: '-1px', overflow: 'hidden', clip: 'rect(0,0,0,0)', whiteSpace: 'nowrap', border: 0 }} role="status" aria-live="polite">
+        {`Network graph: ${nodes?.length || 0} nodes, ${edges?.length || 0} connections displayed`}
+      </div>
     </div>
   );
 }

@@ -461,12 +461,12 @@ export async function analyzeStructuralHoles() {
   // ── Trend tracking: compare with previous graph_statistics snapshot ──
   let trends = null;
   try {
-    const prevStats = await pool.query(
-      'SELECT total_nodes, total_edges, density, computed_at FROM graph_statistics ORDER BY computed_at DESC OFFSET 1 LIMIT 1'
+    // Single query fetches both current and previous snapshot rows
+    const snapResult = await pool.query(
+      'SELECT total_nodes, total_edges, density, computed_at FROM graph_statistics ORDER BY computed_at DESC LIMIT 2'
     );
-    const currStats = await pool.query(
-      'SELECT total_nodes, total_edges, density, computed_at FROM graph_statistics ORDER BY computed_at DESC LIMIT 1'
-    );
+    const currStats = { rows: snapResult.rows.length >= 1 ? [snapResult.rows[0]] : [] };
+    const prevStats = { rows: snapResult.rows.length >= 2 ? [snapResult.rows[1]] : [] };
 
     if (prevStats.rows.length > 0 && currStats.rows.length > 0) {
       const prev = prevStats.rows[0];

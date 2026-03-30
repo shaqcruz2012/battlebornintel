@@ -24,7 +24,8 @@ const router = Router();
 router.get('/', async (req, res, next) => {
   try {
     const {
-      location = 'all',
+      location: locationParam,
+      region: regionParam,
       since,
       until,
       limit = 100,
@@ -32,6 +33,8 @@ router.get('/', async (req, res, next) => {
       stakeholder_type,
       stakeholderType: stakeholderTypeCamel,
     } = req.query;
+    // Support both 'location' and 'region' param names
+    const location = locationParam || regionParam || 'all';
     // Support both snake_case and camelCase param names
     const resolvedStakeholderType = stakeholder_type || stakeholderTypeCamel;
 

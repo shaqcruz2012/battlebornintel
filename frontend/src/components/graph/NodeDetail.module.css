@@ -390,11 +390,26 @@
 }
 
 .moreCount {
+  display: block;
+  width: 100%;
   font-size: 10px;
-  color: var(--text-disabled);
+  color: #45d7c6;
   text-align: center;
-  padding: var(--space-sm) 0;
+  padding: 6px 0;
   font-family: var(--font-mono);
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  background: rgba(69, 215, 198, 0.04);
+  border: 1px solid rgba(69, 215, 198, 0.12);
+  border-radius: 2px;
+  cursor: pointer;
+  transition: background 0.15s ease;
+  margin-top: 4px;
+}
+
+.moreCount:hover {
+  background: rgba(69, 215, 198, 0.08);
+  border-color: rgba(69, 215, 198, 0.25);
 }
 
 /* ── Placeholder ── */

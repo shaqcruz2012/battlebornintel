@@ -41,6 +41,7 @@ import regionalRouter from './routes/regional.js';
 import modelOutputsRouter from './routes/model-outputs.js';
 import macroEventsRouter from './routes/macro-events.js';
 import { initTrackedCompanies, refreshNewsCache } from './services/newsAggregator.js';
+import { recomputeGraphAnalytics } from './services/graphAnalyticsService.js';
 
 const app = express();
 
@@ -279,15 +280,14 @@ app.listen(cfg.port, () => {
     }
   }, 30 * 60 * 1000).unref();
 
-  // Pre-warm the graph cache so the first user request hits warm cache
+  // Pre-warm heavy caches so the first user request hits warm cache
   setTimeout(async () => {
+    const api = `http://localhost:${cfg.port}/api`;
     try {
-      const base = `http://localhost:${cfg.port}/api/graph`;
       console.log('[cache-warm] Pre-warming graph cache...');
-      // Warm both the full and lightweight endpoints in parallel
       const [res1, res2] = await Promise.all([
-        fetch(base),
-        fetch(`${base}/light`),
+        fetch(`${api}/graph`),
+        fetch(`${api}/graph/light`),
       ]);
       if (res1.ok && res2.ok) {
         console.log('[cache-warm] Graph cache warmed successfully (full + light)');
@@ -297,5 +297,28 @@ app.listen(cfg.port, () => {
     } catch (err) {
       console.warn('[cache-warm] Graph warm-up failed:', err.message);
     }
+
+    // Warm analytics engines (structural-holes ~500ms, predicted-links ~180ms cold)
+    try {
+      console.log('[cache-warm] Pre-warming analytics caches...');
+      const [sh, pl] = await Promise.all([
+        fetch(`${api}/analytics/structural-holes`),
+        fetch(`${api}/analytics/predicted-links`),
+      ]);
+      console.log(`[cache-warm] Analytics warmed: structural-holes=${sh.status}, predicted-links=${pl.status}`);
+    } catch (err) {
+      console.warn('[cache-warm] Analytics warm-up failed:', err.message);
+    }
   }, 1000);
+
+  // Recompute graph analytics (PageRank, betweenness, communities, K-means)
+  // Run 5s after startup to not block server boot
+  setTimeout(async () => {
+    try {
+      await recomputeGraphAnalytics();
+      console.log('[Startup] Graph analytics computed');
+    } catch (err) {
+      console.error('[Startup] Graph analytics failed:', err.message);
+    }
+  }, 5000);
 });

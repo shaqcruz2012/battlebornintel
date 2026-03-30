@@ -1,4 +1,4 @@
-import { useEffect, useCallback, useMemo } from 'react';
+import { useEffect, useCallback, useMemo, useRef } from 'react';
 import { fmt, stageLabel } from '../../engine/formatters';
 import { GRADE_COLORS, TRIGGER_CFG, SHEAT } from '../../data/constants';
 import styles from './SectorDetailDrawer.module.css';
@@ -234,19 +234,44 @@ function deriveSectorSignals(companies) {
 /* -- Main modal -- */
 
 export function SectorDetailDrawer({ sector, companies = [], sectorStats, onClose, onViewAll }) {
+  const drawerRef = useRef(null);
+  const triggerRef = useRef(document.activeElement);
 
-  /* Close on Escape */
-  const handleKeyDown = useCallback(
-    (e) => {
-      if (e.key === 'Escape') onClose();
-    },
-    [onClose]
-  );
-
+  /* Focus trap: auto-focus first focusable, cycle Tab, Escape to close */
   useEffect(() => {
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [handleKeyDown]);
+    const drawer = drawerRef.current;
+    if (!drawer) return;
+
+    const focusable = drawer.querySelectorAll(
+      'button, input, [href], [tabindex]:not([tabindex="-1"])'
+    );
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+
+    first?.focus();
+
+    function handleKeyDown(e) {
+      if (e.key === 'Tab') {
+        if (e.shiftKey && document.activeElement === first) {
+          e.preventDefault();
+          last?.focus();
+        } else if (!e.shiftKey && document.activeElement === last) {
+          e.preventDefault();
+          first?.focus();
+        }
+      }
+      if (e.key === 'Escape') onClose();
+    }
+
+    drawer.addEventListener('keydown', handleKeyDown);
+    return () => drawer.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
+
+  /* Return focus to trigger element on unmount */
+  useEffect(() => {
+    const trigger = triggerRef.current;
+    return () => { trigger?.focus(); };
+  }, []);
 
   /* Lock body scroll while open */
   useEffect(() => {
@@ -286,10 +311,7 @@ export function SectorDetailDrawer({ sector, companies = [], sectorStats, onClos
     [sector, companyCount, fundingLabel, avgIrs, heat]
   );
 
-  const publicationDate = useMemo(() => {
-    const now = new Date();
-    return now.toLocaleString('en-US', { month: 'long', year: 'numeric' });
-  }, []);
+  const publicationDate = new Date().toLocaleString('en-US', { month: 'long', year: 'numeric' });
 
   /* Render nothing if no sector selected */
   if (!sector) return null;
@@ -299,12 +321,13 @@ export function SectorDetailDrawer({ sector, companies = [], sectorStats, onClos
       {/* Backdrop */}
       <div
         className={styles.backdrop}
-        onClick={onClose}
+        onClick={(e) => { e.stopPropagation(); onClose(); }}
         aria-hidden="true"
       />
 
       {/* Modal panel */}
       <div
+        ref={drawerRef}
         className={styles.drawer}
         role="dialog"
         aria-modal="true"

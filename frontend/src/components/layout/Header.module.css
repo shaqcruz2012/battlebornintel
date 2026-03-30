@@ -217,3 +217,12 @@
     max-width: 240px;
   }
 }
+
+/* ── Touch-friendly sizing for coarse pointers ────────── */
+
+@media (pointer: coarse) {
+  .searchInput {
+    min-height: 36px;
+    padding: 8px 12px;
+  }
+}

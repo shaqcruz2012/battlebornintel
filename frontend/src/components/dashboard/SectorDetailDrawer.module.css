@@ -7,7 +7,7 @@
   inset: 0;
   background: rgba(0, 0, 0, 0.65);
   backdrop-filter: blur(6px);
-  z-index: 200;
+  z-index: var(--z-modal);
   animation: fadeIn 0.2s ease-out;
 }
 
@@ -28,7 +28,7 @@
   background: var(--bg-card);
   border: 1px solid rgba(69, 215, 198, 0.15);
   border-radius: var(--radius-lg, 12px);
-  z-index: 201;
+  z-index: calc(var(--z-modal) + 1);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -731,5 +731,29 @@
 
   .footerSection {
     padding: var(--space-md) var(--space-lg) var(--space-lg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .backdrop {
+    animation: none !important;
+  }
+
+  .drawer {
+    animation: none !important;
+  }
+
+  .heatDot {
+    animation: none !important;
+  }
+
+  .viewAllBtn,
+  .closeBtn,
+  .signalItem,
+  .companyItem,
+  .viewAllArrow,
+  .signalCompanyTag,
+  .metricBox {
+    transition: none !important;
   }
 }

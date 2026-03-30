@@ -1,16 +1,13 @@
-import { memo } from 'react';
 import styles from './PulseOverlay.module.css';
 
-const TIER_CLASS = {
-  LOW: styles.tierLow,
-  MODERATE: styles.tierModerate,
-  HIGH: styles.tierHigh,
-};
-
-export const PulseOverlay = memo(function PulseOverlay({ score, tier }) {
+export function PulseOverlay({ velocity, tier, cssVars }) {
   return (
-    <div className={`${styles.readout} ${TIER_CLASS[tier] || styles.tierLow}`}>
-      PULSE <span className={styles.score}>{score}</span> // {tier}
+    <div className={styles.pulseReadout} style={cssVars}>
+      <span className={styles.pulseDot} />
+      <span className={styles.pulseLabel}>PULSE</span>
+      <span className={styles.pulseScore}>{velocity}</span>
+      <span className={styles.pulseSeparator}>//</span>
+      <span className={styles.pulseTier}>{tier}</span>
     </div>
   );
-});
+}

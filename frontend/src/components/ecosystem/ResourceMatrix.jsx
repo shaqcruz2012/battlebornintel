@@ -13,6 +13,7 @@ import {
 } from '../../data/ecosystemOrgs';
 import { POLICY_GAPS } from '../../data/policyGaps';
 import { useEcosystemMap } from '../../api/hooks.js';
+import { useFilters } from '../../hooks/useFilters';
 import styles from './ResourceMatrix.module.css';
 
 // ── Component ────────────────────────────────────────────────────────
@@ -22,7 +23,8 @@ export default function ResourceMatrix() {
   const bodyTipsRef  = useRef([]);
 
   // Fetch live ecosystem data from API, fall back to static data
-  const { data: apiOrgs } = useEcosystemMap();
+  const { filters } = useFilters();
+  const { data: apiOrgs } = useEcosystemMap({ region: filters.region });
 
   const [dataset, setDataset]       = useState('core');
   const [activeTrack, setTrack]     = useState('ALL');
@@ -30,7 +32,7 @@ export default function ResourceMatrix() {
   const [activeCats, setActiveCats] = useState(new Set(Object.keys(COLOR_MAP)));
   const [labelsOn, setLabels]       = useState(true);
   const [gapVis, setGapVis]         = useState(
-    Object.fromEntries(POLICY_GAPS.map(g => [g.id, false]))
+    Object.fromEntries(POLICY_GAPS.map(g => [g.id, true]))
   );
   const [dimensions, setDimensions] = useState({ w: 0, h: 0 });
 
@@ -71,10 +73,23 @@ export default function ResourceMatrix() {
   }, [apiOrgs]);
 
   // Derived dataset — merge API data with static (API orgs take priority)
-  const staticOrgs = dataset === 'core' ? coreAll : [...coreAll, ...expandedData];
-  const rawData = liveOrgs
-    ? [...liveOrgs, ...staticOrgs.filter(s => !liveOrgs.find(l => l.name === s.name))]
-    : [...staticOrgs];
+  const regionFilter = filters.region;
+  const rawData = useMemo(() => {
+    const staticOrgs = dataset === 'core' ? coreAll : [...coreAll, ...expandedData];
+    const merged = liveOrgs
+      ? [...liveOrgs, ...staticOrgs.filter(s => !liveOrgs.find(l => l.name === s.name))]
+      : [...staticOrgs];
+
+    if (!regionFilter || regionFilter === 'all') return merged;
+    const r = regionFilter.toLowerCase();
+    return merged.filter((d) => {
+      // API-sourced orgs are already filtered server-side
+      if (d.fromApi) return true;
+      // Static orgs: filter by geo field
+      const geo = (d.geo || '').toLowerCase();
+      return geo.includes(r) || r.includes(geo) || geo === 'nevada' || geo === 'statewide';
+    });
+  }, [dataset, liveOrgs, regionFilter]);
 
   const PAD  = { top: 36, right: 40, bottom: 36, left: 52 };
   const AXIS = 10;
@@ -297,7 +312,7 @@ export default function ResourceMatrix() {
       bodyTipsRef.current.forEach(el => el.remove());
       bodyTipsRef.current = [];
     };
-  }, [rawData, activeTrack, activeStage, activeCats, labelsOn, gapVis, isVisible, isStageDim, dimensions]);
+  }, [rawData, activeTrack, activeStage, activeCats, labelsOn, gapVis, isVisible, isStageDim, dimensions, regionFilter]);
 
   // ── Gap overlay renderer ─────────────────────────────────────────
   function renderGaps(area, toX, toY) {
@@ -353,6 +368,28 @@ export default function ResourceMatrix() {
       lbl.setAttribute('fill','#060a0d');
       lbl.textContent = ov.label;
       svg.appendChild(lbl);
+
+      // Short description label (first sentence)
+      const firstSentence = (ov.description || '').split('.')[0] + '.';
+      const descY = ov.labelPosition.top ? 30 : y1px > 0 ? rh - 24 : 30;
+      const descX = 8;
+      const descText = document.createElementNS(ns, 'text');
+      descText.setAttribute('x', String(descX));
+      descText.setAttribute('y', String(descY));
+      descText.setAttribute('text-anchor', 'start');
+      descText.setAttribute('font-family', 'IBM Plex Mono,monospace');
+      descText.setAttribute('font-size', '8');
+      descText.setAttribute('font-weight', '400');
+      descText.setAttribute('fill', ov.color);
+      descText.setAttribute('fill-opacity', '0.55');
+      // Truncate to fit within the rectangle
+      const maxChars = Math.floor((rw - 16) / 4.8);
+      const truncDesc = firstSentence.length > maxChars
+        ? firstSentence.slice(0, maxChars - 1) + '\u2026'
+        : firstSentence;
+      descText.textContent = truncDesc;
+      svg.appendChild(descText);
+
       g.appendChild(svg);
 
       // Hover tooltip

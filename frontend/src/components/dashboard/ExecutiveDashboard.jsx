@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useCallback } from 'react';
+import { useState, useMemo, useEffect, useCallback, memo } from 'react';
 import { useFilters } from '../../hooks/useFilters';
 import { useCompanies, useKpis, useSectorStats, useFunds, useWeeklyBrief, useStakeholderActivities } from '../../api/hooks';
 import { MainGrid } from '../layout/AppShell';
@@ -14,14 +14,14 @@ import styles from './TerminalGrid.module.css';
 // ── KPI key/label mapping for terminal readout ─────────────────────────────
 
 const KPI_KEYS = [
-  { key: 'trackedFunding', label: 'TRCK.FUND', sortKey: 'trackedFunding', prefix: '$', suffix: 'M', decimals: 1 },
-  { key: 'publicCapitalShare', label: 'PUB.CAP%', sortKey: 'publicCap', prefix: '', suffix: '%', decimals: 1 },
-  { key: 'dealOrigination', label: 'DEAL.ORIG', sortKey: 'dealOrig', prefix: '', suffix: '%', decimals: 0 },
   { key: 'capitalDeployed', label: 'CAP.DEPLOY', sortKey: 'funding', prefix: '$', suffix: 'M', decimals: 1 },
   { key: 'ssbciCapitalDeployed', label: 'SSBCI.CAP', sortKey: 'ssbci', prefix: '$', suffix: 'M', decimals: 1 },
   { key: 'privateLeverage', label: 'PRIV.LEV', sortKey: 'leverage', prefix: '', suffix: 'x', decimals: 1 },
   { key: 'ecosystemCapacity', label: 'ECO.CAP', sortKey: 'employees', prefix: '', suffix: '', decimals: 0 },
   { key: 'innovationIndex', label: 'INNOV.IDX', sortKey: 'momentum', prefix: '', suffix: '', decimals: 0 },
+  { key: 'trackedFunding', label: 'TRCK.FUND', sortKey: 'funding', prefix: '$', suffix: 'M', decimals: 1 },
+  { key: 'publicCapitalShare', label: 'PUB.CAP%', sortKey: 'publicCap', prefix: '', suffix: '%', decimals: 1 },
+  { key: 'dealOrigination', label: 'DEAL.ORIG', sortKey: 'deals', prefix: '', suffix: '%', decimals: 1 },
 ];
 
 function formatKpiValue(val, prefix, suffix, decimals) {
@@ -64,6 +64,17 @@ function formatTimestamp() {
   const day = String(now.getDate()).padStart(2, '0');
   return `${month} ${day} ${h}:${m}:${s}`;
 }
+
+// ── Live timestamp (isolated to avoid full-dashboard re-renders) ──────────
+
+const LiveTimestamp = memo(function LiveTimestamp() {
+  const [ts, setTs] = useState(formatTimestamp);
+  useEffect(() => {
+    const id = setInterval(() => setTs(formatTimestamp()), 30000);
+    return () => clearInterval(id);
+  }, []);
+  return <>{ts}</>;
+});
 
 // ── Narrative derivation (simplified from NarrativePanel) ──────────────────
 
@@ -135,7 +146,7 @@ function deriveNarrative(briefData, companies, funds, sectorStats, activeSector)
 function LoadingSkeleton() {
   return (
     <MainGrid>
-      <div className={styles.terminalGrid}>
+      <div className={styles.terminalGrid} role="status" aria-busy="true" aria-label="Loading dashboard data">
         {[1, 2, 3, 4].map((i) => (
           <div key={i} className={styles.panel}>
             <div className={styles.panelHeader}>
@@ -161,12 +172,6 @@ export function ExecutiveDashboard({ onViewChange }) {
   const { filters, setSortBy, setSector } = useFilters();
   const [selectedSector, setSelectedSector] = useState(null);
   const [activeKpi, setActiveKpi] = useState(null);
-  const [timestamp, setTimestamp] = useState(formatTimestamp);
-
-  useEffect(() => {
-    const interval = setInterval(() => setTimestamp(formatTimestamp()), 30000);
-    return () => clearInterval(interval);
-  }, []);
 
   const { data: companies = [], isLoading: loadingCompanies, isFetching: fetchingCompanies } = useCompanies({
     stage: filters.stage,
@@ -187,11 +192,16 @@ export function ExecutiveDashboard({ onViewChange }) {
     filters.region && filters.region !== 'all' ? { region: filters.region } : {}
   );
   const { data: briefResponse } = useWeeklyBrief();
-  const { data: activities = [] } = useStakeholderActivities({ limit: 20 });
 
   const briefData = briefResponse?.data;
 
-  const velocity = useEcosystemVelocity({ activities, sectorStats, kpis });
+  const { data: activities = [] } = useStakeholderActivities({ limit: 20 });
+
+  const { velocity, tier, cssVars } = useEcosystemVelocity({
+    activities,
+    sectorStats,
+    kpis,
+  });
 
   const isLoading = loadingCompanies || loadingKpis || loadingSectors;
 
@@ -208,17 +218,14 @@ export function ExecutiveDashboard({ onViewChange }) {
 
   const handleKpiClick = useCallback((sortKey, kpiKey) => {
     setSortBy(sortKey);
-    setActiveKpi(prev => prev === kpiKey ? null : kpiKey);
+    setActiveKpi((prev) => (prev === kpiKey ? null : kpiKey));
   }, [setSortBy]);
 
   const handleSectorClick = useCallback((sector) => {
+    if (!sectorStats.some(s => s.sector === sector)) return;
     setSector(sector);
-    setSelectedSector(prev => prev === sector ? null : sector);
-  }, [setSector]);
-
-  const handleKpiClose = useCallback(() => setActiveKpi(null), []);
-  const handleSectorClose = useCallback(() => setSelectedSector(null), []);
-  const handleSectorReset = useCallback(() => { setSector('all'); setSelectedSector(null); }, [setSector]);
+    setSelectedSector((prev) => (prev === sector ? null : sector));
+  }, [sectorStats, setSector]);
 
   if (isLoading) {
     return <LoadingSkeleton />;
@@ -226,15 +233,15 @@ export function ExecutiveDashboard({ onViewChange }) {
 
   return (
     <MainGrid>
-      <div className={styles.terminalGridWrapper}>
-        <PulseOverlay score={velocity.score} tier={velocity.tier} />
-        <div className={`${styles.terminalGrid} ${styles.terminalGridPulsing}`} style={velocity.cssVars}>
+      <div className={styles.terminalGridWrapper} style={cssVars}>
+        <PulseOverlay velocity={velocity} tier={tier} cssVars={cssVars} />
+        <div className={`${styles.terminalGrid} ${styles.terminalGridPulsing}`}>
         {/* ═══ PANEL 1: KPI TERMINAL (top-left) ═══ */}
         <div className={styles.panel}>
           <div className={styles.panelHeader}>
             <span className={styles.panelTitle}>KPI Terminal</span>
             <span className={styles.panelHeaderRight}>
-              <span className={styles.liveDot} /> {timestamp}
+              <span className={styles.liveDot} /> <LiveTimestamp />
             </span>
           </div>
           <div className={styles.panelBody}>
@@ -265,7 +272,7 @@ export function ExecutiveDashboard({ onViewChange }) {
               <div className={styles.sectorHeatGrid}>
                 <div
                   className={`${styles.sectorBlock} ${filters.sector === 'all' ? styles.sectorBlockActive : ''}`}
-                  onClick={handleSectorReset}
+                  onClick={() => { setSector('all'); setSelectedSector(null); }}
                 >
                   <span className={styles.sectorName}>ALL</span>
                 </div>
@@ -377,7 +384,7 @@ export function ExecutiveDashboard({ onViewChange }) {
             )}
           </div>
         </div>
-      </div>
+        </div>
       </div>
 
       {/* ── Risk Intelligence ── */}
@@ -391,7 +398,7 @@ export function ExecutiveDashboard({ onViewChange }) {
           funds={funds}
           companies={companies}
           sectorStats={sectorStats}
-          onClose={handleKpiClose}
+          onClose={() => setActiveKpi(null)}
         />
       )}
       {selectedSector && (
@@ -399,7 +406,7 @@ export function ExecutiveDashboard({ onViewChange }) {
           sector={selectedSector}
           companies={companies}
           sectorStats={sectorStats}
-          onClose={handleSectorClose}
+          onClose={() => setSelectedSector(null)}
           onViewAll={() => handleViewAllCompanies(selectedSector)}
         />
       )}

@@ -109,6 +109,7 @@ export function GalaxyView() {
   const compassArrowRef = useRef(null);
   const compassDistRef = useRef(null);
   const [initError, setInitError] = useState(null);
+  const pendingDataRef = useRef(null);
 
   const { data: graphData, isLoading } = useGraphLight();
   const { data: metrics } = useGraphMetrics();
@@ -182,79 +183,108 @@ export function GalaxyView() {
     return cIds;
   }, [selectedNode, graphInput.links]);
 
-  // Initialize 3d-force-graph
+  // Initialize 3d-force-graph (with ResizeObserver fallback for lazy-loaded containers)
   useEffect(() => {
-    if (!containerRef.current || graphRef.current) return;
+    const container = containerRef.current;
+    if (!container) return;
 
-    let graph;
-    try {
-    graph = ForceGraph3D()(containerRef.current)
-      .backgroundColor(GP.bg)
-      .showNavInfo(false)
-      .nodeRelSize(4)
-      .nodeResolution(16)
-      .linkWidth(0.3)
-      .linkOpacity(0.12)
-      .linkDirectionalParticles(0)
-      .linkDirectionalParticleSpeed(0.005)
-      .linkDirectionalParticleWidth(1.5)
-      .d3AlphaDecay(0.025)
-      .d3VelocityDecay(0.25)
-      .warmupTicks(100)
-      .cooldownTicks(150)
-      .nodeColor((n) => n.color)
-      .nodeVal((n) => n.val)
-      .nodeLabel((node) => {
-        const label = esc(node.label || node.id);
-        const type = esc(node.type || '');
-        const extra = node.funding ? ` \u00B7 $${node.funding}M` : '';
-        return `<div style="font-family:'IBM Plex Mono',monospace;font-size:11px;background:rgba(10,14,20,0.92);color:#d4d0c8;padding:4px 8px;border-radius:3px;border:1px solid #1c2733;pointer-events:none"><div style="color:${esc(node.color)};font-weight:600">${label}</div><div style="font-size:9px;color:#6b6a72">${type}${extra}</div></div>`;
-      })
-      .nodeThreeObjectExtend(true)
-      .nodeThreeObject((node) => {
-        const isHub = HUB_IDS.has(node.id);
-        if (!isHub && (node.val || 2) < 5) return null;
-        const truncated = (node.label || node.id).slice(0, 18);
-        const sprite = makeTextSprite(truncated, node.color);
-        if (!sprite) return null;
-        sprite.position.y = 6;
-        return sprite;
-      })
-      .linkLabel((link) => {
-        const rel = esc((link.rel || '').replace(/_/g, ' '));
-        const note = link.note ? `<div style="font-size:9px;color:rgba(255,255,255,0.5);line-height:1.4">${esc(link.note)}</div>` : '';
-        const url = link.source_url ? `<div style="color:#45d7c6;font-size:8px;margin-top:4px">Click edge to open source</div>` : '';
-        return `<div style="font-family:'IBM Plex Mono',monospace;font-size:10px;background:rgba(10,14,20,0.95);color:#d4d0c8;padding:6px 10px;border-radius:3px;border:1px solid #1c2733;max-width:320px;pointer-events:none"><div style="font-size:8px;color:#6b6a72;letter-spacing:1px;text-transform:uppercase;margin-bottom:3px">${rel}</div><div style="font-size:9px;color:#45d7c6;margin-bottom:2px">${esc(link.sourceName || '')} \u2192 ${esc(link.targetName || '')}</div>${note}${url}</div>`;
-      })
-      .onLinkClick((link) => {
-        if (link.source_url) {
-          window.open(link.source_url, '_blank', 'noopener');
+    function initGraph() {
+      if (graphRef.current) return; // already initialized
+
+      const { width, height } = container.getBoundingClientRect();
+      if (width === 0 || height === 0) return; // not laid out yet
+
+      let graph;
+      try {
+        graph = ForceGraph3D()(container)
+          .backgroundColor(GP.bg)
+          .showNavInfo(false)
+          .nodeRelSize(4)
+          .nodeResolution(16)
+          .linkWidth(0.3)
+          .linkOpacity(0.12)
+          .linkDirectionalParticles(0)
+          .linkDirectionalParticleSpeed(0.005)
+          .linkDirectionalParticleWidth(1.5)
+          .d3AlphaDecay(0.025)
+          .d3VelocityDecay(0.25)
+          .warmupTicks(100)
+          .cooldownTicks(150)
+          .nodeColor((n) => n.color)
+          .nodeVal((n) => n.val)
+          .nodeLabel((node) => {
+            const label = esc(node.label || node.id);
+            const type = esc(node.type || '');
+            const extra = node.funding ? ` \u00B7 $${node.funding}M` : '';
+            return `<div style="font-family:'IBM Plex Mono',monospace;font-size:11px;background:rgba(10,14,20,0.92);color:#d4d0c8;padding:4px 8px;border-radius:3px;border:1px solid #1c2733;pointer-events:none"><div style="color:${esc(node.color)};font-weight:600">${label}</div><div style="font-size:9px;color:#6b6a72">${type}${extra}</div></div>`;
+          })
+          .nodeThreeObjectExtend(true)
+          .nodeThreeObject((node) => {
+            const isHub = HUB_IDS.has(node.id);
+            if (!isHub && (node.val || 2) < 5) return null;
+            const truncated = (node.label || node.id).slice(0, 18);
+            const sprite = makeTextSprite(truncated, node.color);
+            if (!sprite) return null;
+            sprite.position.y = 6;
+            return sprite;
+          })
+          .linkLabel((link) => {
+            const rel = esc((link.rel || '').replace(/_/g, ' '));
+            const note = link.note ? `<div style="font-size:9px;color:rgba(255,255,255,0.5);line-height:1.4">${esc(link.note)}</div>` : '';
+            const url = link.source_url ? `<div style="color:#45d7c6;font-size:8px;margin-top:4px">Click edge to open source</div>` : '';
+            return `<div style="font-family:'IBM Plex Mono',monospace;font-size:10px;background:rgba(10,14,20,0.95);color:#d4d0c8;padding:6px 10px;border-radius:3px;border:1px solid #1c2733;max-width:320px;pointer-events:none"><div style="font-size:8px;color:#6b6a72;letter-spacing:1px;text-transform:uppercase;margin-bottom:3px">${rel}</div><div style="font-size:9px;color:#45d7c6;margin-bottom:2px">${esc(link.sourceName || '')} \u2192 ${esc(link.targetName || '')}</div>${note}${url}</div>`;
+          })
+          .onLinkClick((link) => {
+            if (link.source_url) {
+              window.open(link.source_url, '_blank', 'noopener');
+            }
+          })
+          .linkHoverPrecision(6)
+          .onNodeClick((node) => {
+            setSelectedNode((prev) => prev === node.id ? null : node.id);
+            // Fly camera to node
+            const distance = 180;
+            const distRatio = 1 + distance / Math.hypot(node.x, node.y, node.z);
+            graph.cameraPosition(
+              { x: node.x * distRatio, y: node.y * distRatio, z: node.z * distRatio },
+              node,
+              1200
+            );
+          })
+          .onBackgroundClick(() => setSelectedNode(null));
+
+        // Bloom post-processing removed for stability — the starfield and
+        // node glow provide sufficient visual depth without it.
+
+        graphRef.current = graph;
+
+        // Feed any data that arrived before the graph was ready
+        if (pendingDataRef.current) {
+          graph.graphData(pendingDataRef.current);
+          pendingDataRef.current = null;
         }
-      })
-      .linkHoverPrecision(6)
-      .onNodeClick((node) => {
-        setSelectedNode((prev) => prev === node.id ? null : node.id);
-        // Fly camera to node
-        const distance = 180;
-        const distRatio = 1 + distance / Math.hypot(node.x, node.y, node.z);
-        graph.cameraPosition(
-          { x: node.x * distRatio, y: node.y * distRatio, z: node.z * distRatio },
-          node,
-          1200
-        );
-      })
-      .onBackgroundClick(() => setSelectedNode(null));
+      } catch (err) {
+        console.error('[galaxy] Init failed:', err);
+        setInitError(err.message);
+      }
+    }
 
-    // Bloom post-processing removed for stability — the starfield and
-    // node glow provide sufficient visual depth without it.
+    initGraph(); // try immediately
 
-    graphRef.current = graph;
-    } catch (err) {
-      console.error('[galaxy] Init failed:', err);
-      setInitError(err.message);
+    // If container wasn't ready (0 dimensions), observe for layout
+    let observer;
+    if (!graphRef.current) {
+      observer = new ResizeObserver(() => {
+        initGraph();
+        if (graphRef.current && observer) {
+          observer.disconnect();
+        }
+      });
+      observer.observe(container);
     }
 
     return () => {
+      if (observer) observer.disconnect();
       if (rotationRef.current) {
         cancelAnimationFrame(rotationRef.current);
         rotationRef.current = null;
@@ -266,13 +296,18 @@ export function GalaxyView() {
     };
   }, []);
 
-  // Feed data into graph when ready
+  // Feed data into graph when ready (store in ref if graph not yet initialized)
   useEffect(() => {
-    if (!graphRef.current || graphInput.nodes.length === 0) return;
-    graphRef.current.graphData({
+    if (graphInput.nodes.length === 0) return;
+    const data = {
       nodes: [...graphInput.nodes],
       links: [...graphInput.links],
-    });
+    };
+    if (!graphRef.current) {
+      pendingDataRef.current = data;
+      return;
+    }
+    graphRef.current.graphData(data);
   }, [graphInput]);
 
   // Auto-rotation when no node is selected
@@ -471,7 +506,7 @@ export function GalaxyView() {
   }
 
   return (
-    <div className={styles.wrapper}>
+    <div className={styles.wrapper} role="img" aria-label="3D galaxy visualization of Nevada innovation ecosystem showing companies, funds, and stakeholders as interactive nodes in space">
       <div ref={containerRef} className={styles.canvas} />
 
       <GalaxyHudBar
@@ -517,6 +552,10 @@ export function GalaxyView() {
       </div>
 
       <GalaxyDetailPanel detail={selectedDetail} onClose={handleDeselect} />
+
+      <div style={{ position: 'absolute', width: '1px', height: '1px', padding: 0, margin: '-1px', overflow: 'hidden', clip: 'rect(0,0,0,0)', whiteSpace: 'nowrap', border: 0 }} role="status" aria-live="polite">
+        {`3D galaxy view: ${graphInput.nodes?.length || 0} nodes, ${graphInput.links?.length || 0} connections displayed`}
+      </div>
     </div>
   );
 }

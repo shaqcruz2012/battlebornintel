@@ -18,7 +18,11 @@ async function fetchJSON(path, params = {}, { signal } = {}) {
   const token = localStorage.getItem('bbi_token');
   if (token) headers['Authorization'] = `Bearer ${token}`;
 
-  const res = await fetch(url.toString(), { signal, headers });
+  const res = await fetch(url.toString(), { signal, headers, cache: 'no-store' });
+  if (res.status === 401) {
+    localStorage.removeItem('bbi_token');
+    window.dispatchEvent(new Event('auth:expired'));
+  }
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
     throw new Error(body.error || `API error ${res.status}`);
@@ -109,24 +113,24 @@ export const api = {
   getInvestorMatches: (companyId, params = {}) =>
     fetchJSON(`${BASE}/analytics/investor-match/${companyId}`, params).then((r) => r.data),
 
-  getCapitalFlows: () =>
-    fetchJSON(`${BASE}/analytics/capital-flows`).then((r) => r.data),
+  getCapitalFlows: (params = {}) =>
+    fetchJSON(`${BASE}/analytics/capital-flows`, params).then((r) => r.data),
 
   getCapitalMagnets: (limit = 20) =>
     fetchJSON(`${BASE}/analytics/capital-magnets`, { limit }).then((r) => r.data),
 
-  getPredictedLinks: (limit = 30) =>
-    fetchJSON(`${BASE}/analytics/predicted-links`, { limit }).then((r) => r.data),
+  getPredictedLinks: (limit = 30, params = {}) =>
+    fetchJSON(`${BASE}/analytics/predicted-links`, { limit, ...params }).then((r) => r.data),
 
   // Investors
-  getInvestors: () =>
-    fetchJSON(`${BASE}/investors`).then((r) => r.data),
+  getInvestors: (params = {}) =>
+    fetchJSON(`${BASE}/investors`, params).then((r) => r.data),
 
   getInvestor: (id) =>
     fetchJSON(`${BASE}/investors/${id}`).then((r) => r.data),
 
-  getInvestorStats: () =>
-    fetchJSON(`${BASE}/investors/stats`).then((r) => r.data),
+  getInvestorStats: (params = {}) =>
+    fetchJSON(`${BASE}/investors/stats`, params).then((r) => r.data),
 
   // Frontier News
   getNews: (params = {}) =>
@@ -139,11 +143,32 @@ export const api = {
     fetchJSON(`${BASE}/news/sectors`).then((r) => r.data),
 
   // Ecosystem map
-  getEcosystemMap: () =>
-    fetchJSON(`${BASE}/ecosystem/map`).then((r) => r.data),
+  getEcosystemMap: (params = {}) =>
+    fetchJSON(`${BASE}/ecosystem/map`, params).then((r) => r.data),
 
-  getEcosystemGaps: () =>
-    fetchJSON(`${BASE}/ecosystem/gaps`).then((r) => r.data),
+  getStructuralHoles: (params = {}) =>
+    fetchJSON(`${BASE}/analytics/structural-holes`, params).then((r) => r.data),
+
+  getEcosystemGaps: (params = {}) =>
+    fetchJSON(`${BASE}/ecosystem/gaps`, params).then((r) => r.data),
+
+  getGraphClusters: (type = 'community') =>
+    fetchJSON(`${BASE}/graph/clusters`, { type }).then((r) => r.data),
+
+  getGraphAnalytics: () =>
+    fetchJSON(`${BASE}/graph/analytics`).then((r) => r.data),
+
+  getRegionalSummary: () =>
+    fetchJSON(`${BASE}/regional/summary`).then((r) => r.data),
+
+  getMacroEvents: () =>
+    fetchJSON(`${BASE}/macro-events`).then((r) => r.data),
+
+  getModelLeaderboard: (outputType = 'composite_score', limit = 20) =>
+    fetchJSON(`${BASE}/model-outputs/leaderboard`, {
+      output_type: outputType,
+      limit,
+    }).then((r) => r.data),
 
   refreshNews: () =>
     fetch(`${BASE}/news/refresh`, {

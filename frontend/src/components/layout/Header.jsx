@@ -29,8 +29,8 @@ export function Header() {
     <>
       <header className={styles.header}>
         <div className={styles.brand}>
-          <h1 className={styles.title}>Battle Born Intelligence</h1>
-          <span className={styles.subtitle}>Nevada Startup Ecosystem</span>
+          <h1 className={styles.title}>ATLAS</h1>
+          <span className={styles.subtitle}>Nevada Innovation Ecosystem</span>
         </div>
 
         <div className={styles.controls}>

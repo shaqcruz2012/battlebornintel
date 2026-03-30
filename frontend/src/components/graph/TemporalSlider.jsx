@@ -44,15 +44,25 @@ export function TemporalSlider({ min, max, value, onChange, visibleEdges, totalE
     return () => clearInterval(id);
   }, [playing, max, onChange]);
 
+  // Track whether we need to reset to min on next play start
+  const needsResetRef = useRef(false);
+
   const handlePlay = useCallback(() => {
     setPlaying((p) => {
       if (!p && valueRef.current >= max) {
-        // Reset to min before playing
-        onChange(min);
+        needsResetRef.current = true;
       }
       return !p;
     });
-  }, [max, min, onChange]);
+  }, [max]);
+
+  // Handle reset-to-min outside of render (avoids setState-during-render warning)
+  useEffect(() => {
+    if (playing && needsResetRef.current) {
+      needsResetRef.current = false;
+      onChange(min);
+    }
+  }, [playing, min, onChange]);
 
   const handleSliderChange = useCallback(
     (e) => {

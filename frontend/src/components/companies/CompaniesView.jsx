@@ -32,7 +32,7 @@ const TOP_SECTORS = [
 const COLUMNS = [
   { key: 'name', label: 'Name', align: 'left' },
   { key: 'irs', label: 'IRS', align: 'right' },
-  { key: 'grade', label: 'Grade', align: 'left' },
+  { key: 'grade', label: 'Signal', align: 'left' },
   { key: 'stage', label: 'Stage', align: 'left', hideClass: 'colStage' },
   { key: 'funding', label: 'Funding', align: 'right', hideClass: 'colFunding' },
   { key: 'momentum', label: 'Momentum', align: 'right', hideClass: 'colMomentum' },

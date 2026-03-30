@@ -216,19 +216,23 @@ const PredictedLinksOverlay = memo(function PredictedLinksOverlay({ predictions,
     const nodeMap = {};
     nodes.forEach((n) => { nodeMap[n.id] = n; });
     return predictions
-      .filter((p) => nodeMap[p.source] && nodeMap[p.target])
       .map((p) => {
-        const s = nodeMap[p.source];
-        const t = nodeMap[p.target];
+        // Support both { source, target } and { nodeA, nodeC } shapes
+        const srcId = p.source || p.nodeA?.id;
+        const tgtId = p.target || p.nodeC?.id;
+        const s = nodeMap[srcId];
+        const t = nodeMap[tgtId];
+        if (!s || !t) return null;
         return {
           sx: s.x || 0, sy: s.y || 0,
           tx: t.x || 0, ty: t.y || 0,
           score: p.score || 0,
-          reason: p.reason || '',
-          sourceLabel: s.label || p.source,
-          targetLabel: t.label || p.target,
+          reason: p.reasoning || p.reason || '',
+          sourceLabel: s.label || p.nodeA?.label || srcId,
+          targetLabel: t.label || p.nodeC?.label || tgtId,
         };
-      });
+      })
+      .filter(Boolean);
   }, [predictions, nodes]);
 
   if (!links.length) return null;
@@ -437,7 +441,7 @@ export const AnalysisOverlays = memo(function AnalysisOverlays({
         <CapitalFlowOverlay edges={edges} />
       )}
       {show.predictedLinks && (
-        <PredictedLinksOverlay predictions={predictedLinks} nodes={nodes} />
+        <PredictedLinksOverlay predictions={predictedLinks?.predictions || predictedLinks} nodes={nodes} />
       )}
       {show.bridges && (
         <BridgesOverlay

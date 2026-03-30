@@ -2,6 +2,7 @@ import { memo, useMemo } from 'react';
 import { fmt, stageLabel } from '../../engine/formatters';
 import { TRIGGER_CFG, GRADE_COLORS, STAGE_COLORS } from '../../data/constants';
 import { Sparkline, generateMomentumTrail } from '../shared/Sparkline';
+import { SignalStrengthBars } from '../shared/SignalStrengthBars';
 import styles from './CompaniesView.module.css';
 
 const DIM_LABELS = {
@@ -169,11 +170,7 @@ export const CompanyRow = memo(function CompanyRow({ company, isExpanded, onTogg
           )}
         </td>
         <td className={styles.td}>
-          {c.grade ? (
-            <span className={`${styles.grade} ${gradeClass}`}>{c.grade}</span>
-          ) : (
-            '\u2014'
-          )}
+          <SignalStrengthBars irs={c.irs} />
         </td>
         <td className={`${styles.td} ${styles.colStage}`}>
           <span className={styles.stage} style={stageStyle}>

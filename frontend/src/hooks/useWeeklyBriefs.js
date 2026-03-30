@@ -154,9 +154,12 @@ function aggregateWeekData(weekStart, allEvents) {
 /**
  * Hook: Load and aggregate weekly brief data from the timeline API
  * Dynamically spans from oldest event to today so no data is missed.
+ * @param {number} weeksBack - Number of weeks to look back
+ * @param {Object} opts - Additional options
+ * @param {string} [opts.region] - Region filter (las_vegas, reno, henderson, etc.)
  */
-export function useWeeklyBriefs(weeksBack = 52) {
-  const { data: allEvents, isLoading, error } = useTimeline({ limit: 1000 });
+export function useWeeklyBriefs(weeksBack = 52, { region } = {}) {
+  const { data: allEvents, isLoading, error } = useTimeline({ limit: 200, region });
 
   const weeks = useMemo(() => {
     if (!allEvents || allEvents.length === 0) return [];
@@ -186,7 +189,7 @@ export function useWeeklyBriefs(weeksBack = 52) {
  * Hook: Load single week data
  */
 export function useWeeklyBrief(weekStart) {
-  const { data: allEvents, isLoading, error } = useTimeline({ limit: 1000 });
+  const { data: allEvents, isLoading, error } = useTimeline({ limit: 200 });
 
   const week = useMemo(() => {
     if (!weekStart || !allEvents) return null;

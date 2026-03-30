@@ -82,3 +82,9 @@
     grid-template-columns: 1fr;
   }
 }
+
+@media (prefers-reduced-motion: reduce) {
+  .liveDot {
+    animation: none !important;
+  }
+}

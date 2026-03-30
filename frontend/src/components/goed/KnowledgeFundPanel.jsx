@@ -31,45 +31,67 @@ export function KnowledgeFundPanel({ knowledgeFundEdges, allEdges, nodes }) {
       .filter(Boolean);
   }, [knowledgeFundEdges, nodes]);
 
+  // Pre-build adjacency maps to avoid O(n*m) filtering per recipient
+  const { edgesBySource, edgesByTarget } = useMemo(() => {
+    const bySource = new Map();
+    const byTarget = new Map();
+    allEdges.forEach((e) => {
+      const src = e.source?.id || e.source;
+      const tgt = e.target?.id || e.target;
+      if (!bySource.has(src)) bySource.set(src, []);
+      bySource.get(src).push(e);
+      if (!byTarget.has(tgt)) byTarget.set(tgt, []);
+      byTarget.get(tgt).push(e);
+    });
+    return { edgesBySource: bySource, edgesByTarget: byTarget };
+  }, [allEdges]);
+
   // For each recipient, find partners, startups, and downstream connections
   const recipientDetails = useMemo(
     () =>
       recipients.map((recipient) => {
-        const partners = nodes.filter((n) =>
-          allEdges.some(
-            (e) =>
-              ((e.source === recipient.id && e.target === n.id) ||
-                (e.target === recipient.id && e.source === n.id)) &&
-              ['partners_with', 'collaborated_with', 'invested_in'].includes(
-                e.rel
-              ) &&
-              n.id !== recipient.id
-          )
-        );
+        const outEdges = edgesBySource.get(recipient.id) || [];
+        const inEdges = edgesByTarget.get(recipient.id) || [];
+        const allRecipientEdges = [...outEdges, ...inEdges];
 
-        const startups = nodes.filter((n) =>
-          allEdges.some(
-            (e) =>
-              ((e.source === n.id && e.target === recipient.id) ||
-                (e.source === recipient.id && e.target === n.id)) &&
-              ['accelerated_by', 'incubated_by', 'housed_at'].includes(e.rel)
-          )
-        );
+        const partnerRels = new Set(['partners_with', 'collaborated_with', 'invested_in']);
+        const partnerIds = new Set();
+        allRecipientEdges.forEach((e) => {
+          if (partnerRels.has(e.rel)) {
+            const otherId = (e.source?.id || e.source) === recipient.id
+              ? (e.target?.id || e.target)
+              : (e.source?.id || e.source);
+            if (otherId !== recipient.id) partnerIds.add(otherId);
+          }
+        });
+        const partners = nodes.filter((n) => partnerIds.has(n.id));
+
+        const startupRels = new Set(['accelerated_by', 'incubated_by', 'housed_at']);
+        const startupIds = new Set();
+        allRecipientEdges.forEach((e) => {
+          if (startupRels.has(e.rel)) {
+            const otherId = (e.source?.id || e.source) === recipient.id
+              ? (e.target?.id || e.target)
+              : (e.source?.id || e.source);
+            startupIds.add(otherId);
+          }
+        });
+        const startups = nodes.filter((n) => startupIds.has(n.id));
 
         // Also find companies that received grants_to from this recipient
-        const grantees = nodes.filter((n) =>
-          allEdges.some(
-            (e) =>
-              e.source === recipient.id &&
-              e.target === n.id &&
-              ['grants_to', 'funds'].includes(e.rel) &&
-              n.id !== recipient.id
-          )
-        );
+        const granteeRels = new Set(['grants_to', 'funds']);
+        const granteeIds = new Set();
+        outEdges.forEach((e) => {
+          const tgt = e.target?.id || e.target;
+          if (granteeRels.has(e.rel) && tgt !== recipient.id) {
+            granteeIds.add(tgt);
+          }
+        });
+        const grantees = nodes.filter((n) => granteeIds.has(n.id));
 
         return { recipient, partners, startups, grantees };
       }),
-    [recipients, allEdges, nodes]
+    [recipients, edgesBySource, edgesByTarget, nodes]
   );
 
   if (recipients.length === 0) return null;

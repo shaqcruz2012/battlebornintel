@@ -75,6 +75,8 @@ function ScoreBar({ label, value, max = 100, color }) {
 }
 
 export function NodeDetail({ nodeId, layout, metrics, onClose }) {
+  const [showAllHistorical, setShowAllHistorical] = useState(false);
+  const [showAllOpportunities, setShowAllOpportunities] = useState(false);
   const { nodes, edges } = layout;
 
   const node = useMemo(
@@ -95,7 +97,7 @@ export function NodeDetail({ nodeId, layout, metrics, onClose }) {
         const targetId = typeof e.target === 'object' ? e.target.id : e.target;
         const otherId = sourceId === nodeId ? targetId : sourceId;
         const other = nodes.find((n) => n.id === otherId);
-        return { rel: e.rel, node: other, note: e.note, source_url: e.source_url, year: e.y, edgeCategory: e.category, matchScore: e.matching_score };
+        return { rel: e.rel, node: other, note: e.note, source_url: e.source_url, year: e.y, edgeCategory: e.category, matchScore: e.matching_score, capitalM: e.capitalM, impactType: e.impactType };
       })
       .filter((c) => c.node);
   }, [edges, nodes, nodeId]);
@@ -170,7 +172,22 @@ export function NodeDetail({ nodeId, layout, metrics, onClose }) {
                   <span className={styles.metricLabel}>Momentum</span>
                   <span className={styles.metricValue}>{node.momentum || '\u2014'}</span>
                 </div>
+                {node.locationClass && (
+                  <div className={styles.metricBox}>
+                    <span className={styles.metricLabel}>Location</span>
+                    <span className={styles.metricValue}>{node.locationClass}</span>
+                  </div>
+                )}
+                {node.outcomeStatus && (
+                  <div className={styles.metricBox}>
+                    <span className={styles.metricLabel}>Outcome</span>
+                    <span className={styles.metricValue}>{node.outcomeStatus}</span>
+                  </div>
+                )}
               </>
+            )}
+            {node.type === 'company' && node.confidence != null && (
+              <ScoreBar label="Confidence" value={node.confidence} max={1} color="var(--accent-teal)" />
             )}
             {comm !== undefined && (
               <div className={styles.metricBox}>
@@ -214,28 +231,35 @@ export function NodeDetail({ nodeId, layout, metrics, onClose }) {
             defaultOpen={true}
           >
             <div className={styles.connectionList}>
-              {groupedConnections.historical.slice(0, 25).map((c, i) => {
+              {groupedConnections.historical.slice(0, showAllHistorical ? undefined : 25).map((c, i) => {
                 const rc = REL_CFG[c.rel] || {};
                 const dollarMatch = c.note?.match(/\$[\d,.]+[BMK]?/);
                 const dollarAmt = dollarMatch ? dollarMatch[0] : null;
                 // Extract 1-2 word tag from note (skip generic notes)
                 const tag = extractTag(c.note, c.rel, c.node.label);
                 return (
-                  <div key={i} className={styles.connection}>
+                  <div key={`${c.node?.id || c.id}-${c.rel || ''}-${i}`} className={styles.connection}>
                     <span
                       className={styles.connectionDot}
                       style={{ background: NODE_CFG[c.node.type]?.color || '#666' }}
                     />
                     <span className={styles.connectionName}>{c.node.label}</span>
-                    {dollarAmt && (
+                    {c.capitalM != null && c.capitalM > 0 ? (
+                      <span className={styles.oppAmount} style={{ margin: 0, fontSize: '9px', padding: '1px 4px' }}>
+                        ${c.capitalM}M
+                      </span>
+                    ) : dollarAmt ? (
                       <span className={styles.oppAmount} style={{ margin: 0, fontSize: '9px', padding: '1px 4px' }}>
                         {dollarAmt}
                       </span>
+                    ) : null}
+                    {c.impactType && (
+                      <span className={styles.edgeTag}>{c.impactType}</span>
                     )}
                     {c.year && (
                       <span className={styles.edgeYear}>{c.year}</span>
                     )}
-                    {tag && (
+                    {tag && !c.impactType && (
                       <span className={styles.edgeTag}>{tag}</span>
                     )}
                     {c.source_url && (
@@ -261,10 +285,23 @@ export function NodeDetail({ nodeId, layout, metrics, onClose }) {
                   </div>
                 );
               })}
-              {groupedConnections.historical.length > 20 && (
-                <div className={styles.moreCount}>
-                  +{groupedConnections.historical.length - 20} more
-                </div>
+              {!showAllHistorical && groupedConnections.historical.length > 25 && (
+                <button
+                  className={styles.moreCount}
+                  onClick={(e) => { e.stopPropagation(); setShowAllHistorical(true); }}
+                  type="button"
+                >
+                  +{groupedConnections.historical.length - 25} more
+                </button>
+              )}
+              {showAllHistorical && groupedConnections.historical.length > 25 && (
+                <button
+                  className={styles.moreCount}
+                  onClick={(e) => { e.stopPropagation(); setShowAllHistorical(false); }}
+                  type="button"
+                >
+                  Show less
+                </button>
               )}
             </div>
           </CollapsibleSection>
@@ -278,12 +315,12 @@ export function NodeDetail({ nodeId, layout, metrics, onClose }) {
             defaultOpen={true}
           >
             <div className={styles.connectionList}>
-              {groupedConnections.opportunities.slice(0, 15).map((c, i) => {
+              {groupedConnections.opportunities.slice(0, showAllOpportunities ? undefined : 15).map((c, i) => {
                 const rc = REL_CFG[c.rel] || {};
                 const dollarMatch = c.note?.match(/\$[\d,.]+[BMK]?/);
                 const dollarAmt = dollarMatch ? dollarMatch[0] : null;
                 return (
-                  <div key={i} className={styles.oppCard}>
+                  <div key={`${c.node?.id || c.id}-${c.rel || ''}-${i}`} className={styles.oppCard}>
                     <div className={styles.connection}>
                       <span
                         className={styles.connectionDot}
@@ -300,9 +337,15 @@ export function NodeDetail({ nodeId, layout, metrics, onClose }) {
                         {rc.label || c.rel}
                       </span>
                     </div>
-                    {/* Dollar amount badge */}
-                    {dollarAmt && (
+                    {/* Dollar amount badge — prefer capitalM over parsed note */}
+                    {c.capitalM != null && c.capitalM > 0 ? (
+                      <div className={styles.oppAmount}>${c.capitalM}M</div>
+                    ) : dollarAmt ? (
                       <div className={styles.oppAmount}>{dollarAmt}</div>
+                    ) : null}
+                    {/* Impact type badge */}
+                    {c.impactType && (
+                      <div className={styles.edgeTag} style={{ display: 'inline-block', marginBottom: 4 }}>{c.impactType}</div>
                     )}
                     {/* Match score bar */}
                     {c.matchScore > 0 && (
@@ -330,10 +373,23 @@ export function NodeDetail({ nodeId, layout, metrics, onClose }) {
                   </div>
                 );
               })}
-              {groupedConnections.opportunities.length > 15 && (
-                <div className={styles.moreCount}>
+              {!showAllOpportunities && groupedConnections.opportunities.length > 15 && (
+                <button
+                  className={styles.moreCount}
+                  onClick={(e) => { e.stopPropagation(); setShowAllOpportunities(true); }}
+                  type="button"
+                >
                   +{groupedConnections.opportunities.length - 15} more
-                </div>
+                </button>
+              )}
+              {showAllOpportunities && groupedConnections.opportunities.length > 15 && (
+                <button
+                  className={styles.moreCount}
+                  onClick={(e) => { e.stopPropagation(); setShowAllOpportunities(false); }}
+                  type="button"
+                >
+                  Show less
+                </button>
               )}
             </div>
           </CollapsibleSection>

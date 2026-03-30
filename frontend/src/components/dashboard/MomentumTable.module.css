@@ -89,6 +89,7 @@
 .colHeaders {
   display: grid;
   grid-template-columns: 2.5fr 1fr 1fr 1fr 56px 1fr 40px;
+  gap: 8px;
   padding: 3px 10px;
   border-bottom: 1px solid #1c2733;
   background: #0a0e14;
@@ -133,6 +134,8 @@
 /* ── Virtual scroll container ──────────────────────────── */
 
 .virtualContainer {
+  flex: 1;
+  overflow: auto;
   scrollbar-width: thin;
   scrollbar-color: rgba(69, 215, 198, 0.15) transparent;
 }
@@ -196,5 +199,16 @@
   }
   .header {
     padding: var(--space-md) var(--space-lg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fetchingDot {
+    animation: none !important;
+  }
+
+  .sortBtn,
+  .filterPill {
+    transition: none !important;
   }
 }

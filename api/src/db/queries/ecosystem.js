@@ -63,25 +63,33 @@ export async function getEcosystemMap() {
 /**
  * Get unified ecosystem gaps — combines framework gaps with structural analysis.
  */
-export async function getEcosystemGapsUnified() {
+export async function getEcosystemGapsUnified(region = null) {
+  const hasRegion = region && region !== 'all';
+  const regionFilter = hasRegion ? 'WHERE region = $1' : '';
+  const regionJoinFilter = hasRegion ? 'AND c.region = $2' : '';
+
   // Get company counts per stage for gap severity validation
-  const stageCounts = await pool.query(`
-    SELECT stage, count(*) AS cnt,
+  const stageCounts = await pool.query(
+    `SELECT stage, count(*) AS cnt,
            avg(momentum) AS avg_momentum,
            sum(CASE WHEN funding_m < 5 THEN 1 ELSE 0 END) AS underfunded
     FROM companies
-    GROUP BY stage
-  `);
+    ${regionFilter}
+    GROUP BY stage`,
+    hasRegion ? [region] : []
+  );
 
   // Get Series B+ investor coverage
-  const seriesBCoverage = await pool.query(`
-    SELECT count(DISTINCT ge.target_id) AS companies_with_b_investors
+  const seriesBCoverage = await pool.query(
+    `SELECT count(DISTINCT ge.target_id) AS companies_with_b_investors
     FROM graph_edges ge
     JOIN companies c ON 'c_' || c.id = ge.target_id
     WHERE ge.rel = 'invested_in'
       AND c.stage IN ('series_b', 'series_c_plus')
       AND ge.edge_category = 'historical'
-  `);
+      ${hasRegion ? 'AND c.region = $1' : ''}`,
+    hasRegion ? [region] : []
+  );
 
   // Get gap interventions
   const interventions = await pool.query(`

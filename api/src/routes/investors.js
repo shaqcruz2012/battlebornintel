@@ -3,20 +3,22 @@ import { getAllInvestors, getInvestorById, getInvestorStats } from '../db/querie
 
 const router = Router();
 
-// GET /api/investors — all investors (funds + external) with portfolio data
+// GET /api/investors?region=las_vegas — all investors (funds + external) with portfolio data
 router.get('/', async (req, res, next) => {
   try {
-    const data = await getAllInvestors();
+    const { region } = req.query;
+    const data = await getAllInvestors({ region });
     res.json({ data });
   } catch (err) {
     next(err);
   }
 });
 
-// GET /api/investors/stats — aggregate stats for KPI strip
+// GET /api/investors/stats?region=las_vegas — aggregate stats for KPI strip
 router.get('/stats', async (req, res, next) => {
   try {
-    const data = await getInvestorStats();
+    const { region } = req.query;
+    const data = await getInvestorStats({ region });
     res.json({ data });
   } catch (err) {
     next(err);

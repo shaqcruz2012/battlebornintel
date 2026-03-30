@@ -1,8 +1,14 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { NODE_CFG, EDGE_CATEGORY_CFG } from '../../data/constants';
 import styles from './GraphLegend.module.css';
 
-export function GraphLegend({ colorMode, nodeFilters, layout }) {
+const KMEANS_COLORS = [
+  '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7',
+  '#DDA0DD', '#98D8C8', '#F7DC6F', '#BB8FCE', '#85C1E9',
+  '#82E0AA', '#F0B27A', '#AEB6BF', '#D7BDE2', '#A3E4D7',
+];
+
+export function GraphLegend({ colorMode, nodeFilters, layout, kmeansMap = {} }) {
   const [collapsed, setCollapsed] = useState(false);
 
   const items = Object.entries(NODE_CFG)
@@ -12,6 +18,24 @@ export function GraphLegend({ colorMode, nodeFilters, layout }) {
       label: cfg.label,
       color: cfg.color,
     }));
+
+  // Build K-means cluster legend items from kmeansMap
+  const kmeansItems = useMemo(() => {
+    if (colorMode !== 'attribute' || !kmeansMap) return [];
+    const clusters = {};
+    Object.values(kmeansMap).forEach(({ cluster, label }) => {
+      if (clusters[cluster] == null) {
+        clusters[cluster] = label || `Cluster ${cluster}`;
+      }
+    });
+    return Object.entries(clusters)
+      .sort(([a], [b]) => Number(a) - Number(b))
+      .map(([id, label]) => ({
+        key: `km-${id}`,
+        label,
+        color: KMEANS_COLORS[Number(id) % KMEANS_COLORS.length],
+      }));
+  }, [colorMode, kmeansMap]);
 
   // Compute node/edge counts from layout if available
   const nodeCount = layout?.nodes?.length || 0;
@@ -37,7 +61,7 @@ export function GraphLegend({ colorMode, nodeFilters, layout }) {
       {/* Header with collapse button */}
       <div className={styles.header}>
         <span className={styles.title}>
-          {colorMode === 'community' ? 'Community Colors' : 'Node Types'}
+          {colorMode === 'attribute' ? 'K-Means Clusters' : colorMode === 'community' ? 'Community Colors' : 'Node Types'}
         </span>
         <button
           className={styles.collapseBtn}
@@ -50,7 +74,7 @@ export function GraphLegend({ colorMode, nodeFilters, layout }) {
       </div>
 
       <div className={styles.items}>
-        {items.map((item) => (
+        {(colorMode === 'attribute' ? kmeansItems : items).map((item) => (
           <div key={item.key} className={styles.item}>
             <span className={styles.dot} style={{ background: item.color }} />
             {item.label}

@@ -345,6 +345,9 @@
   right: calc(100% + 8px);
   top: 50%;
   transform: translateX(4px) translateY(-50%);
+  max-width: min(380px, calc(100vw - 40px));
+  max-height: 300px;
+  overflow-y: auto;
   background: var(--bg-card);
   border: 1px solid var(--border-medium);
   border-radius: var(--radius-sm);
@@ -353,11 +356,11 @@
   font-size: var(--text-micro);
   font-weight: var(--weight-normal);
   color: var(--text-secondary);
-  white-space: nowrap;
+  white-space: normal;
   opacity: 0;
   visibility: hidden;
   transition: all 0.15s ease;
-  z-index: 10;
+  z-index: 50;
   pointer-events: none;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
@@ -405,6 +408,8 @@
   position: absolute;
   left: 0;
   bottom: calc(100% + 4px);
+  right: auto;
+  max-width: min(340px, calc(100vw - 40px));
   background: var(--bg-card);
   border: 1px solid var(--border-medium);
   border-left: 2px solid rgba(69, 215, 198, 0.3);
@@ -419,12 +424,11 @@
   color: var(--text-secondary);
   line-height: 1.5;
   min-width: 260px;
-  max-width: 380px;
   white-space: normal;
   opacity: 0;
   visibility: hidden;
   transition: all 0.15s ease;
-  z-index: 10;
+  z-index: 50;
   pointer-events: none;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
@@ -432,6 +436,40 @@
 .opportunityToggle:hover .opportunityTooltip {
   opacity: 1;
   visibility: visible;
+}
+
+/* ── Recommended action ─────────────────────────────────── */
+
+.recommendedAction {
+  margin-top: 6px;
+  padding: 6px 8px;
+  background: rgba(69, 215, 198, 0.06);
+  border-left: 2px solid rgba(69, 215, 198, 0.3);
+  border-radius: 0 2px 2px 0;
+}
+
+.actionLabel {
+  font-size: 8px;
+  font-weight: 600;
+  letter-spacing: 1.5px;
+  color: rgba(69, 215, 198, 0.5);
+  display: block;
+  margin-bottom: 2px;
+}
+
+.actionText {
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.6);
+  line-height: 1.4;
+}
+
+.contactPlaceholder {
+  display: block;
+  margin-top: 4px;
+  font-size: 9px;
+  font-style: italic;
+  color: rgba(69, 215, 198, 0.4);
+  letter-spacing: 0.02em;
 }
 
 /* ── Empty / loading states ──────────────────────────────── */
@@ -459,6 +497,51 @@
   color: #f87171;
   font-size: var(--text-body-sm);
   font-family: var(--font-body);
+}
+
+/* ── Skeleton loading ────────────────────────────────────── */
+
+.skeletonFeed {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  padding: var(--space-lg) var(--space-xl);
+}
+
+.skeletonCard {
+  padding: var(--space-lg);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-elevated);
+}
+
+.skeletonLine {
+  height: 14px;
+  border-radius: 3px;
+  margin-bottom: var(--space-sm);
+  background: linear-gradient(90deg, rgba(28,39,51,0.5) 0%, rgba(255,255,255,0.03) 50%, rgba(28,39,51,0.5) 100%);
+  background-size: 200% 100%;
+  animation: rcShimmer 1.6s ease-in-out infinite;
+}
+
+.skeletonChips {
+  display: flex;
+  gap: var(--space-xs);
+  margin-top: var(--space-sm);
+}
+
+.skeletonChip {
+  width: 72px;
+  height: 24px;
+  border-radius: var(--radius-sm);
+  background: linear-gradient(90deg, rgba(28,39,51,0.5) 0%, rgba(255,255,255,0.03) 50%, rgba(28,39,51,0.5) 100%);
+  background-size: 200% 100%;
+  animation: rcShimmer 1.6s ease-in-out infinite;
+}
+
+@keyframes rcShimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
 }
 
 /* ── Responsive ──────────────────────────────────────────── */

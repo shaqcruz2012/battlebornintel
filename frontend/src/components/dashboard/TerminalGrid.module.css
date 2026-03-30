@@ -1,3 +1,30 @@
+/* ── Pulse wrapper — positions readout + glow ──────────── */
+
+.terminalGridWrapper {
+  position: relative;
+  grid-column: 1 / -1;
+}
+
+@keyframes ecosystemPulse {
+  0%, 100% {
+    border-color: #1c2733;
+    box-shadow: 0 0 0 0 rgba(69, 215, 198, 0);
+  }
+  50% {
+    border-color: rgba(69, 215, 198, var(--pulse-opacity, 0.15));
+    box-shadow:
+      0 0 var(--pulse-glow, 8px) rgba(69, 215, 198, calc(var(--pulse-opacity, 0.15) * 0.4)),
+      inset 0 0 var(--pulse-glow, 8px) rgba(69, 215, 198, calc(var(--pulse-opacity, 0.15) * 0.15));
+  }
+}
+
+.terminalGridPulsing {
+  animation: ecosystemPulse var(--pulse-duration, 4s) ease-in-out infinite;
+  border-radius: 4px;
+  border-width: 1px;
+  border-style: solid;
+}
+
 /* ── Bloomberg Terminal 4-Panel Grid ────────────────────── */
 
 .terminalGridWrapper {
@@ -9,7 +36,7 @@
   display: grid;
   grid-template-columns: 1fr 1fr;
   grid-template-rows: 1fr 1fr;
-  gap: 1px;
+  gap: 2px;
   background: #1c2733;
   border: 1px solid #1c2733;
   border-radius: 4px;
@@ -29,6 +56,7 @@
   flex-direction: column;
   overflow: hidden;
   min-height: 0;
+  contain: content;
 }
 
 .panel:first-child { border-radius: 4px 0 0 0; }
@@ -67,7 +95,7 @@
 .panelHeaderRight {
   font-family: 'IBM Plex Mono', var(--font-mono), monospace;
   font-size: 8px;
-  color: rgba(255, 255, 255, 0.3);
+  color: rgba(255, 255, 255, 0.45);
   letter-spacing: 1px;
 }
 
@@ -78,6 +106,12 @@
   padding: 10px 12px;
   scrollbar-width: thin;
   scrollbar-color: rgba(69, 215, 198, 0.15) transparent;
+  animation: fadeInContent 0.15s ease-out;
+}
+
+@keyframes fadeInContent {
+  from { opacity: 0.6; }
+  to { opacity: 1; }
 }
 
 .panelBody::-webkit-scrollbar {
@@ -130,6 +164,7 @@
   color: #e0e6ed;
   letter-spacing: -0.5px;
   font-variant-numeric: tabular-nums;
+  transition: opacity 0.2s ease;
   text-align: right;
 }
 
@@ -191,7 +226,7 @@
   font-weight: 600;
   letter-spacing: 2px;
   text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.3);
+  color: rgba(255, 255, 255, 0.45);
   margin-bottom: 6px;
 }
 
@@ -278,7 +313,7 @@
 .activityTime {
   font-family: 'IBM Plex Mono', var(--font-mono), monospace;
   font-size: 9px;
-  color: rgba(255, 255, 255, 0.25);
+  color: rgba(255, 255, 255, 0.45);
   white-space: nowrap;
   min-width: 36px;
   text-align: right;
@@ -333,14 +368,14 @@
   font-weight: 600;
   letter-spacing: 1.5px;
   text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.2);
+  color: rgba(255, 255, 255, 0.45);
   margin-top: 2px;
 }
 
 .activityEmpty {
   font-family: 'IBM Plex Mono', var(--font-mono), monospace;
   font-size: 10px;
-  color: rgba(255, 255, 255, 0.2);
+  color: rgba(255, 255, 255, 0.45);
   text-align: center;
   padding: 24px 0;
 }
@@ -512,8 +547,18 @@
 }
 
 @media (max-width: 600px) {
+  .terminalGrid {
+    height: auto;
+    min-height: 0;
+  }
+
+  .panel {
+    min-height: 200px;
+    max-height: 400px;
+  }
+
   .panelHeader {
-    padding: 5px 8px;
+    padding: 6px 8px;
   }
 
   .panelBody {
@@ -527,5 +572,78 @@
 
   .kpiVal {
     font-size: 12px;
+  }
+
+  .sectorHeatGrid {
+    gap: 3px;
+  }
+
+  .sectorName {
+    font-size: 8px;
+  }
+
+  .sectorScore {
+    font-size: 8px;
+  }
+
+  .activityBody {
+    min-width: 0;
+  }
+
+  .activityDesc {
+    font-size: 8px;
+    -webkit-line-clamp: 1;
+  }
+
+  .narrativeText {
+    font-size: 9px;
+  }
+
+  .narrativeDevText {
+    font-size: 8px;
+  }
+
+  .spotlightAnalysis {
+    font-size: 8px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .terminalGridPulsing {
+    animation: none !important;
+  }
+
+  .activitySkeleton {
+    animation: none !important;
+  }
+
+  .liveDot {
+    animation: none !important;
+  }
+
+  .panelBody {
+    animation: none !important;
+  }
+
+  .kpiClickable,
+  .sectorBlock,
+  .activityItem,
+  .kpiVal {
+    transition: none !important;
+  }
+}
+
+/* ── Touch-friendly sizing for coarse pointers ────────── */
+
+@media (pointer: coarse) {
+  .sectorBlock {
+    min-height: 36px;
+    padding: 8px 10px;
+  }
+
+  .kpiClickable {
+    min-height: 36px;
+    padding: 8px 6px;
+    margin: 0 -6px;
   }
 }

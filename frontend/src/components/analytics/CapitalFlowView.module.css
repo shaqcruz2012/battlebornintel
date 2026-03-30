@@ -454,6 +454,161 @@
   text-align: right;
 }
 
+/* ── Concept Help Icon ───────────────────────────────────────── */
+
+.conceptHelp {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 1px solid rgba(69, 215, 198, 0.3);
+  color: rgba(69, 215, 198, 0.5);
+  font-size: 9px;
+  font-family: 'IBM Plex Mono', monospace;
+  cursor: help;
+  margin-left: 6px;
+  position: relative;
+  vertical-align: middle;
+}
+
+.conceptHelp:hover {
+  border-color: rgba(69, 215, 198, 0.6);
+  color: rgba(69, 215, 198, 0.8);
+}
+
+/* ── Sankey Popup (SVG foreignObject fallback) ───────────────── */
+
+.popupTitle {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 700;
+  fill: var(--accent-teal, #2dd4bf);
+  letter-spacing: -0.01em;
+}
+
+.popupLine {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  fill: var(--text-secondary, #a1a1aa);
+}
+
+.popupClose {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  fill: var(--text-disabled, #6b7280);
+}
+
+.popupClose:hover {
+  fill: var(--accent-teal, #2dd4bf);
+}
+
+/* ── Capital Magnet Methodology Popup ────────────────────────── */
+
+.popupOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.popupPanel {
+  background: var(--bg-elevated, #1a1a2e);
+  border: 1px solid var(--accent-teal, #2dd4bf);
+  border-radius: var(--radius-md, 8px);
+  min-width: 340px;
+  max-width: 480px;
+  width: 90vw;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+}
+
+.popupHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-md) var(--space-lg);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.popupHeaderTitle {
+  font-family: var(--font-mono);
+  font-size: var(--text-sm, 0.875rem);
+  font-weight: var(--weight-semibold);
+  color: var(--accent-teal);
+  letter-spacing: -0.01em;
+}
+
+.popupCloseBtn {
+  background: none;
+  border: none;
+  font-family: var(--font-mono);
+  font-size: var(--text-sm, 0.875rem);
+  color: var(--text-disabled);
+  cursor: pointer;
+  padding: 0;
+}
+
+.popupCloseBtn:hover {
+  color: var(--accent-teal);
+}
+
+.popupBody {
+  padding: var(--space-md) var(--space-lg);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.popupRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-md);
+}
+
+.popupLabel {
+  font-family: var(--font-body);
+  font-size: var(--text-micro, 0.65rem);
+  color: var(--text-disabled);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.popupValue {
+  font-family: var(--font-mono);
+  font-size: var(--text-sm, 0.875rem);
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+.popupMethodology {
+  margin-top: var(--space-sm);
+  padding-top: var(--space-sm);
+  border-top: 1px solid var(--border-subtle);
+}
+
+.popupMethodLabel {
+  font-family: var(--font-mono);
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  color: rgba(69, 215, 198, 0.5);
+  display: block;
+  margin-bottom: var(--space-xs);
+}
+
+.popupMethodText {
+  font-family: var(--font-body);
+  font-size: 11px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  margin: 0;
+}
+
 /* ── States ───────────────────────────────────────────────────── */
 
 .emptyState,

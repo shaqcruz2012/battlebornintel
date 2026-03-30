@@ -3,20 +3,30 @@ import { getEcosystemMap, getEcosystemGapsUnified, proposeIntervention } from '.
 
 const router = Router();
 
-// GET /api/ecosystem/map — bubble chart data from entity_registry
+// GET /api/ecosystem/map?region=las_vegas — bubble chart data from entity_registry
 router.get('/map', async (req, res, next) => {
   try {
-    const data = await getEcosystemMap();
+    const { region } = req.query;
+    let data = await getEcosystemMap();
+    // Filter by region if specified
+    if (region && region !== 'all') {
+      const r = region.toLowerCase();
+      data = data.filter((item) => {
+        const itemRegion = (item.detail?.region || item.detail?.city || '').toLowerCase();
+        return itemRegion.includes(r) || r.includes(itemRegion);
+      });
+    }
     res.json({ data });
   } catch (err) {
     next(err);
   }
 });
 
-// GET /api/ecosystem/gaps — unified gap analysis with severity validation
+// GET /api/ecosystem/gaps?region=las_vegas — unified gap analysis with severity validation
 router.get('/gaps', async (req, res, next) => {
   try {
-    const data = await getEcosystemGapsUnified();
+    const region = req.query.region || null;
+    const data = await getEcosystemGapsUnified(region);
     res.json({ data });
   } catch (err) {
     next(err);

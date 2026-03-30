@@ -16,37 +16,69 @@ async function getCachedAnalysis() {
 }
 
 /**
- * GET /api/analytics/structural-holes
+ * Filter structural analysis data by region.
+ * Filters bridges and island members whose associated entities match the region.
+ */
+function filterAnalysisByRegion(analysis, region) {
+  if (!region || region === 'all') return analysis;
+
+  const filteredBridges = (analysis.bridges || []).filter(
+    (b) => b.region === region
+  );
+  const filteredIslands = (analysis.islands || []).map((island) => ({
+    ...island,
+    members: (island.members || []).filter(
+      (m) => !m.region || m.region === region
+    ),
+  })).filter((island) => island.members.length > 0);
+
+  return {
+    ...analysis,
+    bridges: filteredBridges,
+    islands: filteredIslands,
+    stats: {
+      ...analysis.stats,
+      bridgeCount: filteredBridges.length,
+      islandCount: filteredIslands.length,
+    },
+  };
+}
+
+/**
+ * GET /api/analytics/structural-holes?region=las_vegas
  *
  * Full structural hole analysis: bridges, islands, gaps, stats.
  */
 router.get('/structural-holes', async (req, res, next) => {
   try {
+    const region = req.query.region || null;
     const analysis = await getCachedAnalysis();
-    res.json({ data: analysis });
+    res.json({ data: filterAnalysisByRegion(analysis, region) });
   } catch (err) {
     next(err);
   }
 });
 
 /**
- * GET /api/analytics/ecosystem-gaps
+ * GET /api/analytics/ecosystem-gaps?region=las_vegas
  *
  * Focused view: only gaps and islands (lighter payload for the gaps UI).
  */
 router.get('/ecosystem-gaps', async (req, res, next) => {
   try {
+    const region = req.query.region || null;
     const analysis = await getCachedAnalysis();
+    const filtered = filterAnalysisByRegion(analysis, region);
     res.json({
       data: {
-        gaps: analysis.gaps,
-        islands: analysis.islands,
+        gaps: filtered.gaps,
+        islands: filtered.islands,
         stats: {
-          totalCommunities: analysis.stats.totalCommunities,
-          islandCount: analysis.stats.islandCount,
-          gapCount: analysis.stats.gapCount,
+          totalCommunities: filtered.stats.totalCommunities,
+          islandCount: filtered.stats.islandCount,
+          gapCount: filtered.stats.gapCount,
         },
-        trends: analysis.trends,
+        trends: filtered.trends,
       },
     });
   } catch (err) {
