@@ -19,7 +19,7 @@ import numpy as np
 import pandas as pd
 
 from .base_model_agent import BaseModelAgent
-from .constants import unit_for_metric
+from .constants import FORECAST_METRICS, unit_for_metric
 from .status import AgentStatus
 
 logger = logging.getLogger(__name__)
@@ -27,7 +27,7 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 # Constants
 # ---------------------------------------------------------------------------
-SIMULATION_METRICS = ["funding_m", "employees", "momentum"]
+SIMULATION_METRICS = FORECAST_METRICS
 DEFAULT_N_SIMULATIONS = 1000
 DEFAULT_HORIZON_QUARTERS = 8
 

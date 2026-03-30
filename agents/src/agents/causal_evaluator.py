@@ -204,16 +204,19 @@ class CausalEvaluator(BaseModelAgent):
         accel_edges = edges[edges["rel"] == "accelerated_by"].copy()
 
         # Companies can appear as source or target; extract company node IDs
-        treated_info: dict = {}  # node_id -> treatment_year
-        for _, edge in accel_edges.iterrows():
-            for node_col in ["source_id", "target_id"]:
-                node_id = edge[node_col]
-                if str(node_id).startswith("c_"):
-                    year = edge.get("event_year")
-                    if pd.notna(year):
-                        # Keep earliest treatment year
-                        if node_id not in treated_info or year < treated_info[node_id]:
-                            treated_info[node_id] = int(year)
+        # Melt source/target into a single column, filter to company nodes with valid years
+        melted = pd.concat([
+            accel_edges[["source_id", "event_year"]].rename(columns={"source_id": "node_id"}),
+            accel_edges[["target_id", "event_year"]].rename(columns={"target_id": "node_id"}),
+        ], ignore_index=True)
+        melted = melted[
+            melted["node_id"].astype(str).str.startswith("c_") & melted["event_year"].notna()
+        ]
+        # Keep earliest treatment year per company
+        treated_info: dict = {}
+        if not melted.empty:
+            earliest = melted.groupby("node_id")["event_year"].min()
+            treated_info = earliest.astype(int).to_dict()
 
         if len(treated_info) < MIN_TREATMENT:
             return {
@@ -560,8 +563,7 @@ class CausalEvaluator(BaseModelAgent):
         funding_lookup = companies.set_index("node_id")["funding_m"].to_dict()
 
         neighbor_stats: list[dict] = []
-        for _, row in companies.iterrows():
-            node_id = row["node_id"]
+        for node_id in companies["node_id"].values:
             neighbors = neighbor_map.get(node_id, [])
 
             if not neighbors:
