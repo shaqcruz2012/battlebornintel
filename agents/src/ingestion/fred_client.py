@@ -15,16 +15,31 @@ logger = logging.getLogger(__name__)
 FRED_BASE_URL = "https://api.stlouisfed.org/fred"
 
 # Series definitions: series_id -> (entity_type, entity_id, granularity, unit)
+# All series are publicly available via FRED (Federal Reserve Economic Data).
+# See https://fred.stlouisfed.org/ for documentation.
 FRED_SERIES = {
-    "FEDFUNDS": ("macro", "US", "month", "percent"),
-    "UNRATE": ("macro", "US", "month", "percent"),
-    "NVURN": ("region", "NV", "month", "percent"),
-    "GDPC1": ("macro", "US", "quarter", "usd_billions"),
-    "NVRGSP": ("region", "NV", "year", "usd_millions"),
-    "DFF": ("macro", "US", "day", "percent"),
-    "T10Y2Y": ("macro", "US", "day", "percent"),
-    "CPIAUCSL": ("macro", "US", "month", "index"),
-    "ICSA": ("macro", "US", "week", "count"),
+    # ── Existing series ──────────────────────────────────────────
+    "FEDFUNDS": ("macro", "US", "month", "percent"),       # Federal Funds Effective Rate
+    "UNRATE": ("macro", "US", "month", "percent"),          # US Unemployment Rate
+    "NVURN": ("region", "NV", "month", "percent"),          # Nevada Unemployment Rate
+    "GDPC1": ("macro", "US", "quarter", "usd_billions"),    # Real GDP
+    "NVRGSP": ("region", "NV", "year", "usd_millions"),     # Nevada Real GSP
+    "DFF": ("macro", "US", "day", "percent"),               # Daily Federal Funds Rate
+    "T10Y2Y": ("macro", "US", "day", "percent"),            # 10Y-2Y Treasury Spread
+    "CPIAUCSL": ("macro", "US", "month", "index"),          # CPI All Urban Consumers
+    "ICSA": ("macro", "US", "week", "count"),               # Initial Jobless Claims
+
+    # ── P0-6 Expansion: Nevada-specific + venture/innovation ─────
+    "NVNA": ("region", "NV", "month", "count"),             # Nevada All Employees (Total Nonfarm)
+    "NVCONS": ("region", "NV", "month", "count"),           # Nevada Construction Employment
+    "NVINFO": ("region", "NV", "month", "count"),           # Nevada Information Sector Employment
+    "NVPBSV": ("region", "NV", "month", "count"),           # Nevada Professional & Business Services
+    "LAUCN320030000000005": ("region", "NV-Clark", "month", "percent"),  # Clark County Unemployment
+    "LAUCN320310000000005": ("region", "NV-Washoe", "month", "percent"),  # Washoe County Unemployment
+    "PERMIT": ("macro", "US", "month", "count"),            # New Private Housing Permits (US)
+    "NVBPPRIVSA": ("region", "NV", "month", "count"),       # Nevada Building Permits (Private Housing)
+    "BAAFFM": ("macro", "US", "month", "percent"),          # BAA Corporate Bond Spread (credit risk)
+    "VIXCLS": ("macro", "US", "day", "index"),              # CBOE Volatility Index (VIX)
 }
 
 # FRED rate limit: 120 requests per minute

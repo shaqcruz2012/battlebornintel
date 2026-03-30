@@ -13,6 +13,11 @@ DATABASE_URL = os.getenv(
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
 API_BASE_URL = os.getenv("API_BASE_URL", "http://localhost:3001")
 FRED_API_KEY = os.getenv("FRED_API_KEY", "")
+CENSUS_API_KEY = os.getenv("CENSUS_API_KEY", "")
+# SEC EDGAR requires no API key (just User-Agent header)
+# USPTO PatentsView requires no API key
+# NSF NCSES requires no API key
+# NV SOS requires no API key
 
 # Validate critical configuration
 import logging

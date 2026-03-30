@@ -18,6 +18,11 @@ from ..ingestion.fred_ingestor import FredIngestor
 from ..agents.scenario_simulator import ScenarioSimulator
 from ..agents.causal_evaluator import CausalEvaluator
 from ..ingestion.bls_ingestor import BLSIngestor
+from ..ingestion.census_ingestor import CensusIngestor
+from ..ingestion.sec_ingestor import SecIngestor
+from ..ingestion.uspto_ingestor import UsptoIngestor
+from ..ingestion.nsf_ingestor import NsfIngestor
+from ..ingestion.nvsos_ingestor import NvsosIngestor
 from ..agents.graph_feature_agent import GraphFeatureAgent
 
 AGENT_REGISTRY = {
@@ -33,6 +38,11 @@ AGENT_REGISTRY = {
     "freshness_checker": FreshnessChecker,
     "fred_ingestor": FredIngestor,
     "bls_ingestor": BLSIngestor,
+    "census_ingestor": CensusIngestor,
+    "sec_ingestor": SecIngestor,
+    "uspto_ingestor": UsptoIngestor,
+    "nsf_ingestor": NsfIngestor,
+    "nvsos_ingestor": NvsosIngestor,
 }
 
 MAX_RETRIES = 2
@@ -54,11 +64,16 @@ AGENT_TIMEOUTS = {
     "freshness_checker": 60,     # 1 min
     "fred_ingestor": 180,        # 3 min
     "bls_ingestor": 180,         # 3 min
+    "census_ingestor": 300,      # 5 min
+    "sec_ingestor": 300,         # 5 min
+    "uspto_ingestor": 300,       # 5 min
+    "nsf_ingestor": 300,         # 5 min
+    "nvsos_ingestor": 300,       # 5 min
 }
 DEFAULT_TIMEOUT = 300  # 5 min fallback
 
 # Agents that write to metric_snapshots and require a materialized view refresh
-_INGESTOR_AGENTS = {"fred_ingestor", "bls_ingestor"}
+_INGESTOR_AGENTS = {"fred_ingestor", "bls_ingestor", "census_ingestor", "sec_ingestor", "uspto_ingestor", "nsf_ingestor", "nvsos_ingestor"}
 
 logger = logging.getLogger(__name__)
 

@@ -21,6 +21,11 @@ SCHEDULES = [
     {"agent": "bls_ingestor", "cron": "0 3 1 * *", "desc": "1st of month 3 AM - BLS QCEW employment/wages ingestion"},
     {"agent": "scenario_simulator", "cron": "0 8 1 * *", "desc": "1st of month 8 AM - Monte Carlo scenario simulations"},
     {"agent": "causal_evaluator", "cron": "0 7 1 * *", "desc": "1st of month 7 AM - causal inference (DiD, PSM, spillover)"},
+    {"agent": "census_ingestor", "cron": "0 3 1 */3 *", "desc": "Quarterly 1st 3 AM - Census ACS population/income data"},
+    {"agent": "sec_ingestor", "cron": "0 4 * * 1", "desc": "Monday 4 AM - SEC EDGAR company filings"},
+    {"agent": "uspto_ingestor", "cron": "0 5 1 * *", "desc": "1st of month 5 AM - USPTO patent data ingestion"},
+    {"agent": "nsf_ingestor", "cron": "0 3 1 */3 *", "desc": "Quarterly 1st 3 AM - NSF research funding data"},
+    {"agent": "nvsos_ingestor", "cron": "0 4 15 * *", "desc": "15th of month 4 AM - NV SOS business entity filings"},
 ]
 
 
