@@ -114,4 +114,21 @@ export const api = {
 
   getEcosystemForecast: () =>
     fetchJSON(`${BASE}/forecasts/ecosystem`).then((r) => r.data),
+
+  // Temporal Graph
+  getTemporalGraph: (date, nodeTypes, region) =>
+    fetchJSON(`${BASE}/graph/temporal`, {
+      date,
+      nodeTypes: nodeTypes?.join(','),
+      region,
+    }).then((r) => r.data),
+
+  getNodeFeatures: () =>
+    fetchJSON(`${BASE}/graph/node-features`).then((r) => r.data),
+
+  getNodeMetricsHistory: (nodeId) =>
+    fetchJSON(`${BASE}/graph/metrics/${encodeURIComponent(nodeId)}/history`).then((r) => r.data),
+
+  getStageTransitions: (companyId) =>
+    fetchJSON(`${BASE}/graph/stage-transitions/${companyId}`).then((r) => r.data),
 };

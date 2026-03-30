@@ -7,6 +7,7 @@ import { GraphOverlayControls } from './GraphControls';
 import { GraphCanvas } from './GraphCanvas';
 import { GraphLegend } from './GraphLegend';
 import { NodeDetail } from './NodeDetail';
+import { TemporalSlider } from './TemporalSlider';
 import styles from './GraphView.module.css';
 
 const DEFAULT_NODE_FILTERS = {
@@ -33,6 +34,14 @@ export function GraphView() {
   const [opportunityFilter, setOpportunityFilter] = useState('all');
   const [showValues, setShowValues] = useState(false);
   const [focusNodeId, setFocusNodeId] = useState(null);
+  const [temporalYear, setTemporalYear] = useState(2026);
+  const [temporalDate, setTemporalDate] = useState(null); // null = live mode (no temporal filter)
+
+  const handleTemporalChange = useCallback((dateStr) => {
+    const year = parseInt(dateStr.split('-')[0], 10);
+    setTemporalYear(year);
+    setTemporalDate(year >= 2026 ? null : dateStr); // 2026 = live mode
+  }, []);
 
   // FIX 7a: Wrap in useCallback so GraphOverlayControls gets a stable reference
   // and doesn't re-render on every parent state change.
@@ -99,7 +108,7 @@ export function GraphView() {
   );
 
   // Fetch graph data from API with region filtering
-  const { data: graphData, isLoading: loadingGraph, error: graphError } = useGraph(activeNodeTypes, 2026, filters.region);
+  const { data: graphData, isLoading: loadingGraph, error: graphError } = useGraph(activeNodeTypes, temporalYear, filters.region);
   const { data: metricsData, isLoading: loadingMetrics, error: metricsError } = useGraphMetrics(activeNodeTypes);
 
   // Compute D3 layout in Web Worker to keep UI responsive
@@ -200,6 +209,13 @@ export function GraphView() {
             onSearchChange={setSearch}
             nodes={layout.nodes}
             onFocusNode={handleFocusNode}
+          />
+          {/* Bottom overlay: temporal scrubber */}
+          <TemporalSlider
+            value={temporalYear}
+            onDateChange={handleTemporalChange}
+            nodeCount={layout.nodes.length}
+            edgeCount={layout.edges.length}
           />
         </div>
 

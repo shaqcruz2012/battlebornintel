@@ -1,0 +1,259 @@
+/* ── PathFinder — shortest path between two graph nodes ── */
+
+.container {
+  padding: var(--space-lg) var(--space-xl);
+  max-width: 360px;
+}
+
+.title {
+  font-size: 10px;
+  font-weight: var(--weight-semibold);
+  color: var(--text-disabled);
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  margin-bottom: var(--space-md);
+}
+
+.searchRow {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-md);
+}
+
+.fieldWrapper {
+  position: relative;
+}
+
+.fieldLabel {
+  font-size: 9px;
+  color: var(--text-disabled);
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  margin-bottom: 2px;
+  font-weight: var(--weight-medium);
+}
+
+.input {
+  width: 100%;
+  padding: 6px 10px;
+  font-size: 13px;
+  font-family: var(--font-body);
+  color: var(--text-primary);
+  background: var(--bg-elevated, #111117);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  outline: none;
+  transition: border-color var(--transition-fast);
+  box-sizing: border-box;
+}
+
+.input::placeholder {
+  color: var(--text-disabled);
+}
+
+.input:focus {
+  border-color: rgba(69, 215, 198, 0.4);
+}
+
+.dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  z-index: 20;
+  max-height: 180px;
+  overflow-y: auto;
+  background: var(--bg-card, #18181F);
+  border: 1px solid var(--border-subtle);
+  border-top: none;
+  border-radius: 0 0 var(--radius-sm) var(--radius-sm);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+
+.dropdown::-webkit-scrollbar {
+  width: 4px;
+}
+
+.dropdown::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.dropdown::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 2px;
+}
+
+.dropdownItem {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: 6px 10px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: background var(--transition-fast);
+}
+
+.dropdownItem:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-primary);
+}
+
+.dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.itemLabel {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.itemType {
+  font-size: 9px;
+  color: var(--text-disabled);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  flex-shrink: 0;
+}
+
+.actions {
+  display: flex;
+  gap: var(--space-sm);
+}
+
+.findBtn {
+  flex: 1;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: var(--weight-semibold);
+  letter-spacing: 0.3px;
+  color: #08080B;
+  background: #45D7C6;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: opacity var(--transition-fast);
+  font-family: var(--font-body);
+}
+
+.findBtn:hover {
+  opacity: 0.85;
+}
+
+.findBtn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.clearBtn {
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: var(--weight-medium);
+  color: var(--text-disabled);
+  background: transparent;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  font-family: var(--font-body);
+}
+
+.clearBtn:hover {
+  color: var(--text-secondary);
+  border-color: var(--text-disabled);
+}
+
+/* ── Path display ── */
+
+.hopCount {
+  font-size: 10px;
+  color: var(--text-disabled);
+  font-family: 'SF Mono', 'Cascadia Code', 'Consolas', monospace;
+  margin-bottom: var(--space-sm);
+  letter-spacing: 0.3px;
+}
+
+.pathChain {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.pathNode {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background var(--transition-fast);
+}
+
+.pathNode:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.pathNodeName {
+  flex: 1;
+  font-size: 13px;
+  font-weight: var(--weight-medium);
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pathNodeType {
+  font-size: 9px;
+  color: var(--text-disabled);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  padding: 2px 6px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.03);
+  flex-shrink: 0;
+}
+
+.pathEdge {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: 2px 0 2px 14px;
+}
+
+.edgeLine {
+  width: 1px;
+  height: 18px;
+  background: var(--border-subtle);
+  flex-shrink: 0;
+}
+
+.edgeLabel {
+  font-size: 9px;
+  color: var(--text-disabled);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: var(--weight-medium);
+}
+
+/* ── States ── */
+
+.loading {
+  font-size: 12px;
+  color: var(--text-disabled);
+  padding: var(--space-lg) 0;
+  text-align: center;
+}
+
+.error {
+  font-size: 12px;
+  color: #E85D5D;
+  padding: var(--space-md) 0;
+  text-align: center;
+}

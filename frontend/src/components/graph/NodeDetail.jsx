@@ -1,6 +1,7 @@
 import { useMemo, useState, useCallback } from 'react';
 import { NODE_CFG, REL_CFG } from '../../data/constants';
 import { fmt, stageLabel } from '../../engine/formatters';
+import { NodeMetricsChart } from './NodeMetricsChart';
 import styles from './NodeDetail.module.css';
 
 /* ── Collapsible section wrapper ── */
@@ -176,6 +177,11 @@ export function NodeDetail({ nodeId, layout, metrics, onClose }) {
             </div>
           </CollapsibleSection>
         )}
+
+        {/* Metrics History — sparkline chart */}
+        <CollapsibleSection label="Metrics History" defaultOpen={false}>
+          <NodeMetricsChart nodeId={nodeId} />
+        </CollapsibleSection>
 
         {/* Description */}
         {node.description && (

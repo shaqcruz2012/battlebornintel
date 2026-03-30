@@ -199,6 +199,45 @@ export function useEcosystemForecast() {
   });
 }
 
+/** Temporal graph snapshot at a specific date */
+export function useTemporalGraph(date, nodeTypes, region) {
+  return useQuery({
+    queryKey: ['graph', 'temporal', date, nodeTypes, region],
+    queryFn: () => api.getTemporalGraph(date, nodeTypes, region),
+    enabled: !!date,
+    staleTime: 300_000,
+  });
+}
+
+/** Node feature vectors for ML/visualization */
+export function useNodeFeatures() {
+  return useQuery({
+    queryKey: ['graph', 'nodeFeatures'],
+    queryFn: () => api.getNodeFeatures(),
+    staleTime: 300_000,
+  });
+}
+
+/** Metrics history time-series for a specific node */
+export function useNodeMetricsHistory(nodeId) {
+  return useQuery({
+    queryKey: ['graph', 'metricsHistory', nodeId],
+    queryFn: () => api.getNodeMetricsHistory(nodeId),
+    enabled: !!nodeId,
+    staleTime: 120_000,
+  });
+}
+
+/** Stage transitions for a company */
+export function useStageTransitions(companyId) {
+  return useQuery({
+    queryKey: ['stageTransitions', companyId],
+    queryFn: () => api.getStageTransitions(companyId),
+    enabled: !!companyId,
+    staleTime: 120_000,
+  });
+}
+
 export function useGoedSummary(region) {
   const fundsQuery = useFunds(region && region !== 'all' ? { region } : {});
   const graphQuery = useGraph(GOED_NODE_TYPES, 2026, region);

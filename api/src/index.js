@@ -27,6 +27,7 @@ import scenariosRouter from './routes/scenarios.js';
 import forecastsRouter from './routes/forecasts.js';
 import graphAnalyticsRouter from './routes/graph-analytics.js';
 import temporalRouter from './routes/temporal.js';
+import graphAnalysisDetailRouter from './routes/graph-analysis.js';
 import authRouter from './routes/auth.js';
 import { optionalAuth } from './middleware/auth.js';
 
@@ -138,6 +139,7 @@ apiRouter.use('/scenarios',              publicLimit, cacheMiddleware('scenarios
 apiRouter.use('/forecasts',              publicLimit, cacheMiddleware('forecasts',             120_000, { cacheControl: 'public, max-age=120' }),   forecastsRouter);
 apiRouter.use('/graph-analytics',        publicLimit, cacheMiddleware('graphAnalytics',       120_000, { cacheControl: 'public, max-age=120' }),   graphAnalyticsRouter);
 apiRouter.use('/graph',                  publicLimit, cacheMiddleware('graphTemporal',        120_000, { cacheControl: 'public, max-age=120' }),   temporalRouter);
+apiRouter.use('/graph-analysis',         publicLimit, cacheMiddleware('graphAnalysisDetail', 120_000, { cacheControl: 'public, max-age=120' }),   graphAnalysisDetailRouter);
 // Admin routes: key-gated + strict rate limit
 apiRouter.use('/admin', adminLimit, requireAdminKey, adminRouter);
 
