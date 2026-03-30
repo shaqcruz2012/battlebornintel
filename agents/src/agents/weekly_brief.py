@@ -1,3 +1,4 @@
+import asyncio
 import json
 import logging
 
@@ -271,18 +272,14 @@ class WeeklyBrief(BaseAgent):
         return "\n".join(parts) if len(parts) > 1 else ""
 
     async def run(self, pool):
-        # Aggregate data for the brief
-        companies = await pool.fetch(
-            "SELECT * FROM companies ORDER BY momentum DESC"
-        )
-        funds = await pool.fetch("SELECT * FROM funds")
-        recent_events = await pool.fetch(
-            "SELECT * FROM timeline_events ORDER BY event_date DESC LIMIT 10"
-        )
-        scores = await pool.fetch(
-            """SELECT cs.*, c.name FROM computed_scores cs
+        # Aggregate data for the brief — fetch all 4 queries in parallel
+        companies, funds, recent_events, scores = await asyncio.gather(
+            pool.fetch("SELECT * FROM companies ORDER BY momentum DESC"),
+            pool.fetch("SELECT * FROM funds"),
+            pool.fetch("SELECT * FROM timeline_events ORDER BY event_date DESC LIMIT 10"),
+            pool.fetch("""SELECT cs.*, c.name FROM computed_scores cs
                JOIN companies c ON c.id = cs.company_id
-               ORDER BY cs.irs_score DESC NULLS LAST LIMIT 10"""
+               ORDER BY cs.irs_score DESC NULLS LAST LIMIT 10"""),
         )
 
         # Build summary stats
@@ -349,7 +346,7 @@ Return JSON with:
 - "action_items": array of 2-3 recommended actions for stakeholders"""
 
         system_prompt = load_prompt("weekly_brief") or _SYSTEM_PROMPT_FALLBACK
-        response_text = self.call_claude(system_prompt, user_prompt)
+        response_text = await self.call_claude(system_prompt, user_prompt)
 
         content = extract_json(response_text)
         if content is None:

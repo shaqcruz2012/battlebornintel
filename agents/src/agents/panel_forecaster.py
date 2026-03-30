@@ -13,6 +13,7 @@ import numpy as np
 import pandas as pd
 
 from .base_model_agent import BaseModelAgent
+from .constants import unit_for_metric
 from .status import AgentStatus
 from .utils import sanitize_value as _sanitize_value
 
@@ -224,7 +225,7 @@ class PanelForecaster(BaseModelAgent):
                 "entity_id": entity_id,
                 "metric_name": f"{metric}_forecast",
                 "value": _sanitize_value(pred),
-                "unit": _unit_for_metric(metric),
+                "unit": unit_for_metric(metric),
                 "period": future_date,
                 "confidence_lo": _sanitize_value(pred - ci_width),
                 "confidence_hi": _sanitize_value(pred + ci_width),
@@ -232,13 +233,3 @@ class PanelForecaster(BaseModelAgent):
             })
 
         return predictions
-
-
-def _unit_for_metric(metric: str) -> str:
-    """Map metric names to their units."""
-    units = {
-        "funding_m": "usd_millions",
-        "employees": "count",
-        "momentum": "percent",
-    }
-    return units.get(metric, "units")

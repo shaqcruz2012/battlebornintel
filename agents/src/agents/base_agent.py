@@ -1,15 +1,16 @@
+import asyncio
 import json
 import logging
 import os
-import time
 from abc import ABC, abstractmethod
 from datetime import datetime, timezone
 
 import anthropic
 
 from ..db import get_pool
+from .constants import DEFAULT_LLM_MODEL
 
-_DEFAULT_MODEL = os.environ.get("CLAUDE_MODEL", "claude-sonnet-4-20250514")
+_DEFAULT_MODEL = os.environ.get("CLAUDE_MODEL", DEFAULT_LLM_MODEL)
 _RETRYABLE_STATUSES = {429, 500, 502, 503}
 _MAX_RETRIES = 3
 _BASE_BACKOFF = 1  # seconds
@@ -43,7 +44,7 @@ class BaseAgent(ABC):
         """Implement agent logic. Return result dict."""
         ...
 
-    def call_claude(
+    async def call_claude(
         self,
         system_prompt: str,
         user_prompt: str,
@@ -73,7 +74,7 @@ class BaseAgent(ABC):
                         "Claude API returned %d for agent '%s', retrying in %ds (attempt %d/%d)",
                         e.status_code, self.agent_name, delay, attempt + 1, _MAX_RETRIES,
                     )
-                    time.sleep(delay)
+                    await asyncio.sleep(delay)
                     continue
                 logger.error("Claude API call failed for agent '%s': %s", self.agent_name, e)
                 raise
@@ -85,7 +86,7 @@ class BaseAgent(ABC):
                         "Claude API connection error for agent '%s', retrying in %ds (attempt %d/%d)",
                         self.agent_name, delay, attempt + 1, _MAX_RETRIES,
                     )
-                    time.sleep(delay)
+                    await asyncio.sleep(delay)
                     continue
                 logger.error("Claude API call failed for agent '%s': %s", self.agent_name, e)
                 raise

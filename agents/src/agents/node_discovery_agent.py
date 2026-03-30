@@ -191,7 +191,7 @@ class NodeDiscoveryAgent(BaseAgent):
             "Also suggest edges between discovered and existing entities."
         )
 
-        raw = self.call_claude(SYSTEM_PROMPT, user_prompt, max_tokens=4096)
+        raw = await self.call_claude(SYSTEM_PROMPT, user_prompt, max_tokens=4096)
 
         # Parse JSON from response
         try:

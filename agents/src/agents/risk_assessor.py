@@ -1,5 +1,10 @@
+import asyncio
+import logging
+
 from .base_agent import BaseAgent
 from .utils import extract_json, load_prompt
+
+logger = logging.getLogger(__name__)
 
 
 _SYSTEM_PROMPT_FALLBACK = """You are a risk analyst for Nevada's startup ecosystem investment portfolio.
@@ -16,13 +21,9 @@ class RiskAssessor(BaseAgent):
         super().__init__("risk_assessor")
 
     async def run(self, pool):
-        companies = await pool.fetch("SELECT * FROM companies")
-        funds = await pool.fetch("SELECT * FROM funds")
-        scores = await pool.fetch(
-            """SELECT cs.*, c.name, c.funding_m, c.momentum
-               FROM computed_scores cs
-               JOIN companies c ON c.id = cs.company_id
-               ORDER BY cs.computed_at DESC"""
+        companies, funds = await asyncio.gather(
+            pool.fetch("SELECT id, name, funding_m, momentum, sectors FROM companies"),
+            pool.fetch("SELECT name, fund_type, allocated_m, deployed_m FROM funds"),
         )
 
         # Identify risk signals
@@ -42,35 +43,68 @@ class RiskAssessor(BaseAgent):
         top_sector = max(sector_counts.items(), key=lambda x: x[1]) if sector_counts else ("N/A", 0)
         concentration = round(top_sector[1] / len(companies) * 100) if companies else 0
 
+        # --- Fetch metric_snapshots queries in parallel ---
+        async def _fetch_connectivity():
+            try:
+                return await pool.fetch(
+                    """SELECT entity_id, metric_name, value FROM metric_snapshots
+                       WHERE entity_type = 'company'
+                       AND metric_name IN ('accelerator_connectivity_gap', 'rural_isolation_flag')
+                       AND value > 0"""
+                )
+            except Exception:
+                logger.debug("Could not fetch connectivity metrics.", exc_info=True)
+                return []
+
+        async def _fetch_ip_domains():
+            try:
+                return await pool.fetch(
+                    """SELECT value AS tech_domain, COUNT(*) AS cnt FROM metric_snapshots
+                       WHERE entity_type = 'company' AND metric_name = 'tech_domain_code'
+                       GROUP BY value ORDER BY cnt DESC"""
+                )
+            except Exception:
+                logger.debug("Could not fetch IP domain metrics.", exc_info=True)
+                return []
+
+        async def _fetch_leverage():
+            try:
+                return await pool.fetch(
+                    """SELECT entity_id, value FROM metric_snapshots
+                       WHERE metric_name = 'ssbci_leverage_ratio' AND entity_type = 'fund'"""
+                )
+            except Exception:
+                logger.debug("Could not fetch leverage metrics.", exc_info=True)
+                return []
+
+        async def _fetch_policy():
+            try:
+                return await pool.fetch(
+                    """SELECT entity_id, value FROM metric_snapshots
+                       WHERE metric_name = 'policy_opportunity_score' AND entity_type = 'policy'
+                       ORDER BY value DESC LIMIT 3"""
+                )
+            except Exception:
+                logger.debug("Could not fetch policy metrics.", exc_info=True)
+                return []
+
+        connectivity_rows, ip_domain_rows, leverage_rows, policy_rows = await asyncio.gather(
+            _fetch_connectivity(),
+            _fetch_ip_domains(),
+            _fetch_leverage(),
+            _fetch_policy(),
+        )
+
         # --- Structural hole / connectivity risk ---
         disconnected_companies = []
         rural_isolated = []
-        try:
-            connectivity_rows = await pool.fetch(
-                """SELECT entity_id, metric_name, value FROM metric_snapshots
-                   WHERE entity_type = 'company'
-                   AND metric_name IN ('accelerator_connectivity_gap', 'rural_isolation_flag')
-                   AND value > 0"""
-            )
-            for row in connectivity_rows:
-                if row["metric_name"] == "accelerator_connectivity_gap":
-                    disconnected_companies.append(row["entity_id"])
-                elif row["metric_name"] == "rural_isolation_flag":
-                    rural_isolated.append(row["entity_id"])
-        except Exception:
-            pass
+        for row in connectivity_rows:
+            if row["metric_name"] == "accelerator_connectivity_gap":
+                disconnected_companies.append(row["entity_id"])
+            elif row["metric_name"] == "rural_isolation_flag":
+                rural_isolated.append(row["entity_id"])
 
         # --- IP concentration risk ---
-        ip_domain_rows = []
-        try:
-            ip_domain_rows = await pool.fetch(
-                """SELECT value AS tech_domain, COUNT(*) AS cnt FROM metric_snapshots
-                   WHERE entity_type = 'company' AND metric_name = 'tech_domain_code'
-                   GROUP BY value ORDER BY cnt DESC"""
-            )
-        except Exception:
-            pass
-
         top_ip_domain = ip_domain_rows[0] if ip_domain_rows else None
         ip_total = sum(int(r["cnt"]) for r in ip_domain_rows) if ip_domain_rows else 0
         ip_concentration_pct = (
@@ -80,27 +114,7 @@ class RiskAssessor(BaseAgent):
         )
 
         # --- Capital flow risk ---
-        leverage_rows = []
-        try:
-            leverage_rows = await pool.fetch(
-                """SELECT entity_id, value FROM metric_snapshots
-                   WHERE metric_name = 'ssbci_leverage_ratio' AND entity_type = 'fund'"""
-            )
-        except Exception:
-            pass
-
         low_leverage_funds = [r for r in leverage_rows if float(r["value"]) < 1.0]
-
-        # --- Policy opportunity context ---
-        policy_rows = []
-        try:
-            policy_rows = await pool.fetch(
-                """SELECT entity_id, value FROM metric_snapshots
-                   WHERE metric_name = 'policy_opportunity_score' AND entity_type = 'policy'
-                   ORDER BY value DESC LIMIT 3"""
-            )
-        except Exception:
-            pass
 
         user_prompt = f"""Assess risks for Nevada's startup ecosystem portfolio:
 
@@ -141,7 +155,7 @@ Return JSON array of risk objects, each with:
 - "recommendation": actionable mitigation step"""
 
         system_prompt = load_prompt("risk_assessor") or _SYSTEM_PROMPT_FALLBACK
-        response_text = self.call_claude(system_prompt, user_prompt)
+        response_text = await self.call_claude(system_prompt, user_prompt)
 
         parsed = extract_json(response_text)
         if parsed is None:

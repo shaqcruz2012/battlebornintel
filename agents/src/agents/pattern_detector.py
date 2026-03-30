@@ -41,8 +41,8 @@ class PatternDetector(BaseAgent):
         betweenness_vals = [float(m["betweenness"]) for m in metrics if m["betweenness"]]
         pagerank_vals = [float(m["pagerank"]) for m in metrics if m["pagerank"]]
 
-        bridge_threshold = sorted(betweenness_vals)[int(len(betweenness_vals) * 0.75)] if betweenness_vals else 60
-        hub_threshold = sorted(pagerank_vals)[int(len(pagerank_vals) * 0.75)] if pagerank_vals else 50
+        bridge_threshold = sorted(betweenness_vals)[min(int(len(betweenness_vals) * 0.75), len(betweenness_vals) - 1)] if betweenness_vals else 60
+        hub_threshold = sorted(pagerank_vals)[min(int(len(pagerank_vals) * 0.75), len(pagerank_vals) - 1)] if pagerank_vals else 50
 
         bridges = [m for m in metrics if m["betweenness"] and float(m["betweenness"]) > bridge_threshold]
         hubs = [m for m in metrics if m["pagerank"] and float(m["pagerank"]) > hub_threshold]
@@ -67,7 +67,7 @@ class PatternDetector(BaseAgent):
                 "top_members": [m["name"] for m in sorted(named, key=lambda x: -(x["pagerank"] or 0))[:5]],
             })
 
-        # Fetch structural hole data from metric_snapshots (migration 147)
+        # Fetch structural hole data from metric_snapshots
         structural_holes_text = ""
         try:
             holes = await pool.fetch(
@@ -88,7 +88,7 @@ STRUCTURAL GAPS (from T-GNN analysis):
         except Exception:
             logger.debug("Could not fetch structural hole data.", exc_info=True)
 
-        # Fetch policy opportunity context (migration 148)
+        # Fetch policy opportunity context
         policy_text = ""
         try:
             policies = await pool.fetch(
@@ -127,7 +127,7 @@ Return JSON with:
 - "recommendations": 2-3 ecosystem development suggestions based on structure"""
 
         system_prompt = load_prompt("pattern_detector") or _SYSTEM_PROMPT_FALLBACK
-        response_text = self.call_claude(system_prompt, user_prompt)
+        response_text = await self.call_claude(system_prompt, user_prompt)
 
         content = extract_json(response_text)
         if content is None:

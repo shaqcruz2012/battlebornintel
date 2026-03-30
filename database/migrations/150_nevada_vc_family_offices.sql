@@ -121,11 +121,11 @@ ON CONFLICT (source_id, target_id, rel) DO NOTHING;
 
 INSERT INTO metric_snapshots (entity_type, entity_id, metric_name, value, unit, period_start, period_end, granularity, confidence, verified, agent_id)
 VALUES
-  ('investor', 'x_fertitta_cap', 'aum_m',           500,   'usd_millions', '2017-01-01', '2025-12-31', 'year', 0.85, true, 'web_research'),
-  ('investor', 'x_adelson_fo',   'net_worth_b',     37.9,  'usd_billions', '2025-01-01', '2025-12-31', 'year', 0.90, true, 'web_research'),
-  ('investor', 'x_ruffin_fo',    'net_worth_b',     4.2,   'usd_billions', '2025-01-01', '2025-12-31', 'year', 0.85, true, 'web_research'),
-  ('investor', 'x_duffield_fo',  'net_worth_b',     15.4,  'usd_billions', '2025-01-01', '2025-12-31', 'year', 0.90, true, 'web_research'),
-  ('investor', 'x_audacity_fund','target_fund_m',   5,     'usd_millions', '2020-01-01', '2025-12-31', 'year', 0.80, true, 'web_research')
+  ('external', 'x_fertitta_cap', 'aum_m',           500,   'usd_millions', '2017-01-01', '2025-12-31', 'year', 0.85, true, 'web_research'),
+  ('external', 'x_adelson_fo',   'net_worth_b',     37.9,  'usd_billions', '2025-01-01', '2025-12-31', 'year', 0.90, true, 'web_research'),
+  ('external', 'x_ruffin_fo',    'net_worth_b',     4.2,   'usd_billions', '2025-01-01', '2025-12-31', 'year', 0.85, true, 'web_research'),
+  ('external', 'x_duffield_fo',  'net_worth_b',     15.4,  'usd_billions', '2025-01-01', '2025-12-31', 'year', 0.90, true, 'web_research'),
+  ('external', 'x_audacity_fund','target_fund_m',   5,     'usd_millions', '2020-01-01', '2025-12-31', 'year', 0.80, true, 'web_research')
 ON CONFLICT (entity_type, entity_id, metric_name, period_start, period_end) DO NOTHING;
 
 COMMIT;

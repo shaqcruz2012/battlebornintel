@@ -5,8 +5,6 @@ Centralises values that were previously duplicated across multiple agents
 pattern_detector, runner) so there is a single source of truth.
 """
 
-import asyncio
-
 # ---------------------------------------------------------------------------
 # Company stage ordering (survival_analyzer, causal_evaluator)
 # ---------------------------------------------------------------------------
@@ -58,16 +56,8 @@ CALIPER_MULTIPLIER = 0.25
 DEFAULT_LLM_MODEL = "claude-sonnet-4-20250514"
 DEFAULT_MAX_TOKENS = 4096
 
-# Recoverable vs permanent error types for runner retry logic
-RECOVERABLE_ERRORS = (
-    asyncio.TimeoutError,
-    ConnectionError,
-    TimeoutError,
-    OSError,
-)
-
 # ---------------------------------------------------------------------------
-# T-GNN enrichment metric names (migrations 136-149)
+# T-GNN enrichment metric names
 # ---------------------------------------------------------------------------
 
 # Available enrichment metrics in metric_snapshots

@@ -4,8 +4,6 @@ import asyncio
 import json
 import logging
 import time
-import traceback
-
 from ..db import close_pool
 from ..agents.company_analyst import CompanyAnalyst
 from ..agents.weekly_brief import WeeklyBrief
@@ -50,6 +48,8 @@ AGENT_REGISTRY = {
 }
 
 MAX_RETRIES = 2
+# Note: LLM agents also retry API calls internally (BaseAgent.call_claude).
+# This outer retry handles infrastructure failures (timeouts, connection errors).
 
 # Per-agent execution timeouts in seconds
 AGENT_TIMEOUTS = {

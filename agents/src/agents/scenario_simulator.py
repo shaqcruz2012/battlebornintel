@@ -19,6 +19,7 @@ import numpy as np
 import pandas as pd
 
 from .base_model_agent import BaseModelAgent
+from .constants import unit_for_metric
 from .status import AgentStatus
 
 logger = logging.getLogger(__name__)
@@ -664,7 +665,7 @@ class ScenarioSimulator(BaseModelAgent):
                 continue
 
             sims = sim_results[metric]  # (n_sims, n_entities, horizon_q)
-            unit = _unit_for_metric(metric)
+            unit = unit_for_metric(metric)
 
             for q in range(horizon_q):
                 period_date = _quarter_offset_to_date(today, q + 1)
@@ -728,16 +729,6 @@ class ScenarioSimulator(BaseModelAgent):
 # ======================================================================
 # Module-level helpers
 # ======================================================================
-
-def _unit_for_metric(metric: str) -> str:
-    """Map metric names to their units."""
-    units = {
-        "funding_m": "usd_millions",
-        "employees": "count",
-        "momentum": "percent",
-    }
-    return units.get(metric, "units")
-
 
 def _quarter_offset_to_date(ref: date, quarters_ahead: int) -> date:
     """Return the first day of the quarter that is *quarters_ahead* from ref."""

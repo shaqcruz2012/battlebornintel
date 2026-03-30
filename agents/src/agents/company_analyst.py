@@ -1,3 +1,5 @@
+import asyncio
+
 from .base_agent import BaseAgent
 from .utils import extract_json, load_prompt, batch_async
 
@@ -22,7 +24,6 @@ Integrate enrichment data into your analysis when available. Reference specific
 metrics to support your assessments. Be specific with numbers. Be direct.
 No fluff. Output valid JSON."""
 
-# Enrichment metric names aligned with T-GNN migrations 136-149
 _ENRICHMENT_METRICS = [
     "patent_count",
     "ip_moat_score",
@@ -150,30 +151,28 @@ class CompanyAnalyst(BaseAgent):
         if not company:
             raise ValueError(f"Company {company_id} not found")
 
-        # Fetch edges
+        # Fetch edges, score, enrichment, and centrality in parallel
         node_id = f"c_{company_id}"
-        edges = await pool.fetch(
-            """SELECT ge.*,
-                      COALESCE(e.name, a.name, eo.name, p.name) as connected_name
-               FROM graph_edges ge
-               LEFT JOIN externals e ON (e.id = ge.source_id OR e.id = ge.target_id) AND e.id != $1
-               LEFT JOIN accelerators a ON (a.id = ge.source_id OR a.id = ge.target_id) AND a.id != $1
-               LEFT JOIN ecosystem_orgs eo ON (eo.id = ge.source_id OR eo.id = ge.target_id) AND eo.id != $1
-               LEFT JOIN people p ON (p.id = ge.source_id OR p.id = ge.target_id) AND p.id != $1
-               WHERE ge.source_id = $1 OR ge.target_id = $1""",
-            node_id,
+        edges, score, enrichment, centrality = await asyncio.gather(
+            pool.fetch(
+                """SELECT ge.*,
+                          COALESCE(e.name, a.name, eo.name, p.name) as connected_name
+                   FROM graph_edges ge
+                   LEFT JOIN externals e ON (e.id = ge.source_id OR e.id = ge.target_id) AND e.id != $1
+                   LEFT JOIN accelerators a ON (a.id = ge.source_id OR a.id = ge.target_id) AND a.id != $1
+                   LEFT JOIN ecosystem_orgs eo ON (eo.id = ge.source_id OR eo.id = ge.target_id) AND eo.id != $1
+                   LEFT JOIN people p ON (p.id = ge.source_id OR p.id = ge.target_id) AND p.id != $1
+                   WHERE ge.source_id = $1 OR ge.target_id = $1""",
+                node_id,
+            ),
+            pool.fetchrow(
+                """SELECT * FROM computed_scores
+                   WHERE company_id = $1 ORDER BY computed_at DESC LIMIT 1""",
+                company_id,
+            ),
+            self._fetch_enrichment_metrics(pool, node_id),
+            self._fetch_graph_centrality(pool, node_id),
         )
-
-        # Fetch computed score
-        score = await pool.fetchrow(
-            """SELECT * FROM computed_scores
-               WHERE company_id = $1 ORDER BY computed_at DESC LIMIT 1""",
-            company_id,
-        )
-
-        # Fetch T-GNN enrichment data (migrations 136-149)
-        enrichment = await self._fetch_enrichment_metrics(pool, node_id)
-        centrality = await self._fetch_graph_centrality(pool, node_id)
         enrichment_block = self._format_enrichment_block(enrichment, centrality)
 
         # Build prompt
@@ -209,7 +208,7 @@ Return JSON with these keys:
 - "recommendation": one-line investment/support recommendation"""
 
         system_prompt = load_prompt("company_analyst") or _SYSTEM_PROMPT_FALLBACK
-        response_text = self.call_claude(system_prompt, user_prompt)
+        response_text = await self.call_claude(system_prompt, user_prompt)
 
         # Parse JSON from response
         content = extract_json(response_text)
