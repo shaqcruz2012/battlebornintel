@@ -1,0 +1,176 @@
+/* ── TemporalSlider: bottom-left floating time control ──── */
+
+.container {
+  position: absolute;
+  bottom: var(--space-md);
+  left: var(--space-md);
+  z-index: var(--z-sticky);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  background: rgba(10, 14, 20, 0.90);
+  backdrop-filter: blur(10px);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: var(--space-sm) var(--space-md);
+  min-width: 260px;
+  max-width: 340px;
+  user-select: none;
+}
+
+/* ── Header row: play button + year + counts ── */
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.playBtn {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  color: var(--accent-teal);
+  font-size: 11px;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  flex-shrink: 0;
+  line-height: 1;
+  padding: 0;
+}
+
+.playBtn:hover {
+  background: rgba(69, 215, 198, 0.12);
+  border-color: rgba(69, 215, 198, 0.3);
+}
+
+.yearLabel {
+  font-family: var(--font-mono);
+  font-size: var(--text-body);
+  font-weight: var(--weight-semibold);
+  color: var(--text-primary);
+  letter-spacing: 0.04em;
+}
+
+.counts {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+}
+
+.count {
+  font-family: var(--font-body);
+  font-size: var(--text-caption-sm);
+  color: var(--text-secondary);
+}
+
+.sep {
+  font-size: var(--text-caption-sm);
+  color: var(--text-muted);
+}
+
+/* ── Slider row ── */
+
+.sliderRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.tick {
+  font-family: var(--font-mono);
+  font-size: var(--text-micro);
+  color: var(--text-muted);
+  flex-shrink: 0;
+  min-width: 28px;
+}
+
+.trackWrap {
+  flex: 1;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+/* ── Range input styling ── */
+
+.slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 4px;
+  border-radius: 2px;
+  outline: none;
+  cursor: pointer;
+  /* Two-tone track via gradient */
+  background: linear-gradient(
+    to right,
+    var(--accent-teal) 0%,
+    var(--accent-teal) var(--fill-pct, 0%),
+    rgba(255, 255, 255, 0.08) var(--fill-pct, 0%),
+    rgba(255, 255, 255, 0.08) 100%
+  );
+  transition: background var(--transition-fast);
+}
+
+.slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--accent-teal);
+  border: 2px solid var(--bg-card);
+  box-shadow: 0 0 6px rgba(69, 215, 198, 0.4);
+  cursor: pointer;
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.slider::-webkit-slider-thumb:hover {
+  transform: scale(1.2);
+  box-shadow: 0 0 10px rgba(69, 215, 198, 0.6);
+}
+
+.slider::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--accent-teal);
+  border: 2px solid var(--bg-card);
+  box-shadow: 0 0 6px rgba(69, 215, 198, 0.4);
+  cursor: pointer;
+}
+
+.slider::-moz-range-track {
+  height: 4px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+/* ── Tick dots beneath slider ── */
+
+.tickMarks {
+  display: flex;
+  justify-content: space-between;
+  padding: 0 1px;
+}
+
+.tickDot {
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.12);
+  transition: background var(--transition-fast);
+}
+
+.tickDotActive {
+  background: var(--accent-teal);
+  box-shadow: 0 0 4px rgba(69, 215, 198, 0.5);
+}
