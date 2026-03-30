@@ -16,29 +16,20 @@ import numpy as np
 import pandas as pd
 
 from .base_model_agent import BaseModelAgent
+from .constants import (
+    BOOTSTRAP_ITERATIONS,
+    CALIPER_MULTIPLIER,
+    MIN_CONTROL_SAMPLES as MIN_CONTROL,
+    MIN_TREATMENT_SAMPLES as MIN_TREATMENT,
+    STAGE_ORDER,
+)
 from .status import AgentStatus
 
 logger = logging.getLogger(__name__)
 
-# Minimum sample sizes for each analysis
-MIN_TREATMENT = 5
-MIN_CONTROL = 5
+# Additional sample size thresholds specific to this agent
 MIN_MATCHED_PAIRS = 5
 MIN_REGRESSION_OBS = 10
-BOOTSTRAP_ITERATIONS = 1000
-CALIPER_MULTIPLIER = 0.25
-
-# Stage ordering for progression measurement
-STAGE_ORDER = {
-    "pre-seed": 1,
-    "pre_seed": 1,
-    "seed": 2,
-    "series_a": 3,
-    "series_b": 4,
-    "series_c_plus": 5,
-    "growth": 6,
-    "public": 7,
-}
 
 
 class CausalEvaluator(BaseModelAgent):

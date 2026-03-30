@@ -1,9 +1,13 @@
+import logging
+
 from .base_agent import BaseAgent
 from .utils import extract_json, load_prompt
 
+logger = logging.getLogger(__name__)
 
 _SYSTEM_PROMPT_FALLBACK = """You are a graph analytics expert analyzing Nevada's startup ecosystem network.
 Identify structural patterns, emerging clusters, bridge companies, and temporal changes.
+Use the structural hole and connectivity gap data to highlight ecosystem weaknesses.
 Be specific with company names and metrics. Output valid JSON."""
 
 
@@ -33,9 +37,15 @@ class PatternDetector(BaseAgent):
             )
             return {"bridges": 0, "hubs": 0, "communities": 0}
 
-        # Identify structural patterns
-        bridges = [m for m in metrics if m["betweenness"] and m["betweenness"] > 60]
-        hubs = [m for m in metrics if m["pagerank"] and m["pagerank"] > 50]
+        # Use data-driven thresholds (75th percentile) instead of hardcoded values
+        betweenness_vals = [float(m["betweenness"]) for m in metrics if m["betweenness"]]
+        pagerank_vals = [float(m["pagerank"]) for m in metrics if m["pagerank"]]
+
+        bridge_threshold = sorted(betweenness_vals)[int(len(betweenness_vals) * 0.75)] if betweenness_vals else 60
+        hub_threshold = sorted(pagerank_vals)[int(len(pagerank_vals) * 0.75)] if pagerank_vals else 50
+
+        bridges = [m for m in metrics if m["betweenness"] and float(m["betweenness"]) > bridge_threshold]
+        hubs = [m for m in metrics if m["pagerank"] and float(m["pagerank"]) > hub_threshold]
 
         # Community analysis
         communities = {}
@@ -57,23 +67,62 @@ class PatternDetector(BaseAgent):
                 "top_members": [m["name"] for m in sorted(named, key=lambda x: -(x["pagerank"] or 0))[:5]],
             })
 
+        # Fetch structural hole data from metric_snapshots (migration 147)
+        structural_holes_text = ""
+        try:
+            holes = await pool.fetch(
+                """SELECT entity_id, metric_name, value FROM metric_snapshots
+                   WHERE metric_name IN ('structural_hole_severity', 'accelerator_connectivity_gap', 'rural_isolation_flag')
+                   AND entity_type = 'company' AND value > 0
+                   ORDER BY value DESC LIMIT 15"""
+            )
+            if holes:
+                disconnected = sum(1 for h in holes if h["metric_name"] == "accelerator_connectivity_gap")
+                rural = sum(1 for h in holes if h["metric_name"] == "rural_isolation_flag")
+                structural_holes_text = f"""
+
+STRUCTURAL GAPS (from T-GNN analysis):
+- Companies without accelerator connections: {disconnected}
+- Rural-isolated companies: {rural}
+- Top structural holes: {', '.join(f"{h['entity_id']}({h['metric_name']}={h['value']})" for h in holes[:5])}"""
+        except Exception:
+            logger.debug("Could not fetch structural hole data.", exc_info=True)
+
+        # Fetch policy opportunity context (migration 148)
+        policy_text = ""
+        try:
+            policies = await pool.fetch(
+                """SELECT entity_id, value FROM metric_snapshots
+                   WHERE metric_name = 'policy_opportunity_score' AND entity_type = 'policy'
+                   ORDER BY value DESC LIMIT 3"""
+            )
+            if policies:
+                policy_text = f"""
+
+POLICY OPPORTUNITIES:
+{chr(10).join(f"- {p['entity_id']}: score {float(p['value']):.1f}" for p in policies)}"""
+        except Exception:
+            logger.debug("Could not fetch policy data.", exc_info=True)
+
         user_prompt = f"""Analyze these graph structure patterns in Nevada's startup ecosystem:
 
-BRIDGE NODES (high betweenness centrality, >60):
+BRIDGE NODES (top 25% betweenness, threshold={bridge_threshold:.1f}):
 {chr(10).join(f"- {b['node_id']}: {b['company_name'] or 'non-company'} (betweenness: {b['betweenness']}, PR: {b['pagerank']})" for b in bridges[:10])}
 
-HUB NODES (high PageRank, >50):
+HUB NODES (top 25% PageRank, threshold={hub_threshold:.1f}):
 {chr(10).join(f"- {h['node_id']}: {h['company_name'] or 'non-company'} (PR: {h['pagerank']}, betweenness: {h['betweenness']})" for h in hubs[:10])}
 
 COMMUNITY CLUSTERS ({len(community_summary)} detected):
 {chr(10).join(f"- Cluster {cs['community_id']}: {cs['size']} members, top: {', '.join(cs['top_members'][:3])}" for cs in community_summary[:8])}
 
 Total nodes analyzed: {len(metrics)}
+{structural_holes_text}{policy_text}
 
 Return JSON with:
 - "patterns": array of identified structural patterns
 - "emerging_clusters": notable cluster developments
 - "bridge_analysis": significance of key bridge nodes
+- "structural_gaps": identified ecosystem connectivity weaknesses
 - "anomalies": unexpected structural features
 - "recommendations": 2-3 ecosystem development suggestions based on structure"""
 

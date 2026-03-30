@@ -150,6 +150,56 @@ class WeeklyBrief(BaseAgent):
         except Exception:
             logger.debug("Could not fetch ecosystem forecast for weekly brief.", exc_info=True)
 
+        # 5. Structural hole analysis
+        try:
+            holes = await pool.fetch(
+                """SELECT entity_id, metric_name, value FROM metric_snapshots
+                   WHERE metric_name IN ('structural_hole_severity', 'accelerator_connectivity_gap')
+                   AND entity_type = 'company' AND value > 0
+                   ORDER BY value DESC LIMIT 10"""
+            )
+            if holes:
+                disconnected_count = sum(1 for h in holes if h["metric_name"] == "accelerator_connectivity_gap")
+                max_severity = max((float(h["value"]) for h in holes if h["metric_name"] == "structural_hole_severity"), default=0)
+                insights["structural_gaps"] = {
+                    "disconnected_companies": disconnected_count,
+                    "max_hole_severity": round(max_severity, 2),
+                    "top_gaps": [{"entity": h["entity_id"], "metric": h["metric_name"], "value": float(h["value"])} for h in holes[:5]]
+                }
+        except Exception:
+            logger.debug("Could not fetch structural hole data for weekly brief.", exc_info=True)
+
+        # 6. Policy opportunity scores
+        try:
+            policies = await pool.fetch(
+                """SELECT entity_id, value FROM metric_snapshots
+                   WHERE metric_name = 'policy_opportunity_score' AND entity_type = 'policy'
+                   ORDER BY value DESC LIMIT 5"""
+            )
+            if policies:
+                insights["policy_opportunities"] = [
+                    {"gap": p["entity_id"], "score": float(p["value"])} for p in policies
+                ]
+        except Exception:
+            logger.debug("Could not fetch policy opportunities for weekly brief.", exc_info=True)
+
+        # 7. Interstate comparison
+        try:
+            benchmarks = await pool.fetch(
+                """SELECT entity_id, metric_name, value FROM metric_snapshots
+                   WHERE metric_name IN ('vc_deployed_annual_m', 'accelerator_program_count', 'tech_workforce_pct')
+                   AND entity_type = 'state'
+                   ORDER BY entity_id, metric_name"""
+            )
+            if benchmarks:
+                by_state = {}
+                for b in benchmarks:
+                    state = b["entity_id"]
+                    by_state.setdefault(state, {})[b["metric_name"]] = float(b["value"])
+                insights["interstate_benchmarks"] = by_state
+        except Exception:
+            logger.debug("Could not fetch interstate benchmarks for weekly brief.", exc_info=True)
+
         return insights
 
     @staticmethod
@@ -201,6 +251,22 @@ class WeeklyBrief(BaseAgent):
                 lines.append(f"- Projected avg momentum: {ef['avg_momentum']}/100")
             if lines:
                 parts.append("\n### Ecosystem Forecast\n" + "\n".join(lines))
+
+        if "structural_gaps" in insights:
+            sg = insights["structural_gaps"]
+            parts.append(f"\n### Structural Gaps\n- {sg['disconnected_companies']} companies lack accelerator connections\n- Max structural hole severity: {sg['max_hole_severity']}")
+
+        if "policy_opportunities" in insights:
+            lines = [f"- {p['gap']}: score {p['score']}" for p in insights["policy_opportunities"]]
+            parts.append("\n### Policy Opportunities\n" + "\n".join(lines))
+
+        if "interstate_benchmarks" in insights:
+            lines = []
+            for state, metrics in insights["interstate_benchmarks"].items():
+                vc = metrics.get("vc_deployed_annual_m", "N/A")
+                acc = metrics.get("accelerator_program_count", "N/A")
+                lines.append(f"- {state}: VC ${vc}M, {acc} accelerators")
+            parts.append("\n### Interstate Benchmarks\n" + "\n".join(lines))
 
         return "\n".join(parts) if len(parts) > 1 else ""
 

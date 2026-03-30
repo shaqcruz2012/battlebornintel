@@ -1,10 +1,13 @@
 """APScheduler-based scheduling for BBI agents."""
 
 import asyncio
+import logging
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 
 from .runner import run_agent
+
+logger = logging.getLogger(__name__)
 
 
 # Default schedules
@@ -31,12 +34,12 @@ SCHEDULES = [
 
 def create_scheduler() -> AsyncIOScheduler:
     """Create and configure the agent scheduler."""
-    scheduler = AsyncIOScheduler()
+    scheduler = AsyncIOScheduler(timezone="America/Los_Angeles")
 
     for sched in SCHEDULES:
         scheduler.add_job(
             run_agent,
-            CronTrigger.from_crontab(sched["cron"]),
+            CronTrigger.from_crontab(sched["cron"], timezone="America/Los_Angeles"),
             args=[sched["agent"]],
             id=f"bbi_{sched['agent']}",
             name=sched["desc"],
@@ -50,14 +53,13 @@ async def start_scheduler():
     """Start the scheduler (blocking)."""
     scheduler = create_scheduler()
     scheduler.start()
-    print("BBI Agent Scheduler started")
+    logger.info("BBI Agent Scheduler started (%d jobs)", len(SCHEDULES))
     for sched in SCHEDULES:
-        print(f"  {sched['agent']}: {sched['desc']}")
+        logger.info("  %s: %s", sched['agent'], sched['desc'])
 
     try:
-        # Keep running
         while True:
             await asyncio.sleep(3600)
     except (KeyboardInterrupt, SystemExit):
         scheduler.shutdown()
-        print("Scheduler stopped")
+        logger.info("Scheduler stopped gracefully")

@@ -14,21 +14,10 @@ import numpy as np
 import pandas as pd
 
 from .base_model_agent import BaseModelAgent
+from .constants import STAGE_ORDER
 from .status import AgentStatus
 
 logger = logging.getLogger(__name__)
-
-# Stage ordering for survival analysis (time-to-next-stage)
-STAGE_ORDER = {
-    "pre-seed": 1,
-    "pre_seed": 1,
-    "seed": 2,
-    "series_a": 3,
-    "series_b": 4,
-    "series_c_plus": 5,
-    "growth": 6,
-    "public": 7,
-}
 
 # Default milestone for survival: "reached Series A"
 DEFAULT_EVENT_STAGE = "series_a"
