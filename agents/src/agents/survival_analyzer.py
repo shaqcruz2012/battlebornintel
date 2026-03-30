@@ -6,6 +6,7 @@ fits a Cox Proportional Hazards model, and writes results to analysis_results
 (JSONB) and scenario_results (forward survival predictions).
 """
 
+import asyncio
 import logging
 import time
 from datetime import date, datetime, timezone
@@ -171,12 +172,34 @@ class SurvivalAnalyzer(BaseModelAgent):
           - event: 1 if a stage transition (funding round) was observed, 0 if censored
           - covariates: sector, region, funding_m, employees, has_accelerator
         """
-        # Fetch companies with a founding year
-        companies = await pool.fetch(
-            """SELECT id, slug, name, stage, sectors, region, funding_m,
-                      employees, momentum, founded
-               FROM companies
-               WHERE founded IS NOT NULL"""
+        # Fetch companies, events, and accelerator participation in parallel
+        companies, events, accel_companies = await asyncio.gather(
+            pool.fetch(
+                """SELECT id, slug, name, stage, sectors, region, funding_m,
+                          employees, momentum, founded
+                   FROM companies
+                   WHERE founded IS NOT NULL"""
+            ),
+            pool.fetch(
+                """SELECT te.company_id, te.event_date, te.event_type, te.detail
+                   FROM timeline_events te
+                   WHERE te.company_id IS NOT NULL
+                     AND te.event_type IN ('funding', 'milestone', 'launch')
+                   ORDER BY te.company_id, te.event_date"""
+            ),
+            pool.fetch(
+                """SELECT DISTINCT
+                     CAST(SUBSTRING(ge.source_id FROM 3) AS INTEGER) AS company_id
+                   FROM graph_edges ge
+                   WHERE ge.source_id LIKE 'c_\\_%'
+                     AND ge.rel IN ('accelerated_by', 'participated_in')
+                   UNION
+                   SELECT DISTINCT
+                     CAST(SUBSTRING(ge.target_id FROM 3) AS INTEGER) AS company_id
+                   FROM graph_edges ge
+                   WHERE ge.target_id LIKE 'c_\\_%'
+                     AND ge.rel IN ('accelerated_by', 'participated_in')"""
+            ),
         )
         if not companies:
             return pd.DataFrame()
@@ -186,31 +209,8 @@ class SurvivalAnalyzer(BaseModelAgent):
             company_df["funding_m"], errors="coerce"
         ).fillna(0)
 
-        # Fetch funding/milestone events to detect stage transitions
-        events = await pool.fetch(
-            """SELECT te.company_id, te.event_date, te.event_type, te.detail
-               FROM timeline_events te
-               WHERE te.company_id IS NOT NULL
-                 AND te.event_type IN ('funding', 'milestone', 'launch')
-               ORDER BY te.company_id, te.event_date"""
-        )
         events_df = (
             pd.DataFrame([dict(e) for e in events]) if events else pd.DataFrame()
-        )
-
-        # Check accelerator participation via graph_edges
-        accel_companies = await pool.fetch(
-            """SELECT DISTINCT
-                 CAST(SUBSTRING(ge.source_id FROM 3) AS INTEGER) AS company_id
-               FROM graph_edges ge
-               WHERE ge.source_id LIKE 'c_\\_%'
-                 AND ge.rel IN ('accelerated_by', 'participated_in')
-               UNION
-               SELECT DISTINCT
-                 CAST(SUBSTRING(ge.target_id FROM 3) AS INTEGER) AS company_id
-               FROM graph_edges ge
-               WHERE ge.target_id LIKE 'c_\\_%'
-                 AND ge.rel IN ('accelerated_by', 'participated_in')"""
         )
         accel_ids = (
             {r["company_id"] for r in accel_companies} if accel_companies else set()

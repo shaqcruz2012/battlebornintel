@@ -144,18 +144,16 @@ class CompanyAnalyst(BaseAgent):
         return "\n".join(lines) if lines else ""
 
     async def _analyze_one(self, pool, company_id: int):
-        # Fetch company data
         company = await pool.fetchrow(
-            "SELECT * FROM companies WHERE id = $1", company_id
+            "SELECT id, name, stage, sectors, city, region, funding_m, employees, founded, description, eligible FROM companies WHERE id = $1", company_id
         )
         if not company:
             raise ValueError(f"Company {company_id} not found")
 
-        # Fetch edges, score, enrichment, and centrality in parallel
         node_id = f"c_{company_id}"
         edges, score, enrichment, centrality = await asyncio.gather(
             pool.fetch(
-                """SELECT ge.*,
+                """SELECT ge.rel, ge.note,
                           COALESCE(e.name, a.name, eo.name, p.name) as connected_name
                    FROM graph_edges ge
                    LEFT JOIN externals e ON (e.id = ge.source_id OR e.id = ge.target_id) AND e.id != $1
@@ -166,7 +164,7 @@ class CompanyAnalyst(BaseAgent):
                 node_id,
             ),
             pool.fetchrow(
-                """SELECT * FROM computed_scores
+                """SELECT irs_score, grade FROM computed_scores
                    WHERE company_id = $1 ORDER BY computed_at DESC LIMIT 1""",
                 company_id,
             ),
@@ -175,7 +173,6 @@ class CompanyAnalyst(BaseAgent):
         )
         enrichment_block = self._format_enrichment_block(enrichment, centrality)
 
-        # Build prompt
         sectors = ", ".join(company["sectors"]) if company["sectors"] else "N/A"
         eligible = ", ".join(company["eligible"]) if company["eligible"] else "None"
         connections = [
@@ -210,7 +207,6 @@ Return JSON with these keys:
         system_prompt = load_prompt("company_analyst") or _SYSTEM_PROMPT_FALLBACK
         response_text = await self.call_claude(system_prompt, user_prompt)
 
-        # Parse JSON from response
         content = extract_json(response_text)
         if content is None:
             content = {"raw_analysis": response_text}

@@ -3,7 +3,7 @@ import json
 import logging
 
 from .base_agent import BaseAgent
-from .utils import extract_json, load_prompt
+from .utils import extract_json, load_prompt, fetch_structural_gaps, fetch_policy_opportunities, compute_ssbci_deployment
 
 logger = logging.getLogger(__name__)
 
@@ -39,150 +39,150 @@ class WeeklyBrief(BaseAgent):
         """
         insights: dict = {}
 
-        # 1. Recent company analyses (analysis_type = 'company_narrative')
-        try:
-            rows = await pool.fetch(
-                """SELECT entity_id, content, created_at
-                   FROM analysis_results
-                   WHERE analysis_type = 'company_narrative'
-                   ORDER BY created_at DESC
-                   LIMIT 5"""
-            )
-            if rows:
-                analyses = []
-                for r in rows:
-                    content = r["content"]
-                    if isinstance(content, str):
-                        content = json.loads(content)
-                    analyses.append({
-                        "entity_id": r["entity_id"],
-                        "summary": content.get("executive_summary", "N/A"),
-                        "recommendation": content.get("recommendation", "N/A"),
-                        "created_at": str(r["created_at"]),
-                    })
-                insights["recent_company_analyses"] = analyses
-        except Exception:
-            logger.debug("Could not fetch company analyses for weekly brief.", exc_info=True)
-
-        # 2. Latest risk assessment
-        try:
-            rows = await pool.fetch(
-                """SELECT content, created_at
-                   FROM analysis_results
-                   WHERE analysis_type = 'risk_assessment'
-                   ORDER BY created_at DESC
-                   LIMIT 1"""
-            )
-            if rows:
-                content = rows[0]["content"]
-                if isinstance(content, str):
-                    content = json.loads(content)
-                risks = content.get("risks", [])
-                if risks:
-                    insights["latest_risks"] = risks
-        except Exception:
-            logger.debug("Could not fetch risk assessment for weekly brief.", exc_info=True)
-
-        # 3. Latest causal evaluation summaries
-        try:
-            rows = await pool.fetch(
-                """SELECT entity_id, content, created_at
-                   FROM analysis_results
-                   WHERE analysis_type = 'causal_evaluation'
-                   ORDER BY created_at DESC
-                   LIMIT 3"""
-            )
-            if rows:
-                causal = []
-                for r in rows:
-                    content = r["content"]
-                    if isinstance(content, str):
-                        content = json.loads(content)
-                    analyses = content.get("analyses", {})
-                    did = analyses.get("accelerator_did", {})
-                    causal.append({
-                        "entity_id": r["entity_id"],
-                        "att": did.get("att"),
-                        "is_accelerated": did.get("is_significant", False),
-                    })
-                insights["causal_insights"] = causal
-        except Exception:
-            logger.debug("Could not fetch causal evaluations for weekly brief.", exc_info=True)
-
-        # 4. Ecosystem forecast from the latest completed scenario
-        try:
-            scenario = await pool.fetchrow(
-                """SELECT id FROM scenarios
-                   WHERE status = 'complete'
-                   ORDER BY updated_at DESC
-                   LIMIT 1"""
-            )
-            if scenario:
-                agg = await pool.fetchrow(
-                    """SELECT
-                         SUM(CASE WHEN metric_name = 'funding_m' THEN value END) AS total_funding,
-                         SUM(CASE WHEN metric_name = 'employees' THEN value END) AS total_employees,
-                         AVG(CASE WHEN metric_name = 'momentum' THEN value END) AS avg_momentum
-                       FROM scenario_results
-                       WHERE scenario_id = $1""",
-                    scenario["id"],
+        # Sections 1-4: independent analysis_results fetches, run in parallel
+        async def _fetch_company_analyses():
+            try:
+                rows = await pool.fetch(
+                    """SELECT entity_id, content, created_at
+                       FROM analysis_results
+                       WHERE analysis_type = 'company_narrative'
+                       ORDER BY created_at DESC
+                       LIMIT 5"""
                 )
-                if agg and any(
-                    agg[k] is not None
-                    for k in ("total_funding", "total_employees", "avg_momentum")
-                ):
-                    insights["ecosystem_forecast"] = {
-                        "total_funding": (
-                            float(agg["total_funding"])
-                            if agg["total_funding"] is not None
-                            else None
-                        ),
-                        "total_employees": (
-                            float(agg["total_employees"])
-                            if agg["total_employees"] is not None
-                            else None
-                        ),
-                        "avg_momentum": (
-                            round(float(agg["avg_momentum"]), 1)
-                            if agg["avg_momentum"] is not None
-                            else None
-                        ),
-                    }
-        except Exception:
-            logger.debug("Could not fetch ecosystem forecast for weekly brief.", exc_info=True)
+                if rows:
+                    analyses = []
+                    for r in rows:
+                        content = r["content"]
+                        if isinstance(content, str):
+                            content = json.loads(content)
+                        analyses.append({
+                            "entity_id": r["entity_id"],
+                            "summary": content.get("executive_summary", "N/A"),
+                            "recommendation": content.get("recommendation", "N/A"),
+                            "created_at": str(r["created_at"]),
+                        })
+                    return ("recent_company_analyses", analyses)
+            except Exception:
+                logger.debug("Could not fetch company analyses for weekly brief.", exc_info=True)
+            return None
 
-        # 5. Structural hole analysis
-        try:
-            holes = await pool.fetch(
-                """SELECT entity_id, metric_name, value FROM metric_snapshots
-                   WHERE metric_name IN ('structural_hole_severity', 'accelerator_connectivity_gap')
-                   AND entity_type = 'company' AND value > 0
-                   ORDER BY value DESC LIMIT 10"""
-            )
-            if holes:
-                disconnected_count = sum(1 for h in holes if h["metric_name"] == "accelerator_connectivity_gap")
-                max_severity = max((float(h["value"]) for h in holes if h["metric_name"] == "structural_hole_severity"), default=0)
-                insights["structural_gaps"] = {
-                    "disconnected_companies": disconnected_count,
-                    "max_hole_severity": round(max_severity, 2),
-                    "top_gaps": [{"entity": h["entity_id"], "metric": h["metric_name"], "value": float(h["value"])} for h in holes[:5]]
-                }
-        except Exception:
-            logger.debug("Could not fetch structural hole data for weekly brief.", exc_info=True)
+        async def _fetch_risk_assessment():
+            try:
+                rows = await pool.fetch(
+                    """SELECT content, created_at
+                       FROM analysis_results
+                       WHERE analysis_type = 'risk_assessment'
+                       ORDER BY created_at DESC
+                       LIMIT 1"""
+                )
+                if rows:
+                    content = rows[0]["content"]
+                    if isinstance(content, str):
+                        content = json.loads(content)
+                    risks = content.get("risks", [])
+                    if risks:
+                        return ("latest_risks", risks)
+            except Exception:
+                logger.debug("Could not fetch risk assessment for weekly brief.", exc_info=True)
+            return None
 
-        # 6. Policy opportunity scores
-        try:
-            policies = await pool.fetch(
-                """SELECT entity_id, value FROM metric_snapshots
-                   WHERE metric_name = 'policy_opportunity_score' AND entity_type = 'policy'
-                   ORDER BY value DESC LIMIT 5"""
-            )
-            if policies:
-                insights["policy_opportunities"] = [
-                    {"gap": p["entity_id"], "score": float(p["value"])} for p in policies
-                ]
-        except Exception:
-            logger.debug("Could not fetch policy opportunities for weekly brief.", exc_info=True)
+        async def _fetch_causal_evaluations():
+            try:
+                rows = await pool.fetch(
+                    """SELECT entity_id, content, created_at
+                       FROM analysis_results
+                       WHERE analysis_type = 'causal_evaluation'
+                       ORDER BY created_at DESC
+                       LIMIT 3"""
+                )
+                if rows:
+                    causal = []
+                    for r in rows:
+                        content = r["content"]
+                        if isinstance(content, str):
+                            content = json.loads(content)
+                        analyses = content.get("analyses", {})
+                        did = analyses.get("accelerator_did", {})
+                        causal.append({
+                            "entity_id": r["entity_id"],
+                            "att": did.get("att"),
+                            "is_accelerated": did.get("is_significant", False),
+                        })
+                    return ("causal_insights", causal)
+            except Exception:
+                logger.debug("Could not fetch causal evaluations for weekly brief.", exc_info=True)
+            return None
+
+        async def _fetch_ecosystem_forecast():
+            try:
+                scenario = await pool.fetchrow(
+                    """SELECT id FROM scenarios
+                       WHERE status = 'complete'
+                       ORDER BY updated_at DESC
+                       LIMIT 1"""
+                )
+                if scenario:
+                    agg = await pool.fetchrow(
+                        """SELECT
+                             SUM(CASE WHEN metric_name = 'funding_m' THEN value END) AS total_funding,
+                             SUM(CASE WHEN metric_name = 'employees' THEN value END) AS total_employees,
+                             AVG(CASE WHEN metric_name = 'momentum' THEN value END) AS avg_momentum
+                           FROM scenario_results
+                           WHERE scenario_id = $1""",
+                        scenario["id"],
+                    )
+                    if agg and any(
+                        agg[k] is not None
+                        for k in ("total_funding", "total_employees", "avg_momentum")
+                    ):
+                        return ("ecosystem_forecast", {
+                            "total_funding": (
+                                float(agg["total_funding"])
+                                if agg["total_funding"] is not None
+                                else None
+                            ),
+                            "total_employees": (
+                                float(agg["total_employees"])
+                                if agg["total_employees"] is not None
+                                else None
+                            ),
+                            "avg_momentum": (
+                                round(float(agg["avg_momentum"]), 1)
+                                if agg["avg_momentum"] is not None
+                                else None
+                            ),
+                        })
+            except Exception:
+                logger.debug("Could not fetch ecosystem forecast for weekly brief.", exc_info=True)
+            return None
+
+        parallel_results = await asyncio.gather(
+            _fetch_company_analyses(),
+            _fetch_risk_assessment(),
+            _fetch_causal_evaluations(),
+            _fetch_ecosystem_forecast(),
+        )
+        for result in parallel_results:
+            if result is not None:
+                insights[result[0]] = result[1]
+
+        # 5. Structural hole analysis (shared helper handles errors)
+        holes = await fetch_structural_gaps(pool, limit=10)
+        if holes:
+            disconnected_count = sum(1 for h in holes if h["metric_name"] == "accelerator_connectivity_gap")
+            max_severity = max((float(h["value"]) for h in holes if h["metric_name"] == "structural_hole_severity"), default=0)
+            insights["structural_gaps"] = {
+                "disconnected_companies": disconnected_count,
+                "max_hole_severity": round(max_severity, 2),
+                "top_gaps": [{"entity": h["entity_id"], "metric": h["metric_name"], "value": float(h["value"])} for h in holes[:5]]
+            }
+
+        # 6. Policy opportunity scores (shared helper handles errors)
+        policies = await fetch_policy_opportunities(pool, limit=5)
+        if policies:
+            insights["policy_opportunities"] = [
+                {"gap": p["entity_id"], "score": float(p["value"])} for p in policies
+            ]
 
         # 7. Interstate comparison
         try:
@@ -272,17 +272,15 @@ class WeeklyBrief(BaseAgent):
         return "\n".join(parts) if len(parts) > 1 else ""
 
     async def run(self, pool):
-        # Aggregate data for the brief — fetch all 4 queries in parallel
         companies, funds, recent_events, scores = await asyncio.gather(
-            pool.fetch("SELECT * FROM companies ORDER BY momentum DESC"),
-            pool.fetch("SELECT * FROM funds"),
-            pool.fetch("SELECT * FROM timeline_events ORDER BY event_date DESC LIMIT 10"),
-            pool.fetch("""SELECT cs.*, c.name FROM computed_scores cs
+            pool.fetch("SELECT name, funding_m, employees, momentum, sectors FROM companies ORDER BY momentum DESC"),
+            pool.fetch("SELECT name, fund_type, allocated_m, deployed_m FROM funds"),
+            pool.fetch("SELECT event_date, company_name, detail FROM timeline_events ORDER BY event_date DESC LIMIT 10"),
+            pool.fetch("""SELECT cs.irs_score, cs.grade, c.name FROM computed_scores cs
                JOIN companies c ON c.id = cs.company_id
                ORDER BY cs.irs_score DESC NULLS LAST LIMIT 10"""),
         )
 
-        # Build summary stats
         total_funding = sum(float(c["funding_m"]) for c in companies)
         total_employees = sum(c["employees"] for c in companies)
         avg_momentum = (
@@ -290,14 +288,10 @@ class WeeklyBrief(BaseAgent):
             if companies
             else 0
         )
-        ssbci_funds = [f for f in funds if f["fund_type"] == "SSBCI"]
-        ssbci_deployed = sum(float(f["deployed_m"]) for f in ssbci_funds)
-        ssbci_allocated = sum(
-            float(f["allocated_m"]) for f in ssbci_funds if f["allocated_m"]
-        )
-        deploy_pct = (
-            round(ssbci_deployed / ssbci_allocated * 100) if ssbci_allocated else 0
-        )
+        ssbci_stats = compute_ssbci_deployment(funds)
+        ssbci_deployed = ssbci_stats["total_deploy"]
+        ssbci_allocated = ssbci_stats["total_alloc"]
+        deploy_pct = ssbci_stats["deploy_pct"]
 
         top_movers = [
             f"{c['name']} (momentum: {c['momentum']})"

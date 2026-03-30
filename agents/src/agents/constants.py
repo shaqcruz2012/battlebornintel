@@ -107,3 +107,6 @@ INTERSTATE_METRICS = [
     "university_spinout_rate",
     "tech_workforce_pct",
 ]
+
+# Default metrics for panel forecasting and scenario simulation
+FORECAST_METRICS = ["funding_m", "employees", "momentum"]

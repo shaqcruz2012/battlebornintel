@@ -8,6 +8,7 @@ Estimates causal treatment effects using three methods:
 All results are saved to analysis_results with analysis_type='causal_evaluation'.
 """
 
+import asyncio
 import logging
 import time
 from datetime import date, datetime, timezone
@@ -67,8 +68,12 @@ class CausalEvaluator(BaseModelAgent):
             ],
         )
 
-        # Load company data
-        companies_df = await self._load_companies(pool)
+        # Load company data, graph edges, and graph metrics in parallel
+        companies_df, edges_df, graph_df = await asyncio.gather(
+            self._load_companies(pool),
+            self._load_graph_edges(pool),
+            self.load_graph_features(pool, node_types=["c"]),
+        )
 
         # Defensive: remove rows with Inf in key numeric columns before analysis
         if not companies_df.empty:
@@ -88,12 +93,6 @@ class CausalEvaluator(BaseModelAgent):
         if companies_df.empty or len(companies_df) < MIN_TREATMENT + MIN_CONTROL:
             logger.warning("Insufficient company data (n=%d).", len(companies_df))
             return {"model_id": model_id, "status": AgentStatus.INSUFFICIENT_DATA}
-
-        # Load graph edges
-        edges_df = await self._load_graph_edges(pool)
-
-        # Load graph metrics
-        graph_df = await self.load_graph_features(pool, node_types=["c"])
 
         results: dict = {
             "analysis_date": datetime.now(timezone.utc).isoformat(),
@@ -172,10 +171,11 @@ class CausalEvaluator(BaseModelAgent):
         return df
 
     async def _load_graph_edges(self, pool) -> pd.DataFrame:
-        """Load all graph edges."""
+        """Load graph edges for relationship types used by causal analyses."""
         rows = await pool.fetch(
             """SELECT source_id, target_id, rel, event_year, matching_score, note
-               FROM graph_edges"""
+               FROM graph_edges
+               WHERE rel IN ('accelerated_by', 'invested_in')"""
         )
         if not rows:
             return pd.DataFrame(
@@ -539,16 +539,18 @@ class CausalEvaluator(BaseModelAgent):
         if graph_df.empty:
             return {"status": AgentStatus.SKIPPED, "reason": "no graph metrics available"}
 
-        # Build 1-hop neighbor sets for company nodes
+        # Build neighbor map using vectorized filtering
         company_nodes = set(companies["node_id"].values)
+        company_edges = edges[
+            edges["source_id"].isin(company_nodes) & edges["target_id"].isin(company_nodes)
+        ]
         neighbor_map: dict[str, list[str]] = {n: [] for n in company_nodes}
-
-        for _, edge in edges.iterrows():
-            src, tgt = str(edge["source_id"]), str(edge["target_id"])
-            if src in neighbor_map and tgt in company_nodes:
-                neighbor_map[src].append(tgt)
-            if tgt in neighbor_map and src in company_nodes:
-                neighbor_map[tgt].append(src)
+        for node_id in company_edges["source_id"].unique():
+            neighbor_map[node_id] = company_edges[company_edges["source_id"] == node_id]["target_id"].tolist()
+        for node_id in company_edges["target_id"].unique():
+            neighbor_map.setdefault(node_id, []).extend(
+                company_edges[company_edges["target_id"] == node_id]["source_id"].tolist()
+            )
 
         # Compute neighbor averages
         # Merge graph metrics onto companies

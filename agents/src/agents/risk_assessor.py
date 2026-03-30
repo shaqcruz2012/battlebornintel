@@ -2,7 +2,7 @@ import asyncio
 import logging
 
 from .base_agent import BaseAgent
-from .utils import extract_json, load_prompt
+from .utils import extract_json, load_prompt, fetch_structural_gaps, fetch_policy_opportunities, compute_ssbci_deployment
 
 logger = logging.getLogger(__name__)
 
@@ -26,11 +26,11 @@ class RiskAssessor(BaseAgent):
             pool.fetch("SELECT name, fund_type, allocated_m, deployed_m FROM funds"),
         )
 
-        # Identify risk signals
-        ssbci = [f for f in funds if f["fund_type"] == "SSBCI"]
-        total_alloc = sum(float(f["allocated_m"]) for f in ssbci if f["allocated_m"])
-        total_deploy = sum(float(f["deployed_m"]) for f in ssbci)
-        deploy_pct = round(total_deploy / total_alloc * 100) if total_alloc > 0 else 0
+        ssbci_stats = compute_ssbci_deployment(funds)
+        ssbci = ssbci_stats["ssbci_funds"]
+        total_alloc = ssbci_stats["total_alloc"]
+        total_deploy = ssbci_stats["total_deploy"]
+        deploy_pct = ssbci_stats["deploy_pct"]
 
         low_momentum = [
             c for c in companies
@@ -44,18 +44,6 @@ class RiskAssessor(BaseAgent):
         concentration = round(top_sector[1] / len(companies) * 100) if companies else 0
 
         # --- Fetch metric_snapshots queries in parallel ---
-        async def _fetch_connectivity():
-            try:
-                return await pool.fetch(
-                    """SELECT entity_id, metric_name, value FROM metric_snapshots
-                       WHERE entity_type = 'company'
-                       AND metric_name IN ('accelerator_connectivity_gap', 'rural_isolation_flag')
-                       AND value > 0"""
-                )
-            except Exception:
-                logger.debug("Could not fetch connectivity metrics.", exc_info=True)
-                return []
-
         async def _fetch_ip_domains():
             try:
                 return await pool.fetch(
@@ -77,22 +65,11 @@ class RiskAssessor(BaseAgent):
                 logger.debug("Could not fetch leverage metrics.", exc_info=True)
                 return []
 
-        async def _fetch_policy():
-            try:
-                return await pool.fetch(
-                    """SELECT entity_id, value FROM metric_snapshots
-                       WHERE metric_name = 'policy_opportunity_score' AND entity_type = 'policy'
-                       ORDER BY value DESC LIMIT 3"""
-                )
-            except Exception:
-                logger.debug("Could not fetch policy metrics.", exc_info=True)
-                return []
-
         connectivity_rows, ip_domain_rows, leverage_rows, policy_rows = await asyncio.gather(
-            _fetch_connectivity(),
+            fetch_structural_gaps(pool),
             _fetch_ip_domains(),
             _fetch_leverage(),
-            _fetch_policy(),
+            fetch_policy_opportunities(pool, limit=3),
         )
 
         # --- Structural hole / connectivity risk ---

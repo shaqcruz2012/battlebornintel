@@ -271,3 +271,61 @@ async def batch_async(
             return await coro_fn(item)
 
     return await asyncio.gather(*[bounded(item) for item in items])
+
+
+# ---------------------------------------------------------------------------
+# 7. fetch_structural_gaps
+# ---------------------------------------------------------------------------
+
+async def fetch_structural_gaps(pool, limit: int = 15) -> list:
+    """Fetch structural hole / connectivity gap metrics from metric_snapshots."""
+    try:
+        return await pool.fetch(
+            """SELECT entity_id, metric_name, value FROM metric_snapshots
+               WHERE metric_name IN ('structural_hole_severity', 'accelerator_connectivity_gap', 'rural_isolation_flag')
+               AND entity_type = 'company' AND value > 0
+               ORDER BY value DESC LIMIT $1""",
+            limit,
+        )
+    except Exception:
+        logging.getLogger(__name__).debug("Could not fetch structural gap data.", exc_info=True)
+        return []
+
+
+# ---------------------------------------------------------------------------
+# 8. fetch_policy_opportunities
+# ---------------------------------------------------------------------------
+
+async def fetch_policy_opportunities(pool, limit: int = 5) -> list:
+    """Fetch top policy opportunity scores from metric_snapshots."""
+    try:
+        return await pool.fetch(
+            """SELECT entity_id, value FROM metric_snapshots
+               WHERE metric_name = 'policy_opportunity_score' AND entity_type = 'policy'
+               ORDER BY value DESC LIMIT $1""",
+            limit,
+        )
+    except Exception:
+        logging.getLogger(__name__).debug("Could not fetch policy opportunities.", exc_info=True)
+        return []
+
+
+# ---------------------------------------------------------------------------
+# 9. compute_ssbci_deployment
+# ---------------------------------------------------------------------------
+
+def compute_ssbci_deployment(funds: list) -> dict:
+    """Compute SSBCI deployment statistics from a funds list.
+
+    Returns dict with keys: ssbci_funds, total_alloc, total_deploy, deploy_pct.
+    """
+    ssbci = [f for f in funds if f["fund_type"] == "SSBCI"]
+    total_alloc = sum(float(f["allocated_m"]) for f in ssbci if f["allocated_m"])
+    total_deploy = sum(float(f["deployed_m"]) for f in ssbci)
+    deploy_pct = round(total_deploy / total_alloc * 100) if total_alloc > 0 else 0
+    return {
+        "ssbci_funds": ssbci,
+        "total_alloc": total_alloc,
+        "total_deploy": total_deploy,
+        "deploy_pct": deploy_pct,
+    }

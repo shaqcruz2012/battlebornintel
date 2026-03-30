@@ -165,7 +165,7 @@ class NodeDiscoveryAgent(BaseAgent):
                 rows = await pool.fetch(f"SELECT {col} FROM {table}")
                 names.update(r[col].lower() for r in rows if r[col])
             except Exception:
-                pass
+                logger.debug("Could not fetch existing node names.", exc_info=True)
         # Also pull person names from graph nodes with p_ prefix
         rows = await pool.fetch("""
             SELECT DISTINCT source_id FROM graph_edges WHERE source_id LIKE 'p_%'

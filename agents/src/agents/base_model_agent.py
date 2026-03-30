@@ -65,7 +65,7 @@ class BaseModelAgent(ABC):
                 e,
             )
             await self._fail_run(pool, str(e))
-            raise
+            raise RuntimeError(f"Agent '{self.agent_name}' failed: {e}") from e
 
     @abstractmethod
     async def run(self, pool, **kwargs):

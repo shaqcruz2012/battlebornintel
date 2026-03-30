@@ -1,7 +1,7 @@
 import logging
 
 from .base_agent import BaseAgent
-from .utils import extract_json, load_prompt
+from .utils import extract_json, load_prompt, fetch_structural_gaps, fetch_policy_opportunities
 
 logger = logging.getLogger(__name__)
 
@@ -69,40 +69,25 @@ class PatternDetector(BaseAgent):
 
         # Fetch structural hole data from metric_snapshots
         structural_holes_text = ""
-        try:
-            holes = await pool.fetch(
-                """SELECT entity_id, metric_name, value FROM metric_snapshots
-                   WHERE metric_name IN ('structural_hole_severity', 'accelerator_connectivity_gap', 'rural_isolation_flag')
-                   AND entity_type = 'company' AND value > 0
-                   ORDER BY value DESC LIMIT 15"""
-            )
-            if holes:
-                disconnected = sum(1 for h in holes if h["metric_name"] == "accelerator_connectivity_gap")
-                rural = sum(1 for h in holes if h["metric_name"] == "rural_isolation_flag")
-                structural_holes_text = f"""
+        holes = await fetch_structural_gaps(pool, limit=15)
+        if holes:
+            disconnected = sum(1 for h in holes if h["metric_name"] == "accelerator_connectivity_gap")
+            rural = sum(1 for h in holes if h["metric_name"] == "rural_isolation_flag")
+            structural_holes_text = f"""
 
 STRUCTURAL GAPS (from T-GNN analysis):
 - Companies without accelerator connections: {disconnected}
 - Rural-isolated companies: {rural}
 - Top structural holes: {', '.join(f"{h['entity_id']}({h['metric_name']}={h['value']})" for h in holes[:5])}"""
-        except Exception:
-            logger.debug("Could not fetch structural hole data.", exc_info=True)
 
         # Fetch policy opportunity context
         policy_text = ""
-        try:
-            policies = await pool.fetch(
-                """SELECT entity_id, value FROM metric_snapshots
-                   WHERE metric_name = 'policy_opportunity_score' AND entity_type = 'policy'
-                   ORDER BY value DESC LIMIT 3"""
-            )
-            if policies:
-                policy_text = f"""
+        policies = await fetch_policy_opportunities(pool, limit=3)
+        if policies:
+            policy_text = f"""
 
 POLICY OPPORTUNITIES:
 {chr(10).join(f"- {p['entity_id']}: score {float(p['value']):.1f}" for p in policies)}"""
-        except Exception:
-            logger.debug("Could not fetch policy data.", exc_info=True)
 
         user_prompt = f"""Analyze these graph structure patterns in Nevada's startup ecosystem:
 

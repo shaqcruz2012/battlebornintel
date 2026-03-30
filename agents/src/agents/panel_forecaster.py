@@ -7,20 +7,20 @@ Writes results to scenario_results and registers itself in the models table.
 
 import logging
 import time
-from datetime import date, datetime, timezone
+from datetime import date
 
 import numpy as np
 import pandas as pd
 
 from .base_model_agent import BaseModelAgent
-from .constants import unit_for_metric
+from .constants import FORECAST_METRICS, unit_for_metric
 from .status import AgentStatus
 from .utils import sanitize_value as _sanitize_value
 
 logger = logging.getLogger(__name__)
 
 # Metrics to forecast
-PANEL_METRICS = ["funding_m", "employees", "momentum"]
+PANEL_METRICS = FORECAST_METRICS
 FORECAST_QUARTERS = 4  # how many quarters ahead
 
 

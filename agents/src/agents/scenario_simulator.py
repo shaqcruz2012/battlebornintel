@@ -185,8 +185,13 @@ class ScenarioSimulator(BaseModelAgent):
         horizon_q = assumptions.get("horizon_quarters", DEFAULT_HORIZON_QUARTERS)
         n_sims = assumptions.get("n_simulations", DEFAULT_N_SIMULATIONS)
 
+        # 0. Load panel data once (shared by _load_baseline and _estimate_noise)
+        panel = await self.load_panel_data(
+            pool, entity_type="company", metric_names=SIMULATION_METRICS
+        )
+
         # 1. Load baseline data
-        baseline = await self._load_baseline(pool)
+        baseline = await self._load_baseline(pool, panel=panel)
         if baseline.empty:
             logger.warning("No baseline data available; skipping scenario '%s'.", name)
             return {"scenario_id": None, "rows_written": 0, "status": AgentStatus.NO_DATA}
@@ -210,7 +215,7 @@ class ScenarioSimulator(BaseModelAgent):
                 )
 
         # 2. Load historical residuals / volatility for noise model
-        noise_params = await self._estimate_noise(pool, baseline)
+        noise_params = await self._estimate_noise(pool, baseline, panel=panel)
 
         # 3. Build intervention schedule
         intervention_schedule = self._build_intervention_schedule(
@@ -269,17 +274,24 @@ class ScenarioSimulator(BaseModelAgent):
     # Data loading
     # ------------------------------------------------------------------
 
-    async def _load_baseline(self, pool) -> pd.DataFrame:
+    async def _load_baseline(self, pool, *, panel: pd.DataFrame | None = None) -> pd.DataFrame:
         """Load current company metrics from metric_snapshots.
 
         Falls back to the companies table when metric_snapshots is sparse.
         Returns a DataFrame with columns:
             entity_id, funding_m, employees, momentum, irs_score, stage, region
+
+        Parameters
+        ----------
+        panel : DataFrame, optional
+            Pre-loaded panel data from load_panel_data(). When provided the
+            redundant DB round-trip is skipped.
         """
         # Try metric_snapshots first (latest period per company per metric)
-        panel = await self.load_panel_data(
-            pool, entity_type="company", metric_names=SIMULATION_METRICS
-        )
+        if panel is None:
+            panel = await self.load_panel_data(
+                pool, entity_type="company", metric_names=SIMULATION_METRICS
+            )
 
         if not panel.empty:
             # Keep only the latest snapshot per entity
@@ -330,19 +342,26 @@ class ScenarioSimulator(BaseModelAgent):
         return merged
 
     async def _estimate_noise(
-        self, pool, baseline: pd.DataFrame
+        self, pool, baseline: pd.DataFrame, *, panel: pd.DataFrame | None = None
     ) -> dict[str, dict[str, float]]:
         """Estimate per-metric noise parameters from historical data.
 
         Returns {metric: {"mean_residual": float, "std": float}}.
         If historical data is insufficient, uses a percentage of the
         baseline mean as a default volatility estimate.
+
+        Parameters
+        ----------
+        panel : DataFrame, optional
+            Pre-loaded panel data from load_panel_data(). When provided the
+            redundant DB round-trip is skipped.
         """
         noise: dict[str, dict[str, float]] = {}
 
-        panel = await self.load_panel_data(
-            pool, entity_type="company", metric_names=SIMULATION_METRICS
-        )
+        if panel is None:
+            panel = await self.load_panel_data(
+                pool, entity_type="company", metric_names=SIMULATION_METRICS
+            )
 
         for metric in SIMULATION_METRICS:
             if not panel.empty and metric in panel.columns:
