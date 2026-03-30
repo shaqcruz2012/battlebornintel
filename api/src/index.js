@@ -37,6 +37,9 @@ import investorsRouter from './routes/investors.js';
 import risksRouter from './routes/risks.js';
 import newsRouter, { setLastRefreshAt } from './routes/news.js';
 import ecosystemRouter from './routes/ecosystem.js';
+import regionalRouter from './routes/regional.js';
+import modelOutputsRouter from './routes/model-outputs.js';
+import macroEventsRouter from './routes/macro-events.js';
 import { initTrackedCompanies, refreshNewsCache } from './services/newsAggregator.js';
 
 const app = express();
@@ -205,6 +208,15 @@ app.use('/api/news', publicLimit, cacheMiddleware('news', 120_000, { cacheContro
 
 // Ecosystem map routes
 app.use('/api/ecosystem', publicLimit, cacheMiddleware('ecosystem', 120_000, { cacheControl: 'public, max-age=120' }), ecosystemRouter);
+
+// Regional economic indicators (FRED + BLS data)
+app.use('/api/regional', publicLimit, cacheMiddleware('regional', 300_000, { cacheControl: 'public, max-age=3600' }), regionalRouter);
+
+// Model outputs and predictions
+app.use('/api/model-outputs', publicLimit, cacheMiddleware('modelOutputs', 120_000, { cacheControl: 'public, max-age=120' }), modelOutputsRouter);
+
+// Macro events and shock exposure
+app.use('/api/macro-events', publicLimit, cacheMiddleware('macroEvents', 300_000, { cacheControl: 'public, max-age=3600' }), macroEventsRouter);
 
 // Analytics routes (Phase 2 engines)
 app.use('/api/analytics', publicLimit, cacheMiddleware('analytics',           300_000, { cacheControl: 'public, max-age=300' }), analyticsRouter);
