@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { memo, useState, useMemo, useEffect } from 'react';
 import { useRiskSignals } from '../../api/hooks';
 import styles from './RiskIntelligencePanel.module.css';
 
@@ -24,13 +24,98 @@ const TEMPORAL_SIGNAL_TYPES = new Set([
 ]);
 
 const SEVERITY_COLORS = {
-  critical: '#ef4444',
+  critical: '#ff6b6b',
   high: '#f97316',
   medium: '#e5b654',
   low: 'rgba(255,255,255,0.4)',
 };
 
 const SEVERITY_ORDER = ['critical', 'high', 'medium', 'low'];
+
+// ── Signal Analysis Context ─────────────────────────────────────────────────
+
+const SIGNAL_CONTEXT = {
+  ecosystem_velocity: {
+    situation:
+      'Ecosystem activity has dropped significantly, indicating potential slowdown in deal flow, partnerships, and innovation output. This pattern often precedes funding dry-ups by 2-3 quarters as investor confidence erodes and company formation rates decline.',
+    framework:
+      'Apply the Ecosystem Lifecycle Framework: classify whether this is a seasonal dip, structural decline, or data collection gap. Compare against national VC activity benchmarks for the same period. Cross-reference with NVSOS filing data and DETR employment figures to distinguish real deceleration from reporting lag.',
+    recommendation:
+      'Conduct an ecosystem health check with GOED stakeholders. If activity decline is real (not a data artifact), consider launching an emergency deal flow stimulus — accelerator demo days, corporate partnership matchmaking, or innovation challenges to reactivate dormant companies.',
+  },
+  stage_pipeline_health: {
+    situation:
+      'A significant number of companies show no stage progression, funding events, or milestone achievements. This suggests companies may be stuck in a "zombie" state — operating but not growing, consuming ecosystem resources without generating returns or employment gains.',
+    framework:
+      'Use Stage Gate Analysis: segment stalled companies by stage (seed vs. growth) and sector. Seed-stage stalls often indicate mentorship gaps; growth-stage stalls suggest capital access barriers. Map each cohort against time-to-milestone benchmarks from comparable ecosystems (Utah, Colorado).',
+    recommendation:
+      'Launch targeted intervention programs: for seed-stage stalls, increase mentorship and technical assistance; for growth-stage, facilitate Series A/B investor introductions and consider bridge financing through SSBCI vehicles.',
+  },
+  funding_gap: {
+    situation:
+      'Specific funding stages show significantly fewer active investors than expected, creating bottlenecks where companies cannot progress to the next stage regardless of their readiness. These gaps often cascade — a Series A gap today produces a Series B drought 18-24 months later.',
+    framework:
+      'Apply Capital Stack Analysis: map available capital by stage against company demand. Identify which stages have supply-demand mismatches and whether gaps are structural (no funds targeting that stage) or cyclical (funds paused deployments). Compare Nevada capital density per stage with peer states.',
+    recommendation:
+      'Work with GOED and fund managers to recruit stage-specific investors. For seed gaps, consider expanding angel network programs; for Series A gaps, create co-investment vehicles that de-risk lead investor positions.',
+  },
+  sector_contagion: {
+    situation:
+      'A sector is showing declining metrics across multiple dimensions — company count, funding velocity, hiring, and deal activity. When one sector weakens, it can pull down adjacent sectors through supply chain dependencies and investor sentiment contagion.',
+    framework:
+      'Apply Sector Dependency Mapping: identify upstream and downstream connections between the declining sector and healthy sectors. Use the ecosystem graph to quantify cross-sector investor overlap and shared talent pools. Determine if decline is sector-specific or macro-driven.',
+    recommendation:
+      'Isolate the affected sector to prevent contagion. Engage sector-specific advisors to diagnose root causes. If decline is structural (e.g., regulatory shift), facilitate company pivots and workforce retraining programs. If cyclical, maintain support infrastructure so the sector can recover.',
+  },
+  ssbci_compliance: {
+    situation:
+      'SSBCI deployment clock is running and fund deployment rates are behind schedule relative to federal milestones. Failure to deploy on time risks clawback of federal matching funds, which would remove a critical component of Nevada\'s early-stage capital stack.',
+    framework:
+      'Apply Deployment Clock Analysis: calculate remaining capital vs. remaining time, accounting for typical deal velocity. Model best-case and worst-case deployment scenarios. Identify whether the bottleneck is deal flow (not enough qualified companies) or process (slow diligence/closing).',
+    recommendation:
+      'Convene an emergency SSBCI deployment review with fund managers. If deal flow is the bottleneck, accelerate pipeline development through targeted outreach. If process is the bottleneck, streamline diligence requirements and consider parallel processing of applications.',
+  },
+  capital_concentration: {
+    situation:
+      'Portfolio concentration exceeds healthy thresholds — too much capital is deployed into too few companies, sectors, or stages. This creates fragility: if a single large position fails, it can impair the entire portfolio and damage investor confidence in the ecosystem.',
+    framework:
+      'Apply Portfolio Diversification Analysis: calculate Herfindahl-Hirschman Index (HHI) across sectors, stages, and individual positions. Compare against target allocation ranges. Identify whether concentration is intentional (strategic bets) or accidental (follow-on bias).',
+    recommendation:
+      'Rebalance new deployments toward underweight sectors and stages. Establish concentration limits in fund mandates (e.g., no single company > 15% of fund, no single sector > 30%). For existing concentrated positions, explore syndication or secondary sales to reduce exposure.',
+  },
+  momentum_decay: {
+    situation:
+      'Company-level momentum indicators are declining — hiring has slowed, press mentions have dropped, and product milestones are being missed. Momentum decay is often the earliest signal of a company entering distress, typically appearing 6-9 months before financial metrics deteriorate.',
+    framework:
+      'Apply the Leading Indicator Framework: weight recent momentum data more heavily than lagging financial metrics. Segment companies by decay severity (mild slowdown vs. full stall) and identify common patterns among decaying companies (sector, stage, investor profile).',
+    recommendation:
+      'Flag decaying companies for proactive portfolio management. Conduct wellness checks with founders to identify root causes (market, team, capital, product). Deploy targeted support: executive coaching, customer introductions, or bridge capital as appropriate.',
+  },
+  network_fragility: {
+    situation:
+      'The ecosystem graph shows structural weakness — key nodes (connector companies, active investors, serial mentors) have reduced their engagement, creating the risk that network partitions could isolate subgroups of companies from deal flow and knowledge sharing.',
+    framework:
+      'Apply Network Resilience Analysis: compute betweenness centrality and identify single points of failure. Model what happens if the top 3-5 connector nodes disengage. Measure clustering coefficient to assess whether subnetworks are self-sustaining or dependent on hub nodes.',
+    recommendation:
+      'Strengthen network redundancy by cultivating backup connectors in each subcluster. Launch cross-sector networking events to create alternative pathways. Engage disengaging connectors to understand and address their reasons for withdrawal.',
+  },
+  investor_flight: {
+    situation:
+      'Active investor count is declining as investors reduce their Nevada-focused activity or exit the ecosystem entirely. Investor flight reduces competition for deals, which counterintuitively hurts companies by lowering valuations and reducing the urgency to close rounds.',
+    framework:
+      'Apply Investor Retention Analysis: categorize departing investors by type (angel, VC, corporate), investment stage, and reason for departure. Determine whether exits are due to poor returns, better opportunities elsewhere, or ecosystem-specific friction (regulatory, talent, deal flow).',
+    recommendation:
+      'Conduct exit interviews with departing investors to identify addressable friction points. Launch an investor attraction campaign highlighting recent wins, improved infrastructure, and SSBCI co-investment opportunities. Consider creating a fund-of-funds vehicle to anchor institutional capital.',
+  },
+  stale_intelligence: {
+    situation:
+      'A significant portion of tracked entities have not been updated recently, meaning current risk assessments may be based on outdated information. Stale data creates blind spots where emerging risks go undetected until they become crises.',
+    framework:
+      'Apply Data Freshness Analysis: calculate the age distribution of entity records and identify clusters of staleness. Determine whether staleness is uniform (system-wide collection issue) or concentrated (specific sectors or stages). Assess the impact on risk model confidence intervals.',
+    recommendation:
+      'Prioritize data refresh for high-risk and high-value entities. Investigate and repair any broken data collection pipelines. For entities with chronic staleness, evaluate whether they should be reclassified as inactive or flagged for manual verification.',
+  },
+};
 
 const HEATMAP_DIMS = [
   { key: 'momentum', label: 'MOM' },
@@ -121,6 +206,48 @@ function thresholdRatio(value, threshold) {
   return Math.min(Math.abs(value) / (Math.abs(threshold) * 2), 1);
 }
 
+function SignalAnalysis({ signalType }) {
+  const [open, setOpen] = useState(false);
+  const ctx = SIGNAL_CONTEXT[signalType];
+
+  if (!ctx) return null;
+
+  function handleToggle(e) {
+    e.stopPropagation();
+    setOpen((prev) => !prev);
+  }
+
+  return (
+    <div className={styles.analysisSection}>
+      <button
+        className={styles.analysisToggle}
+        onClick={handleToggle}
+        aria-expanded={open}
+        type="button"
+      >
+        <span className={styles.analysisToggleIcon}>{open ? '\u25BE' : '\u25B8'}</span>
+        VIEW ANALYSIS
+      </button>
+      {open && (
+        <div className={styles.analysisBody}>
+          <div className={styles.analysisBlock}>
+            <span className={styles.analysisLabel}>SITUATION</span>
+            <p className={styles.analysisText}>{ctx.situation}</p>
+          </div>
+          <div className={styles.analysisBlock}>
+            <span className={styles.analysisLabel}>FRAMEWORK</span>
+            <p className={styles.analysisText}>{ctx.framework}</p>
+          </div>
+          <div className={styles.analysisBlock}>
+            <span className={styles.analysisLabel}>RECOMMENDATION</span>
+            <p className={styles.analysisText}>{ctx.recommendation}</p>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function SignalCard({ signal, expanded, onToggle }) {
   const color = SEVERITY_COLORS[signal.severity];
   const icon = SIGNAL_ICONS[signal.signal_type] || '\u25CF';
@@ -134,6 +261,9 @@ function SignalCard({ signal, expanded, onToggle }) {
       className={`${styles.signalCard} ${expanded ? styles.signalCardExpanded : ''} ${isTemporal ? styles.signalCardTemporal : ''}`}
       style={{ borderLeftColor: color }}
       onClick={onToggle}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onToggle(); } }}
     >
       <div className={styles.signalHeader}>
         <span className={styles.signalIcon} style={{ color }}>{icon}</span>
@@ -213,6 +343,9 @@ function SignalCard({ signal, expanded, onToggle }) {
           <div className={styles.signalRecommendation}>
             {signal.recommendation}
           </div>
+
+          {/* Expandable analysis context */}
+          <SignalAnalysis signalType={signal.signal_type} />
         </div>
       )}
     </div>
@@ -233,6 +366,22 @@ function RiskHeatmap({ companies }) {
   return (
     <div className={styles.heatmapSection}>
       <div className={styles.heatmapTitle}>IRS Dimension Heatmap</div>
+      <details className={styles.heatmapMethodology}>
+        <summary className={styles.methodologySummary}>METHODOLOGY &amp; KEY</summary>
+        <p>
+          The IRS (Investment Readiness Score) is a composite 0-100 metric computed across 7 dimensions.
+          Data sources include verified fund reports, company filings, hiring signals, and sector heat indices.
+        </p>
+        <div className={styles.heatmapMethodologyDims}>
+          <span>MOM = Momentum (20%) — Growth velocity from recent activity and market traction</span>
+          <span>FV = Funding Velocity (15%) — Capital raised relative to stage benchmarks</span>
+          <span>MKT = Market Timing (10%) — Sector heat and market opportunity alignment</span>
+          <span>HIRE = Hiring Signal (12%) — Workforce expansion and talent acquisition patterns</span>
+          <span>DQ = Data Quality (8%) — Completeness and verifiability of company data</span>
+          <span>NET = Network Access (8%) — Connections to funds, accelerators, and ecosystem orgs</span>
+          <span>TEAM = Team Strength (15%) — Team size, experience, and leadership indicators</span>
+        </div>
+      </details>
       <div className={styles.heatmapGrid}>
         <table className={styles.heatmapTable}>
           <thead>
@@ -274,10 +423,13 @@ function RiskHeatmap({ companies }) {
 
 // ── Main Component ───────────────────────────────────────────────────────────
 
-export function RiskIntelligencePanel({ companies = [] }) {
+export const RiskIntelligencePanel = memo(function RiskIntelligencePanel({ companies = [] }) {
   const { data, isLoading } = useRiskSignals();
   const [expandedId, setExpandedId] = useState(null);
   const [activeFilter, setActiveFilter] = useState(null);
+
+  // Reset filter when data changes to prevent stale selection
+  useEffect(() => { setActiveFilter(null); }, [data]);
 
   const { filteredSignals, temporalSignals } = useMemo(() => {
     if (!data?.signals) return { filteredSignals: [], temporalSignals: [] };
@@ -301,7 +453,7 @@ export function RiskIntelligencePanel({ companies = [] }) {
           </div>
         </div>
         <div className={styles.body}>
-          <div className={styles.loading}>COMPUTING RISK SIGNALS...</div>
+          <div className={styles.loading} role="status" aria-busy="true">COMPUTING RISK SIGNALS...</div>
         </div>
       </div>
     );
@@ -391,4 +543,4 @@ export function RiskIntelligencePanel({ companies = [] }) {
       </div>
     </div>
   );
-}
+});

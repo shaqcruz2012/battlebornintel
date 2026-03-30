@@ -6,14 +6,11 @@
   gap: 0;
   margin: var(--space-sm) 0 var(--space-xs);
   border-bottom: 1px solid var(--border-medium);
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-  scrollbar-width: none;          /* Firefox */
+  overflow: visible;
+  position: relative;
 }
 
-.tabs::-webkit-scrollbar {
-  display: none;                  /* Chrome/Safari */
-}
+/* Scrollbar hidden — tabs use overflow menu instead of scrolling */
 
 .tab {
   flex-shrink: 0;
@@ -53,4 +50,94 @@
   height: 2px;
   background: var(--accent-teal);
   border-radius: 1px 1px 0 0;
+}
+
+/* ── Overflow menu (Palantir-style) ──────────────────────── */
+
+.overflowWrap {
+  position: relative;
+  flex-shrink: 0;
+  z-index: 9999;
+}
+
+.overflowTrigger {
+  padding: 6px 10px;
+  display: flex;
+  align-items: center;
+}
+
+.overflowOpen {
+  color: var(--accent-teal);
+}
+
+.hamburger {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 14px;
+}
+
+.hamburger span {
+  display: block;
+  height: 1.5px;
+  width: 100%;
+  background: currentColor;
+  border-radius: 1px;
+  transition: transform 0.15s ease, opacity 0.15s ease;
+}
+
+.overflowOpen .hamburger span:nth-child(1) {
+  transform: translateY(3.5px) rotate(45deg);
+}
+
+.overflowOpen .hamburger span:nth-child(2) {
+  opacity: 0;
+}
+
+.overflowOpen .hamburger span:nth-child(3) {
+  transform: translateY(-3.5px) rotate(-45deg);
+}
+
+.overflowMenu {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  background: #0d1117;
+  border: 1px solid #1c2733;
+  border-radius: 4px;
+  padding: 4px 0;
+  min-width: 180px;
+  z-index: 9999;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(69, 215, 198, 0.08);
+}
+
+.overflowItem {
+  display: block;
+  width: 100%;
+  padding: 7px 14px;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: var(--weight-medium);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--text-disabled);
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  transition: color 0.1s ease, background 0.1s ease;
+}
+
+.overflowItem:hover {
+  color: var(--text-primary);
+  background: rgba(69, 215, 198, 0.06);
+}
+
+.overflowActive {
+  color: var(--accent-teal);
+}
+
+.overflowActive::before {
+  content: '\25B8 ';
+  font-size: 7px;
 }

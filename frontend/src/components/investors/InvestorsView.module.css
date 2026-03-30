@@ -296,6 +296,76 @@
   color: var(--text-secondary);
 }
 
+/* ── Fund portfolio expansion ────────────────────────── */
+
+.fundPortfolio {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.fundPortfolioHeader {
+  font-family: 'IBM Plex Mono', var(--font-mono), monospace;
+  font-size: 8px;
+  font-weight: 600;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: #45d7c6;
+  margin-bottom: 6px;
+}
+
+.fundPortfolioList {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 300px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(69, 215, 198, 0.15) transparent;
+}
+
+.fundPortfolioItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+}
+
+.fundPortfolioItem:last-child {
+  border-bottom: none;
+}
+
+.fundPortfolioName {
+  font-family: 'IBM Plex Mono', var(--font-mono), monospace;
+  font-size: 9px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.7);
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fundPortfolioStage {
+  font-family: 'IBM Plex Mono', var(--font-mono), monospace;
+  font-size: 8px;
+  color: rgba(255, 255, 255, 0.35);
+  min-width: 50px;
+  text-align: center;
+}
+
+.fundPortfolioFunding {
+  font-family: 'IBM Plex Mono', var(--font-mono), monospace;
+  font-size: 9px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.5);
+  min-width: 60px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
 /* ── External investors table ─────────────────────────── */
 
 .investorTable {
@@ -336,6 +406,8 @@
 .investorRow {
   cursor: pointer;
   transition: background var(--transition-fast);
+  content-visibility: auto;
+  contain-intrinsic-size: 0 50px;
 }
 
 .investorRow:hover {

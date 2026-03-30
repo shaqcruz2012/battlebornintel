@@ -1,12 +1,12 @@
-import { useEffect } from 'react';
+import { memo, useEffect } from 'react';
 import { useStakeholderActivities } from '../../api/hooks';
 import { useQueryClient } from '@tanstack/react-query';
 import { EventCard } from '../shared/EventCard';
 import styles from './TerminalGrid.module.css';
 
-export function LiveActivityFeed() {
+export const LiveActivityFeed = memo(function LiveActivityFeed() {
   const queryClient = useQueryClient();
-  const { data: activities = [], isLoading } = useStakeholderActivities({ limit: 20 });
+  const { data: activities = [], isLoading, isError } = useStakeholderActivities({ limit: 20 });
 
   // Auto-refresh every 60 seconds
   useEffect(() => {
@@ -26,12 +26,16 @@ export function LiveActivityFeed() {
     );
   }
 
+  if (isError) {
+    return <div className={styles.activityEmpty}>FAILED TO LOAD ACTIVITY DATA</div>;
+  }
+
   if (!activities.length) {
     return <div className={styles.activityEmpty}>NO ACTIVITY DATA</div>;
   }
 
   return (
-    <>
+    <div aria-live="polite" aria-label="Live ecosystem activity feed">
       {activities.map((a, i) => (
         <EventCard
           key={a.id || i}
@@ -53,6 +57,6 @@ export function LiveActivityFeed() {
           compact
         />
       ))}
-    </>
+    </div>
   );
-}
+});

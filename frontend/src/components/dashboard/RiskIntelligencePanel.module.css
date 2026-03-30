@@ -3,6 +3,7 @@
 .wrapper {
   grid-column: 1 / -1;
   margin-top: var(--space-sm);
+  contain: content;
 }
 
 /* ── Header ─────────────────────────────────────────────── */
@@ -94,10 +95,9 @@
   border-radius: 0 0 4px 4px;
   padding: 12px;
   display: grid;
-  grid-template-columns: 200px 1fr 1fr;
-  gap: 12px;
+  grid-template-columns: 160px 1fr 1.2fr;
+  gap: 16px;
   min-height: 200px;
-  max-height: 420px;
 }
 
 /* ── Risk Score Display ─────────────────────────────────── */
@@ -519,6 +519,73 @@
   letter-spacing: 0.5px;
 }
 
+/* ── Signal Analysis (expandable context) ────────────────── */
+
+.analysisSection {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(69, 215, 198, 0.08);
+}
+
+.analysisToggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-family: 'IBM Plex Mono', var(--font-mono), monospace;
+  font-size: 7px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: #45d7c6;
+  background: rgba(69, 215, 198, 0.04);
+  border: 1px solid rgba(69, 215, 198, 0.15);
+  border-radius: 2px;
+  padding: 3px 8px;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.analysisToggle:hover {
+  background: rgba(69, 215, 198, 0.08);
+  border-color: rgba(69, 215, 198, 0.3);
+}
+
+.analysisToggleIcon {
+  font-size: 8px;
+  line-height: 1;
+}
+
+.analysisBody {
+  margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.analysisBlock {
+  padding-left: 8px;
+  border-left: 2px solid rgba(69, 215, 198, 0.25);
+}
+
+.analysisLabel {
+  display: block;
+  font-family: 'IBM Plex Mono', var(--font-mono), monospace;
+  font-size: 7px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: #45d7c6;
+  margin-bottom: 3px;
+}
+
+.analysisText {
+  font-family: 'IBM Plex Mono', var(--font-mono), monospace;
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.55);
+  line-height: 1.6;
+  margin: 0;
+}
+
 /* ── Risk Heatmap ───────────────────────────────────────── */
 
 .heatmapSection {
@@ -534,8 +601,54 @@
   letter-spacing: 1.5px;
   text-transform: uppercase;
   color: rgba(255, 255, 255, 0.4);
+  margin-bottom: 0;
+  flex-shrink: 0;
+}
+
+.heatmapMethodology {
+  font-family: 'IBM Plex Mono', var(--font-mono), monospace;
+  font-size: 9px;
+  line-height: 1.5;
+  color: rgba(255, 255, 255, 0.4);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  margin-top: 6px;
+  padding-top: 4px;
   margin-bottom: 8px;
   flex-shrink: 0;
+}
+
+.methodologySummary {
+  font-size: 7px;
+  font-weight: 600;
+  letter-spacing: 1.5px;
+  color: rgba(69, 215, 198, 0.5);
+  cursor: pointer;
+  list-style: none;
+  padding: 2px 0;
+}
+
+.methodologySummary::-webkit-details-marker {
+  display: none;
+}
+
+.methodologySummary::before {
+  content: '\25B8 ';
+  font-size: 7px;
+}
+
+.heatmapMethodology[open] > .methodologySummary::before {
+  content: '\25BE ';
+}
+
+.heatmapMethodology p {
+  margin: 0 0 6px 0;
+}
+
+.heatmapMethodologyDims {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  font-size: 9px;
 }
 
 .heatmapGrid {
@@ -628,10 +741,21 @@
 
 /* ── Responsive ─────────────────────────────────────────── */
 
-@media (max-width: 1200px) {
+@media (max-width: 1400px) {
+  .body {
+    grid-template-columns: 140px 1fr;
+    grid-template-rows: auto auto;
+  }
+
+  .heatmapSection {
+    grid-column: 1 / -1;
+    max-height: 300px;
+  }
+}
+
+@media (max-width: 1024px) {
   .body {
     grid-template-columns: 1fr;
-    max-height: none;
   }
 
   .scoreSection {
@@ -641,5 +765,112 @@
     padding-bottom: 12px;
     flex-direction: row;
     justify-content: space-around;
+    gap: 16px;
+  }
+
+  .heatmapSection {
+    max-height: 350px;
+  }
+
+  .heatmapMethodology {
+    font-size: 8px;
+  }
+}
+
+@media (max-width: 600px) {
+  .wrapper {
+    margin-top: var(--space-xs, 4px);
+  }
+
+  .header {
+    flex-direction: column;
+    gap: 6px;
+    align-items: flex-start;
+    padding: 8px 10px;
+  }
+
+  .body {
+    padding: 8px;
+    gap: 10px;
+  }
+
+  .scoreSection {
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 12px;
+    padding-bottom: 10px;
+  }
+
+  .scoreValue {
+    font-size: 36px;
+  }
+
+  .signalList {
+    max-height: 400px;
+  }
+
+  .signalTitle {
+    font-size: 8px;
+  }
+
+  .signalDescription {
+    font-size: 7px;
+  }
+
+  .heatmapSection {
+    max-height: none;
+  }
+
+  .heatmapGrid {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .heatmapTable {
+    min-width: 500px;
+  }
+
+  .heatmapMethodology {
+    font-size: 8px;
+  }
+
+  .heatmapMethodologyDims {
+    font-size: 8px;
+  }
+
+  .filterBar {
+    flex-wrap: wrap;
+  }
+
+  .filterPill {
+    font-size: 7px;
+    padding: 4px 8px;
+    min-height: 28px;
+  }
+
+  .analysisText {
+    font-size: 9px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .breachedBadge {
+    animation: none !important;
+  }
+
+  .gradientMarker {
+    transition: none !important;
+  }
+
+  .metricFill {
+    transition: none !important;
+  }
+
+  .signalCard,
+  .filterPill,
+  .heatmapRow,
+  .analysisToggle {
+    transition: none !important;
   }
 }

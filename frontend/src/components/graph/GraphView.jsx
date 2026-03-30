@@ -1,6 +1,6 @@
 import { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import { useFilters } from '../../hooks/useFilters';
-import { useGraphLight, useGraph, useGraphMetrics, usePredictedLinks } from '../../api/hooks';
+import { useGraphLight, useGraph, useGraphMetrics, usePredictedLinks, useGraphAnalytics } from '../../api/hooks';
 import { useGraphLayout } from '../../hooks/useGraphLayout';
 import { GraphOverlayControls } from './GraphControls';
 import { GraphCanvas } from './GraphCanvas';
@@ -147,6 +147,21 @@ export function GraphView() {
   // Fetch predicted links only when that overlay is active (lazy load)
   const { data: predictedLinksData } = usePredictedLinks(30, overlays.predictedLinks);
 
+  // Fetch graph analytics for K-means cluster coloring
+  const { data: analyticsData } = useGraphAnalytics();
+
+  // Build kmeans map: nodeId -> { cluster, label }
+  const kmeansMap = useMemo(() => {
+    if (!analyticsData) return {};
+    const map = {};
+    analyticsData.forEach(a => {
+      if (a.kmeans_cluster != null) {
+        map[a.node_id] = { cluster: a.kmeans_cluster, label: a.kmeans_label };
+      }
+    });
+    return map;
+  }, [analyticsData]);
+
   // Compute D3 layout in Web Worker to keep UI responsive
   const rawNodes = graphData?.nodes || [];
   const rawEdges = graphData?.edges || [];
@@ -277,9 +292,10 @@ export function GraphView() {
               nodeDegreeMap={nodeDegreeMap}
               selectedCluster={selectedCluster}
               onSelectCluster={setSelectedCluster}
+              kmeansMap={kmeansMap}
             />
             {/* Left overlay: legend (minimizable) */}
-            <GraphLegend colorMode={colorMode} nodeFilters={nodeFilters} layout={layout} />
+            <GraphLegend colorMode={colorMode} nodeFilters={nodeFilters} layout={layout} kmeansMap={kmeansMap} />
             {/* Right overlay: node/color/edge controls + search (minimizable) */}
             <GraphOverlayControls
               nodeFilters={nodeFilters}

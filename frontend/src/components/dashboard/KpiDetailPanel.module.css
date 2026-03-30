@@ -759,3 +759,23 @@
     grid-template-columns: 1fr 1fr;
   }
 }
+
+@media (prefers-reduced-motion: reduce) {
+  .panelWrapper {
+    animation: none !important;
+  }
+
+  .barFill {
+    transition: none !important;
+  }
+
+  .gradientMarker {
+    transition: none !important;
+  }
+
+  .closeBtn,
+  .miniRow,
+  .metricBox {
+    transition: none !important;
+  }
+}

@@ -1,26 +1,10 @@
 import { useState, useMemo } from 'react';
-import { useQuery } from '@tanstack/react-query';
 import { MainGrid } from '../layout/AppShell';
 import { POLICY_GAPS } from '../../data/policyGaps';
-import { useEcosystemGaps } from '../../api/hooks.js';
+import { useStructuralHoles, useEcosystemGaps } from '../../api/hooks.js';
+import { useFilters } from '../../hooks/useFilters';
+import { GapBriefPanel } from './GapBriefPanel';
 import styles from './EcosystemGaps.module.css';
-
-/* ── API fetch ────────────────────────────────────────────────────────────── */
-
-async function fetchStructuralHoles() {
-  const res = await fetch('/api/analytics/structural-holes');
-  if (!res.ok) throw new Error(`API error ${res.status}`);
-  const json = await res.json();
-  return json.data;
-}
-
-function useStructuralHoles() {
-  return useQuery({
-    queryKey: ['analytics', 'structural-holes'],
-    queryFn: fetchStructuralHoles,
-    staleTime: 300_000,
-  });
-}
 
 /* ── Helpers ──────────────────────────────────────────────────────────────── */
 
@@ -65,7 +49,7 @@ function StatsStrip({ stats }) {
   );
 }
 
-function BridgeCards({ bridges }) {
+function BridgeCards({ bridges, onSelect }) {
   const [showAll, setShowAll] = useState(false);
   const visible = showAll ? bridges : bridges.slice(0, 12);
 
@@ -75,7 +59,7 @@ function BridgeCards({ bridges }) {
     <>
       <div className={styles.bridgeGrid}>
         {visible.map((b) => (
-          <div key={b.nodeId} className={styles.bridgeCard}>
+          <div key={b.nodeId} className={styles.bridgeCard} style={{ cursor: 'pointer' }} onClick={() => onSelect(b, 'bridge')}>
             <div className={styles.bridgeTop}>
               <span className={styles.bridgeName} title={b.label}>{b.label}</span>
               <span className={styles.bridgeType}>{b.type}</span>
@@ -127,13 +111,13 @@ function BridgeCards({ bridges }) {
   );
 }
 
-function IslandList({ islands, bridgeNodeIds }) {
+function IslandList({ islands, bridgeNodeIds, onSelect }) {
   if (islands.length === 0) return <p className={styles.sectionDesc}>No isolated communities found.</p>;
 
   return (
     <div className={styles.communityMap}>
       {islands.map((island) => (
-        <div key={island.communityId} className={styles.communityBoxIsland}>
+        <div key={island.communityId} className={styles.communityBoxIsland} style={{ cursor: 'pointer' }} onClick={() => onSelect(island, 'island')}>
           <div className={styles.communityBoxHeader}>
             <span className={styles.communityId} title={`Community ${island.communityId}`}>{island.communityName || `Community ${island.communityId}`}</span>
             <span className={styles.communityCount}>
@@ -163,7 +147,7 @@ function IslandList({ islands, bridgeNodeIds }) {
   );
 }
 
-function GapsTable({ gaps }) {
+function GapsTable({ gaps, onSelect }) {
   const [showAll, setShowAll] = useState(false);
   const visible = showAll ? gaps : gaps.slice(0, 20);
 
@@ -185,7 +169,7 @@ function GapsTable({ gaps }) {
           </thead>
           <tbody>
             {visible.map((g, i) => (
-              <tr key={`${g.communityA}-${g.communityB}`}>
+              <tr key={`${g.communityA}-${g.communityB}`} style={{ cursor: 'pointer' }} onClick={() => onSelect(g, 'missing')}>
                 <td>
                   <span className={styles.gapIndicator}>
                     <span className={styles.gapDot} />
@@ -204,6 +188,10 @@ function GapsTable({ gaps }) {
                 <td>{g.interEdges}</td>
                 <td className={severityClass(g.gapSeverity)}>
                   {g.gapSeverity.toFixed(1)}
+                  {' '}
+                  <span className={styles.severityLabel}>
+                    {g.gapSeverity >= 5 ? 'HIGH' : g.gapSeverity >= 2 ? 'MED' : 'LOW'}
+                  </span>
                 </td>
                 <td>
                   <div className={styles.gapBridgeList}>
@@ -271,7 +259,7 @@ function exportGapsCsv(gaps) {
 
 /* ── Framework Gaps (policy overlay) ─────────────────────────────────────── */
 
-function FrameworkGapsSection({ gapMetrics }) {
+function FrameworkGapsSection({ gapMetrics, onSelect }) {
   return (
     <div>
       <h3 className={styles.sectionHeader}>Framework Gaps (Policy Analysis)</h3>
@@ -294,7 +282,8 @@ function FrameworkGapsSection({ gapMetrics }) {
             <div
               key={gap.id}
               className={styles.frameworkCard}
-              style={{ borderLeftColor: gap.color }}
+              style={{ borderLeftColor: gap.color, cursor: 'pointer' }}
+              onClick={() => onSelect(gap, 'framework')}
             >
               <div className={styles.frameworkHeader}>
                 <span className={styles.frameworkName}>{gap.label}</span>
@@ -332,8 +321,18 @@ function FrameworkGapsSection({ gapMetrics }) {
 /* ── Main component ───────────────────────────────────────────────────────── */
 
 export function EcosystemGaps() {
-  const { data, isLoading, error } = useStructuralHoles();
-  const { data: gapMetrics } = useEcosystemGaps();
+  const { filters } = useFilters();
+  const regionParam = { region: filters.region };
+  const { data, isLoading, error } = useStructuralHoles(regionParam);
+  const { data: gapMetrics } = useEcosystemGaps(regionParam);
+
+  const [selectedGap, setSelectedGap] = useState(null);
+  const [selectedGapType, setSelectedGapType] = useState(null);
+
+  const handleSelectGap = (gap, type) => {
+    setSelectedGap(gap);
+    setSelectedGapType(type);
+  };
 
   const bridges = data?.bridges ?? [];
   const islands = data?.islands ?? [];
@@ -348,7 +347,25 @@ export function EcosystemGaps() {
   if (isLoading) {
     return (
       <MainGrid>
-        <div className={styles.loading}>Analyzing structural holes...</div>
+        <div className={styles.container}>
+          <div className={styles.header}>
+            <div className={styles.skeletonTitle} />
+            <div className={styles.skeletonSubtitle} />
+          </div>
+          <div className={styles.statsStrip}>
+            {[1, 2, 3, 4, 5, 6].map(i => (
+              <div key={i} className={`${styles.statCard} ${styles.skeletonPulse}`}>
+                <span className={styles.statLabel}>&nbsp;</span>
+                <span className={styles.statValue}>&nbsp;</span>
+              </div>
+            ))}
+          </div>
+          <div className={styles.skeletonCards}>
+            {[1, 2, 3, 4, 5, 6].map(i => (
+              <div key={i} className={styles.skeletonCard} />
+            ))}
+          </div>
+        </div>
       </MainGrid>
     );
   }
@@ -396,7 +413,7 @@ export function EcosystemGaps() {
         <StatsStrip stats={stats} />
 
         {/* Framework Gaps — research-validated policy gaps */}
-        <FrameworkGapsSection gapMetrics={gapMetrics} />
+        <FrameworkGapsSection gapMetrics={gapMetrics} onSelect={handleSelectGap} />
 
         {/* Bridge nodes */}
         <section>
@@ -404,7 +421,7 @@ export function EcosystemGaps() {
           <p className={styles.sectionDesc}>
             Nodes with low Burt constraint spanning 3+ communities — they broker connections across otherwise disconnected groups.
           </p>
-          <BridgeCards bridges={bridges} />
+          <BridgeCards bridges={bridges} onSelect={handleSelectGap} />
         </section>
 
         {/* Isolated communities */}
@@ -413,7 +430,7 @@ export function EcosystemGaps() {
           <p className={styles.sectionDesc}>
             Clusters with fewer than 2 external edges — potential blind spots in the ecosystem.
           </p>
-          <IslandList islands={islands} bridgeNodeIds={bridgeNodeIds} />
+          <IslandList islands={islands} bridgeNodeIds={bridgeNodeIds} onSelect={handleSelectGap} />
         </section>
 
         {/* Ecosystem gaps */}
@@ -422,9 +439,18 @@ export function EcosystemGaps() {
           <p className={styles.sectionDesc}>
             Community pairs with internal density but zero or minimal inter-community edges — structural holes where new connections would have outsized impact.
           </p>
-          <GapsTable gaps={gaps} />
+          <GapsTable gaps={gaps} onSelect={handleSelectGap} />
         </section>
       </div>
+
+      {/* Gap Brief slide-in panel */}
+      {selectedGap && (
+        <GapBriefPanel
+          gap={selectedGap}
+          type={selectedGapType}
+          onClose={() => setSelectedGap(null)}
+        />
+      )}
     </MainGrid>
   );
 }

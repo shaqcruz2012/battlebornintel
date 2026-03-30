@@ -402,3 +402,25 @@
 .compact .expandChevron {
   display: none;
 }
+
+@media (prefers-reduced-motion: reduce) {
+  .card {
+    transition: none !important;
+  }
+
+  .cardBar {
+    transition: none !important;
+  }
+
+  .detailSection {
+    animation: none !important;
+  }
+
+  .sourceLink {
+    transition: none !important;
+  }
+
+  .expandChevron {
+    transition: none !important;
+  }
+}

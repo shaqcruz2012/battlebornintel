@@ -139,7 +139,13 @@ export function EventCard({ event, isExpanded, onToggle, compact = false }) {
     <div className={cardClass}>
       <div className={styles.cardBar} style={{ backgroundColor: barColor }} />
       <div className={styles.cardBody}>
-        <div className={styles.cardClickArea} onClick={handleCardClick} role="button" tabIndex={0}>
+        <div
+          className={styles.cardClickArea}
+          onClick={handleCardClick}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleCardClick(); } }}
+        >
           <div className={styles.cardMeta}>
             <div className={styles.cardMetaLeft}>
               <span className={styles.cardLiveIndicator} />

@@ -1,3 +1,5 @@
+// NOTE: For future optimization, split into separate FilterContext and FilterActionsContext
+// to allow components that only dispatch actions to avoid re-rendering on filter changes.
 import { createContext, useContext, useState, useMemo } from 'react';
 
 const FilterContext = createContext(null);

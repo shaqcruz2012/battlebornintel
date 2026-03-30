@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { NODE_CFG } from '../../data/constants';
 import { FilterChip } from '../shared/FilterChip';
 import { GraphSearchDropdown } from './GraphSearchDropdown';
@@ -12,6 +12,7 @@ const NODE_TYPES = Object.entries(NODE_CFG).map(([key, cfg]) => ({
 const COLOR_MODES = [
   { value: 'type', label: 'By Type' },
   { value: 'community', label: 'Community' },
+  { value: 'attribute', label: 'K-Means' },
 ];
 
 const STAKEHOLDER_PRESETS = [
@@ -74,7 +75,8 @@ export function GraphOverlayControls({
   nodes = [],
   onFocusNode,
 }) {
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsed, setCollapsed] = useState(() => sessionStorage.getItem('graphControlsCollapsed') === 'true');
+  useEffect(() => { sessionStorage.setItem('graphControlsCollapsed', String(collapsed)); }, [collapsed]);
   const activePreset = STAKEHOLDER_PRESETS.find((p) => matchesPreset(nodeFilters, p));
 
   if (collapsed) {

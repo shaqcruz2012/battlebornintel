@@ -1,0 +1,210 @@
+/* ── GapBriefPanel: Slide-in one-page brief ──────────── */
+
+.backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  z-index: 900;
+  animation: fadeIn 150ms ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.panel {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: 480px;
+  max-width: 100vw;
+  height: 100vh;
+  background: #0a0e14;
+  border-left: 1px solid var(--border-subtle, #3D3D48);
+  z-index: 910;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  animation: slideIn 200ms ease;
+}
+
+@keyframes slideIn {
+  from { transform: translateX(100%); }
+  to   { transform: translateX(0); }
+}
+
+/* ── Header row ──────────────────────────────────────── */
+
+.headerRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px 12px;
+  border-bottom: 1px solid var(--border-subtle, #3D3D48);
+  flex-shrink: 0;
+}
+
+.closeBtn {
+  background: none;
+  border: 1px solid var(--border-subtle, #3D3D48);
+  color: var(--text-secondary, #6B6A72);
+  font-family: var(--font-mono, 'JetBrains Mono', monospace);
+  font-size: 12px;
+  padding: 4px 10px;
+  border-radius: 3px;
+  cursor: pointer;
+  letter-spacing: 0.04em;
+}
+
+.closeBtn:hover {
+  color: var(--text-primary, #D4D0C8);
+  border-color: var(--text-secondary, #6B6A72);
+}
+
+.typeBadge {
+  font-family: var(--font-mono, 'JetBrains Mono', monospace);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  padding: 3px 10px;
+  border-radius: 3px;
+  color: #0a0e14;
+  font-weight: 600;
+}
+
+.typeBadgeFramework {
+  composes: typeBadge;
+  background: #9b8af7;
+}
+
+.typeBadgeBridge {
+  composes: typeBadge;
+  background: var(--accent-teal, #4ECDC4);
+}
+
+.typeBadgeIsland {
+  composes: typeBadge;
+  background: var(--accent-red, #e05050);
+}
+
+.typeBadgeMissing {
+  composes: typeBadge;
+  background: var(--accent-amber, #f0a500);
+}
+
+/* ── Content body ────────────────────────────────────── */
+
+.body {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  flex: 1;
+}
+
+.briefTitle {
+  font-family: var(--font-mono, 'JetBrains Mono', monospace);
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--accent-teal, #4ECDC4);
+  margin: 0;
+  line-height: 1.3;
+}
+
+.divider {
+  border: none;
+  border-top: 2px solid var(--accent-teal, #4ECDC4);
+  margin: 0;
+  opacity: 0.5;
+}
+
+/* ── Section blocks ──────────────────────────────────── */
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sectionLabel {
+  font-family: var(--font-mono, 'JetBrains Mono', monospace);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--accent-teal, #4ECDC4);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.sectionLabel::before {
+  content: '\25B8';
+  font-size: 10px;
+}
+
+.sectionText {
+  font-family: var(--font-mono, 'JetBrains Mono', monospace);
+  font-size: 13px;
+  color: var(--text-secondary, #A0A0A8);
+  line-height: 1.6;
+  margin: 0;
+}
+
+/* ── Actions list ────────────────────────────────────── */
+
+.actionList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.actionItem {
+  font-family: var(--font-mono, 'JetBrains Mono', monospace);
+  font-size: 12px;
+  color: var(--text-secondary, #A0A0A8);
+  padding-left: 20px;
+  position: relative;
+  line-height: 1.5;
+}
+
+.actionItem::before {
+  content: '\2500\2500';
+  position: absolute;
+  left: 0;
+  color: var(--text-disabled, #3D3D48);
+  font-size: 11px;
+}
+
+/* ── Entity chips ────────────────────────────────────── */
+
+.entityChips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.entityChip {
+  font-family: var(--font-mono, 'JetBrains Mono', monospace);
+  font-size: 11px;
+  padding: 3px 8px;
+  border-radius: 3px;
+  background: rgba(78, 205, 196, 0.1);
+  color: var(--accent-teal, #4ECDC4);
+  border: 1px solid rgba(78, 205, 196, 0.25);
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ── Responsive ──────────────────────────────────────── */
+
+@media (max-width: 520px) {
+  .panel {
+    width: 100vw;
+  }
+}

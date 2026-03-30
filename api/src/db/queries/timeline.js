@@ -1,6 +1,6 @@
 import pool from '../pool.js';
 
-export async function getTimeline({ limit = 30, type } = {}) {
+export async function getTimeline({ limit = 30, type, region } = {}) {
   let sql = `
     SELECT
       e.id,
@@ -25,6 +25,12 @@ export async function getTimeline({ limit = 30, type } = {}) {
   if (type) {
     sql += ` AND e.event_type = $${idx}`;
     params.push(type);
+    idx++;
+  }
+
+  if (region && region !== 'all') {
+    sql += ` AND LOWER(c.region) = $${idx}`;
+    params.push(region.toLowerCase());
     idx++;
   }
 

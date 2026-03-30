@@ -4,7 +4,7 @@ import { api } from './client.js';
 /** Scored, filtered companies */
 export function useCompanies(filters = {}) {
   return useQuery({
-    queryKey: ['companies', filters],
+    queryKey: ['companies', filters.stage, filters.region, filters.sector, filters.search, filters.sortBy],
     queryFn: () => api.getCompanies(filters),
     staleTime: 300_000,
     placeholderData: (previousData) => previousData,
@@ -24,7 +24,7 @@ export function useCompany(id) {
 /** All funds — optionally filtered by region */
 export function useFunds(filters = {}) {
   return useQuery({
-    queryKey: ['funds', filters],
+    queryKey: ['funds', filters.region],
     queryFn: () => api.getFunds(filters),
     staleTime: 300_000,
   });
@@ -59,10 +59,28 @@ export function useGraphMetrics(nodeTypes) {
   });
 }
 
+/** Graph clusters (community or kmeans) */
+export function useGraphClusters(type = 'community') {
+  return useQuery({
+    queryKey: ['graphClusters', type],
+    queryFn: () => api.getGraphClusters(type),
+    staleTime: 300_000,
+  });
+}
+
+/** Graph analytics (PageRank, betweenness, kmeans, etc.) */
+export function useGraphAnalytics() {
+  return useQuery({
+    queryKey: ['graphAnalytics'],
+    queryFn: () => api.getGraphAnalytics(),
+    staleTime: 300_000,
+  });
+}
+
 /** Aggregate KPIs */
 export function useKpis(filters = {}) {
   return useQuery({
-    queryKey: ['kpis', filters],
+    queryKey: ['kpis', filters.stage, filters.region, filters.sector],
     queryFn: () => api.getKpis(filters),
     staleTime: 300_000,
   });
@@ -80,7 +98,7 @@ export function useSectorStats() {
 /** Timeline events */
 export function useTimeline(params = {}) {
   return useQuery({
-    queryKey: ['timeline', params],
+    queryKey: ['timeline', params.limit, params.offset, params.type, params.region],
     queryFn: () => api.getTimeline(params),
     staleTime: 300_000,
   });
@@ -108,7 +126,7 @@ export function useCompanyAnalysis(id) {
 /** Weekly intelligence brief - current/latest */
 export function useWeeklyBrief(params = {}) {
   return useQuery({
-    queryKey: ['analysis', 'brief', params],
+    queryKey: ['analysis', 'brief', params.weekStart, params.weekEnd],
     queryFn: () => api.getWeeklyBrief(params),
     staleTime: 300_000,
   });
@@ -146,7 +164,7 @@ export function useRiskAssessments() {
 /** Risk intelligence signals (computed from ecosystem data) */
 export function useRiskSignals(params = {}) {
   return useQuery({
-    queryKey: ['risks', params],
+    queryKey: ['risks', params.type, params.severity, params.limit],
     queryFn: () => api.getRiskSignals(params),
     staleTime: 120_000,
   });
@@ -155,7 +173,7 @@ export function useRiskSignals(params = {}) {
 /** Stakeholder activities digest */
 export function useStakeholderActivities(params = {}) {
   return useQuery({
-    queryKey: ['stakeholderActivities', params],
+    queryKey: ['stakeholderActivities', params.region, params.type, params.stakeholderType, params.startDate, params.endDate, params.limit],
     queryFn: () => api.getStakeholderActivities(params),
     staleTime: 300_000,
   });
@@ -172,10 +190,10 @@ export function useInvestorMatches(companyId) {
 }
 
 /** Capital flow analytics */
-export function useCapitalFlows() {
+export function useCapitalFlows(params = {}) {
   return useQuery({
-    queryKey: ['analytics', 'capital-flows'],
-    queryFn: () => api.getCapitalFlows(),
+    queryKey: ['analytics', 'capital-flows', params.region],
+    queryFn: () => api.getCapitalFlows(params),
     staleTime: 300_000,
   });
 }
@@ -190,20 +208,20 @@ export function useCapitalMagnets(limit = 20) {
 }
 
 /** Predicted links between nodes */
-export function usePredictedLinks(limit = 30, enabled = false) {
+export function usePredictedLinks(limit = 30, enabled = false, params = {}) {
   return useQuery({
-    queryKey: ['analytics', 'predicted-links', limit],
-    queryFn: () => api.getPredictedLinks(limit),
+    queryKey: ['analytics', 'predicted-links', limit, params.region],
+    queryFn: () => api.getPredictedLinks(limit, params),
     staleTime: 300_000,
     enabled,
   });
 }
 
 /** All investors (NV funds + external) */
-export function useInvestors() {
+export function useInvestors(params = {}) {
   return useQuery({
-    queryKey: ['investors'],
-    queryFn: () => api.getInvestors(),
+    queryKey: ['investors', params.region],
+    queryFn: () => api.getInvestors(params),
     staleTime: 300_000,
   });
 }
@@ -219,10 +237,10 @@ export function useInvestor(id) {
 }
 
 /** Investor aggregate stats */
-export function useInvestorStats() {
+export function useInvestorStats(params = {}) {
   return useQuery({
-    queryKey: ['investorStats'],
-    queryFn: () => api.getInvestorStats(),
+    queryKey: ['investorStats', params.region],
+    queryFn: () => api.getInvestorStats(params),
     staleTime: 300_000,
   });
 }
@@ -230,19 +248,21 @@ export function useInvestorStats() {
 /** Frontier news feed */
 export function useNews(params = {}) {
   return useQuery({
-    queryKey: ['news', 'frontier', params],
+    queryKey: ['news', 'frontier', params.minRelevance, params.limit, params.sector, params.search],
     queryFn: () => api.getNews(params),
     staleTime: 120_000,
     refetchInterval: 30 * 60 * 1000, // auto-refresh every 30 min
+    refetchIntervalInBackground: false,
   });
 }
 
 /** Nevada-only news */
 export function useNewsNevada(params = {}) {
   return useQuery({
-    queryKey: ['news', 'nevada', params],
+    queryKey: ['news', 'nevada', params.minRelevance, params.limit, params.sector, params.search],
     queryFn: () => api.getNewsNevada(params),
     staleTime: 120_000,
+    refetchIntervalInBackground: false,
   });
 }
 
@@ -261,26 +281,63 @@ export function useNewsRefresh() {
   return useMutation({
     mutationFn: () => api.refreshNews(),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['news'] });
+      qc.invalidateQueries({ queryKey: ['news', 'frontier'] });
+      qc.invalidateQueries({ queryKey: ['news', 'nevada'] });
     },
   });
 }
 
 /** Ecosystem map entities for ResourceMatrix */
-export function useEcosystemMap() {
+export function useEcosystemMap(params = {}) {
   return useQuery({
-    queryKey: ['ecosystemMap'],
-    queryFn: () => api.getEcosystemMap(),
+    queryKey: ['ecosystemMap', params.region],
+    queryFn: () => api.getEcosystemMap(params),
     staleTime: 120_000,
   });
 }
 
-/** Ecosystem policy gaps */
-export function useEcosystemGaps() {
+/** Structural holes analysis */
+export function useStructuralHoles(params = {}) {
   return useQuery({
-    queryKey: ['ecosystemGaps'],
-    queryFn: () => api.getEcosystemGaps(),
+    queryKey: ['analytics', 'structural-holes', params.region],
+    queryFn: () => api.getStructuralHoles(params),
+    staleTime: 300_000,
+  });
+}
+
+/** Ecosystem policy gaps */
+export function useEcosystemGaps(params = {}) {
+  return useQuery({
+    queryKey: ['ecosystemGaps', params.region],
+    queryFn: () => api.getEcosystemGaps(params),
     staleTime: 120_000,
+  });
+}
+
+/** Regional economic indicators summary */
+export function useRegionalSummary() {
+  return useQuery({
+    queryKey: ['regional', 'summary'],
+    queryFn: () => api.getRegionalSummary(),
+    staleTime: 600_000,
+  });
+}
+
+/** Macro economic events */
+export function useMacroEvents() {
+  return useQuery({
+    queryKey: ['macroEvents'],
+    queryFn: () => api.getMacroEvents(),
+    staleTime: 600_000,
+  });
+}
+
+/** Model outputs leaderboard */
+export function useModelLeaderboard(outputType = 'composite_score', limit = 20) {
+  return useQuery({
+    queryKey: ['modelOutputs', 'leaderboard', outputType, limit],
+    queryFn: () => api.getModelLeaderboard(outputType, limit),
+    staleTime: 300_000,
   });
 }
 

@@ -1,0 +1,11 @@
+.bars {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 1px;
+}
+
+.bar {
+  width: 3px;
+  border-radius: 1px;
+  display: inline-block;
+}

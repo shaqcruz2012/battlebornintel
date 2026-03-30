@@ -268,6 +268,27 @@
   opacity: 1;
 }
 
+.loadMoreBtn {
+  font-family: var(--font-mono);
+  font-size: var(--text-caption);
+  color: var(--accent-teal);
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 4px;
+  cursor: pointer;
+  padding: 10px 16px;
+  margin: 8px 0;
+  text-align: center;
+  width: 100%;
+  opacity: 0.85;
+  transition: opacity var(--transition-fast), background var(--transition-fast);
+}
+
+.loadMoreBtn:hover {
+  opacity: 1;
+  background: var(--bg-hover);
+}
+
 .feedList {
   display: flex;
   flex-direction: column;

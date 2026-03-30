@@ -1,13 +1,17 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, memo } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { useFilters } from '../../hooks/useFilters';
 import styles from './RecommendedConnections.module.css';
 
 const BASE = '/api';
 
-async function fetchPredictedLinks({ limit = 50, minScore = 0.3 } = {}) {
+async function fetchPredictedLinks({ limit = 50, minScore = 0.3, region } = {}) {
   const url = new URL(`${BASE}/analytics/predicted-links`, window.location.origin);
   url.searchParams.set('limit', limit);
   url.searchParams.set('minScore', minScore);
+  if (region && region !== 'all') {
+    url.searchParams.set('region', region);
+  }
   const res = await fetch(url.toString());
   if (!res.ok) throw new Error(`API error ${res.status}`);
   const json = await res.json();
@@ -23,22 +27,71 @@ function usePredictedLinks(opts = {}) {
   });
 }
 
-const TYPE_FILTERS = [
-  { value: 'all', label: 'All' },
-  { value: 'fund|company', label: 'Fund-Co' },
-  { value: 'company|company', label: 'Co-Co' },
-  { value: 'accelerator|company', label: 'Accel-Co' },
-  { value: 'ecosystem|company', label: 'Eco-Co' },
-  { value: 'person|company', label: 'Person-Co' },
-];
+// Type filter labels — map normalized type pairs to readable labels
+const TYPE_PAIR_LABELS = {
+  'fund|company': 'Fund-Co',
+  'company|company': 'Co-Co',
+  'accelerator|company': 'Accel-Co',
+  'ecosystem|company': 'Eco-Co',
+  'person|company': 'Person-Co',
+  'fund|fund': 'Fund-Fund',
+  'accelerator|fund': 'Accel-Fund',
+  'company|fund': 'Co-Fund',
+  'external|company': 'Ext-Co',
+  'fund|accelerator': 'Fund-Accel',
+  'fund|ecosystem': 'Fund-Eco',
+  'person|fund': 'Person-Fund',
+};
+
+// Normalize type strings from the API to canonical filter values.
+// Handles variations like 'ecosystem_org' -> 'ecosystem', case differences, etc.
+function normalizeType(t) {
+  if (!t) return '';
+  const lower = t.toLowerCase().trim();
+  if (lower === 'ecosystem_org' || lower === 'ecosystem_organization') return 'ecosystem';
+  if (lower === 'investor') return 'fund';
+  if (lower === 'startup') return 'company';
+  return lower;
+}
 
 const FEATURE_LABELS = {
-  jaccard: 'JAC',
-  sectorOverlap: 'SEC',
-  geoProximity: 'GEO',
-  recency: 'REC',
-  typeCompatibility: 'TYP',
+  jaccard: 'Network Overlap',
+  sectorOverlap: 'Sector Match',
+  geoProximity: 'Proximity',
+  recency: 'Recency',
+  typeCompatibility: 'Type Fit',
 };
+
+const FEATURE_TOOLTIPS = {
+  jaccard: 'Shared connections — how many mutual contacts these two entities have in common',
+  sectorOverlap: 'Industry alignment — whether they operate in the same or related sectors',
+  geoProximity: 'Geographic closeness — same city scores highest, same state scores medium',
+  recency: 'How recently the bridge connection between them was active',
+  typeCompatibility: 'How commonly this type of entity pairs with the other (e.g., fund-company pairs are common)',
+};
+
+function generateRecommendedAction(prediction) {
+  const bridge = prediction.bridgeNode;
+  const target = prediction.nodeC;
+
+  if (!bridge) return null;
+
+  const bridgeType = bridge.type || 'entity';
+
+  if (bridgeType === 'fund' || bridgeType === 'investor') {
+    return `Request portfolio introduction through ${bridge.label} to connect with ${target.label}`;
+  }
+  if (bridgeType === 'accelerator') {
+    return `Apply to or engage with ${bridge.label}'s program to access ${target.label}'s network`;
+  }
+  if (bridgeType === 'ecosystem_org' || bridgeType === 'government') {
+    return `Attend ${bridge.label} events or programs to build a pathway to ${target.label}`;
+  }
+  if (bridgeType === 'person') {
+    return `Request a personal introduction from ${bridge.label} to ${target.label}`;
+  }
+  return `Connect through ${bridge.label} to reach ${target.label}`;
+}
 
 function scoreClass(score) {
   if (score >= 0.6) return styles.scoreHigh;
@@ -70,7 +123,7 @@ function nodeTypeClass(type) {
   }
 }
 
-function PredictionCard({ prediction }) {
+const PredictionCard = memo(function PredictionCard({ prediction }) {
   const { nodeA, nodeC, bridgeNode, score, features, reasoning, opportunity } = prediction;
   const pct = Math.round(score * 100);
   const [expanded, setExpanded] = useState(false);
@@ -100,7 +153,12 @@ function PredictionCard({ prediction }) {
 
         <div className={styles.featureRow}>
           {Object.entries(features).map(([key, val]) => (
-            <span key={key} className={`${styles.chip} ${chipClass(val)}`}>
+            <span
+              key={key}
+              className={`${styles.chip} ${chipClass(val)}`}
+              title={FEATURE_TOOLTIPS[key]}
+              aria-label={`${FEATURE_LABELS[key]} score: ${Math.round(val * 100)}% — ${FEATURE_TOOLTIPS[key]}`}
+            >
               <span className={styles.chipLabel}>{FEATURE_LABELS[key]}</span>
               <span className={styles.chipVal}>{Math.round(val * 100)}</span>
             </span>
@@ -124,6 +182,18 @@ function PredictionCard({ prediction }) {
             )}
           </div>
         )}
+
+        {prediction.bridgeNode && (
+          <div className={styles.recommendedAction}>
+            <span className={styles.actionLabel}>RECOMMENDED ACTION</span>
+            <span className={styles.actionText}>
+              {generateRecommendedAction(prediction)}
+            </span>
+            <span className={styles.contactPlaceholder}>
+              Contact list coming soon — connect through {prediction.bridgeNode.label}&apos;s network
+            </span>
+          </div>
+        )}
       </div>
 
       <div className={styles.scoreCol}>
@@ -137,24 +207,27 @@ function PredictionCard({ prediction }) {
       </div>
     </div>
   );
-}
+});
 
 export function RecommendedConnections() {
+  const { filters } = useFilters();
   const [typeFilter, setTypeFilter] = useState('all');
   const [sortBy, setSortBy] = useState('score');
 
-  const { data, isLoading, isError, isFetching } = usePredictedLinks({ limit: 100, minScore: 0.25 });
+  const { data, isLoading, isError, isFetching } = usePredictedLinks({ limit: 100, minScore: 0.25, region: filters.region });
 
   const filteredPredictions = useMemo(() => {
     if (!data?.predictions) return [];
     let items = data.predictions;
 
-    // Filter by type pair
+    // Filter by type pair (normalize types for robust matching)
     if (typeFilter !== 'all') {
       const [tA, tC] = typeFilter.split('|');
       items = items.filter((p) => {
-        const matchForward = p.nodeA.type === tA && p.nodeC.type === tC;
-        const matchReverse = p.nodeA.type === tC && p.nodeC.type === tA;
+        const nA = normalizeType(p.nodeA.type);
+        const nC = normalizeType(p.nodeC.type);
+        const matchForward = nA === tA && nC === tC;
+        const matchReverse = nA === tC && nC === tA;
         return matchForward || matchReverse;
       });
     }
@@ -170,6 +243,24 @@ export function RecommendedConnections() {
 
     return items;
   }, [data, typeFilter, sortBy]);
+
+  // Build type filters dynamically from actual prediction data
+  const typeFilters = useMemo(() => {
+    const filters = [{ value: 'all', label: 'All' }];
+    if (!data?.predictions) return filters;
+    const seen = new Set();
+    data.predictions.forEach(p => {
+      const pair = `${normalizeType(p.nodeA.type)}|${normalizeType(p.nodeC.type)}`;
+      const reversePair = `${normalizeType(p.nodeC.type)}|${normalizeType(p.nodeA.type)}`;
+      // Dedupe forward/reverse
+      const canonical = seen.has(reversePair) ? reversePair : pair;
+      if (!seen.has(canonical) && !seen.has(reversePair)) {
+        seen.add(canonical);
+        filters.push({ value: canonical, label: TYPE_PAIR_LABELS[canonical] || canonical.replace('|', '-').toUpperCase() });
+      }
+    });
+    return filters;
+  }, [data]);
 
   const handleFilterChange = useCallback((val) => setTypeFilter(val), []);
   const handleSortChange = useCallback((e) => setSortBy(e.target.value), []);
@@ -192,7 +283,7 @@ export function RecommendedConnections() {
         </div>
 
         <div className={styles.controls}>
-          {TYPE_FILTERS.map((f) => (
+          {typeFilters.map((f) => (
             <button
               key={f.value}
               type="button"
@@ -232,7 +323,19 @@ export function RecommendedConnections() {
       )}
 
       {isLoading ? (
-        <div className={styles.loading}>Computing triadic closure predictions...</div>
+        <div className={styles.skeletonFeed}>
+          {[1, 2, 3, 4, 5].map(i => (
+            <div key={i} className={styles.skeletonCard}>
+              <div className={styles.skeletonLine} style={{ width: '60%' }} />
+              <div className={styles.skeletonLine} style={{ width: '35%', height: 10 }} />
+              <div className={styles.skeletonChips}>
+                {[1, 2, 3].map(j => (
+                  <div key={j} className={styles.skeletonChip} />
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
       ) : isError ? (
         <div className={styles.error}>Failed to load predictions. Check API connection.</div>
       ) : filteredPredictions.length === 0 ? (

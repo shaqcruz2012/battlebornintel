@@ -1,59 +1,67 @@
 import { useMemo } from 'react';
 
-const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
+/**
+ * Compute an ecosystem velocity score (0-100) from activity recency,
+ * sector heat, and innovation index. Returns the score, a tier label,
+ * and CSS custom-property values for driving the pulse animation.
+ *
+ * Tiers:
+ *   LOW      (0-33)  : 6s cycle, 0.08 opacity, 8px glow
+ *   MODERATE (34-66) : 4s cycle, 0.12 opacity, 12px glow
+ *   HIGH     (67-100): 2.5s cycle, 0.18 opacity, 18px glow
+ */
 
-const TIERS = [
-  { max: 33, label: 'LOW',      duration: '6s',   opacity: 0.08, glow: '8px' },
-  { max: 66, label: 'MODERATE', duration: '4s',   opacity: 0.15, glow: '15px' },
-  { max: 100, label: 'HIGH',    duration: '2.5s', opacity: 0.3,  glow: '25px' },
-];
+const TIERS = {
+  LOW:      { label: 'LOW',      duration: '6s',   opacity: '0.2',  glow: '8px'  },
+  MODERATE: { label: 'MODERATE', duration: '4s',   opacity: '0.35', glow: '14px' },
+  HIGH:     { label: 'HIGH',     duration: '2.5s', opacity: '0.5',  glow: '22px' },
+};
 
 function tierFor(score) {
-  return TIERS.find(t => score <= t.max) || TIERS[2];
+  if (score >= 67) return TIERS.HIGH;
+  if (score >= 34) return TIERS.MODERATE;
+  return TIERS.LOW;
 }
 
-/**
- * Computes an ecosystem velocity score (0-100) from three data sources.
- * Returns { score, tier, cssVars } for driving the Pulse Mode animation.
- *
- * @param {Object} params
- * @param {Array}  params.activities  - Recent stakeholder activities (up to 20)
- * @param {Array}  params.sectorStats - Sector heat objects ({ heat: number })
- * @param {Object} params.kpis        - KPI object with innovationIndex.value
- */
-export function useEcosystemVelocity({ activities, sectorStats, kpis }) {
+function recencyScore(activities) {
+  if (!activities?.length) return 0;
+  const now = Date.now();
+  const DAY = 86_400_000;
+  let score = 0;
+  const cap = Math.min(activities.length, 20);
+  for (let i = 0; i < cap; i++) {
+    const age = now - new Date(activities[i].event_date || activities[i].date || 0).getTime();
+    if (age < DAY)       score += 5;
+    else if (age < 7  * DAY) score += 3;
+    else if (age < 30 * DAY) score += 1;
+  }
+  return Math.min(score, 100);
+}
+
+function sectorHeatScore(sectorStats) {
+  if (!sectorStats?.length) return 0;
+  const avg = sectorStats.reduce((s, sec) => s + (sec.heat || sec.avg_momentum || 0), 0) / sectorStats.length;
+  return Math.min(Math.round(avg), 100);
+}
+
+export function useEcosystemVelocity({ activities, sectorStats, kpis } = {}) {
   return useMemo(() => {
-    // Activity recency: what fraction of recent activities are from the last 7 days
-    const now = Date.now();
-    const recentCount = (activities || []).filter(a => {
-      const date = new Date(a.activity_date || a.date || a.created_at);
-      return now - date.getTime() < SEVEN_DAYS_MS;
-    }).length;
-    const activityRecency = Math.min(100, (recentCount / 10) * 100);
+    const r = recencyScore(activities);
+    const h = sectorHeatScore(sectorStats);
+    const innov = kpis?.innovationIndex?.value ?? 50;
 
-    // Average sector heat (already 0-100 per sector)
-    const heats = (sectorStats || []).map(s => s.heat || 0);
-    const avgSectorHeat = heats.length > 0
-      ? heats.reduce((sum, h) => sum + h, 0) / heats.length
-      : 0;
-
-    // Innovation index (already 0-100)
-    const innovationIndex = kpis?.innovationIndex?.value || 0;
-
-    // Composite velocity
-    const raw = (activityRecency * 0.5) + (avgSectorHeat * 0.3) + (innovationIndex * 0.2);
-    const score = Math.round(Math.min(100, Math.max(0, raw)));
-
-    const tier = tierFor(score);
+    // Weighted blend: 40% recency, 30% sector heat, 30% innovation
+    const velocity = Math.round(r * 0.4 + h * 0.3 + innov * 0.3);
+    const clamped = Math.max(0, Math.min(100, velocity));
+    const tier = tierFor(clamped);
 
     return {
-      score,
+      velocity: clamped,
       tier: tier.label,
       cssVars: {
         '--pulse-duration': tier.duration,
-        '--pulse-opacity': String(tier.opacity),
-        '--pulse-color': `rgba(69, 215, 198, ${tier.opacity})`,
-        '--pulse-glow-radius': tier.glow,
+        '--pulse-opacity': tier.opacity,
+        '--pulse-glow':    tier.glow,
       },
     };
   }, [activities, sectorStats, kpis]);

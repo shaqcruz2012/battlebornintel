@@ -3,6 +3,8 @@ import { fmt, stageLabel } from '../../engine/formatters';
 import { GRADE_COLORS, TRIGGER_CFG } from '../../data/constants';
 import { StatusBadge } from '../shared/StatusBadge';
 import { Sparkline, generateMomentumTrail } from '../shared/Sparkline';
+import { SignalStrengthBars } from '../shared/SignalStrengthBars';
+import { IrsExplainer } from '../shared/IrsExplainer';
 import styles from './MomentumRow.module.css';
 
 const DIM_LABELS = {
@@ -34,27 +36,30 @@ const ExpandedContent = memo(function ExpandedContent({ company }) {
 
       {c.dims && (
         <div className={styles.dims}>
-          {Object.entries(c.dims).map(([key, val]) => (
-            <div key={key} className={styles.dim}>
-              <span className={styles.dimLabel}>
-                {DIM_LABELS[key] || key}
-              </span>
-              <div className={styles.dimBar}>
-                <div
-                  className={styles.dimFill}
-                  style={{
-                    width: `${val}%`,
-                    background:
-                      val >= 70
-                        ? 'var(--accent-teal)'
-                        : val >= 40
-                          ? 'var(--accent-gold)'
-                          : 'var(--status-risk)',
-                  }}
-                />
+          {Object.entries(c.dims).map(([key, val]) => {
+            const clamped = Math.min(Math.max(val ?? 0, 0), 100);
+            return (
+              <div key={key} className={styles.dim}>
+                <span className={styles.dimLabel}>
+                  {DIM_LABELS[key] || key}
+                </span>
+                <div className={styles.dimBar}>
+                  <div
+                    className={styles.dimFill}
+                    style={{
+                      width: `${clamped}%`,
+                      background:
+                        clamped >= 70
+                          ? 'var(--accent-teal)'
+                          : clamped >= 40
+                            ? 'var(--accent-gold)'
+                            : 'var(--status-risk)',
+                    }}
+                  />
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
@@ -96,9 +101,15 @@ export const MomentumRow = memo(function MomentumRow({ company, rank }) {
   );
 
   return (
-    <div className={styles.row}>
-      <div className={styles.summary} onClick={() => setOpen(!open)}>
-        <div className={styles.nameGroup}>
+    <div className={styles.row} role="row">
+      <div
+        className={styles.summary}
+        onClick={() => setOpen(!open)}
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setOpen(!open); } }}
+      >
+        <div className={styles.nameGroup} role="cell">
           <span className={styles.rank}>{rank}</span>
           <div>
             <span className={styles.name}>{c.name}</span>
@@ -106,33 +117,35 @@ export const MomentumRow = memo(function MomentumRow({ company, rank }) {
           </div>
         </div>
 
-        <div className={`${styles.metric} ${styles.hideMobile}`}>
+        <div className={`${styles.metric} ${styles.hideMobile}`} role="cell">
           <span className={styles.metricLabel}>Stage</span>
           {stageLabel(c.stage)}
         </div>
 
-        <div className={`${styles.metric} ${styles.hideMobile}`}>
+        <div className={`${styles.metric} ${styles.hideMobile}`} role="cell">
           <span className={styles.metricLabel}>Funding</span>
           {fmt(c.funding)}
         </div>
 
-        <div className={styles.metric}>
+        <div className={styles.metric} role="cell">
           <span className={styles.metricLabel}>IRS</span>
-          {c.irs || '—'}
+          <IrsExplainer dims={c.dims}>
+            <span style={{ cursor: 'pointer' }}>{c.irs || '—'}</span>
+          </IrsExplainer>
         </div>
 
-        <div className={styles.metric} style={{ display: 'flex', justifyContent: 'center' }}>
+        <div className={styles.metric} role="cell" style={{ display: 'flex', justifyContent: 'center' }}>
           <Sparkline data={sparkData} width={48} height={16} color="auto" showArea={false} />
         </div>
 
         <span
           className={styles.grade}
-          style={{ color: gradeColor }}
+          role="cell"
         >
-          {c.grade || '—'}
+          <SignalStrengthBars irs={c.irs} />
         </span>
 
-        <span className={`${styles.chevron} ${open ? styles.chevronOpen : ''}`}>
+        <span className={`${styles.chevron} ${open ? styles.chevronOpen : ''}`} role="cell">
           ▾
         </span>
       </div>

@@ -1,5 +1,6 @@
 import { useState, useMemo, useCallback } from 'react';
 import { useInvestors, useInvestorStats } from '../../api/hooks';
+import { useFilters } from '../../hooks/useFilters';
 import { MainGrid } from '../layout/AppShell';
 import { downloadCsv } from '../../utils/exportCsv';
 import styles from './InvestorsView.module.css';
@@ -120,6 +121,25 @@ function NVFundCard({ fund, isExpanded, onToggle }) {
       </div>
 
       {fund.thesis && <p className={styles.thesis}>{fund.thesis}</p>}
+
+      {isExpanded && fund.portfolio && fund.portfolio.length > 0 && (
+        <div className={styles.fundPortfolio}>
+          <div className={styles.fundPortfolioHeader}>
+            Portfolio Companies ({fund.portfolio.length})
+          </div>
+          <div className={styles.fundPortfolioList}>
+            {fund.portfolio.map((c, i) => (
+              <div key={c.id || i} className={styles.fundPortfolioItem}>
+                <span className={styles.fundPortfolioName}>{c.name}</span>
+                <span className={styles.fundPortfolioStage}>{c.stage || '--'}</span>
+                <span className={styles.fundPortfolioFunding}>
+                  {c.funding != null ? formatCurrency(c.funding) : '--'}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -134,6 +154,10 @@ function InvestorRow({ investor, isExpanded, onToggle }) {
       <tr
         className={`${styles.investorRow} ${isExpanded ? styles.investorRowExpanded : ''}`}
         onClick={onToggle}
+        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onToggle(); } }}
+        tabIndex={0}
+        role="button"
+        style={{ cursor: 'pointer' }}
       >
         <td className={`${styles.investorTd} ${styles.investorName}`}>
           {investor.name}
@@ -176,8 +200,10 @@ function InvestorRow({ investor, isExpanded, onToggle }) {
 /* ── Main View ──────────────────────────────────────────────── */
 
 export function InvestorsView() {
-  const { data, isLoading: loadingInvestors } = useInvestors();
-  const { data: stats, isLoading: loadingStats } = useInvestorStats();
+  const { filters } = useFilters();
+  const regionParam = { region: filters.region };
+  const { data, isLoading: loadingInvestors } = useInvestors(regionParam);
+  const { data: stats, isLoading: loadingStats } = useInvestorStats(regionParam);
 
   const [expandedFundId, setExpandedFundId] = useState(null);
   const [expandedExtId, setExpandedExtId] = useState(null);

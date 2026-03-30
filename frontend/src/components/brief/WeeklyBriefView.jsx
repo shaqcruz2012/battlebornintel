@@ -1,6 +1,7 @@
 import { useState, useRef, useCallback, useMemo } from 'react';
 import { MainGrid } from '../layout/AppShell';
 import { useWeeklyBriefs } from '../../hooks/useWeeklyBriefs';
+import { useFilters } from '../../hooks/useFilters';
 import { getTodayWeekStart, formatDate, getISOWeekNumber } from '../../utils/weeks';
 import { WeeklyBriefCard } from './WeeklyBriefCard';
 import styles from './WeeklyBriefView.module.css';
@@ -161,7 +162,8 @@ function EditorsNote({ note }) {
 }
 
 export function WeeklyBriefView() {
-  const { weeks, isLoading } = useWeeklyBriefs(52);
+  const { filters } = useFilters();
+  const { weeks, isLoading } = useWeeklyBriefs(52, { region: filters.region });
   const [filterType, setFilterType] = useState('all');
   const [showScrollTop, setShowScrollTop] = useState(false);
   const scrollContainerRef = useRef(null);

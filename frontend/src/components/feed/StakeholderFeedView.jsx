@@ -1,5 +1,6 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { useStakeholderActivities } from '../../api/hooks';
+import { useFilters } from '../../hooks/useFilters';
 import { MainGrid } from '../layout/AppShell';
 import { EventCard } from '../shared/EventCard';
 import styles from './StakeholderFeedView.module.css';
@@ -158,11 +159,10 @@ function SidebarStats({ activities }) {
       .map((a) => a.amount)
       .filter(Boolean)
       .map((s) => {
-        const n = s.replace(/[$,BMK]/gi, '').trim();
-        const num = parseFloat(n);
-        if (isNaN(num)) return 0;
-        if (s.includes('B')) return num * 1000;
-        if (s.includes('K')) return num / 1000;
+        if (!s || typeof s !== 'string') return 0;
+        const num = parseFloat(s.replace(/[^0-9.]/g, '')) || 0;
+        if (/B/i.test(s)) return num * 1000;
+        if (/K/i.test(s)) return num / 1000;
         return num;
       });
     const total = amounts.reduce((acc, n) => acc + n, 0);
@@ -260,15 +260,38 @@ function EmptyState({ hasFilters }) {
 // ── Main view ──────────────────────────────────────────────────────────────────
 
 export function StakeholderFeedView() {
-  const [region, setRegion] = useState('all');
+  const { filters } = useFilters();
+  // Derive local region from the global header filter
+  const globalRegion = filters.region || 'all';
+  const [localRegion, setLocalRegion] = useState('all');
+  // Effective region: global filter takes precedence when not 'all'
+  const region = globalRegion !== 'all' ? globalRegion : localRegion;
+  const setRegion = setLocalRegion;
+
+  // Sync: when global region changes to a specific region, reset local to 'all'
+  const prevGlobalRef = useRef(globalRegion);
+  useEffect(() => {
+    if (prevGlobalRef.current !== globalRegion) {
+      setLocalRegion('all');
+      prevGlobalRef.current = globalRegion;
+    }
+  }, [globalRegion]);
+
   const [stakeholderType, setStakeholderType] = useState('all');
   const [eventType, setEventType] = useState('all');
   const [dateRange, setDateRange] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
-  const [expandedId, setExpandedId] = useState(null);
+  const [expandedIds, setExpandedIds] = useState(new Set());
+  const [visibleCount, setVisibleCount] = useState(50);
+  const PAGE_SIZE = 50;
 
   const handleToggleExpand = useCallback((id) => {
-    setExpandedId((prev) => (prev === id ? null : id));
+    setExpandedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
   }, []);
 
   const apiParams = useMemo(() => {
@@ -282,11 +305,24 @@ export function StakeholderFeedView() {
     };
   }, [region, eventType, stakeholderType, dateRange]);
 
+  // Reset visible count when filters change
+  const prevParamsRef = useRef(apiParams);
+  useEffect(() => {
+    if (prevParamsRef.current !== apiParams) {
+      setVisibleCount(PAGE_SIZE);
+      prevParamsRef.current = apiParams;
+    }
+  }, [apiParams]);
+
   const { data: apiActivities, isLoading, error } = useStakeholderActivities(apiParams);
 
   const baseActivities = useMemo(() => {
     return apiActivities ?? [];
   }, [apiActivities]);
+
+  const handleLoadMore = useCallback(() => {
+    setVisibleCount((prev) => prev + PAGE_SIZE);
+  }, []);
 
   const filtered = useMemo(() => {
     return baseActivities.filter((a) => {
@@ -385,7 +421,7 @@ export function StakeholderFeedView() {
           {/* Feed column */}
           <div className={styles.feedColumn}>
             {isLoading ? (
-              <div className={styles.loadingState}>
+              <div className={styles.loadingState} role="status" aria-busy="true">
                 <div className={styles.loadingSpinner} />
                 <span>Loading stakeholder activities...</span>
               </div>
@@ -419,14 +455,23 @@ export function StakeholderFeedView() {
                     </button>
                   )}
                 </div>
-                {filtered.map((activity) => (
+                {filtered.slice(0, visibleCount).map((activity) => (
                   <EventCard
                     key={activity.id}
                     event={activity}
-                    isExpanded={expandedId === activity.id}
+                    isExpanded={expandedIds.has(activity.id)}
                     onToggle={handleToggleExpand}
                   />
                 ))}
+                {visibleCount < filtered.length && (
+                  <button
+                    className={styles.loadMoreBtn}
+                    type="button"
+                    onClick={handleLoadMore}
+                  >
+                    Load more ({filtered.length - visibleCount} remaining)
+                  </button>
+                )}
               </div>
             )}
           </div>

@@ -17,7 +17,7 @@ const VALID_EVENT_TYPES = new Set([
  */
 router.get('/', async (req, res, next) => {
   try {
-    const { limit, type } = req.query;
+    const { limit, type, region } = req.query;
     if (type && !VALID_EVENT_TYPES.has(type)) {
       return res.status(400).json({
         error: `type must be one of: ${[...VALID_EVENT_TYPES].join(', ')}`,
@@ -26,6 +26,7 @@ router.get('/', async (req, res, next) => {
     const data = await getTimeline({
       limit: limit ? Math.min(parseInt(limit, 10), 500) : 30,
       type,
+      region,
     });
     res.json({ data });
   } catch (err) {

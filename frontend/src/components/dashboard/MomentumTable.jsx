@@ -1,6 +1,7 @@
-import { useMemo, useRef, useEffect, useState } from 'react';
+import { memo, useMemo, useRef, useEffect, useState } from 'react';
 import { MomentumRow } from './MomentumRow';
 import { Tooltip } from '../shared/Tooltip';
+import { IrsExplainer } from '../shared/IrsExplainer';
 import styles from './MomentumTable.module.css';
 
 const SORTS = [
@@ -20,7 +21,7 @@ const GRADE_TOOLTIP =
 const ROW_HEIGHT = 24; // Compact Bloomberg-style row height
 const BUFFER_SIZE = 3; // Extra rows to render above/below visible window
 
-export function MomentumTable({ companies, sortBy, onSortChange, isFetching }) {
+export const MomentumTable = memo(function MomentumTable({ companies, sortBy, onSortChange, isFetching, error }) {
   const containerRef = useRef(null);
   const [visibleRange, setVisibleRange] = useState({ start: 0, end: 15 });
 
@@ -60,7 +61,7 @@ export function MomentumTable({ companies, sortBy, onSortChange, isFetching }) {
   }, [companies, visibleRange]);
 
   return (
-    <div className={styles.wrapper}>
+    <div className={styles.wrapper} role="table" aria-label="Momentum rankings table">
       <div className={styles.header}>
         <h2 className={styles.title}>
           Momentum Rankings
@@ -80,27 +81,34 @@ export function MomentumTable({ companies, sortBy, onSortChange, isFetching }) {
         </div>
       </div>
 
-      <div className={styles.colHeaders}>
-        <span>Company</span>
-        <span className={styles.hideMobile}>Stage</span>
-        <span className={styles.hideMobile}>Funding</span>
+      <div className={styles.colHeaders} role="row">
+        <span role="columnheader">Company</span>
+        <span className={styles.hideMobile} role="columnheader">Stage</span>
+        <span className={styles.hideMobile} role="columnheader">Funding</span>
         <Tooltip title="Investment Readiness Score" text={IRS_TOOLTIP} position="below">
-          <span className={styles.headerWithTip}>IRS</span>
+          <span className={styles.headerWithTip} role="columnheader">IRS</span>
         </Tooltip>
-        <span>Trend</span>
-        <Tooltip title="Grade" text={GRADE_TOOLTIP} position="below">
-          <span className={styles.headerWithTip}>Grade</span>
-        </Tooltip>
-        <span />
+        <span role="columnheader">Trend</span>
+        <span role="columnheader" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+          Signal
+          <IrsExplainer>
+            <span style={{ cursor: 'pointer', opacity: 0.5, fontSize: 10 }}>?</span>
+          </IrsExplainer>
+        </span>
+        <span role="columnheader" />
       </div>
 
-      {companies.length === 0 ? (
+      {error ? (
+        <div className={styles.empty} role="alert">
+          Unable to load momentum data. Try refreshing.
+        </div>
+      ) : companies.length === 0 ? (
         <div className={styles.empty}>No companies match current filters</div>
       ) : (
         <div
           ref={containerRef}
           className={styles.virtualContainer}
-          style={{ flex: 1, overflow: 'auto' }}
+          role="rowgroup"
         >
           <div style={{ height: `${totalHeight}px`, position: 'relative' }}>
             {/* Top spacer */}
@@ -122,4 +130,4 @@ export function MomentumTable({ companies, sortBy, onSortChange, isFetching }) {
       )}
     </div>
   );
-}
+});

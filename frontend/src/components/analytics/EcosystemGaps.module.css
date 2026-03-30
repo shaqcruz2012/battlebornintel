@@ -319,6 +319,13 @@
   color: var(--text-secondary);
 }
 
+.severityLabel {
+  font-size: var(--text-caption, 0.7rem);
+  opacity: 0.8;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
 .gapBridgeList {
   display: flex;
   flex-wrap: wrap;
@@ -468,6 +475,54 @@
   font-family: var(--font-heading);
   font-size: var(--text-h4);
   color: var(--text-secondary);
+}
+
+/* ── Skeleton loading states ──────────────────────────── */
+
+.skeletonTitle {
+  height: 20px;
+  width: 200px;
+  border-radius: 3px;
+  background: linear-gradient(90deg, rgba(28,39,51,0.5) 0%, rgba(255,255,255,0.03) 50%, rgba(28,39,51,0.5) 100%);
+  background-size: 200% 100%;
+  animation: skeletonShimmer 1.6s ease-in-out infinite;
+  margin-bottom: var(--space-xs);
+}
+
+.skeletonSubtitle {
+  height: 12px;
+  width: 360px;
+  border-radius: 3px;
+  background: linear-gradient(90deg, rgba(28,39,51,0.5) 0%, rgba(255,255,255,0.03) 50%, rgba(28,39,51,0.5) 100%);
+  background-size: 200% 100%;
+  animation: skeletonShimmer 1.6s ease-in-out infinite;
+}
+
+.skeletonPulse {
+  background: rgba(28, 39, 51, 0.3) !important;
+  animation: skeletonShimmer 1.6s ease-in-out infinite;
+  background-size: 200% 100% !important;
+  background-image: linear-gradient(90deg, rgba(28,39,51,0.5) 0%, rgba(255,255,255,0.03) 50%, rgba(28,39,51,0.5) 100%) !important;
+}
+
+.skeletonCards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: var(--space-sm);
+  margin-top: var(--space-md);
+}
+
+.skeletonCard {
+  height: 100px;
+  border-radius: var(--radius-sm);
+  background: linear-gradient(90deg, rgba(28,39,51,0.5) 0%, rgba(255,255,255,0.03) 50%, rgba(28,39,51,0.5) 100%);
+  background-size: 200% 100%;
+  animation: skeletonShimmer 1.6s ease-in-out infinite;
+}
+
+@keyframes skeletonShimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
 }
 
 /* ── Responsive ───────────────────────────────────────── */

@@ -146,15 +146,31 @@ function CategorySection({ category, results, activeIndex, globalOffset, onSelec
  */
 export function SearchOverlay({ isOpen, onClose, onViewChange }) {
   const [query, setQuery] = useState('');
+  const [debouncedQuery, setDebouncedQuery] = useState('');
   const [activeIndex, setActiveIndex] = useState(0);
   const inputRef = useRef(null);
+  const debouncedSearch = useRef(null);
   const { search } = useSearchIndex();
 
-  // Compute results whenever query changes
+  // Debounce actual search execution — display query updates immediately
+  const handleQueryChange = useCallback((val) => {
+    setQuery(val);
+    clearTimeout(debouncedSearch.current);
+    debouncedSearch.current = setTimeout(() => {
+      setDebouncedQuery(val);
+    }, 200);
+  }, []);
+
+  // Clean up debounce timer on unmount
+  useEffect(() => {
+    return () => clearTimeout(debouncedSearch.current);
+  }, []);
+
+  // Compute results from the debounced query
   const grouped = useMemo(() => {
-    if (!query.trim()) return { companies: [], funds: [], people: [], organizations: [] };
-    return search(query);
-  }, [query, search]);
+    if (!debouncedQuery.trim()) return { companies: [], funds: [], people: [], organizations: [] };
+    return search(debouncedQuery);
+  }, [debouncedQuery, search]);
 
   const flat = useMemo(() => flattenResults(grouped), [grouped]);
   const totalResults = flat.length;
@@ -163,6 +179,7 @@ export function SearchOverlay({ isOpen, onClose, onViewChange }) {
   useEffect(() => {
     if (isOpen) {
       setQuery('');
+      setDebouncedQuery('');
       setActiveIndex(0);
       // Small timeout to allow the animation to start before focusing
       const t = setTimeout(() => inputRef.current?.focus(), 50);
@@ -250,7 +267,7 @@ export function SearchOverlay({ isOpen, onClose, onViewChange }) {
             className={styles.input}
             placeholder="Search companies, investors, people..."
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            onChange={(e) => handleQueryChange(e.target.value)}
             onKeyDown={handleKeyDown}
             autoComplete="off"
             spellCheck="false"

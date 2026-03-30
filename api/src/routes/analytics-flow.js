@@ -3,11 +3,34 @@ import { computeCapitalFlows } from '../engine/capital-flow.js';
 
 const router = Router();
 
-// GET /api/analytics/capital-flows
-router.get('/capital-flows', async (_req, res, next) => {
+/**
+ * Filter capital flow data by region.
+ * Keeps only magnets/sourceSink entries matching the region and
+ * recalculates byRegion to show only the filtered region.
+ */
+function filterByRegion(data, region) {
+  if (!region || region === 'all') return data;
+
+  const filteredMagnets = (data.capitalMagnets || []).filter(
+    (m) => m.region === region
+  );
+  const filteredSourceSink = (data.sourceSink || []).filter(
+    (s) => s.region === region
+  );
+
+  return {
+    ...data,
+    capitalMagnets: filteredMagnets,
+    sourceSink: filteredSourceSink,
+  };
+}
+
+// GET /api/analytics/capital-flows?region=las_vegas
+router.get('/capital-flows', async (req, res, next) => {
   try {
+    const region = req.query.region || null;
     const data = await computeCapitalFlows();
-    res.json({ data });
+    res.json({ data: filterByRegion(data, region) });
   } catch (err) {
     next(err);
   }

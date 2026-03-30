@@ -41,11 +41,12 @@ function deriveAlerts(companies, funds = []) {
   }
 
   const sectorCounts = {};
-  companies.forEach((c) =>
-    (c.sector || []).forEach((s) => {
+  companies.forEach((c) => {
+    const sectors = Array.isArray(c.sector) ? c.sector : [c.sector].filter(Boolean);
+    sectors.forEach((s) => {
       sectorCounts[s] = (sectorCounts[s] || 0) + 1;
-    })
-  );
+    });
+  });
   const topSector = Object.entries(sectorCounts).sort(
     (a, b) => b[1] - a[1]
   )[0];
@@ -99,7 +100,7 @@ export function RiskAlerts({ companies, funds = [] }) {
       <div className={styles.list}>
         {alerts.map((a, i) => (
           <div
-            key={i}
+            key={`alert-${a.severity}-${(a.label || '').slice(0, 20).replace(/\s/g, '-')}`}
             className={styles.alert}
             style={{ borderLeftColor: a.color }}
           >

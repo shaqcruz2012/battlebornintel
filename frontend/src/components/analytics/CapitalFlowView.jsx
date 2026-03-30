@@ -1,23 +1,24 @@
 import { useState, useMemo, useCallback } from 'react';
-import { useQuery } from '@tanstack/react-query';
 import { MainGrid } from '../layout/AppShell';
+import { useCapitalFlows } from '../../api/hooks.js';
+import { useFilters } from '../../hooks/useFilters';
 import styles from './CapitalFlowView.module.css';
 
-// ── API fetcher ──────────────────────────────────────────────────────────────
+// ── Concept Tooltips ────────────────────────────────────────────────────────
 
-async function fetchCapitalFlows() {
-  const res = await fetch('/api/analytics/capital-flows');
-  if (!res.ok) throw new Error(`API error ${res.status}`);
-  const json = await res.json();
-  return json.data;
-}
+const CONCEPT_TOOLTIPS = {
+  pagerank: 'Measures how much capital a fund attracts from the network, weighted by the size and diversity of its connections. Funds connected to other well-connected funds score higher.',
+  sourceSink: 'Identifies net capital deployers (sources) vs. net capital attractors (sinks). Sources push more capital into the ecosystem than they pull; sinks attract more than they deploy.',
+  capitalMagnet: 'Ranks entities by their ability to attract capital from multiple diverse sources. Higher scores indicate broader network influence, not just larger dollar amounts.',
+  sankey: 'Shows how capital flows from funds through sectors to individual companies. Wider bands represent larger capital amounts. Follow a band to trace where a fund\'s capital ends up.',
+  stageDistribution: 'Breakdown of capital by company funding stage. Shows where in the lifecycle (Seed, Series A, B, etc.) Nevada\'s capital is being deployed.',
+  sectorDistribution: 'Capital allocation across industry sectors. Shows which sectors attract the most investment in the Nevada ecosystem.',
+};
 
-function useCapitalFlows() {
-  return useQuery({
-    queryKey: ['analytics', 'capital-flows'],
-    queryFn: fetchCapitalFlows,
-    staleTime: 300_000,
-  });
+function ConceptHelp({ concept }) {
+  return (
+    <span className={styles.conceptHelp} title={CONCEPT_TOOLTIPS[concept]}>?</span>
+  );
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -46,10 +47,145 @@ const STAGE_LABELS = {
   unknown: 'Unknown',
 };
 
+// ── Sankey Node Detail Popup ─────────────────────────────────────────────────
+
+function SankeyNodePopup({ node, flows, width, height, onClose }) {
+  const details = useMemo(() => {
+    if (!flows || !node) return null;
+    const { column, label, value } = node;
+
+    if (column === 'fund') {
+      const fundFlows = flows.filter(f => f.type === 'fund_to_sector' && f.source === label);
+      const sectors = [...new Set(fundFlows.map(f => f.target))];
+      const companyFlows = flows.filter(
+        f => f.type === 'sector_to_company' && sectors.includes(f.source)
+      );
+      const uniqueCompanies = [...new Set(companyFlows.map(f => f.target))];
+      return {
+        title: label,
+        lines: [
+          `Capital deployed: ${fmtM(value)}`,
+          `Portfolio companies: ${uniqueCompanies.length}`,
+          `Top sectors: ${sectors.slice(0, 3).join(', ') || 'N/A'}`,
+        ],
+      };
+    }
+
+    if (column === 'company') {
+      const companyFlows = flows.filter(f => f.type === 'sector_to_company' && f.target === label);
+      const sectors = [...new Set(companyFlows.map(f => f.source))];
+      const fundFlows = flows.filter(f => f.type === 'fund_to_sector' && sectors.includes(f.target));
+      const investors = [...new Set(fundFlows.map(f => f.source))];
+      return {
+        title: label,
+        lines: [
+          `Total funding: ${fmtM(value)}`,
+          `Sectors: ${sectors.join(', ') || 'N/A'}`,
+          `Key investors: ${investors.slice(0, 3).join(', ') || 'N/A'}`,
+        ],
+      };
+    }
+
+    return null;
+  }, [flows, node]);
+
+  if (!details) return null;
+
+  const popupW = 280;
+  const popupH = 120;
+  const px = Math.min(Math.max(20, width / 2 - popupW / 2), width - popupW - 20);
+  const py = Math.min(height / 2 - popupH / 2, height - popupH - 20);
+
+  return (
+    <g>
+      <rect
+        x={0} y={0} width={width} height={height}
+        fill="rgba(0,0,0,0.3)" onClick={onClose}
+        style={{ cursor: 'pointer' }}
+      />
+      <rect
+        x={px} y={py} width={popupW} height={popupH}
+        rx={6} fill="var(--bg-elevated, #1a1a2e)"
+        stroke="var(--accent-teal, #2dd4bf)" strokeWidth={1.5}
+      />
+      <text x={px + 12} y={py + 22} className={styles.popupTitle}>
+        {truncateLabel(details.title, 32)}
+      </text>
+      {details.lines.map((line, i) => (
+        <text
+          key={i}
+          x={px + 12}
+          y={py + 44 + i * 22}
+          className={styles.popupLine}
+        >
+          {line}
+        </text>
+      ))}
+      <text
+        x={px + popupW - 12} y={py + 18}
+        textAnchor="end" className={styles.popupClose}
+        onClick={onClose} style={{ cursor: 'pointer' }}
+      >
+        [x]
+      </text>
+    </g>
+  );
+}
+
+// ── Capital Magnet Methodology Popup ────────────────────────────────────────
+
+function MagnetMethodologyPopup({ magnet, onClose }) {
+  if (!magnet) return null;
+
+  return (
+    <div className={styles.popupOverlay} onClick={onClose}>
+      <div className={styles.popupPanel} onClick={(e) => e.stopPropagation()}>
+        <div className={styles.popupHeader}>
+          <span className={styles.popupHeaderTitle}>{magnet.name}</span>
+          <button type="button" className={styles.popupCloseBtn} onClick={onClose}>[x]</button>
+        </div>
+        <div className={styles.popupBody}>
+          <div className={styles.popupRow}>
+            <span className={styles.popupLabel}>PageRank Score</span>
+            <span className={styles.popupValue}>{magnet.score}</span>
+          </div>
+          <div className={styles.popupRow}>
+            <span className={styles.popupLabel}>Total Capital Attracted</span>
+            <span className={styles.popupValue}>{fmtM(magnet.totalAttracted)}</span>
+          </div>
+          <div className={styles.popupRow}>
+            <span className={styles.popupLabel}>Sectors</span>
+            <span className={styles.popupValue}>{magnet.sectors?.join(', ') || 'N/A'}</span>
+          </div>
+          <div className={styles.popupRow}>
+            <span className={styles.popupLabel}>Region</span>
+            <span className={styles.popupValue}>{REGION_LABELS[magnet.region] || magnet.region || 'N/A'}</span>
+          </div>
+          <div className={styles.popupMethodology}>
+            <span className={styles.popupMethodLabel}>METHODOLOGY</span>
+            <p className={styles.popupMethodText}>
+              PageRank measures how much capital this entity attracts from the broader network,
+              weighted by the diversity and connectedness of its sources. Entities connected to
+              other well-connected entities score higher. This score of {magnet.score} ranks
+              this entity among the top capital magnets in the Nevada ecosystem.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Sankey Diagram ───────────────────────────────────────────────────────────
+
+function truncateLabel(text, maxChars) {
+  if (!text || text.length <= maxChars) return text;
+  return text.slice(0, maxChars - 1) + '\u2026';
+}
 
 function SankeyDiagram({ flows, width = 900, height = 520 }) {
   const [hovered, setHovered] = useState(null);
+  const [selectedNode, setSelectedNode] = useState(null);
 
   const layout = useMemo(() => {
     if (!flows || flows.length === 0) return null;
@@ -64,7 +200,7 @@ function SankeyDiagram({ flows, width = 900, height = 520 }) {
       }
     }
 
-    // For sector→company flows, targets are companies
+    // For sector->company flows, targets are companies
     const companySet = new Set();
     for (const f of flows) {
       if (f.type === 'sector_to_company') {
@@ -98,16 +234,17 @@ function SankeyDiagram({ flows, width = 900, height = 520 }) {
       middleTotal[m] = Math.max(middleInTotal[m] || 0, middleOutTotal[m] || 0);
     }
 
-    const pad = 40;
+    const sidePad = 160;
+    const topPad = 40;
     const nodeWidth = 18;
-    const colX = [pad, width / 2 - nodeWidth / 2, width - pad - nodeWidth];
+    const colX = [sidePad, width / 2 - nodeWidth / 2, width - sidePad - nodeWidth];
     const vertPad = 6;
 
     function layoutColumn(items, totals, x) {
       const totalValue = items.reduce((s, i) => s + (totals[i] || 0), 0) || 1;
-      const availH = height - pad * 2 - vertPad * (items.length - 1);
+      const availH = height - topPad * 2 - vertPad * (items.length - 1);
       const nodes = {};
-      let y = pad;
+      let y = topPad;
       for (const item of items) {
         const h = Math.max(8, (((totals[item] || 0) / totalValue) * availH));
         nodes[item] = { x, y, w: nodeWidth, h, label: item, value: totals[item] || 0 };
@@ -240,6 +377,7 @@ function SankeyDiagram({ flows, width = 900, height = 520 }) {
               stroke={isHovered ? 'var(--accent-amber, #f0b429)' : 'var(--accent-teal, #2dd4bf)'}
               strokeWidth={Math.max(1.5, link.thickness)}
               strokeOpacity={hovered ? (isHovered ? 0.7 : 0.08) : 0.35}
+              aria-hidden="true"
               onMouseEnter={() => handleMouseEnter(link.source)}
               onMouseLeave={handleMouseLeave}
             />
@@ -258,7 +396,7 @@ function SankeyDiagram({ flows, width = 900, height = 520 }) {
             const t = 0.5;
             const mt = 1 - t;
             const mx = mt * mt * mt * link.x0 + 3 * mt * mt * t * cx0 + 3 * mt * t * t * cx1 + t * t * t * link.x1;
-            const my = mt * mt * mt * link.y0 + 3 * mt * mt * t * link.y0 + 3 * mt * t * t * link.y1 + t * t * t * link.y1;
+            const my = (link.y0 + link.y1) / 2;
             const isHovered = hovered === link.source || hovered === link.target;
             return (
               <text
@@ -282,8 +420,10 @@ function SankeyDiagram({ flows, width = 900, height = 520 }) {
           key={`src-${n.label}`}
           onMouseEnter={() => handleMouseEnter(n.label)}
           onMouseLeave={handleMouseLeave}
+          onClick={() => setSelectedNode({ column: 'fund', label: n.label, value: n.value })}
           className={styles.sankeyNode}
         >
+          <title>{n.label}: {fmtM(n.value)}</title>
           <rect
             x={n.x}
             y={n.y}
@@ -301,7 +441,7 @@ function SankeyDiagram({ flows, width = 900, height = 520 }) {
             className={styles.sankeyLabel}
             opacity={hovered ? (hovered === n.label ? 1 : 0.4) : 1}
           >
-            {n.label}
+            {truncateLabel(n.label, 22)}
           </text>
         </g>
       ))}
@@ -314,6 +454,7 @@ function SankeyDiagram({ flows, width = 900, height = 520 }) {
           onMouseLeave={handleMouseLeave}
           className={styles.sankeyNode}
         >
+          <title>{n.label}: {fmtM(n.value)}</title>
           <rect
             x={n.x}
             y={n.y}
@@ -341,8 +482,10 @@ function SankeyDiagram({ flows, width = 900, height = 520 }) {
           key={`tgt-${n.label}`}
           onMouseEnter={() => handleMouseEnter(n.label)}
           onMouseLeave={handleMouseLeave}
+          onClick={() => setSelectedNode({ column: 'company', label: n.label, value: n.value })}
           className={styles.sankeyNode}
         >
+          <title>{n.label}: {fmtM(n.value)}</title>
           <rect
             x={n.x}
             y={n.y}
@@ -360,15 +503,26 @@ function SankeyDiagram({ flows, width = 900, height = 520 }) {
             className={styles.sankeyLabel}
             opacity={hovered ? (hovered === n.label ? 1 : 0.4) : 1}
           >
-            {n.label}
+            {truncateLabel(n.label, 22)}
           </text>
         </g>
       ))}
 
       {/* Column headers */}
-      <text x={38} y={18} className={styles.sankeyColumnHeader}>FUNDS</text>
+      <text x={160} y={18} textAnchor="middle" className={styles.sankeyColumnHeader}>FUNDS</text>
       <text x={width / 2} y={18} textAnchor="middle" className={styles.sankeyColumnHeader}>SECTORS</text>
-      <text x={width - 38} y={18} textAnchor="end" className={styles.sankeyColumnHeader}>COMPANIES</text>
+      <text x={width - 160} y={18} textAnchor="middle" className={styles.sankeyColumnHeader}>COMPANIES</text>
+
+      {/* Node detail popup (rendered as foreignObject inside SVG) */}
+      {selectedNode && (
+        <SankeyNodePopup
+          node={selectedNode}
+          flows={flows}
+          width={width}
+          height={height}
+          onClose={() => setSelectedNode(null)}
+        />
+      )}
     </svg>
   );
 }
@@ -376,17 +530,24 @@ function SankeyDiagram({ flows, width = 900, height = 520 }) {
 // ── Capital Magnet Leaderboard ────────────────────────────────────────────────
 
 function MagnetLeaderboard({ magnets }) {
+  const [selectedMagnet, setSelectedMagnet] = useState(null);
+
   if (!magnets || magnets.length === 0) return null;
   const top = magnets.slice(0, 10);
   const maxScore = top[0]?.score || 1;
 
   return (
     <div className={styles.leaderboard}>
-      <h3 className={styles.sectionTitle}>Capital Magnet Ranking</h3>
-      <p className={styles.sectionSubtitle}>Weighted PageRank on funding subgraph</p>
+      <h3 className={styles.sectionTitle}>Capital Magnet Ranking <ConceptHelp concept="capitalMagnet" /></h3>
+      <p className={styles.sectionSubtitle}>Ranking funds by network capital attraction</p>
       <div className={styles.leaderboardList}>
         {top.map((m, i) => (
-          <div key={m.id} className={styles.leaderboardRow}>
+          <div
+            key={m.id}
+            className={styles.leaderboardRow}
+            onClick={() => setSelectedMagnet({ ...m, _rank: i + 1 })}
+            style={{ cursor: 'pointer' }}
+          >
             <span className={styles.leaderboardRank}>#{i + 1}</span>
             <div className={styles.leaderboardInfo}>
               <span className={styles.leaderboardName}>{m.name}</span>
@@ -405,6 +566,12 @@ function MagnetLeaderboard({ magnets }) {
           </div>
         ))}
       </div>
+      {selectedMagnet && (
+        <MagnetMethodologyPopup
+          magnet={selectedMagnet}
+          onClose={() => setSelectedMagnet(null)}
+        />
+      )}
     </div>
   );
 }
@@ -421,8 +588,8 @@ function SourceSinkCards({ sourceSink }) {
 
   return (
     <div className={styles.sourceSinkSection}>
-      <h3 className={styles.sectionTitle}>Source-Sink Analysis</h3>
-      <p className={styles.sectionSubtitle}>Net capital flow by institution</p>
+      <h3 className={styles.sectionTitle}>Source-Sink Analysis <ConceptHelp concept="sourceSink" /></h3>
+      <p className={styles.sectionSubtitle}>Who deploys vs. who attracts capital</p>
       <div className={styles.sourceSinkGrid}>
         {deployers.map((s) => (
           <div key={s.id} className={styles.sourceSinkCard}>
@@ -505,7 +672,7 @@ function SectorChart({ bySector }) {
 
   return (
     <div className={styles.sectorChart}>
-      <h3 className={styles.sectionTitle}>Capital by Sector</h3>
+      <h3 className={styles.sectionTitle}>Capital by Sector <ConceptHelp concept="sectorDistribution" /></h3>
       <div className={styles.regionBars}>
         {entries.map((e) => (
           <div key={e.sector} className={styles.regionBarRow}>
@@ -539,7 +706,7 @@ function StageChart({ byStage }) {
 
   return (
     <div className={styles.stageChart}>
-      <h3 className={styles.sectionTitle}>Capital by Stage</h3>
+      <h3 className={styles.sectionTitle}>Capital by Stage <ConceptHelp concept="stageDistribution" /></h3>
       <div className={styles.regionBars}>
         {entries.map((e) => (
           <div key={e.stage} className={styles.regionBarRow}>
@@ -623,7 +790,8 @@ function LoadingSkeleton() {
 // ── Main View ────────────────────────────────────────────────────────────────
 
 export function CapitalFlowView() {
-  const { data, isLoading, isError, error } = useCapitalFlows();
+  const { filters } = useFilters();
+  const { data, isLoading, isError, error } = useCapitalFlows({ region: filters.region });
 
   if (isLoading) return <LoadingSkeleton />;
 
@@ -646,14 +814,14 @@ export function CapitalFlowView() {
         <div className={styles.viewHeader}>
           <h2 className={styles.viewTitle}>Capital Flow Analytics</h2>
           <p className={styles.viewSubtitle}>
-            Directed funding graph analysis with weighted PageRank scoring
+            How capital moves through Nevada&apos;s innovation ecosystem <ConceptHelp concept="pagerank" />
           </p>
         </div>
 
         <KpiStrip data={data} />
 
         <div className={styles.sankeyContainer}>
-          <h3 className={styles.sectionTitle}>Fund-to-Sector-to-Company Flow</h3>
+          <h3 className={styles.sectionTitle}>Fund-to-Sector-to-Company Flow <ConceptHelp concept="sankey" /></h3>
           <SankeyDiagram flows={data?.flows} />
         </div>
 

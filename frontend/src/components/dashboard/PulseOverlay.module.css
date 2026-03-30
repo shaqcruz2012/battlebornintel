@@ -1,21 +1,69 @@
-.readout {
+/* ── Pulse readout — ambient NOC heartbeat indicator ─── */
+
+.pulseReadout {
   position: absolute;
-  top: -18px;
-  right: 2px;
-  font-family: 'IBM Plex Mono', var(--font-mono), monospace;
-  font-size: 9px;
-  font-weight: 500;
-  letter-spacing: 2px;
-  color: rgba(69, 215, 198, 0.35);
-  z-index: 1;
+  top: 6px;
+  right: 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  z-index: 3;
   pointer-events: none;
-  user-select: none;
+  background: rgba(10, 14, 20, 0.75);
+  padding: 2px 8px;
+  border-radius: 2px;
+  border: 1px solid rgba(69, 215, 198, 0.1);
 }
 
-.score {
+.pulseLabel {
+  font-family: 'IBM Plex Mono', var(--font-mono), monospace;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 2px;
+  text-transform: uppercase;
   color: rgba(69, 215, 198, 0.5);
 }
 
-.tierLow      { color: rgba(255, 255, 255, 0.15); }
-.tierModerate { color: rgba(69, 215, 198, 0.35); }
-.tierHigh     { color: rgba(69, 215, 198, 0.55); }
+.pulseScore {
+  font-family: 'IBM Plex Mono', var(--font-mono), monospace;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: rgba(69, 215, 198, 0.7);
+  font-variant-numeric: tabular-nums;
+}
+
+.pulseSeparator {
+  font-family: 'IBM Plex Mono', var(--font-mono), monospace;
+  font-size: 9px;
+  color: rgba(69, 215, 198, 0.25);
+  letter-spacing: 1px;
+}
+
+.pulseTier {
+  font-family: 'IBM Plex Mono', var(--font-mono), monospace;
+  font-size: 8px;
+  font-weight: 600;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: rgba(69, 215, 198, 0.4);
+}
+
+.pulseDot {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: rgba(69, 215, 198, 0.5);
+  animation: pulseDotBlink var(--pulse-duration, 4s) ease-in-out infinite;
+}
+
+@keyframes pulseDotBlink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.2; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pulseDot {
+    animation: none;
+  }
+}

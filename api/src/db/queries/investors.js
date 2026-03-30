@@ -2,28 +2,68 @@ import pool from '../pool.js';
 
 /**
  * Get all investors — Nevada-based funds + out-of-state externals with invested_in edges.
+ * @param {Object} opts
+ * @param {string} [opts.region] - Filter by region of invested companies (las_vegas, reno, henderson, etc.)
  */
-export async function getAllInvestors() {
+export async function getAllInvestors({ region } = {}) {
+  const filterRegion = region && region !== 'all' ? region : null;
+
   // Section 1: Nevada-based funds (from funds table)
-  const { rows: funds } = await pool.query(`
-    SELECT f.id, f.name, f.fund_type AS type, f.allocated_m, f.deployed_m,
-           f.company_count, f.thesis, f.check_size_min_m, f.check_size_max_m,
-           f.vintage_year
-    FROM funds f
-    ORDER BY f.deployed_m DESC NULLS LAST
-  `);
+  // When region is active, only include funds that have invested in companies in that region
+  let fundsSql;
+  const fundsParams = [];
+  if (filterRegion) {
+    fundsSql = `
+      SELECT DISTINCT f.id, f.name, f.fund_type AS type, f.allocated_m, f.deployed_m,
+             f.company_count, f.thesis, f.check_size_min_m, f.check_size_max_m,
+             f.vintage_year
+      FROM funds f
+      INNER JOIN companies c ON f.id = ANY(c.eligible)
+      WHERE LOWER(c.region) = $1
+      ORDER BY f.deployed_m DESC NULLS LAST
+    `;
+    fundsParams.push(filterRegion.toLowerCase());
+  } else {
+    fundsSql = `
+      SELECT f.id, f.name, f.fund_type AS type, f.allocated_m, f.deployed_m,
+             f.company_count, f.thesis, f.check_size_min_m, f.check_size_max_m,
+             f.vintage_year
+      FROM funds f
+      ORDER BY f.deployed_m DESC NULLS LAST
+    `;
+  }
+  const { rows: funds } = await pool.query(fundsSql, fundsParams);
 
   // Section 2: External investors with invested_in edges (out-of-state + NV i_ nodes)
-  const { rows: externals } = await pool.query(`
-    SELECT e.id, e.name, e.entity_type AS type, e.note,
-           COUNT(DISTINCT ge.target_id) AS portfolio_size,
-           ARRAY_AGG(DISTINCT ge.target_id ORDER BY ge.target_id) AS portfolio_ids
-    FROM externals e
-    INNER JOIN graph_edges ge ON ge.source_id = e.id AND ge.rel = 'invested_in'
-    WHERE e.id LIKE 'i_%'
-    GROUP BY e.id, e.name, e.entity_type, e.note
-    ORDER BY COUNT(DISTINCT ge.target_id) DESC, e.name
-  `);
+  // When region is active, only include externals that invested in companies in that region
+  let extSql;
+  const extParams = [];
+  if (filterRegion) {
+    extSql = `
+      SELECT e.id, e.name, e.entity_type AS type, e.note,
+             COUNT(DISTINCT ge.target_id) AS portfolio_size,
+             ARRAY_AGG(DISTINCT ge.target_id ORDER BY ge.target_id) AS portfolio_ids
+      FROM externals e
+      INNER JOIN graph_edges ge ON ge.source_id = e.id AND ge.rel = 'invested_in'
+      INNER JOIN companies c ON 'c_' || c.id = ge.target_id
+      WHERE e.id LIKE 'i_%' AND LOWER(c.region) = $1
+      GROUP BY e.id, e.name, e.entity_type, e.note
+      ORDER BY COUNT(DISTINCT ge.target_id) DESC, e.name
+    `;
+    extParams.push(filterRegion.toLowerCase());
+  } else {
+    extSql = `
+      SELECT e.id, e.name, e.entity_type AS type, e.note,
+             COUNT(DISTINCT ge.target_id) AS portfolio_size,
+             ARRAY_AGG(DISTINCT ge.target_id ORDER BY ge.target_id) AS portfolio_ids
+      FROM externals e
+      INNER JOIN graph_edges ge ON ge.source_id = e.id AND ge.rel = 'invested_in'
+      WHERE e.id LIKE 'i_%'
+      GROUP BY e.id, e.name, e.entity_type, e.note
+      ORDER BY COUNT(DISTINCT ge.target_id) DESC, e.name
+    `;
+  }
+  const { rows: externals } = await pool.query(extSql, extParams);
 
   // Enrich externals with company names
   const allCompanyIds = [...new Set(externals.flatMap(e => e.portfolio_ids || []))];
@@ -47,6 +87,33 @@ export async function getAllInvestors() {
     portfolio: (e.portfolio_ids || []).map(pid => companyMap[pid]).filter(Boolean),
   }));
 
+  // Fetch portfolio companies for each NV fund
+  const fundIds = funds.map(f => f.id);
+  let fundPortfolios = {};
+  if (fundIds.length > 0) {
+    const portfolioSql = filterRegion
+      ? `SELECT c.id, c.name, c.stage, c.funding_m, c.eligible
+         FROM companies c
+         WHERE LOWER(c.region) = $1
+         ORDER BY c.funding_m DESC NULLS LAST`
+      : `SELECT c.id, c.name, c.stage, c.funding_m, c.eligible
+         FROM companies c
+         ORDER BY c.funding_m DESC NULLS LAST`;
+    const portfolioParams = filterRegion ? [filterRegion.toLowerCase()] : [];
+    const { rows: allCompanies } = await pool.query(portfolioSql, portfolioParams);
+    // Map companies to their eligible funds
+    for (const c of allCompanies) {
+      if (!c.eligible) continue;
+      for (const fid of c.eligible) {
+        if (!fundPortfolios[fid]) fundPortfolios[fid] = [];
+        fundPortfolios[fid].push({
+          id: c.id, name: c.name, stage: c.stage,
+          funding: c.funding_m ? parseFloat(c.funding_m) : null,
+        });
+      }
+    }
+  }
+
   return {
     nvFunds: funds.map(f => ({
       id: f.id,
@@ -59,6 +126,7 @@ export async function getAllInvestors() {
       checkSizeMin: f.check_size_min_m != null ? parseFloat(f.check_size_min_m) : null,
       checkSizeMax: f.check_size_max_m != null ? parseFloat(f.check_size_max_m) : null,
       vintageYear: f.vintage_year,
+      portfolio: fundPortfolios[f.id] || [],
     })),
     externalInvestors,
   };
@@ -131,32 +199,82 @@ export async function getInvestorById(id) {
 
 /**
  * Aggregate investor stats for the KPI strip.
+ * @param {Object} opts
+ * @param {string} [opts.region] - Filter by region of invested companies
  */
-export async function getInvestorStats() {
-  const { rows: [fundStats] } = await pool.query(`
-    SELECT
-      COUNT(*) AS total_nv_funds,
-      COALESCE(SUM(deployed_m), 0) AS total_deployed,
-      COALESCE(SUM(allocated_m), 0) AS total_allocated
-    FROM funds
-  `);
+export async function getInvestorStats({ region } = {}) {
+  const filterRegion = region && region !== 'all' ? region : null;
 
-  const { rows: [extStats] } = await pool.query(`
-    SELECT COUNT(DISTINCT e.id) AS total_external_investors
-    FROM externals e
-    INNER JOIN graph_edges ge ON ge.source_id = e.id AND ge.rel = 'invested_in'
-    WHERE e.id LIKE 'i_%'
-  `);
+  let fundStatsSql;
+  const fundStatsParams = [];
+  if (filterRegion) {
+    fundStatsSql = `
+      SELECT
+        COUNT(DISTINCT f.id) AS total_nv_funds,
+        COALESCE(SUM(DISTINCT f.deployed_m), 0) AS total_deployed,
+        COALESCE(SUM(DISTINCT f.allocated_m), 0) AS total_allocated
+      FROM funds f
+      INNER JOIN companies c ON f.id = ANY(c.eligible)
+      WHERE LOWER(c.region) = $1
+    `;
+    fundStatsParams.push(filterRegion.toLowerCase());
+  } else {
+    fundStatsSql = `
+      SELECT
+        COUNT(*) AS total_nv_funds,
+        COALESCE(SUM(deployed_m), 0) AS total_deployed,
+        COALESCE(SUM(allocated_m), 0) AS total_allocated
+      FROM funds
+    `;
+  }
+  const { rows: [fundStats] } = await pool.query(fundStatsSql, fundStatsParams);
+
+  let extStatsSql;
+  const extStatsParams = [];
+  if (filterRegion) {
+    extStatsSql = `
+      SELECT COUNT(DISTINCT e.id) AS total_external_investors
+      FROM externals e
+      INNER JOIN graph_edges ge ON ge.source_id = e.id AND ge.rel = 'invested_in'
+      INNER JOIN companies c ON 'c_' || c.id = ge.target_id
+      WHERE e.id LIKE 'i_%' AND LOWER(c.region) = $1
+    `;
+    extStatsParams.push(filterRegion.toLowerCase());
+  } else {
+    extStatsSql = `
+      SELECT COUNT(DISTINCT e.id) AS total_external_investors
+      FROM externals e
+      INNER JOIN graph_edges ge ON ge.source_id = e.id AND ge.rel = 'invested_in'
+      WHERE e.id LIKE 'i_%'
+    `;
+  }
+  const { rows: [extStats] } = await pool.query(extStatsSql, extStatsParams);
 
   // Breakdown by investor type
-  const { rows: typeBreakdown } = await pool.query(`
-    SELECT e.entity_type AS type, COUNT(DISTINCT e.id) AS count
-    FROM externals e
-    INNER JOIN graph_edges ge ON ge.source_id = e.id AND ge.rel = 'invested_in'
-    WHERE e.id LIKE 'i_%'
-    GROUP BY e.entity_type
-    ORDER BY count DESC
-  `);
+  let typeBreakdownSql;
+  const typeBreakdownParams = [];
+  if (filterRegion) {
+    typeBreakdownSql = `
+      SELECT e.entity_type AS type, COUNT(DISTINCT e.id) AS count
+      FROM externals e
+      INNER JOIN graph_edges ge ON ge.source_id = e.id AND ge.rel = 'invested_in'
+      INNER JOIN companies c ON 'c_' || c.id = ge.target_id
+      WHERE e.id LIKE 'i_%' AND LOWER(c.region) = $1
+      GROUP BY e.entity_type
+      ORDER BY count DESC
+    `;
+    typeBreakdownParams.push(filterRegion.toLowerCase());
+  } else {
+    typeBreakdownSql = `
+      SELECT e.entity_type AS type, COUNT(DISTINCT e.id) AS count
+      FROM externals e
+      INNER JOIN graph_edges ge ON ge.source_id = e.id AND ge.rel = 'invested_in'
+      WHERE e.id LIKE 'i_%'
+      GROUP BY e.entity_type
+      ORDER BY count DESC
+    `;
+  }
+  const { rows: typeBreakdown } = await pool.query(typeBreakdownSql, typeBreakdownParams);
 
   const totalUniqueInvestors = parseInt(fundStats.total_nv_funds, 10) +
     parseInt(extStats.total_external_investors, 10);

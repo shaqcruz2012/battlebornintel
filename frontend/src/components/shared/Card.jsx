@@ -21,7 +21,16 @@ export function Card({
     .join(' ');
 
   return (
-    <div className={cls} onClick={onClick} style={style}>
+    <div
+      className={cls}
+      onClick={onClick}
+      style={style}
+      {...(onClick ? {
+        role: 'button',
+        tabIndex: 0,
+        onKeyDown: (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick(e); } },
+      } : {})}
+    >
       {children}
     </div>
   );

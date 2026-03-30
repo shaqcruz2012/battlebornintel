@@ -31,6 +31,11 @@ export function useGraphLayout(nodes, edges, options = {}) {
   // Track which layout request is current so stale worker responses are ignored.
   const requestIdRef = useRef(0);
 
+  // Cache previous node positions so temporal scrubbing preserves layout stability.
+  // When edges change (year filter) but nodes remain mostly the same, we seed
+  // new layouts with the last known positions instead of random placement.
+  const prevPositionsRef = useRef({});
+
   // Stable keys derived from graph topology (IDs and connections), not object references.
   // This prevents the layout from recomputing when upstream code recreates the same
   // arrays with new references but identical data.
@@ -54,6 +59,10 @@ export function useGraphLayout(nodes, edges, options = {}) {
     if (_requestId !== undefined && _requestId !== requestIdRef.current) return;
 
     if (success) {
+      // Cache positions for layout stability across temporal scrubbing
+      const posMap = {};
+      layoutNodes.forEach(n => { if (n.x != null && n.y != null) posMap[n.id] = { x: n.x, y: n.y }; });
+      prevPositionsRef.current = posMap;
       setLayout({ nodes: layoutNodes, edges: edgesRef.current });
       setError(null);
       setIsLoading(false);
@@ -120,9 +129,19 @@ export function useGraphLayout(nodes, edges, options = {}) {
     setIsLoading(true);
     setError(null);
 
+    // Seed nodes with previous positions for layout stability during temporal scrubbing.
+    // Nodes that existed in the prior layout keep their positions; new nodes get placed by the worker.
+    const prevPos = prevPositionsRef.current;
+    const seededNodes = Object.keys(prevPos).length > 0
+      ? nodes.map(n => {
+          const prev = prevPos[n.id];
+          return prev ? { ...n, x: prev.x, y: prev.y, fx: undefined, fy: undefined } : n;
+        })
+      : nodes;
+
     // Always send JSON objects — the performance difference vs ArrayBuffer
     // transfer is negligible at ~700 nodes and avoids format mismatch bugs.
-    worker.postMessage({ nodes, edges, width, height, iterations, useTransfer: false, _requestId: reqId });
+    worker.postMessage({ nodes: seededNodes, edges, width, height, iterations: Object.keys(prevPos).length > 0 ? Math.min(iterations, 50) : iterations, useTransfer: false, _requestId: reqId });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [nodesKey, edgesKey, iterations, enabled, width, height]);
 

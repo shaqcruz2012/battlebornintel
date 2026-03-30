@@ -60,3 +60,17 @@
   opacity: 0.6;
   font-variant-numeric: tabular-nums;
 }
+
+/* ── Touch-friendly sizing for coarse pointers ────────── */
+
+@media (pointer: coarse) {
+  .chip {
+    min-height: 36px;
+    padding: 8px 12px;
+  }
+
+  .small {
+    min-height: 32px;
+    padding: 6px 10px;
+  }
+}
