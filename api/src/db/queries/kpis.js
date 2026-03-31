@@ -482,11 +482,13 @@ export async function getSectorStats({ region } = {}) {
           sector: s,
           count: 0,
           totalFunding: 0,
+          totalMomentum: 0,
           heat: sectorHeat[s] || 50,
         };
       }
       map[s].count++;
       map[s].totalFunding += parseFloat(c.funding_m || 0);
+      map[s].totalMomentum += (c.momentum || 0);
     }
   }
 
@@ -494,6 +496,7 @@ export async function getSectorStats({ region } = {}) {
     .map((s) => ({
       ...s,
       avgFunding: s.count > 0 ? s.totalFunding / s.count : 0,
+      momentum: s.count > 0 ? Math.round(s.totalMomentum / s.count) : 0,
     }))
     .sort((a, b) => b.heat - a.heat);
 }
