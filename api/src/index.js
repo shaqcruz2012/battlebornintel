@@ -30,6 +30,17 @@ import temporalRouter from './routes/temporal.js';
 import graphAnalysisDetailRouter from './routes/graph-analysis.js';
 import featureIngestionRouter from './routes/feature-ingestion.js';
 import authRouter from './routes/auth.js';
+import risksRouter from './routes/risks.js';
+import investorsRouter from './routes/investors.js';
+import ecosystemRouter from './routes/ecosystem.js';
+import newsRouter from './routes/news.js';
+import graphTraversalRouter from './routes/graph-traversal.js';
+import analyticsRouter from './routes/analytics.js';
+import analyticsStructuralRouter from './routes/analytics-structural.js';
+import analyticsPredictionsRouter from './routes/analytics-predictions.js';
+import analyticsFlowRouter from './routes/analytics-flow.js';
+import ingestionRouter from './routes/ingestion.js';
+import subscribersRouter from './routes/subscribers.js';
 import regionalRouter from './routes/regional.js';
 import modelOutputsRouter from './routes/model-outputs.js';
 import macroEventsRouter from './routes/macro-events.js';
@@ -147,6 +158,19 @@ apiRouter.use('/graph-analysis',         publicLimit, cacheMiddleware('graphAnal
 // Admin routes: key-gated + strict rate limit
 apiRouter.use('/admin', adminLimit, requireAdminKey, adminRouter);
 apiRouter.use('/features', adminLimit, requireAdminKey, featureIngestionRouter);
+
+// Routes restored from pre-merge
+apiRouter.use('/risks',                  publicLimit, cacheMiddleware('risks',                 120_000, { cacheControl: 'private, max-age=120' }),  risksRouter);
+apiRouter.use('/investors',              publicLimit, cacheMiddleware('investors',             300_000, { cacheControl: 'public, max-age=3600' }),  investorsRouter);
+apiRouter.use('/ecosystem',              publicLimit, cacheMiddleware('ecosystem',             120_000, { cacheControl: 'public, max-age=120' }),   ecosystemRouter);
+apiRouter.use('/news',                   publicLimit, cacheMiddleware('news',                  120_000, { cacheControl: 'public, max-age=120' }),   newsRouter);
+apiRouter.use('/graph',                  publicLimit, cacheMiddleware('graphTraversal',        300_000, { cacheControl: 'public, max-age=300' }),   graphTraversalRouter);
+apiRouter.use('/analytics',              publicLimit, cacheMiddleware('analytics',             300_000, { cacheControl: 'public, max-age=300' }),   analyticsRouter);
+apiRouter.use('/analytics',              publicLimit, cacheMiddleware('analyticsStructural',   300_000, { cacheControl: 'public, max-age=300' }),   analyticsStructuralRouter);
+apiRouter.use('/analytics',              publicLimit, cacheMiddleware('analyticsPredictions',  300_000, { cacheControl: 'public, max-age=300' }),   analyticsPredictionsRouter);
+apiRouter.use('/analytics',              publicLimit, cacheMiddleware('analyticsFlow',         300_000, { cacheControl: 'public, max-age=300' }),   analyticsFlowRouter);
+apiRouter.use('/ingestion',              publicLimit, ingestionRouter);
+apiRouter.use('/subscribers',            publicLimit, subscribersRouter);
 
 // High-impact batch endpoint for dashboard
 apiRouter.use('/dashboard-batch', publicLimit, dashboardBatchRouter);
