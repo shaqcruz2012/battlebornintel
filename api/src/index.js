@@ -56,10 +56,10 @@ app.use(helmet({
     directives: {
       defaultSrc: ["'self'"],
       scriptSrc: ["'self'"],
-      styleSrc: ["'self'", "'unsafe-inline'"],  // needed for inline styles in React
+      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
       imgSrc: ["'self'", "data:"],
-      connectSrc: ["'self'", process.env.CORS_ORIGIN || 'http://localhost:5173'],
-      fontSrc: ["'self'"],
+      connectSrc: ["'self'"],
+      fontSrc: ["'self'", "https://fonts.gstatic.com", "https://fonts.googleapis.com"],
       objectSrc: ["'none'"],
       frameAncestors: ["'none'"],
     },

@@ -131,4 +131,88 @@ export const api = {
 
   getStageTransitions: (companyId) =>
     fetchJSON(`${BASE}/graph/stage-transitions/${companyId}`).then((r) => r.data),
+
+  // Lightweight graph (same endpoint, smaller payload flag)
+  getGraphLight: (nodeTypes, yearMax, region, opportunities) =>
+    fetchJSON(`${BASE}/graph`, {
+      nodeTypes: nodeTypes?.join(','),
+      yearMax,
+      region,
+      opportunities: opportunities || undefined,
+      light: true,
+    }).then((r) => r.data),
+
+  // Graph clusters (community or kmeans)
+  getGraphClusters: (type = 'community') =>
+    fetchJSON(`${BASE}/graph-analytics/clusters`, { type }).then((r) => r.data),
+
+  // Graph analytics summary
+  getGraphAnalytics: () =>
+    fetchJSON(`${BASE}/graph-analytics/snapshot`).then((r) => r.data),
+
+  // Investor match for a company
+  getInvestorMatches: (companyId) =>
+    fetchJSON(`${BASE}/analytics/investor-match/${companyId}`).then((r) => r.data),
+
+  // Capital flow analytics
+  getCapitalFlows: (params = {}) =>
+    fetchJSON(`${BASE}/analytics/capital-flows`, params).then((r) => r.data),
+
+  // Capital magnet rankings
+  getCapitalMagnets: (limit = 20) =>
+    fetchJSON(`${BASE}/analytics/capital-magnets`, { limit }).then((r) => r.data),
+
+  // Predicted links
+  getPredictedLinks: (limit = 30, params = {}) =>
+    fetchJSON(`${BASE}/analytics/predicted-links`, { limit, ...params }).then((r) => r.data),
+
+  // Investors
+  getInvestors: (params = {}) =>
+    fetchJSON(`${BASE}/investors`, params).then((r) => r.data),
+
+  getInvestor: (id) =>
+    fetchJSON(`${BASE}/investors/${id}`).then((r) => r.data),
+
+  getInvestorStats: (params = {}) =>
+    fetchJSON(`${BASE}/investors/stats`, params).then((r) => r.data),
+
+  // News
+  getNews: (params = {}) =>
+    fetchJSON(`${BASE}/news/frontier`, params).then((r) => r.data),
+
+  getNewsNevada: (params = {}) =>
+    fetchJSON(`${BASE}/news/nevada`, params).then((r) => r.data),
+
+  getNewsSectors: () =>
+    fetchJSON(`${BASE}/news/sectors`).then((r) => r.data),
+
+  refreshNews: () =>
+    fetch(`${BASE}/news/refresh`, { method: 'POST' }).then((r) => r.json()),
+
+  // Ecosystem
+  getEcosystemMap: (params = {}) =>
+    fetchJSON(`${BASE}/ecosystem/map`, params).then((r) => r.data),
+
+  // Structural holes & gaps
+  getStructuralHoles: (params = {}) =>
+    fetchJSON(`${BASE}/analytics/structural-holes`, params).then((r) => r.data),
+
+  getEcosystemGaps: (params = {}) =>
+    fetchJSON(`${BASE}/analytics/ecosystem-gaps`, params).then((r) => r.data),
+
+  // Regional summary
+  getRegionalSummary: () =>
+    fetchJSON(`${BASE}/regional/summary`).then((r) => r.data),
+
+  // Macro events
+  getMacroEvents: () =>
+    fetchJSON(`${BASE}/macro-events`).then((r) => r.data),
+
+  // Model outputs leaderboard
+  getModelLeaderboard: (outputType = 'composite_score', limit = 20) =>
+    fetchJSON(`${BASE}/model-outputs/leaderboard`, { outputType, limit }).then((r) => r.data),
+
+  // Risk signals
+  getRiskSignals: (params = {}) =>
+    fetchJSON(`${BASE}/risks`, params).then((r) => r.data),
 };
