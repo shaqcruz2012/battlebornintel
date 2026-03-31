@@ -194,8 +194,9 @@ app.use('/api', apiRouter);
 // Error handler
 app.use(errorHandler);
 
-const server = app.listen(cfg.port, () => {
-  logger.info('BBI API listening', { port: cfg.port });
+const port = parseInt(process.env.PORT || process.env.API_PORT || '3001', 10);
+const server = app.listen(port, '0.0.0.0', () => {
+  console.log(`BBI API listening on 0.0.0.0:${port} (PORT=${process.env.PORT}, API_PORT=${process.env.API_PORT})`);
 });
 
 async function shutdown(signal) {
