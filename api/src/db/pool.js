@@ -3,8 +3,11 @@ import cfg from '../config.js';
 import { logger } from '../logger.js';
 
 // SSL configuration for production/staging environments
-const sslConfig = process.env.DB_SSL === 'true'
-  ? { rejectUnauthorized: process.env.DB_SSL_REJECT_UNAUTHORIZED !== 'false' }
+// Railway Postgres uses self-signed certs, so auto-enable SSL when DATABASE_URL
+// points to a Railway host or DB_SSL is explicitly set.
+const isRailway = !!process.env.RAILWAY_ENVIRONMENT || (cfg.databaseUrl && cfg.databaseUrl.includes('.railway.'));
+const sslConfig = (process.env.DB_SSL === 'true' || isRailway)
+  ? { rejectUnauthorized: process.env.DB_SSL_REJECT_UNAUTHORIZED !== 'false' && !isRailway }
   : undefined;
 
 const pool = new pg.Pool({
