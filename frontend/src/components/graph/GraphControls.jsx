@@ -119,6 +119,7 @@ export function GraphOverlayControls({
             value={search}
             onChange={(e) => onSearchChange(e.target.value)}
             style={{ width: '100%' }}
+            aria-label="Search graph nodes"
           />
           {search && nodes.length > 0 && (
             <GraphSearchDropdown

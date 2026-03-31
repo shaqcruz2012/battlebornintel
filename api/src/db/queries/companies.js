@@ -2,16 +2,18 @@ import pool from '../pool.js';
 
 export async function getAllCompanies({ stage, region, sector, search, sortBy } = {}) {
   let sql = `
-    SELECT c.*,
-           cs.irs_score, cs.grade, cs.triggers, cs.dims
-    FROM companies c
-    LEFT JOIN LATERAL (
-      SELECT irs_score, grade, triggers, dims
+    WITH latest_scores AS (
+      SELECT DISTINCT ON (company_id)
+        company_id, irs_score, grade, triggers, dims,
+        forward_score, forward_components, score_type
       FROM computed_scores
-      WHERE company_id = c.id
-      ORDER BY computed_at DESC
-      LIMIT 1
-    ) cs ON true
+      ORDER BY company_id, computed_at DESC
+    )
+    SELECT c.*,
+      cs.irs_score, cs.grade, cs.triggers, cs.dims,
+      cs.forward_score, cs.forward_components, cs.score_type
+    FROM companies c
+    LEFT JOIN latest_scores cs ON cs.company_id = c.id
   `;
   const conditions = [];
   const params = [];
@@ -55,12 +57,11 @@ export async function getAllCompanies({ stage, region, sector, search, sortBy } 
 
   const orderMap = {
     irs: 'cs.irs_score DESC NULLS LAST',
-    momentum: 'c.momentum DESC NULLS LAST',
-    funding: 'c.funding_m DESC NULLS LAST',
+    momentum: 'c.momentum DESC',
+    funding: 'c.funding_m DESC',
     name: 'c.name ASC',
-    employees: 'c.employees DESC NULLS LAST',
   };
-  sql += ` ORDER BY ${orderMap[sortBy] || orderMap.irs}`;
+  sql += ` ORDER BY ${orderMap[sortBy] || orderMap.irs} LIMIT 500`;
 
   const { rows } = await pool.query(sql, params);
   return rows.map(formatCompany);
@@ -69,16 +70,19 @@ export async function getAllCompanies({ stage, region, sector, search, sortBy } 
 export async function getCompanyById(id) {
   const nodeId = `c_${id}`;
 
-  // Run all three queries in parallel instead of sequentially
-  const [companyResult, edgeResult, listingResult] = await Promise.all([
+  // Fetch company + scores, edges, and listings in parallel (avoids N+1)
+  const [companyRes, edgesRes, listingsRes] = await Promise.all([
     pool.query(
       `WITH latest_scores AS (
-         SELECT DISTINCT ON (company_id) company_id, irs_score, grade, triggers, dims
+         SELECT DISTINCT ON (company_id)
+           company_id, irs_score, grade, triggers, dims,
+           forward_score, forward_components, score_type
          FROM computed_scores
-         WHERE company_id = $1
          ORDER BY company_id, computed_at DESC
        )
-       SELECT c.*, cs.irs_score, cs.grade, cs.triggers, cs.dims
+       SELECT c.*,
+         cs.irs_score, cs.grade, cs.triggers, cs.dims,
+         cs.forward_score, cs.forward_components, cs.score_type
        FROM companies c
        LEFT JOIN latest_scores cs ON cs.company_id = c.id
        WHERE c.id = $1`,
@@ -94,12 +98,11 @@ export async function getCompanyById(id) {
     ),
   ]);
 
-  if (companyResult.rows.length === 0) return null;
+  if (companyRes.rows.length === 0) return null;
 
-  const company = formatCompany(companyResult.rows[0]);
-  company.edges = edgeResult.rows;
-  company.listings = listingResult.rows;
-
+  const company = formatCompany(companyRes.rows[0]);
+  company.edges = edgesRes.rows;
+  company.listings = listingsRes.rows;
   return company;
 }
 
@@ -124,5 +127,8 @@ function formatCompany(row) {
     grade: row.grade || null,
     triggers: row.triggers || [],
     dims: row.dims || null,
+    forward_score: row.forward_score ?? null,
+    forward_components: row.forward_components ?? null,
+    score_type: row.score_type || 'heuristic',
   };
 }

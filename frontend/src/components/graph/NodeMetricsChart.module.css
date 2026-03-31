@@ -1,0 +1,58 @@
+/* ── NodeMetricsChart: compact centrality sparkline ──────── */
+
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--space-sm) 0;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.title {
+  font-family: var(--font-body);
+  font-size: var(--text-micro);
+  font-weight: var(--weight-semibold);
+  color: var(--text-disabled);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.chart {
+  display: block;
+  overflow: visible;
+}
+
+.axisLabel {
+  font-family: var(--font-mono);
+  font-size: 8px;
+  fill: var(--text-muted);
+}
+
+.legend {
+  display: flex;
+  gap: var(--space-md);
+}
+
+.legendItem {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-family: var(--font-body);
+  font-size: var(--text-micro);
+  color: var(--text-secondary);
+}
+
+.legendSwatch {
+  display: inline-block;
+  width: 8px;
+  height: 2px;
+  border-radius: 1px;
+  flex-shrink: 0;
+}
+
+.loading {
+  font-family: var(--font-body);
+  font-size: var(--text-caption-sm);
+  color: var(--text-muted);
+  font-style: italic;
+}

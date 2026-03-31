@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { logger } from '../logger.js';
 import {
   getStakeholderActivities,
   getCompanyActivities,
@@ -24,8 +25,7 @@ const router = Router();
 router.get('/', async (req, res, next) => {
   try {
     const {
-      location: locationParam,
-      region: regionParam,
+      location = 'all',
       since,
       until,
       limit = 100,
@@ -33,8 +33,6 @@ router.get('/', async (req, res, next) => {
       stakeholder_type,
       stakeholderType: stakeholderTypeCamel,
     } = req.query;
-    // Support both 'location' and 'region' param names
-    const location = locationParam || regionParam || 'all';
     // Support both snake_case and camelCase param names
     const resolvedStakeholderType = stakeholder_type || stakeholderTypeCamel;
 
@@ -62,7 +60,7 @@ router.get('/', async (req, res, next) => {
       since,
       until,
       type,
-      stakeholderType: resolvedStakeholderType,
+      stakeholderType: stakeholder_type,
     };
 
     // Fetch paginated data with total count in a single query
@@ -70,6 +68,13 @@ router.get('/', async (req, res, next) => {
       ...filterParams,
       limit: parsedLimit,
     });
+
+    if (data.length === 0) {
+      logger.warn(
+        '[stakeholder-activities] Empty results for filters:',
+        JSON.stringify(filterParams),
+      );
+    }
 
     const activeFilters = {
       location: location !== 'all' ? location : null,
@@ -90,6 +95,7 @@ router.get('/', async (req, res, next) => {
       },
     });
   } catch (err) {
+    logger.error('[stakeholder-activities] GET / failed:', err.message);
     next(err);
   }
 });
@@ -113,11 +119,16 @@ router.get('/company/:companyId', async (req, res, next) => {
       parseInt(limit, 10) || 20
     );
 
+    if (data.length === 0) {
+      logger.warn(`[stakeholder-activities] No activities found for company ${parsedCompanyId}`);
+    }
+
     res.json({
       data,
       meta: { count: data.length },
     });
   } catch (err) {
+    logger.error('[stakeholder-activities] GET /company/:companyId failed:', err.message);
     next(err);
   }
 });
@@ -139,6 +150,12 @@ router.get('/location/:location', async (req, res, next) => {
 
     const data = await getActivitiesByLocationAndDateRange(location, startDate, endDate);
 
+    if (data.length === 0) {
+      logger.warn(
+        `[stakeholder-activities] No activities for location="${location}" between ${startDate} and ${endDate}`,
+      );
+    }
+
     res.json({
       data,
       meta: {
@@ -151,6 +168,7 @@ router.get('/location/:location', async (req, res, next) => {
       },
     });
   } catch (err) {
+    logger.error('[stakeholder-activities] GET /location/:location failed:', err.message);
     next(err);
   }
 });
@@ -163,7 +181,9 @@ router.get('/stats/by-type', async (req, res, next) => {
   try {
     const data = await countActivitiesByType();
 
-    res.json({ data });
+    res.json({
+      data,
+    });
   } catch (err) {
     next(err);
   }
@@ -177,7 +197,9 @@ router.get('/stats/by-location', async (req, res, next) => {
   try {
     const data = await countActivitiesByLocation();
 
-    res.json({ data });
+    res.json({
+      data,
+    });
   } catch (err) {
     next(err);
   }

@@ -1,162 +1,149 @@
-# CLAUDE.md — BattleBornIntel
+# BattleBornIntel (BBI)
 
-## Project Overview
+Regional innovation ecosystem intelligence platform for Nevada's startup/venture landscape.
 
-BattleBornIntel is a Nevada innovation ecosystem intelligence platform. It tracks companies, funds, investors, stakeholder activities, risk signals, and ecosystem graph relationships across Nevada's tech/business landscape.
+## Context Routing
 
-**Stack:** React (Vite) frontend + Express API + PostgreSQL 16 (Docker, port 5433)
+> **CRITICAL**: Context exhaustion is the #1 cause of agent failure. Every file read costs tokens that can't be used for output. Route agents to the smallest context file that covers their task.
+
+| Task | Context File | ~Tokens | When to Use |
+|------|-------------|---------|-------------|
+| SQL, migrations, schema | `.claude/prompts/database-schema.md` | 1.5K | Writing queries, creating migrations, schema questions |
+| Python agents | `.claude/prompts/agent-development.md` | 1.5K | New agents, BaseAgent/BaseModelAgent, scheduling |
+| Express API | `.claude/prompts/api-development.md` | 2K | New endpoints, query functions, caching, middleware |
+| React frontend | `.claude/prompts/frontend-development.md` | 2K | New views, hooks, API client, D3 graph work |
+| Data ingestion | `.claude/prompts/ingestion-development.md` | 1.5K | FRED/BLS ingestors, metric_snapshots writes |
+| Multi-file tasks | `.claude/prompts/team-pattern.md` | 2K | 4-agent team workflow, context budgets |
+| Code quality | `.claude/prompts/optimization-agent.md` | 2K | Best practices, quality scoring, anti-patterns |
+| Agent governance | `.claude/prompts/agent-governance.md` | 2K | Autonomy tiers, review patterns, control rules, data doctrine |
+
+### Agent Context Rules
+1. **Builders read max 3 files** — more than this causes context exhaustion
+2. **Planners research, Builders write** — never combine both in one agent
+3. **Pre-digest context** — paste relevant snippets into prompts instead of having agents read files
+4. **Multi-domain tasks split per domain** — one agent for Python, another for JS, another for frontend
+5. **Schema verification uses migrations** — never trust docs alone, always check actual CREATE TABLE
+
+### Subagent prompt pattern:
+```
+Read .claude/prompts/<relevant>.md for schema and patterns, then [task description].
+```
 
 ## Architecture
 
-```
-frontend/src/          → React SPA (JSX, CSS Modules, Recharts, D3 force graph)
-  components/          → Feature-grouped: dashboard, graph, search, analytics, etc.
-  api/                 → client.js (fetch wrapper), hooks.js (React Query)
-  workers/             → Web Workers for D3 layout computation
+| Layer | Stack | Directory |
+|-------|-------|-----------|
+| Frontend | React 18 + Vite, D3 force graph, TanStack Query | `frontend/` |
+| API | Express.js, in-memory cache, rate limiting | `api/` |
+| Database | PostgreSQL 16 (Docker, port 5433) | `database/migrations/` |
+| Agents | Python async, Claude API + statistical models | `agents/` |
 
-api/src/               → Express REST API
-  routes/              → ~20 route files (companies, funds, graph, risks, news, etc.)
-  db/pool.js           → pg Pool connection
-  db/queries/          → Parameterized SQL query modules
-  db/migrations/       → SQL migration files
-  engine/              → Risk signals, analysis engines
-  services/            → newsAggregator, etc.
-  middleware/           → auth, cache, errorHandler
+**Connection string**: `postgresql://bbi:bbi_dev_password@localhost:5433/battlebornintel`
 
-database/              → migrations/ and seeds/
-agents/                → Python data agents (scraping, ETL)
-```
+## Database Schema (Key Tables)
 
-## Running the Project
+### Core entities
+- `companies` — id, name, slug, stage, sectors[], employees, funding_m, momentum, founded, city, region, status, eligible
+- `graph_edges` — source_id, target_id, rel, event_year, note, weight, matching_score
+- `funds` / `ssbci_funds` — fund tracking with allocated_m, deployed_m, leverage_ratio
+- `regions` — name, level, fips, iso_code, population, gdp_b, parent_id
+- `sectors` — name, slug, naics_codes[], maturity_stage, strategic_priority
+- `universities` — name, research_budget_m, tech_transfer_office, spinout_count
+- `programs` — name, program_type (grant/loan/equity/accelerator_cohort/...), budget_m
+
+### Analytics tables
+- `metric_snapshots` — entity_type, entity_id, metric_name, value, unit, period_start, period_end, granularity, confidence, verified, agent_id
+- `scenarios` — id, name, description, base_period (DATE), model_id (FK), assumptions (JSONB), status, created_by
+- `scenario_results` — scenario_id, entity_type, entity_id, metric_name, value, unit, period (DATE), confidence_lo, confidence_hi
+- `models` — id, name, objective, input_variables (JSONB), output_variables (JSONB), version, is_active
+- `stage_transitions` — id, company_id, from_stage, to_stage, transition_date, transition_year, confidence, evidence_type, evidence_source, created_at
+- `analysis_results` — analysis_type, entity_type, entity_id, content (JSONB), model_used, agent_run_id
+- `computed_scores` — company_id, irs_score, dim scores
+- `graph_metrics_cache` — node_id, pagerank, betweenness, community_id, computed_at
+- `computed_scores_history` — mirrors computed_scores with archived_at for time-series tracking
+
+### Auth & audit tables
+- `users` — id, email, password_hash, display_name, role (admin/analyst/viewer/service_account), is_active, mfa_secret, mfa_enabled
+- `sessions` — id (UUID), user_id, token_hash, ip_address, user_agent, expires_at
+- `audit_log` — id, user_id, action, resource_type, resource_id, ip_address, user_agent, details (JSONB), created_at
+
+### Materialized views
+- `economic_indicators_latest` — filtered metric_snapshots for macro series
+- `economic_indicators_pivot` — latest value per indicator
+- `economic_indicators_summary` — latest + previous + pct_change
+
+## Graph Schema
+
+**10 node types**: company (`c_`), fund (`f_`), sector (`s_`), region (`r_`), person (`p_`), external (`x_`), exchange (`ex_`), accelerator (`a_`), ecosystem (`e_`), program (`pr_`)
+
+**21+ edge types**: invested_in, accelerated_by, founded_by, employed_at, acquired, partners_with, qualifies_for, won_pitch, etc.
+
+**3 edge categories**: historical (past events), opportunity (potential), projected (forward-looking)
+
+## Agent Framework
+
+### Base classes
+- `BaseAgent` (`agents/src/agents/base_agent.py`) — LLM-powered agents using Claude API
+- `BaseModelAgent` (`agents/src/agents/base_model_agent.py`) — Statistical/ML agents (no LLM)
+  - Key methods: `load_panel_data()`, `load_graph_features()`, `save_predictions()`, `register_model()`, `save_analysis()`, `create_scenario()`, `complete_scenario()`
+
+### Agent registry (`agents/src/orchestration/runner.py`)
+| Agent | Type | Schedule | Purpose |
+|-------|------|----------|---------|
+| company_analyst | LLM | Sun 2 AM | Full company analysis |
+| weekly_brief | LLM | Mon 6 AM | Weekly intelligence brief |
+| risk_assessor | LLM | Daily 3 AM | Risk assessment |
+| pattern_detector | LLM | Sun 4 AM | Pattern detection |
+| panel_forecaster | Statistical | Sun 5 AM | OLS time-series forecasting |
+| survival_analyzer | Statistical | Sun 6 AM | Kaplan-Meier + Cox PH survival |
+| causal_evaluator | Statistical | 1st/mo 7 AM | DiD, PSM, spillover analysis |
+| scenario_simulator | Statistical | 1st/mo 8 AM | Monte Carlo what-if engine |
+| freshness_checker | Ingestion | Daily 1 AM | Data freshness audit |
+| fred_ingestor | Ingestion | Mon 2 AM | FRED macro data (9 series) |
+| bls_ingestor | Ingestion | 1st/mo 3 AM | BLS QCEW employment/wages |
+
+### Python dependencies
+pandas, numpy, statsmodels, lifelines, scikit-learn, networkx, httpx, asyncpg
+
+## API Routes
+
+| Route | Cache TTL | Description |
+|-------|-----------|-------------|
+| `/api/companies` | 300s | Company list with IRS scores |
+| `/api/funds` | 300s | Fund deployment data |
+| `/api/graph` | 300s | Full graph nodes + edges |
+| `/api/kpis` | 120s | Aggregate KPIs by sector |
+| `/api/timeline` | 120s | Timeline events feed |
+| `/api/analysis` | 60s | AI analysis briefs + risks |
+| `/api/indicators` | 120s | Economic indicators (FRED/BLS) |
+| `/api/scenarios` | 120s | Scenario CRUD + results |
+| `/api/forecasts` | 120s | Entity forecasts from scenario_results |
+| `/api/opportunities` | 300s | Opportunity matching + scoring |
+| `/api/stakeholder-activities` | 300s | Stakeholder activity feed |
+| `/api/dashboard-batch` | 120s | Batched dashboard data |
+| `/api/constants` | 600s | Static reference data |
+| `/api/admin` | N/A | Key-gated admin (recompute, refresh, cache clear) |
+
+## Common Patterns
+
+- **Polymorphic entity references**: `entity_type` + `entity_id` used in metric_snapshots, scenario_results, analysis_results
+- **Node ID prefixes**: `c_123` (company), `f_bbv` (fund), `s_tech` (sector), `r_nv` (region)
+- **Idempotent writes**: All INSERT use `ON CONFLICT DO NOTHING` or `DO UPDATE`
+- **Audit trail**: All agent runs logged in `agent_runs` table (status, input_params, output_summary, error_message)
+
+## Development
 
 ```bash
-docker compose up -d                    # PostgreSQL on localhost:5433
-cd api && npm run dev                   # API on :3001
-cd frontend && npm run dev              # Frontend on :5173
+# Start DB
+docker compose up -d db
+
+# API (port 3001)
+cd api && npm install && npm run dev
+
+# Frontend (port 5173)
+cd frontend && npm install && npm run dev
+
+# Agents
+cd agents && pip install -r requirements.txt
+python -m src.orchestration.scheduler  # or run individual agent
 ```
-
-## Data Integrity (CRITICAL)
-
-- ALL data must be verifiable — no fabricated companies, funds, people, or metrics
-- Source URLs must resolve to real pages
-- Never invent ecosystem relationships or financial data
-- When seeding or ingesting data, every record must trace to a real source
-
----
-
-## Security Rules
-
-### Mandatory — Every Change
-
-- [ ] No hardcoded secrets (API keys, passwords, tokens) in source
-- [ ] Use environment variables or config.js for all credentials
-- [ ] All SQL queries use parameterized placeholders (`$1, $2`) — NEVER string concatenation
-- [ ] All user/external input validated before use
-- [ ] Error responses never leak stack traces, SQL, or internal paths to clients
-- [ ] CORS origin is restrictive in production
-- [ ] Auth middleware applied to protected routes
-
-### Secret Management
-
-- Secrets go in `.env` (gitignored) or environment variables
-- `config.js` reads from `process.env` with safe defaults for dev only
-- If a secret is accidentally committed: rotate immediately, then force-remove from history
-
-### SQL Injection Prevention
-
-```javascript
-// CORRECT — parameterized
-const { rows } = await pool.query('SELECT * FROM companies WHERE id = $1', [id]);
-
-// NEVER — string interpolation
-const { rows } = await pool.query(`SELECT * FROM companies WHERE id = ${id}`);
-```
-
-### XSS Prevention
-
-- Never use `dangerouslySetInnerHTML` without sanitization
-- Validate and escape any user-provided content rendered in JSX
-- API responses should not include raw HTML from untrusted sources
-
----
-
-## Code Quality Standards
-
-### File Organization
-
-- Feature-grouped components (e.g., `components/dashboard/`, `components/graph/`)
-- One component per file, file name matches export
-- Max ~400 lines per file; split if larger
-- Max ~50 lines per function; extract helpers if longer
-
-### Immutability
-
-- Return new objects/arrays, never mutate props, state, or function arguments
-- Use spread operators, `.map()`, `.filter()` — not `.push()`, `.splice()`, or direct assignment
-
-### Error Handling
-
-- Every `pool.query()` call must be in a try/catch
-- API routes: catch errors, log server-side detail, return safe client message
-- Frontend: React Error Boundaries wrap major sections
-- Never silently swallow errors — at minimum `console.error()` in dev
-
-### React Patterns
-
-- Correct `useEffect` dependency arrays — no missing deps, no stale closures
-- No state updates during render phase
-- Lists always have stable `key` props (not array index for dynamic lists)
-- Avoid prop drilling — use context or composition for deeply shared state
-- Loading and error states for all async data (React Query handles most)
-
-### Node.js / Express Patterns
-
-- All route handlers: validate input, query with params, handle errors
-- Use `middleware/cache.js` for expensive queries
-- No N+1 query patterns — use JOINs or batch queries
-- Set reasonable timeouts on external calls
-- Rate limiting on public-facing endpoints
-
----
-
-## Code Review Checklist
-
-Before considering any change complete:
-
-**Security (blocking)**
-- [ ] No credentials in code
-- [ ] SQL parameterized
-- [ ] Input validated at API boundary
-- [ ] Auth checked on protected routes
-
-**Quality (blocking)**
-- [ ] No functions > 50 lines
-- [ ] No files > 800 lines
-- [ ] Errors handled, not swallowed
-- [ ] No `console.log` left in committed code (use proper logging)
-
-**React (warning)**
-- [ ] useEffect deps correct
-- [ ] No render-phase side effects
-- [ ] Keys on lists
-- [ ] Loading/error states present
-
-**Performance (advisory)**
-- [ ] No unnecessary re-renders (memo where heavy)
-- [ ] Large lists virtualized if > 100 items
-- [ ] API queries bounded (LIMIT, pagination)
-- [ ] Web Workers used for heavy computation (D3 layout)
-
----
-
-## Git Workflow
-
-- Commit messages: `type: description` (fix:, feat:, refactor:, docs:, chore:)
-- Keep commits focused — one logical change per commit
-- Never commit `.env`, `node_modules/`, or `pgdata/`
-
-## When Uncertain
-
-- Read the existing code before proposing changes
-- Match existing patterns and conventions in the file being edited
-- Ask rather than guess when data integrity is at stake

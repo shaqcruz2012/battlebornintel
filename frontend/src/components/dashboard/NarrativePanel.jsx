@@ -1,4 +1,4 @@
-import { memo, useMemo } from 'react';
+import { useMemo } from 'react';
 import { Card } from '../shared/Card';
 import { useWeeklyBrief, useRiskAssessments } from '../../api/hooks';
 import styles from './NarrativePanel.module.css';
@@ -297,19 +297,16 @@ function deriveSectorSpotlight(sectorStats, companies, activeSector) {
 
 // ── Placeholder text (ecosystem-wide fallback) ─────────────────────────────
 
-function makePlaceholder(activeSector) {
-  const sectorNote = activeSector && activeSector !== 'all' ? ` in ${activeSector}` : '';
-  return {
-    capitalFormation:
-      `Nevada's venture formation pipeline${sectorNote} is demonstrating resilience in Q1 2026, with state-sponsored capital vehicles sustaining deployment velocity despite a nationally cautious fundraising environment. SSBCI-backed funds continue to anchor early-stage rounds, providing the risk-tolerant capital that catalyses private co-investment across the ecosystem.`,
+const PLACEHOLDER = {
+  capitalFormation:
+    "Nevada's venture formation pipeline is demonstrating resilience in Q1 2026, with state-sponsored capital vehicles sustaining deployment velocity despite a nationally cautious fundraising environment. SSBCI-backed funds continue to anchor early-stage rounds, providing the risk-tolerant capital that catalyses private co-investment across the ecosystem.",
 
-    riskSignals:
-      `Concentration risk in pre-revenue cohorts${sectorNote} remains the primary watchlist item for Q1. Macro headwinds—including compressed exit windows and elevated cost of capital—are weighing on runway projections for bridge-stage companies. Ecosystem-level exposure to federal procurement delays warrants continued monitoring through H1.`,
+  riskSignals:
+    "Concentration risk in pre-revenue cohorts remains the primary watchlist item for Q1. Macro headwinds—including compressed exit windows and elevated cost of capital—are weighing on runway projections for bridge-stage companies. Ecosystem-level exposure to federal procurement delays warrants continued monitoring through H1.",
 
-    strategicOutlook:
-      `Nevada${sectorNote} is positioned to capitalise on westward capital migration and the decentralisation of the national innovation economy. Sustained GOED engagement and federal partnership deepening are expected to accelerate ecosystem maturation through 2026.`,
-  };
-}
+  strategicOutlook:
+    "Nevada is positioned to capitalise on westward capital migration and the decentralisation of the national innovation economy. Sustained GOED engagement and federal partnership deepening are expected to accelerate ecosystem maturation through 2026.",
+};
 
 // ── Skeleton loading state ──────────────────────────────────────────────────
 
@@ -318,7 +315,7 @@ function SkeletonBlock({ lines = 3, width = '100%' }) {
     <div className={styles.skeleton} style={{ width }}>
       {Array.from({ length: lines }).map((_, i) => (
         <div
-          key={`skel-${i}`}
+          key={i}
           className={styles.skeletonLine}
           style={{ width: i === lines - 1 ? '72%' : '100%' }}
         />
@@ -329,16 +326,16 @@ function SkeletonBlock({ lines = 3, width = '100%' }) {
 
 // ── Main component ──────────────────────────────────────────────────────────
 
-export const NarrativePanel = memo(function NarrativePanel({ companies = [], funds = [], activeSector = 'all', sectorStats: sectorStatsProp = [] }) {
-  const { data: briefResponse, isLoading: briefLoading, error: briefError } = useWeeklyBrief();
-  const { data: risksRaw, isLoading: risksLoading, error: risksError } = useRiskAssessments();
+export function NarrativePanel({ companies = [], funds = [], activeSector = 'all', sectorStats: sectorStatsProp = [] }) {
+  const { data: briefResponse, isLoading: briefLoading, isError: briefError } = useWeeklyBrief();
+  const { data: risksRaw, isLoading: risksLoading, isError: risksError } = useRiskAssessments();
 
   const briefData = briefResponse?.data;
   const risks = Array.isArray(risksRaw) ? risksRaw : [];
   const sectorStats = Array.isArray(sectorStatsProp) ? sectorStatsProp : [];
 
   const isLoading = briefLoading || risksLoading;
-  const hasError = briefError || risksError;
+  const isError = briefError || risksError;
 
   const sectorLabel = activeSector && activeSector !== 'all' ? activeSector : null;
 
@@ -348,26 +345,17 @@ export const NarrativePanel = memo(function NarrativePanel({ companies = [], fun
   );
 
   const capitalFormation = useMemo(
-    () => {
-      const placeholder = makePlaceholder(activeSector);
-      return deriveSectorCapitalFormation(briefData, companies, funds, activeSector) || placeholder.capitalFormation;
-    },
+    () => deriveSectorCapitalFormation(briefData, companies, funds, activeSector) || PLACEHOLDER.capitalFormation,
     [briefData, companies, funds, activeSector]
   );
 
   const riskSignals = useMemo(
-    () => {
-      const placeholder = makePlaceholder(activeSector);
-      return deriveSectorRiskSignals(briefData, risks, companies, activeSector) || placeholder.riskSignals;
-    },
+    () => deriveSectorRiskSignals(briefData, risks, companies, activeSector) || PLACEHOLDER.riskSignals,
     [briefData, risks, companies, activeSector]
   );
 
   const strategicOutlook = useMemo(
-    () => {
-      const placeholder = makePlaceholder(activeSector);
-      return deriveSectorOutlook(briefData, sectorStats, companies, activeSector) || placeholder.strategicOutlook;
-    },
+    () => deriveSectorOutlook(briefData, sectorStats, companies, activeSector) || PLACEHOLDER.strategicOutlook,
     [briefData, sectorStats, companies, activeSector]
   );
 
@@ -406,22 +394,18 @@ export const NarrativePanel = memo(function NarrativePanel({ companies = [], fun
         <div className={styles.dividerHeavy} />
 
         {/* ── Narrative sections ─────────────────────────────── */}
-        {hasError && !isLoading && !briefData ? (
-          <div className={styles.sectionList} role="alert">
-            <div className={styles.narrativeSection}>
-              <p className={styles.sectionBody} style={{ color: 'var(--text-disabled)', fontStyle: 'italic' }}>
-                Brief data temporarily unavailable. Showing fallback narrative.
-              </p>
-            </div>
-          </div>
-        ) : null}
         {isLoading ? (
-          <div className={styles.loadingBlock} role="status" aria-busy="true">
+          <div className={styles.loadingBlock}>
             <SkeletonBlock lines={3} />
             <div style={{ height: 16 }} />
             <SkeletonBlock lines={3} />
             <div style={{ height: 16 }} />
             <SkeletonBlock lines={3} />
+          </div>
+        ) : isError ? (
+          <div className={styles.loadingBlock} style={{ textAlign: 'center', padding: '2rem 1rem', color: 'var(--text-secondary)' }}>
+            <div style={{ marginBottom: '0.5rem', fontWeight: 600 }}>Unable to load intelligence brief</div>
+            <div style={{ fontSize: '0.85rem' }}>Data may be temporarily unavailable. Showing fallback analysis.</div>
           </div>
         ) : (
           <div className={styles.sectionList}>
@@ -460,7 +444,7 @@ export const NarrativePanel = memo(function NarrativePanel({ companies = [], fun
           ) : (
             <ul className={styles.devList}>
               {keyDevelopments.map((item, i) => (
-                <li key={`dev-${i}-${item.slice(0, 20).replace(/\s/g, '-')}`} className={styles.devItem}>
+                <li key={i} className={styles.devItem}>
                   <span className={styles.devRule} />
                   <span className={styles.devText}>{item}</span>
                 </li>
@@ -492,4 +476,4 @@ export const NarrativePanel = memo(function NarrativePanel({ companies = [], fun
       </Card>
     </div>
   );
-});
+}

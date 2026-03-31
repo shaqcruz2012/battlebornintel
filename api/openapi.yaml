@@ -1,0 +1,1893 @@
+openapi: 3.0.3
+info:
+  title: BattleBornIntel API
+  description: Regional innovation ecosystem intelligence platform for Nevada's startup/venture landscape.
+  version: 1.0.0
+
+servers:
+  - url: http://localhost:3001/api
+    description: Local development
+  - url: http://localhost:3001/api/v1
+    description: Local development (versioned)
+
+components:
+  securitySchemes:
+    AdminKey:
+      type: apiKey
+      in: header
+      name: X-Admin-Key
+      description: Required for all /admin endpoints.
+
+  parameters:
+    ISODate:
+      name: date
+      in: query
+      schema:
+        type: string
+        format: date
+        example: "2025-01-01"
+
+  schemas:
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+      required: [error]
+
+    DataWrapper:
+      type: object
+      properties:
+        data: {}
+
+    PaginationMeta:
+      type: object
+      properties:
+        page:
+          type: integer
+        limit:
+          type: integer
+        total:
+          type: integer
+
+  responses:
+    BadRequest:
+      description: Validation error
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    RateLimited:
+      description: Too many requests
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+            example:
+              error: Too many requests
+    Unauthorized:
+      description: Missing or invalid admin API key
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    ServerError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+
+paths:
+  # ── Health & Diagnostics ───────────────────────────────────────────────────
+
+  /health:
+    get:
+      tags: [System]
+      summary: Health check
+      responses:
+        "200":
+          description: API and database are healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [ok]
+                  db:
+                    type: string
+                    enum: [connected]
+                  version:
+                    type: string
+        "503":
+          description: Database disconnected
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [error]
+                  db:
+                    type: string
+                    enum: [disconnected]
+
+  /cache-stats:
+    get:
+      tags: [System]
+      summary: In-memory cache statistics
+      responses:
+        "200":
+          description: Cache hit/miss stats
+          content:
+            application/json:
+              schema:
+                type: object
+
+  # ── Companies ──────────────────────────────────────────────────────────────
+
+  /companies:
+    get:
+      tags: [Companies]
+      summary: List companies with optional filters
+      parameters:
+        - name: stage
+          in: query
+          schema:
+            type: string
+          description: Filter by company stage
+        - name: region
+          in: query
+          schema:
+            type: string
+          description: Filter by region
+        - name: sector
+          in: query
+          schema:
+            type: string
+          description: Filter by sector
+        - name: search
+          in: query
+          schema:
+            type: string
+          description: Free-text search
+        - name: sortBy
+          in: query
+          schema:
+            type: string
+          description: Sort field
+      responses:
+        "200":
+          description: Company list with IRS/forward scores
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+        "429":
+          $ref: "#/components/responses/RateLimited"
+        "500":
+          $ref: "#/components/responses/ServerError"
+
+  /companies/{id}:
+    get:
+      tags: [Companies]
+      summary: Get a single company by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+      responses:
+        "200":
+          description: Company detail with forward score
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/ServerError"
+
+  # ── Funds ──────────────────────────────────────────────────────────────────
+
+  /funds:
+    get:
+      tags: [Funds]
+      summary: List all funds
+      responses:
+        "200":
+          description: Fund deployment data
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+        "429":
+          $ref: "#/components/responses/RateLimited"
+        "500":
+          $ref: "#/components/responses/ServerError"
+
+  /funds/{id}:
+    get:
+      tags: [Funds]
+      summary: Get a single fund by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: "^[a-zA-Z0-9_-]+$"
+            maxLength: 20
+      responses:
+        "200":
+          description: Fund detail
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/ServerError"
+
+  # ── Graph ──────────────────────────────────────────────────────────────────
+
+  /graph:
+    get:
+      tags: [Graph]
+      summary: Full graph nodes and edges
+      parameters:
+        - name: nodeTypes
+          in: query
+          schema:
+            type: string
+          description: Comma-separated node types (company, fund, person, external, accelerator, ecosystem)
+        - name: yearMax
+          in: query
+          schema:
+            type: integer
+            default: 2026
+          description: Maximum event year for edge filtering
+        - name: region
+          in: query
+          schema:
+            type: string
+            default: all
+          description: Region filter
+      responses:
+        "200":
+          description: Graph data (nodes + edges)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+        "429":
+          $ref: "#/components/responses/RateLimited"
+        "500":
+          $ref: "#/components/responses/ServerError"
+
+  /graph/metrics:
+    get:
+      tags: [Graph]
+      summary: Graph analytics metrics (PageRank, betweenness, communities)
+      parameters:
+        - name: nodeTypes
+          in: query
+          schema:
+            type: string
+          description: Comma-separated node types for live computation fallback
+      responses:
+        "200":
+          description: Graph metrics with source indicator
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      pagerank:
+                        type: object
+                      betweenness:
+                        type: object
+                      communities:
+                        type: object
+                      numCommunities:
+                        type: integer
+                  source:
+                    type: string
+                    enum: [cache, computed, empty]
+        "500":
+          $ref: "#/components/responses/ServerError"
+
+  # ── KPIs ───────────────────────────────────────────────────────────────────
+
+  /kpis:
+    get:
+      tags: [KPIs]
+      summary: Aggregate KPIs, optionally enriched with forecasts
+      parameters:
+        - name: stage
+          in: query
+          schema:
+            type: string
+        - name: region
+          in: query
+          schema:
+            type: string
+        - name: sector
+          in: query
+          schema:
+            type: string
+        - name: forecasts
+          in: query
+          schema:
+            type: string
+            enum: ["true", "false"]
+          description: Include forecast data (only when stage and region are omitted)
+      responses:
+        "200":
+          description: KPI aggregates
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+        "429":
+          $ref: "#/components/responses/RateLimited"
+        "500":
+          $ref: "#/components/responses/ServerError"
+
+  /kpis/sectors:
+    get:
+      tags: [KPIs]
+      summary: Sector-level statistics
+      parameters:
+        - name: region
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Per-sector stats
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+        "500":
+          $ref: "#/components/responses/ServerError"
+
+  /kpis/ecosystem-forecast:
+    get:
+      tags: [KPIs]
+      summary: Ecosystem-level forecast summary
+      responses:
+        "200":
+          description: Forecast summary or null if no scenario available
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    nullable: true
+                    type: object
+                  message:
+                    type: string
+        "500":
+          $ref: "#/components/responses/ServerError"
+
+  # ── Timeline ───────────────────────────────────────────────────────────────
+
+  /timeline:
+    get:
+      tags: [Timeline]
+      summary: Recent timeline events
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 30
+            maximum: 500
+        - name: type
+          in: query
+          schema:
+            type: string
+          description: Event type filter
+      responses:
+        "200":
+          description: Timeline events
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+        "429":
+          $ref: "#/components/responses/RateLimited"
+        "500":
+          $ref: "#/components/responses/ServerError"
+
+  /timeline/weeks:
+    get:
+      tags: [Timeline]
+      summary: List weeks with event counts
+      responses:
+        "200":
+          description: Week list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+        "500":
+          $ref: "#/components/responses/ServerError"
+
+  /timeline/reap:
+    get:
+      tags: [Timeline]
+      summary: MIT REAP framework metrics from timeline events
+      parameters:
+        - name: since
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: until
+          in: query
+          schema:
+            type: string
+            format: date
+      responses:
+        "200":
+          description: REAP metrics
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "500":
+          $ref: "#/components/responses/ServerError"
+
+  /timeline/week/{date}:
+    get:
+      tags: [Timeline]
+      summary: Events for a specific ISO week
+      parameters:
+        - name: date
+          in: path
+          required: true
+          schema:
+            type: string
+            format: date
+          description: Monday of the week (YYYY-MM-DD)
+      responses:
+        "200":
+          description: Week events
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                  weekStart:
+                    type: string
+                    format: date
+                  eventCount:
+                    type: integer
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "500":
+          $ref: "#/components/responses/ServerError"
+
+  # ── Analysis ───────────────────────────────────────────────────────────────
+
+  /analysis/company/{id}:
+    get:
+      tags: [Analysis]
+      summary: AI-generated company analysis
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+      responses:
+        "200":
+          description: Analysis content (JSONB)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/ServerError"
+
+  /analysis/brief:
+    get:
+      tags: [Analysis]
+      summary: Latest weekly intelligence brief
+      responses:
+        "200":
+          description: Brief content with generation timestamp
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                  generatedAt:
+                    type: string
+                    format: date-time
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/ServerError"
+
+  /analysis/risks:
+    get:
+      tags: [Analysis]
+      summary: Current risk assessments
+      responses:
+        "200":
+          description: Array of risk content objects
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+        "500":
+          $ref: "#/components/responses/ServerError"
+
+  # ── Economic Indicators ────────────────────────────────────────────────────
+
+  /indicators:
+    get:
+      tags: [Indicators]
+      summary: Indicator summary (latest values + trends)
+      responses:
+        "200":
+          description: Indicator summaries
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+        "429":
+          $ref: "#/components/responses/RateLimited"
+        "500":
+          $ref: "#/components/responses/ServerError"
+
+  /indicators/history/{metric}:
+    get:
+      tags: [Indicators]
+      summary: Time series for a specific indicator
+      parameters:
+        - name: metric
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: entity_id
+          in: query
+          schema:
+            type: string
+          description: Scope to a specific entity
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 100
+            maximum: 500
+      responses:
+        "200":
+          description: Time series data
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "500":
+          $ref: "#/components/responses/ServerError"
+
+  /indicators/macro:
+    get:
+      tags: [Indicators]
+      summary: All macro-level indicators
+      parameters:
+        - name: start
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: end
+          in: query
+          schema:
+            type: string
+            format: date
+      responses:
+        "200":
+          description: Macro indicator data
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "500":
+          $ref: "#/components/responses/ServerError"
+
+  /indicators/regional/{region}:
+    get:
+      tags: [Indicators]
+      summary: Indicators for a specific region
+      parameters:
+        - name: region
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: start
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: end
+          in: query
+          schema:
+            type: string
+            format: date
+      responses:
+        "200":
+          description: Regional indicator data
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "500":
+          $ref: "#/components/responses/ServerError"
+
+  # ── Scenarios ──────────────────────────────────────────────────────────────
+
+  /scenarios:
+    get:
+      tags: [Scenarios]
+      summary: List scenarios with pagination
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+            minimum: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+            maximum: 100
+      responses:
+        "200":
+          description: Paginated scenario list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                  meta:
+                    $ref: "#/components/schemas/PaginationMeta"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+        "500":
+          $ref: "#/components/responses/ServerError"
+
+  /scenarios/models:
+    get:
+      tags: [Scenarios]
+      summary: List registered models
+      responses:
+        "200":
+          description: Model list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+        "500":
+          $ref: "#/components/responses/ServerError"
+
+  /scenarios/compare:
+    get:
+      tags: [Scenarios]
+      summary: Compare results across scenarios for a metric
+      parameters:
+        - name: ids
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Comma-separated scenario IDs (max 10)
+        - name: metric
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Metric name to compare
+      responses:
+        "200":
+          description: Comparison data
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "500":
+          $ref: "#/components/responses/ServerError"
+
+  /scenarios/forecasts/{entityType}/{entityId}:
+    get:
+      tags: [Scenarios]
+      summary: Latest forecasts for an entity from completed scenarios
+      parameters:
+        - name: entityType
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: entityId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: metrics
+          in: query
+          schema:
+            type: string
+          description: Comma-separated metric names to filter
+      responses:
+        "200":
+          description: Forecast data
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "500":
+          $ref: "#/components/responses/ServerError"
+
+  /scenarios/{id}:
+    get:
+      tags: [Scenarios]
+      summary: Get a single scenario by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+      responses:
+        "200":
+          description: Scenario detail
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/ServerError"
+
+  /scenarios/{id}/results:
+    get:
+      tags: [Scenarios]
+      summary: Results for a scenario, optionally filtered
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+        - name: entity_type
+          in: query
+          schema:
+            type: string
+        - name: metric
+          in: query
+          schema:
+            type: string
+        - name: entity_id
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Scenario result rows
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "500":
+          $ref: "#/components/responses/ServerError"
+
+  # ── Forecasts ──────────────────────────────────────────────────────────────
+
+  /forecasts/company/{id}:
+    get:
+      tags: [Forecasts]
+      summary: Forecasts for a company from completed scenarios
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+      responses:
+        "200":
+          description: Forecast rows with confidence intervals
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        metric_name:
+                          type: string
+                        value:
+                          type: number
+                        unit:
+                          type: string
+                        period:
+                          type: string
+                          format: date
+                        confidence_lo:
+                          type: number
+                        confidence_hi:
+                          type: number
+                        scenario_id:
+                          type: integer
+                        scenario_name:
+                          type: string
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "500":
+          $ref: "#/components/responses/ServerError"
+
+  /forecasts/sector/{slug}:
+    get:
+      tags: [Forecasts]
+      summary: Aggregated forecasts for a sector
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Aggregated forecast rows (sum, avg, min, max)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        metric_name:
+                          type: string
+                        period:
+                          type: string
+                          format: date
+                        total_value:
+                          type: number
+                        avg_value:
+                          type: number
+                        min_value:
+                          type: number
+                        max_value:
+                          type: number
+                        unit:
+                          type: string
+                        entity_count:
+                          type: integer
+        "500":
+          $ref: "#/components/responses/ServerError"
+
+  /forecasts/ecosystem:
+    get:
+      tags: [Forecasts]
+      summary: Ecosystem-level forecasts (funding, employment, innovation)
+      responses:
+        "200":
+          description: Ecosystem forecast rows
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        metric_name:
+                          type: string
+                        period:
+                          type: string
+                          format: date
+                        value:
+                          type: number
+                        unit:
+                          type: string
+                        confidence_lo:
+                          type: number
+                        confidence_hi:
+                          type: number
+                        scenario_id:
+                          type: integer
+                        scenario_name:
+                          type: string
+        "500":
+          $ref: "#/components/responses/ServerError"
+
+  # ── Opportunities ──────────────────────────────────────────────────────────
+
+  /opportunities:
+    get:
+      tags: [Opportunities]
+      summary: List opportunity matches with filters and pagination
+      parameters:
+        - name: quality
+          in: query
+          schema:
+            type: string
+            enum: [excellent, good, fair, all]
+            default: all
+        - name: entityType
+          in: query
+          schema:
+            type: string
+            enum: [program, fund, all]
+            default: all
+        - name: sector
+          in: query
+          schema:
+            type: string
+        - name: stage
+          in: query
+          schema:
+            type: string
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: sortBy
+          in: query
+          schema:
+            type: string
+            enum: [score, company, recent]
+            default: score
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 100
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+      responses:
+        "200":
+          description: Opportunity list with pagination metadata
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                  meta:
+                    type: object
+                    properties:
+                      total:
+                        type: integer
+                      limit:
+                        type: integer
+                      offset:
+                        type: integer
+                      filters:
+                        type: object
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+        "500":
+          $ref: "#/components/responses/ServerError"
+
+  /opportunities/stats:
+    get:
+      tags: [Opportunities]
+      summary: Aggregate opportunity statistics
+      responses:
+        "200":
+          description: Stats summary
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+        "500":
+          $ref: "#/components/responses/ServerError"
+
+  /opportunities/company/{companyId}:
+    get:
+      tags: [Opportunities]
+      summary: Opportunities for a specific company
+      parameters:
+        - name: companyId
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+      responses:
+        "200":
+          description: Company opportunities with summary
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                  summary:
+                    type: object
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "500":
+          $ref: "#/components/responses/ServerError"
+
+  # ── Stakeholder Activities ─────────────────────────────────────────────────
+
+  /stakeholder-activities:
+    get:
+      tags: [Stakeholder Activities]
+      summary: Stakeholder activity feed with filters
+      parameters:
+        - name: location
+          in: query
+          schema:
+            type: string
+            default: all
+          description: Nevada region slug
+        - name: since
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: until
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 100
+            maximum: 500
+        - name: type
+          in: query
+          schema:
+            type: string
+          description: Activity type (funding, partnership, award, etc.)
+        - name: stakeholder_type
+          in: query
+          schema:
+            type: string
+            enum: [gov_policy, gov, university, corporate, risk_capital, capital, ecosystem]
+      responses:
+        "200":
+          description: Activity feed with metadata
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                  meta:
+                    type: object
+                    properties:
+                      count:
+                        type: integer
+                      total:
+                        type: integer
+                      limit:
+                        type: integer
+                      hasMore:
+                        type: boolean
+                      filters:
+                        type: object
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+        "500":
+          $ref: "#/components/responses/ServerError"
+
+  /stakeholder-activities/company/{companyId}:
+    get:
+      tags: [Stakeholder Activities]
+      summary: Activities for a specific company
+      parameters:
+        - name: companyId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        "200":
+          description: Company activities
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                  meta:
+                    type: object
+                    properties:
+                      count:
+                        type: integer
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "500":
+          $ref: "#/components/responses/ServerError"
+
+  /stakeholder-activities/location/{location}:
+    get:
+      tags: [Stakeholder Activities]
+      summary: Activities by location with date range
+      parameters:
+        - name: location
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: since
+          in: query
+          schema:
+            type: string
+            format: date
+          description: Defaults to 90 days ago
+        - name: until
+          in: query
+          schema:
+            type: string
+            format: date
+          description: Defaults to today
+      responses:
+        "200":
+          description: Location activities
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                  meta:
+                    type: object
+                    properties:
+                      count:
+                        type: integer
+                      location:
+                        type: string
+                      dateRange:
+                        type: object
+                        properties:
+                          start:
+                            type: string
+                            format: date
+                          end:
+                            type: string
+                            format: date
+        "500":
+          $ref: "#/components/responses/ServerError"
+
+  /stakeholder-activities/stats/by-type:
+    get:
+      tags: [Stakeholder Activities]
+      summary: Activity counts grouped by type
+      responses:
+        "200":
+          description: Type counts
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+        "500":
+          $ref: "#/components/responses/ServerError"
+
+  /stakeholder-activities/stats/by-location:
+    get:
+      tags: [Stakeholder Activities]
+      summary: Activity counts grouped by location
+      responses:
+        "200":
+          description: Location counts
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+        "500":
+          $ref: "#/components/responses/ServerError"
+
+  # ── Constants ──────────────────────────────────────────────────────────────
+
+  /constants:
+    get:
+      tags: [Constants]
+      summary: Static reference data (stages, sectors, regions, etc.)
+      responses:
+        "200":
+          description: Reference data
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+        "429":
+          $ref: "#/components/responses/RateLimited"
+        "500":
+          $ref: "#/components/responses/ServerError"
+
+  # ── Dashboard Batch ────────────────────────────────────────────────────────
+
+  /dashboard-batch:
+    get:
+      tags: [Dashboard]
+      summary: Batched dashboard data (companies, KPIs, funds, sectors, indicators)
+      parameters:
+        - name: companies
+          in: query
+          schema:
+            type: string
+            enum: ["true", "false"]
+            default: "true"
+        - name: kpis
+          in: query
+          schema:
+            type: string
+            enum: ["true", "false"]
+            default: "true"
+        - name: funds
+          in: query
+          schema:
+            type: string
+            enum: ["true", "false"]
+            default: "true"
+        - name: sectors
+          in: query
+          schema:
+            type: string
+            enum: ["true", "false"]
+            default: "true"
+        - name: indicators
+          in: query
+          schema:
+            type: string
+            enum: ["true", "false"]
+            default: "false"
+        - name: filters
+          in: query
+          schema:
+            type: string
+          description: JSON string with keys stage, region, sector, search, sortBy
+      responses:
+        "200":
+          description: Batched response with requested datasets
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      companies:
+                        type: array
+                        items:
+                          type: object
+                      kpis:
+                        type: object
+                      funds:
+                        type: array
+                        items:
+                          type: object
+                      sectors:
+                        type: array
+                        items:
+                          type: object
+                      indicators:
+                        type: array
+                        items:
+                          type: object
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+        "500":
+          $ref: "#/components/responses/ServerError"
+
+  /dashboard-batch/executives:
+    get:
+      tags: [Dashboard]
+      summary: Executive dashboard (companies + KPIs)
+      parameters:
+        - name: filters
+          in: query
+          schema:
+            type: string
+          description: JSON string with keys stage, region, sector, search, sortBy
+      responses:
+        "200":
+          description: Executive batch response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      companies:
+                        type: array
+                        items:
+                          type: object
+                      kpis:
+                        type: object
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "500":
+          $ref: "#/components/responses/ServerError"
+
+  /dashboard-batch/goed:
+    get:
+      tags: [Dashboard]
+      summary: GOED dashboard (KPIs, sectors, companies, indicators)
+      parameters:
+        - name: region
+          in: query
+          schema:
+            type: string
+          description: Nevada region to scope all datasets
+      responses:
+        "200":
+          description: GOED batch response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      kpis:
+                        type: object
+                      sectors:
+                        type: array
+                        items:
+                          type: object
+                      companies:
+                        type: array
+                        items:
+                          type: object
+                      indicators:
+                        type: array
+                        items:
+                          type: object
+        "500":
+          $ref: "#/components/responses/ServerError"
+
+  # ── Graph Analytics ────────────────────────────────────────────────────────
+
+  /graph-analytics/embeddings:
+    get:
+      tags: [Graph Analytics]
+      summary: Node embeddings from graph ML models
+      parameters:
+        - name: model_name
+          in: query
+          schema:
+            type: string
+        - name: node_ids
+          in: query
+          schema:
+            type: string
+          description: Comma-separated node IDs (alphanumeric/underscore, max 40 chars each)
+      responses:
+        "200":
+          description: Embedding vectors
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "500":
+          $ref: "#/components/responses/ServerError"
+
+  /graph-analytics/clusters:
+    get:
+      tags: [Graph Analytics]
+      summary: Clustering results
+      parameters:
+        - name: model_name
+          in: query
+          schema:
+            type: string
+        - name: cluster_id
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Cluster assignments
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "500":
+          $ref: "#/components/responses/ServerError"
+
+  /graph-analytics/clusters/summary:
+    get:
+      tags: [Graph Analytics]
+      summary: Clustering summary statistics
+      parameters:
+        - name: model_name
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Cluster summary
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+        "500":
+          $ref: "#/components/responses/ServerError"
+
+  /graph-analytics/temporal/{nodeId}:
+    get:
+      tags: [Graph Analytics]
+      summary: Temporal metrics for a node
+      parameters:
+        - name: nodeId
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: "^[a-zA-Z0-9_]{1,40}$"
+      responses:
+        "200":
+          description: Temporal metric series
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "500":
+          $ref: "#/components/responses/ServerError"
+
+  /graph-analytics/snapshot:
+    get:
+      tags: [Graph Analytics]
+      summary: Graph snapshot at a point in time
+      parameters:
+        - name: date
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+      responses:
+        "200":
+          description: Graph snapshot data
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "500":
+          $ref: "#/components/responses/ServerError"
+
+  # ── Admin (requires X-Admin-Key header) ────────────────────────────────────
+
+  /admin/recompute-scores:
+    post:
+      tags: [Admin]
+      summary: Recompute all IRS scores
+      security:
+        - AdminKey: []
+      responses:
+        "200":
+          description: Scores recomputed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      companiesScored:
+                        type: integer
+                  message:
+                    type: string
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+        "500":
+          $ref: "#/components/responses/ServerError"
+
+  /admin/recompute-graph:
+    post:
+      tags: [Admin]
+      summary: Recompute graph metrics and cache
+      security:
+        - AdminKey: []
+      responses:
+        "200":
+          description: Graph metrics recomputed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      nodesCached:
+                        type: integer
+                  message:
+                    type: string
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+        "500":
+          $ref: "#/components/responses/ServerError"
+
+  /admin/recompute-all:
+    post:
+      tags: [Admin]
+      summary: Recompute scores, graph metrics, and refresh indicators
+      security:
+        - AdminKey: []
+      responses:
+        "200":
+          description: All computations complete
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      companiesScored:
+                        type: integer
+                      nodesCached:
+                        type: integer
+                      indicatorsRefreshed:
+                        type: boolean
+                  message:
+                    type: string
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+        "500":
+          $ref: "#/components/responses/ServerError"
+
+  /admin/refresh-indicators:
+    post:
+      tags: [Admin]
+      summary: Refresh economic indicators materialized views
+      security:
+        - AdminKey: []
+      responses:
+        "200":
+          description: Indicators refreshed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    nullable: true
+                  message:
+                    type: string
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+        "500":
+          $ref: "#/components/responses/ServerError"
+
+  /admin/agent-status:
+    get:
+      tags: [Admin]
+      summary: Agent health status (last 7 days)
+      security:
+        - AdminKey: []
+      responses:
+        "200":
+          description: Agent run status
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      agents:
+                        type: array
+                        items:
+                          type: object
+                      generated_at:
+                        type: string
+                        format: date-time
+                      window_days:
+                        type: integer
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/ServerError"
+
+  /admin/data-freshness:
+    get:
+      tags: [Admin]
+      summary: Data freshness per entity type
+      security:
+        - AdminKey: []
+      responses:
+        "200":
+          description: Freshness report
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      freshness:
+                        type: array
+                        items:
+                          type: object
+                      generated_at:
+                        type: string
+                        format: date-time
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/ServerError"
+
+  /admin/pool-stats:
+    get:
+      tags: [Admin]
+      summary: Database connection pool statistics
+      security:
+        - AdminKey: []
+      responses:
+        "200":
+          description: Pool stats
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/ServerError"

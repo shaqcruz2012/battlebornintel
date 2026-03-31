@@ -22,9 +22,12 @@ const DATABASE_URL =
 
 const pool = new pg.Pool({ connectionString: DATABASE_URL });
 
+const FORCE_MODE = process.argv.includes('--force');
+
 async function seed() {
   const client = await pool.connect();
   console.log('Connected to PostgreSQL');
+  console.log(FORCE_MODE ? '[seed] FORCE MODE: will truncate tables before seeding' : '[seed] ADDITIVE MODE: will skip existing data (use --force to override)');
 
   try {
     // Dynamic import of frontend data modules (pathToFileURL for Windows ESM compat)
@@ -56,166 +59,238 @@ async function seed() {
 
     await client.query('BEGIN');
 
-    // Truncate all tables except externals (order matters for FK).
-    // externals is NOT truncated here because migrations 046-060 add rows that
-    // must survive re-seeding. The externals INSERT below uses ON CONFLICT DO UPDATE
-    // so seed data is refreshed without wiping migration-added rows.
-    await client.query(`
-      TRUNCATE graph_metrics_cache, computed_scores, analysis_results, agent_runs,
-               listings, timeline_events, graph_edges, people,
-               accelerators, ecosystem_orgs, graph_funds, funds, companies, constants
-      CASCADE
-    `);
+    // Truncate removed in additive mode to preserve enrichment data from migrations.
+    // Use --force flag to truncate for fresh installs.
+    if (FORCE_MODE) {
+      console.log('[seed] FORCE MODE: truncating all tables before seeding');
+      await client.query(`
+        TRUNCATE graph_metrics_cache, computed_scores, analysis_results, agent_runs,
+                 listings, timeline_events, graph_edges, people, externals,
+                 accelerators, ecosystem_orgs, graph_funds, funds, companies, constants
+        CASCADE
+      `);
+    }
 
     // 1. Companies
-    for (const c of COMPANIES) {
-      await client.query(
-        `INSERT INTO companies (id, slug, name, stage, sectors, city, region, funding_m, momentum, employees, founded, description, eligible, lat, lng)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)`,
-        [
-          c.id,
-          c.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/-+$/, ''),
-          c.name,
-          c.stage,
-          c.sector || [],
-          c.city,
-          c.region,
-          c.funding || 0,
-          c.momentum || 0,
-          c.employees || 0,
-          c.founded || null,
-          c.description || null,
-          c.eligible || [],
-          c.lat || null,
-          c.lng || null,
-        ]
-      );
+    {
+      const { rows: [{ count }] } = await client.query('SELECT COUNT(*) FROM companies');
+      if (parseInt(count) > 0 && !FORCE_MODE) {
+        console.log(`[seed] companies already has ${count} rows, skipping (use --force to override)`);
+      } else {
+        for (const c of COMPANIES) {
+          await client.query(
+            `INSERT INTO companies (id, slug, name, stage, sectors, city, region, funding_m, momentum, employees, founded, description, eligible, lat, lng)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+             ON CONFLICT (id) DO NOTHING`,
+            [
+              c.id,
+              c.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/-+$/, ''),
+              c.name,
+              c.stage,
+              c.sector || [],
+              c.city,
+              c.region,
+              c.funding || 0,
+              c.momentum || 0,
+              c.employees || 0,
+              c.founded || null,
+              c.description || null,
+              c.eligible || [],
+              c.lat || null,
+              c.lng || null,
+            ]
+          );
+        }
+        // Reset sequence
+        await client.query(
+          `SELECT setval('companies_id_seq', (SELECT MAX(id) FROM companies))`
+        );
+        console.log(`  companies: ${COMPANIES.length} rows`);
+      }
     }
-    // Reset sequence
-    await client.query(
-      `SELECT setval('companies_id_seq', (SELECT MAX(id) FROM companies))`
-    );
-    console.log(`  companies: ${COMPANIES.length} rows`);
 
     // 2. Funds
-    for (const f of FUNDS) {
-      await client.query(
-        `INSERT INTO funds (id, name, fund_type, allocated_m, deployed_m, leverage, company_count, thesis)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-        [
-          f.id,
-          f.name,
-          f.type,
-          f.allocated || null,
-          f.deployed || 0,
-          f.leverage || null,
-          f.companies || 0,
-          f.thesis || null,
-        ]
-      );
+    {
+      const { rows: [{ count }] } = await client.query('SELECT COUNT(*) FROM funds');
+      if (parseInt(count) > 0 && !FORCE_MODE) {
+        console.log(`[seed] funds already has ${count} rows, skipping (use --force to override)`);
+      } else {
+        for (const f of FUNDS) {
+          await client.query(
+            `INSERT INTO funds (id, name, fund_type, allocated_m, deployed_m, leverage, company_count, thesis)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+             ON CONFLICT (id) DO NOTHING`,
+            [
+              f.id,
+              f.name,
+              f.type,
+              f.allocated || null,
+              f.deployed || 0,
+              f.leverage || null,
+              f.companies || 0,
+              f.thesis || null,
+            ]
+          );
+        }
+        console.log(`  funds: ${FUNDS.length} rows`);
+      }
     }
-    console.log(`  funds: ${FUNDS.length} rows`);
 
     // 3. Graph edges
-    for (const e of VERIFIED_EDGES) {
-      const eventDate = e.y ? `${e.y}-01-01` : null;
-      await client.query(
-        `INSERT INTO graph_edges (source_id, target_id, rel, note, event_year, event_date)
-         VALUES ($1, $2, $3, $4, $5, $6)`,
-        [e.source, e.target, e.rel, e.note || null, e.y || null, eventDate]
-      );
+    {
+      const { rows: [{ count }] } = await client.query('SELECT COUNT(*) FROM graph_edges');
+      if (parseInt(count) > 0 && !FORCE_MODE) {
+        console.log(`[seed] graph_edges already has ${count} rows, skipping (use --force to override)`);
+      } else {
+        for (const e of VERIFIED_EDGES) {
+          await client.query(
+            `INSERT INTO graph_edges (source_id, target_id, rel, note, event_year)
+             VALUES ($1, $2, $3, $4, $5)
+             ON CONFLICT (source_id, target_id, rel) DO NOTHING`,
+            [e.source, e.target, e.rel, e.note || null, e.y || null]
+          );
+        }
+        console.log(`  graph_edges: ${VERIFIED_EDGES.length} rows`);
+      }
     }
-    console.log(`  graph_edges: ${VERIFIED_EDGES.length} rows`);
 
     // 4. People
-    for (const p of PEOPLE) {
-      await client.query(
-        `INSERT INTO people (id, name, role, company_id, note)
-         VALUES ($1, $2, $3, $4, $5)`,
-        [p.id, p.name, p.role || null, p.companyId || null, p.note || null]
-      );
+    {
+      const { rows: [{ count }] } = await client.query('SELECT COUNT(*) FROM people');
+      if (parseInt(count) > 0 && !FORCE_MODE) {
+        console.log(`[seed] people already has ${count} rows, skipping (use --force to override)`);
+      } else {
+        for (const p of PEOPLE) {
+          await client.query(
+            `INSERT INTO people (id, name, role, company_id, note)
+             VALUES ($1, $2, $3, $4, $5)
+             ON CONFLICT (id) DO NOTHING`,
+            [p.id, p.name, p.role || null, p.companyId || null, p.note || null]
+          );
+        }
+        console.log(`  people: ${PEOPLE.length} rows`);
+      }
     }
-    console.log(`  people: ${PEOPLE.length} rows`);
 
-    // 5. Externals — use UPSERT so migration-added rows (046-060) survive re-seeding.
-    // We do NOT truncate externals above; instead we update name/entity_type/note for
-    // any row that already exists and insert new ones.
-    for (const x of EXTERNALS) {
-      await client.query(
-        `INSERT INTO externals (id, name, entity_type, note)
-         VALUES ($1, $2, $3, $4)
-         ON CONFLICT (id) DO UPDATE
-           SET name = EXCLUDED.name,
-               entity_type = EXCLUDED.entity_type,
-               note = EXCLUDED.note`,
-        [x.id, x.name, x.etype, x.note || null]
-      );
+    // 5. Externals
+    {
+      const { rows: [{ count }] } = await client.query('SELECT COUNT(*) FROM externals');
+      if (parseInt(count) > 0 && !FORCE_MODE) {
+        console.log(`[seed] externals already has ${count} rows, skipping (use --force to override)`);
+      } else {
+        for (const x of EXTERNALS) {
+          await client.query(
+            `INSERT INTO externals (id, name, entity_type, note)
+             VALUES ($1, $2, $3, $4)
+             ON CONFLICT (id) DO NOTHING`,
+            [x.id, x.name, x.etype, x.note || null]
+          );
+        }
+        console.log(`  externals: ${EXTERNALS.length} rows`);
+      }
     }
-    console.log(`  externals: ${EXTERNALS.length} rows`);
 
     // 6. Accelerators
-    for (const a of ACCELERATORS) {
-      await client.query(
-        `INSERT INTO accelerators (id, name, accel_type, city, region, founded, note)
-         VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-        [
-          a.id,
-          a.name,
-          a.atype,
-          a.city || null,
-          a.region || null,
-          a.founded || null,
-          a.note || null,
-        ]
-      );
+    {
+      const { rows: [{ count }] } = await client.query('SELECT COUNT(*) FROM accelerators');
+      if (parseInt(count) > 0 && !FORCE_MODE) {
+        console.log(`[seed] accelerators already has ${count} rows, skipping (use --force to override)`);
+      } else {
+        for (const a of ACCELERATORS) {
+          await client.query(
+            `INSERT INTO accelerators (id, name, accel_type, city, region, founded, note)
+             VALUES ($1, $2, $3, $4, $5, $6, $7)
+             ON CONFLICT (id) DO NOTHING`,
+            [
+              a.id,
+              a.name,
+              a.atype,
+              a.city || null,
+              a.region || null,
+              a.founded || null,
+              a.note || null,
+            ]
+          );
+        }
+        console.log(`  accelerators: ${ACCELERATORS.length} rows`);
+      }
     }
-    console.log(`  accelerators: ${ACCELERATORS.length} rows`);
 
     // 7. Ecosystem orgs
-    for (const o of ECOSYSTEM_ORGS) {
-      await client.query(
-        `INSERT INTO ecosystem_orgs (id, name, entity_type, city, region, note)
-         VALUES ($1, $2, $3, $4, $5, $6)`,
-        [
-          o.id,
-          o.name,
-          o.etype,
-          o.city || null,
-          o.region || null,
-          o.note || null,
-        ]
-      );
+    {
+      const { rows: [{ count }] } = await client.query('SELECT COUNT(*) FROM ecosystem_orgs');
+      if (parseInt(count) > 0 && !FORCE_MODE) {
+        console.log(`[seed] ecosystem_orgs already has ${count} rows, skipping (use --force to override)`);
+      } else {
+        for (const o of ECOSYSTEM_ORGS) {
+          await client.query(
+            `INSERT INTO ecosystem_orgs (id, name, entity_type, city, region, note)
+             VALUES ($1, $2, $3, $4, $5, $6)
+             ON CONFLICT (id) DO NOTHING`,
+            [
+              o.id,
+              o.name,
+              o.etype,
+              o.city || null,
+              o.region || null,
+              o.note || null,
+            ]
+          );
+        }
+        console.log(`  ecosystem_orgs: ${ECOSYSTEM_ORGS.length} rows`);
+      }
     }
-    console.log(`  ecosystem_orgs: ${ECOSYSTEM_ORGS.length} rows`);
 
     // 8. Graph funds
-    for (const f of GRAPH_FUNDS) {
-      await client.query(
-        `INSERT INTO graph_funds (id, name, fund_type) VALUES ($1, $2, $3)`,
-        [f.id, f.name, f.type]
-      );
+    {
+      const { rows: [{ count }] } = await client.query('SELECT COUNT(*) FROM graph_funds');
+      if (parseInt(count) > 0 && !FORCE_MODE) {
+        console.log(`[seed] graph_funds already has ${count} rows, skipping (use --force to override)`);
+      } else {
+        for (const f of GRAPH_FUNDS) {
+          await client.query(
+            `INSERT INTO graph_funds (id, name, fund_type) VALUES ($1, $2, $3)
+             ON CONFLICT (id) DO NOTHING`,
+            [f.id, f.name, f.type]
+          );
+        }
+        console.log(`  graph_funds: ${GRAPH_FUNDS.length} rows`);
+      }
     }
-    console.log(`  graph_funds: ${GRAPH_FUNDS.length} rows`);
 
     // 9. Listings
-    for (const l of LISTINGS) {
-      await client.query(
-        `INSERT INTO listings (company_id, exchange, ticker) VALUES ($1, $2, $3)`,
-        [l.companyId, l.exchange, l.ticker]
-      );
+    {
+      const { rows: [{ count }] } = await client.query('SELECT COUNT(*) FROM listings');
+      if (parseInt(count) > 0 && !FORCE_MODE) {
+        console.log(`[seed] listings already has ${count} rows, skipping (use --force to override)`);
+      } else {
+        for (const l of LISTINGS) {
+          await client.query(
+            `INSERT INTO listings (company_id, exchange, ticker) VALUES ($1, $2, $3)
+             ON CONFLICT (company_id, exchange) DO NOTHING`,
+            [l.companyId, l.exchange, l.ticker]
+          );
+        }
+        console.log(`  listings: ${LISTINGS.length} rows`);
+      }
     }
-    console.log(`  listings: ${LISTINGS.length} rows`);
 
     // 10. Timeline events
     if (TIMELINE) {
-      for (const t of TIMELINE) {
-        await client.query(
-          `INSERT INTO timeline_events (event_date, event_type, company_name, detail, icon)
-           VALUES ($1, $2, $3, $4, $5)`,
-          [t.date, t.type, t.company, t.detail, t.icon || null]
-        );
+      const { rows: [{ count }] } = await client.query('SELECT COUNT(*) FROM timeline_events');
+      if (parseInt(count) > 0 && !FORCE_MODE) {
+        console.log(`[seed] timeline_events already has ${count} rows, skipping (use --force to override)`);
+      } else {
+        for (const t of TIMELINE) {
+          await client.query(
+            `INSERT INTO timeline_events (event_date, event_type, company_name, detail, icon)
+             VALUES ($1, $2, $3, $4, $5)
+             ON CONFLICT DO NOTHING`,
+            [t.date, t.type, t.company, t.detail, t.icon || null]
+          );
+        }
+        console.log(`  timeline_events: ${TIMELINE.length} rows`);
       }
-      console.log(`  timeline_events: ${TIMELINE.length} rows`);
     }
 
     // 11. Constants
@@ -231,17 +306,25 @@ async function seed() {
       stage_colors: STAGE_COLORS,
       community_colors: COMM_COLORS,
     };
-    for (const [key, value] of Object.entries(constantsMap)) {
-      if (value !== undefined) {
-        await client.query(
-          `INSERT INTO constants (key, value, description) VALUES ($1, $2, $3)`,
-          [key, JSON.stringify(value), `Auto-seeded from frontend data`]
+    {
+      const { rows: [{ count }] } = await client.query('SELECT COUNT(*) FROM constants');
+      if (parseInt(count) > 0 && !FORCE_MODE) {
+        console.log(`[seed] constants already has ${count} rows, skipping (use --force to override)`);
+      } else {
+        for (const [key, value] of Object.entries(constantsMap)) {
+          if (value !== undefined) {
+            await client.query(
+              `INSERT INTO constants (key, value, description) VALUES ($1, $2, $3)
+               ON CONFLICT (key) DO NOTHING`,
+              [key, JSON.stringify(value), `Auto-seeded from frontend data`]
+            );
+          }
+        }
+        console.log(
+          `  constants: ${Object.keys(constantsMap).length} rows`
         );
       }
     }
-    console.log(
-      `  constants: ${Object.keys(constantsMap).length} rows`
-    );
 
     // 12. Pre-compute IRS scores
     const { computeIRS } = await import(toURL('api/src/engine/scoring.js'));
@@ -259,7 +342,8 @@ async function seed() {
       );
       await client.query(
         `INSERT INTO computed_scores (company_id, irs_score, grade, triggers, dims)
-         VALUES ($1, $2, $3, $4, $5)`,
+         VALUES ($1, $2, $3, $4, $5)
+         ON CONFLICT (company_id) DO UPDATE SET irs_score = EXCLUDED.irs_score, grade = EXCLUDED.grade, triggers = EXCLUDED.triggers, dims = EXCLUDED.dims`,
         [c.id, irs, grade, triggers, JSON.stringify(dims)]
       );
     }
@@ -300,7 +384,8 @@ async function seed() {
     for (const nodeId of nodeIds) {
       await client.query(
         `INSERT INTO graph_metrics_cache (node_id, pagerank, betweenness, community_id)
-         VALUES ($1, $2, $3, $4)`,
+         VALUES ($1, $2, $3, $4)
+         ON CONFLICT (node_id) DO UPDATE SET pagerank = EXCLUDED.pagerank, betweenness = EXCLUDED.betweenness, community_id = EXCLUDED.community_id, computed_at = NOW()`,
         [nodeId, metrics.pagerank[nodeId], metrics.betweenness[nodeId], metrics.communities[nodeId]]
       );
     }

@@ -2,7 +2,15 @@
  * In-Memory Cache Middleware
  * Simple caching layer for frequently-accessed API responses
  * Expected to improve response time by 150-250ms for cached queries
+ *
+ * Includes cache stampede (thundering herd) protection: when a cache entry
+ * expires and multiple requests arrive simultaneously, only one request
+ * computes the fresh value while others wait for that result.
  */
+
+// Inflight request map for stampede protection.
+// Maps cache key -> Promise<data> for requests currently being computed.
+const inflight = new Map();
 
 class Cache {
   constructor() {
@@ -93,10 +101,6 @@ class Cache {
 // Global cache instance
 const cache = new Cache();
 
-// In-flight request deduplication: if multiple identical requests arrive while
-// the first is still being computed, they all share the same result.
-const inflight = new Map(); // key -> Promise<data>
-
 /**
  * Cache middleware factory
  * @param {string} keyPrefix - Prefix for cache keys (e.g., 'companies')
@@ -125,18 +129,27 @@ export function cacheMiddleware(keyPrefix = '', ttlMs = 300000, options = {}) {
       return res.json(cached);
     }
 
-    // Request deduplication: if an identical GET is already in-flight, wait for it
+    // Stampede protection: if another request is already computing this key,
+    // wait for its result instead of hitting the downstream handler again.
     if (req.method === 'GET' && inflight.has(key)) {
-      inflight.get(key).then(data => {
-        res.setHeader('X-Cache', 'DEDUP');
+      inflight.get(key).then((data) => {
+        res.setHeader('X-Cache', 'HIT_COALESCED');
         applyHttpCacheHeaders(res);
         res.json(data);
-      }).catch(() => next());
+      }).catch(() => {
+        // The original request failed — let this one try on its own.
+        // Remove any stale inflight entry (it should already be cleaned up,
+        // but guard against races).
+        inflight.delete(key);
+        next();
+      });
       return;
     }
 
-    // Track this request as in-flight
-    let resolveInflight, rejectInflight;
+    // This request will be the one to compute the value.
+    // Create a promise that other concurrent requests can wait on.
+    let resolveInflight;
+    let rejectInflight;
     if (req.method === 'GET') {
       const promise = new Promise((resolve, reject) => {
         resolveInflight = resolve;
@@ -145,20 +158,37 @@ export function cacheMiddleware(keyPrefix = '', ttlMs = 300000, options = {}) {
       inflight.set(key, promise);
     }
 
-    // Intercept res.json to cache response and resolve in-flight waiters
+    // Intercept res.json to cache response and resolve waiting requests
     const originalJson = res.json.bind(res);
     res.json = function(data) {
       if (req.method === 'GET' && res.statusCode === 200) {
         cache.set(key, data, ttlMs);
         res.setHeader('X-Cache', 'MISS');
         applyHttpCacheHeaders(res);
-        if (resolveInflight) resolveInflight(data);
-      } else if (resolveInflight) {
-        // Resolve with null instead of rejecting — prevents unhandled rejection crashes
-        resolveInflight(null);
+        // Resolve all coalesced waiters and clean up
+        if (resolveInflight) {
+          resolveInflight(data);
+          inflight.delete(key);
+        }
+      } else if (req.method === 'GET') {
+        // Non-200 response — reject so waiters retry on their own
+        if (rejectInflight) {
+          rejectInflight(new Error('upstream non-200'));
+          inflight.delete(key);
+        }
       }
-      inflight.delete(key);
       return originalJson(data);
+    };
+
+    // Guard against cases where the handler errors without calling res.json
+    // (e.g., Express error middleware kicks in).
+    const originalEnd = res.end.bind(res);
+    res.end = function(...args) {
+      if (req.method === 'GET' && inflight.has(key) && rejectInflight) {
+        rejectInflight(new Error('response ended without json'));
+        inflight.delete(key);
+      }
+      return originalEnd(...args);
     };
 
     next();

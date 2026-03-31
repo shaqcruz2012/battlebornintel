@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, useMemo, useCallback } from 'react';
+import { useEffect, useState, useRef, useMemo } from 'react';
 
 /**
  * Hook to compute graph layout using Web Worker
@@ -7,7 +7,7 @@ import { useEffect, useState, useRef, useMemo, useCallback } from 'react';
  */
 export function useGraphLayout(nodes, edges, options = {}) {
   const {
-    iterations = 150,
+    iterations = 400,
     enabled = true,
     width = 1200,
     height = 700,
@@ -20,27 +20,38 @@ export function useGraphLayout(nodes, edges, options = {}) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
   const workerRef = useRef(null);
-
-  // Track the latest edges in a ref so the persistent message handler can
-  // always close over the current edge array without being re-attached.
-  const edgesRef = useRef(edges);
-  edgesRef.current = edges;
-  const nodesRef = useRef(nodes);
-  nodesRef.current = nodes;
-
-  // Track which layout request is current so stale worker responses are ignored.
   const requestIdRef = useRef(0);
+  const lastMessageRef = useRef(null);
+  const retryCountRef = useRef(0);
 
-  // Cache previous node positions so temporal scrubbing preserves layout stability.
-  // When edges change (year filter) but nodes remain mostly the same, we seed
-  // new layouts with the last known positions instead of random placement.
-  const prevPositionsRef = useRef({});
+  // Initialize worker on mount
+  useEffect(() => {
+    // Create worker if not exists
+    if (!workerRef.current && typeof window !== 'undefined') {
+      try {
+        workerRef.current = new Worker(
+          new URL('../workers/d3-layout.worker.js', import.meta.url),
+          { type: 'module' }
+        );
+      } catch {
+        console.debug('Web Worker not supported, falling back to main thread');
+      }
+    }
+
+    return () => {
+      // Cleanup worker on unmount
+      if (workerRef.current) {
+        workerRef.current.terminate();
+        workerRef.current = null;
+      }
+    };
+  }, []);
 
   // Stable keys derived from graph topology (IDs and connections), not object references.
   // This prevents the layout from recomputing when upstream code recreates the same
   // arrays with new references but identical data.
   const nodesKey = useMemo(
-    () => JSON.stringify((nodes || []).map((n) => `${n.id}:${n._communityId ?? ''}`).sort()),
+    () => JSON.stringify((nodes || []).map((n) => n.id).sort()),
     [nodes]
   );
   const edgesKey = useMemo(
@@ -48,69 +59,11 @@ export function useGraphLayout(nodes, edges, options = {}) {
     [edges]
   );
 
-  // Persistent message handler — attached once when the worker is created,
-  // never removed until unmount. This prevents the race condition where a
-  // ResizeObserver-triggered effect cleanup would remove the listener before
-  // the worker's response arrived.
-  const handleWorkerMessage = useCallback((e) => {
-    const { success, nodes: layoutNodes, error: workerError, _requestId } = e.data;
-
-    // Ignore responses from stale requests
-    if (_requestId !== undefined && _requestId !== requestIdRef.current) return;
-
-    if (success) {
-      // Cache positions for layout stability across temporal scrubbing
-      const posMap = {};
-      layoutNodes.forEach(n => { if (n.x != null && n.y != null) posMap[n.id] = { x: n.x, y: n.y }; });
-      prevPositionsRef.current = posMap;
-      setLayout({ nodes: layoutNodes, edges: edgesRef.current });
-      setError(null);
-      setIsLoading(false);
-    } else {
-      setError(workerError);
-      setLayout({ nodes: nodesRef.current, edges: edgesRef.current });
-      setIsLoading(false);
-    }
-  }, []);
-
-  const handleWorkerError = useCallback((err) => {
-    setError(err.message);
-    setLayout({ nodes: nodesRef.current, edges: edgesRef.current });
-    setIsLoading(false);
-  }, []);
-
-  // Initialize worker on mount — attach message handlers once.
-  useEffect(() => {
-    if (!workerRef.current && typeof window !== 'undefined') {
-      try {
-        const worker = new Worker(
-          new URL('../workers/d3-layout.worker.js', import.meta.url),
-          { type: 'module' }
-        );
-        worker.addEventListener('message', handleWorkerMessage);
-        worker.addEventListener('error', handleWorkerError);
-        workerRef.current = worker;
-      } catch {
-        console.warn('Web Worker not supported, falling back to main thread');
-      }
-    }
-
-    return () => {
-      if (workerRef.current) {
-        workerRef.current.removeEventListener('message', handleWorkerMessage);
-        workerRef.current.removeEventListener('error', handleWorkerError);
-        workerRef.current.terminate();
-        workerRef.current = null;
-      }
-    };
-  }, [handleWorkerMessage, handleWorkerError]);
-
-  // Dispatch layout computation when graph topology or canvas dimensions change.
-  // The message listener is persistent (set up on mount), so effect cleanup
-  // here does NOT remove the listener — eliminating the race where a
-  // ResizeObserver-triggered re-run would orphan an in-flight worker response.
+  // Compute layout when nodes/edges change
   useEffect(() => {
     if (!enabled || !nodes || nodes.length === 0) {
+      // Reset to empty layout so hasFitRef in GraphCanvas resets for the next
+      // data load, allowing fitAll to fire on the first valid interim frame.
       setLayout({ nodes: [], edges: [] });
       setIsLoading(false);
       return;
@@ -123,27 +76,84 @@ export function useGraphLayout(nodes, edges, options = {}) {
       return;
     }
 
-    // Increment request ID so any in-flight stale response is ignored
-    const reqId = ++requestIdRef.current;
-
     setIsLoading(true);
     setError(null);
+    retryCountRef.current = 0;
 
-    // Seed nodes with previous positions for layout stability during temporal scrubbing.
-    // Nodes that existed in the prior layout keep their positions; new nodes get placed by the worker.
-    const prevPos = prevPositionsRef.current;
-    const seededNodes = Object.keys(prevPos).length > 0
-      ? nodes.map(n => {
-          const prev = prevPos[n.id];
-          return prev ? { ...n, x: prev.x, y: prev.y, fx: undefined, fy: undefined } : n;
-        })
-      : nodes;
+    // Increment request ID to detect stale worker responses
+    requestIdRef.current += 1;
+    const currentRequest = requestIdRef.current;
 
-    // Always send JSON objects — the performance difference vs ArrayBuffer
-    // transfer is negligible at ~700 nodes and avoids format mismatch bugs.
-    worker.postMessage({ nodes: seededNodes, edges, width, height, iterations: Object.keys(prevPos).length > 0 ? Math.min(iterations, 50) : iterations, useTransfer: false, _requestId: reqId });
+    // Send work to worker
+    const msg = { nodes, edges, width, height, iterations, requestId: currentRequest };
+    lastMessageRef.current = msg;
+    worker.postMessage(msg);
+
+    // Handle worker response — supports progressive rendering via interim frames.
+    // Interim frames are throttled with requestAnimationFrame to avoid flooding
+    // React with re-renders faster than the browser can paint.
+    let pendingInterim = null;
+    let rafId = null;
+
+    const flushInterim = () => {
+      if (pendingInterim) {
+        setLayout({ nodes: pendingInterim, edges });
+        setError(null);
+        pendingInterim = null;
+      }
+      rafId = null;
+    };
+
+    const handleMessage = (e) => {
+      // Discard stale messages from a previous request
+      if (e.data.requestId !== requestIdRef.current) return;
+
+      const { success, nodes: layoutNodes, error: workerError, interim } = e.data;
+
+      if (success) {
+        retryCountRef.current = 0;
+        if (interim) {
+          // Buffer interim frames and flush at display refresh rate
+          pendingInterim = layoutNodes;
+          if (!rafId) {
+            rafId = requestAnimationFrame(flushInterim);
+          }
+        } else {
+          // Final frame — apply immediately and mark complete
+          if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
+          setLayout({ nodes: layoutNodes, edges });
+          setError(null);
+          setIsLoading(false);
+        }
+      } else {
+        setError(workerError);
+        setLayout({ nodes, edges });
+        setIsLoading(false);
+      }
+    };
+
+    const handleError = (err) => {
+      console.error('Graph worker error:', err);
+      if (retryCountRef.current < 1 && lastMessageRef.current) {
+        retryCountRef.current += 1;
+        worker.postMessage(lastMessageRef.current);
+      } else {
+        setError(err.message);
+        setLayout({ nodes, edges });
+        setIsLoading(false);
+      }
+    };
+
+    worker.addEventListener('message', handleMessage);
+    worker.addEventListener('error', handleError);
+
+    return () => {
+      if (rafId) cancelAnimationFrame(rafId);
+      worker.removeEventListener('message', handleMessage);
+      worker.removeEventListener('error', handleError);
+    };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [nodesKey, edgesKey, iterations, enabled, width, height]);
+  }, [nodesKey, edgesKey, iterations, enabled]);
 
   return { layout, isLoading, error };
 }

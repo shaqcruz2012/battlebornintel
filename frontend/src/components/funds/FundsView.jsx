@@ -172,6 +172,7 @@ export function FundsView() {
               key={opt.key}
               className={`${styles.sortBtn} ${sortBy === opt.key ? styles.sortBtnActive : ''}`}
               onClick={() => setSortBy(opt.key)}
+              type="button"
             >
               {opt.label}
             </button>

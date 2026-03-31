@@ -1,4 +1,5 @@
 import pool from '../pool.js';
+import { logger } from '../../logger.js';
 
 // Data quality constants
 const DATA_QUALITY = {
@@ -69,12 +70,18 @@ export async function getKpis({ stage, region, sector } = {}) {
         [companies.map(c => `c_${c.id}`)]
       );
       // Extract fund IDs from source_id (e.g., "f_bbv" -> "bbv", "f_fundnv" -> "fundnv")
-      const fundIds = investmentEdges.map(e => {
+      const fundIds = [];
+      for (const e of investmentEdges) {
         const match = e.source_id.match(/^f_(.+)$/);
-        return match ? match[1] : null;
-      }).filter(Boolean);
+        if (match) {
+          fundIds.push(match[1]);
+        } else {
+          logger.warn(`[kpis] Unexpected source_id format in invested_in edge: ${e.source_id}`);
+        }
+      }
 
-      funds = allFunds.filter(f => fundIds.includes(f.id));
+      const fundIdSet = new Set(fundIds);
+      funds = allFunds.filter(f => fundIdSet.has(f.id));
     }
   } else {
     // No filter active → statewide totals use all funds
@@ -280,6 +287,176 @@ export async function getKpis({ stage, region, sector } = {}) {
         },
       },
     },
+  };
+}
+
+/**
+ * Get KPIs enriched with forecast confidence intervals from the latest
+ * completed scenario.  Returns the same shape as getKpis() but each KPI
+ * that has a matching forecast gains a `forecast` field:
+ *   { value, lo, hi, period }
+ */
+export async function getKPIsWithForecasts(sector) {
+  // 1. Get base KPI data (pass sector filter through)
+  const kpis = await getKpis(sector ? { sector } : {});
+
+  // 2. Pull forecast data from the latest completed scenario.
+  //    We look for ecosystem-level forecasts first (aggregate KPIs),
+  //    then company-level simulated metrics for per-company rollups.
+  const { rows: forecastRows } = await pool.query(
+    `SELECT sr.metric_name, sr.value, sr.confidence_lo, sr.confidence_hi, sr.period
+     FROM scenario_results sr
+     JOIN scenarios s ON s.id = sr.scenario_id
+     WHERE s.status = 'complete'
+       AND sr.entity_type = 'ecosystem'
+       AND sr.metric_name IN (
+         'funding_m_forecast', 'employment_forecast', 'innovation_index',
+         'capital_deployed_forecast', 'leverage_forecast'
+       )
+     ORDER BY s.created_at DESC, sr.period DESC`
+  );
+
+  // Build a map of metric_name -> latest forecast row
+  const forecastMap = {};
+  for (const row of forecastRows) {
+    // Keep only the first (latest scenario, latest period) per metric
+    if (!forecastMap[row.metric_name]) {
+      forecastMap[row.metric_name] = row;
+    }
+  }
+
+  // 3. Map forecast metrics to KPI keys
+  const kpiToForecastMetric = {
+    capitalDeployed: 'capital_deployed_forecast',
+    ecosystemCapacity: 'employment_forecast',
+    innovationIndex: 'innovation_index',
+    privateLeverage: 'leverage_forecast',
+    ssbciCapitalDeployed: 'funding_m_forecast',
+  };
+
+  // 4. Enrich each KPI with forecast data where available
+  const enriched = {};
+  for (const [key, kpi] of Object.entries(kpis)) {
+    enriched[key] = { ...kpi };
+    const forecastMetric = kpiToForecastMetric[key];
+    if (forecastMetric && forecastMap[forecastMetric]) {
+      const f = forecastMap[forecastMetric];
+      enriched[key].forecast = {
+        value: parseFloat(f.value),
+        lo: parseFloat(f.confidence_lo),
+        hi: parseFloat(f.confidence_hi),
+        period: f.period,
+      };
+    }
+  }
+
+  return enriched;
+}
+
+/**
+ * Ecosystem-level forecast summary from the latest completed scenario.
+ * Returns total funding, total employees, and average momentum — each
+ * with confidence interval bands — aggregated across all companies.
+ */
+export async function getEcosystemForecastSummary() {
+  // Find the latest completed scenario
+  const { rows: scenarioRows } = await pool.query(
+    `SELECT id, name, base_period, created_at
+     FROM scenarios
+     WHERE status = 'complete'
+     ORDER BY created_at DESC
+     LIMIT 1`
+  );
+
+  if (scenarioRows.length === 0) {
+    return null;
+  }
+
+  const scenario = scenarioRows[0];
+
+  // Aggregate company-level simulated results from that scenario
+  const { rows } = await pool.query(
+    `SELECT
+       sr.metric_name,
+       CASE WHEN sr.metric_name = 'momentum_simulated' THEN AVG(sr.value)
+            ELSE SUM(sr.value) END AS value,
+       CASE WHEN sr.metric_name = 'momentum_simulated' THEN AVG(sr.confidence_lo)
+            ELSE SUM(sr.confidence_lo) END AS confidence_lo,
+       CASE WHEN sr.metric_name = 'momentum_simulated' THEN AVG(sr.confidence_hi)
+            ELSE SUM(sr.confidence_hi) END AS confidence_hi,
+       MAX(sr.period) AS period,
+       COUNT(*)::int AS entity_count
+     FROM scenario_results sr
+     WHERE sr.scenario_id = $1
+       AND sr.entity_type = 'company'
+       AND sr.metric_name IN ('funding_m_simulated', 'employees_simulated', 'momentum_simulated')
+     GROUP BY sr.metric_name`,
+    [scenario.id]
+  );
+
+  // Also check for ecosystem-level rows (pre-aggregated by the model)
+  const { rows: ecosystemRows } = await pool.query(
+    `SELECT sr.metric_name, sr.value, sr.confidence_lo, sr.confidence_hi, sr.period
+     FROM scenario_results sr
+     WHERE sr.scenario_id = $1
+       AND sr.entity_type = 'ecosystem'
+       AND sr.metric_name IN ('funding_m_forecast', 'employment_forecast', 'innovation_index')
+     ORDER BY sr.period DESC`,
+    [scenario.id]
+  );
+
+  // Build result map — prefer ecosystem-level rows if present, fall back to
+  // company-level aggregations
+  const metricsMap = {};
+
+  // Company-level aggregates (fallback)
+  const companyMetricToKey = {
+    funding_m_simulated: 'totalFunding',
+    employees_simulated: 'totalEmployees',
+    momentum_simulated: 'avgMomentum',
+  };
+  for (const row of rows) {
+    const key = companyMetricToKey[row.metric_name];
+    if (key) {
+      metricsMap[key] = {
+        value: parseFloat(row.value),
+        lo: parseFloat(row.confidence_lo),
+        hi: parseFloat(row.confidence_hi),
+        period: row.period,
+        entityCount: row.entity_count,
+      };
+    }
+  }
+
+  // Ecosystem-level rows (override if available)
+  const ecosystemMetricToKey = {
+    funding_m_forecast: 'totalFunding',
+    employment_forecast: 'totalEmployees',
+    innovation_index: 'avgMomentum',
+  };
+  for (const row of ecosystemRows) {
+    const key = ecosystemMetricToKey[row.metric_name];
+    if (key) {
+      metricsMap[key] = {
+        value: parseFloat(row.value),
+        lo: parseFloat(row.confidence_lo),
+        hi: parseFloat(row.confidence_hi),
+        period: row.period,
+        entityCount: metricsMap[key]?.entityCount || null,
+      };
+    }
+  }
+
+  return {
+    scenario: {
+      id: scenario.id,
+      name: scenario.name,
+      basePeriod: scenario.base_period,
+      createdAt: scenario.created_at,
+    },
+    totalFunding: metricsMap.totalFunding || null,
+    totalEmployees: metricsMap.totalEmployees || null,
+    avgMomentum: metricsMap.avgMomentum || null,
   };
 }
 

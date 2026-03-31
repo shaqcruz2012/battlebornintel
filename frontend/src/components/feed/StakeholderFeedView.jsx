@@ -394,7 +394,7 @@ export function StakeholderFeedView() {
             />
           </div>
           <div className={styles.searchWrapper}>
-            <span className={styles.searchIcon}>&#128269;</span>
+            <span className={styles.searchIcon} aria-hidden="true">&#128269;</span>
             <input
               type="text"
               className={styles.searchInput}
@@ -409,6 +409,7 @@ export function StakeholderFeedView() {
                 onClick={handleClearSearch}
                 type="button"
                 title="Clear search"
+                aria-label="Clear search"
               >
                 &times;
               </button>

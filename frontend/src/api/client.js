@@ -14,15 +14,7 @@ async function fetchJSON(path, params = {}, { signal } = {}) {
     }
   }
 
-  const headers = {};
-  const token = localStorage.getItem('bbi_token');
-  if (token) headers['Authorization'] = `Bearer ${token}`;
-
-  const res = await fetch(url.toString(), { signal, headers, cache: 'no-store' });
-  if (res.status === 401) {
-    localStorage.removeItem('bbi_token');
-    window.dispatchEvent(new Event('auth:expired'));
-  }
+  const res = await fetch(url.toString(), { signal });
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
     throw new Error(body.error || `API error ${res.status}`);
@@ -46,21 +38,11 @@ export const api = {
     fetchJSON(`${BASE}/funds/${id}`).then((r) => r.data),
 
   // Graph
-  getGraph: (nodeTypes, yearMax, region, opportunities) =>
+  getGraph: (nodeTypes, yearMax, region) =>
     fetchJSON(`${BASE}/graph`, {
       nodeTypes: nodeTypes?.join(','),
       yearMax,
       region,
-      opportunities: opportunities ? 'true' : undefined,
-    }).then((r) => r.data),
-
-  // Lightweight graph — smaller payload for initial render
-  getGraphLight: (nodeTypes, yearMax, region, opportunities) =>
-    fetchJSON(`${BASE}/graph/light`, {
-      nodeTypes: nodeTypes?.join(','),
-      yearMax,
-      region,
-      opportunities: opportunities ? 'true' : undefined,
     }).then((r) => r.data),
 
   getGraphMetrics: (nodeTypes) =>
@@ -85,100 +67,68 @@ export const api = {
 
   // Analysis
   getCompanyAnalysis: (id) =>
-    fetchJSON(`${BASE}/analysis/company/${id}`).then((r) => r.data),
+    fetchJSON(`${BASE}/analysis/company/${id}`).then((r) => r.data).catch((e) => {
+      if (e.message?.includes('404')) return null;
+      throw e;
+    }),
 
   getWeeklyBrief: (params = {}) =>
-    fetchJSON(`${BASE}/analysis/brief`, params).then((r) => r),
-
-  getWeeklyBriefByWeek: (weekStart) =>
-    fetchJSON(`${BASE}/analysis/brief/${weekStart}`).then((r) => r.data),
-
-  getWeeklyBriefRange: (startWeek, endWeek) =>
-    fetchJSON(`${BASE}/analysis/brief`, {
-      weekStart: startWeek,
-      weekEnd: endWeek,
-    }).then((r) => r),
+    fetchJSON(`${BASE}/analysis/brief`, params).then((r) => r).catch((e) => {
+      if (e.message?.includes('404')) return { data: null };
+      throw e;
+    }),
 
   getRiskAssessments: () =>
     fetchJSON(`${BASE}/analysis/risks`).then((r) => r.data),
-
-  getRiskSignals: (params = {}) =>
-    fetchJSON(`${BASE}/risks`, params).then((r) => r.data),
 
   // Stakeholder Activities
   getStakeholderActivities: (params = {}) =>
     fetchJSON(`${BASE}/stakeholder-activities`, params).then((r) => r.data),
 
-  // Analytics
-  getInvestorMatches: (companyId, params = {}) =>
-    fetchJSON(`${BASE}/analytics/investor-match/${companyId}`, params).then((r) => r.data),
+  // Economic Indicators
+  getIndicatorsSummary: () =>
+    fetchJSON(`${BASE}/indicators`).then((r) => r.data),
 
-  getCapitalFlows: (params = {}) =>
-    fetchJSON(`${BASE}/analytics/capital-flows`, params).then((r) => r.data),
+  getIndicatorHistory: (metric, params = {}) =>
+    fetchJSON(`${BASE}/indicators/history/${metric}`, params).then((r) => r.data),
 
-  getCapitalMagnets: (limit = 20) =>
-    fetchJSON(`${BASE}/analytics/capital-magnets`, { limit }).then((r) => r.data),
+  getMacroIndicators: (params = {}) =>
+    fetchJSON(`${BASE}/indicators/macro`, params).then((r) => r.data),
 
-  getPredictedLinks: (limit = 30, params = {}) =>
-    fetchJSON(`${BASE}/analytics/predicted-links`, { limit, ...params }).then((r) => r.data),
+  getRegionalIndicators: (region, params = {}) =>
+    fetchJSON(`${BASE}/indicators/regional/${region}`, params).then((r) => r.data),
 
-  // Investors
-  getInvestors: (params = {}) =>
-    fetchJSON(`${BASE}/investors`, params).then((r) => r.data),
+  // Scenarios
+  getScenarios: (params = {}) =>
+    fetchJSON(`${BASE}/scenarios`, params).then((r) => r.data),
 
-  getInvestor: (id) =>
-    fetchJSON(`${BASE}/investors/${id}`).then((r) => r.data),
+  getScenario: (id) =>
+    fetchJSON(`${BASE}/scenarios/${id}`).then((r) => r.data),
 
-  getInvestorStats: (params = {}) =>
-    fetchJSON(`${BASE}/investors/stats`, params).then((r) => r.data),
+  getScenarioResults: (id, filters = {}) =>
+    fetchJSON(`${BASE}/scenarios/${id}/results`, filters).then((r) => r.data),
 
-  // Frontier News
-  getNews: (params = {}) =>
-    fetchJSON(`${BASE}/news/frontier`, params).then((r) => r),
+  // Forecasts
+  getForecasts: (entityType, entityId, params = {}) =>
+    fetchJSON(`${BASE}/scenarios/forecasts/${entityType}/${entityId}`, params).then((r) => r.data),
 
-  getNewsNevada: (params = {}) =>
-    fetchJSON(`${BASE}/news/nevada`, params).then((r) => r),
+  getEcosystemForecast: () =>
+    fetchJSON(`${BASE}/forecasts/ecosystem`).then((r) => r.data),
 
-  getNewsSectors: () =>
-    fetchJSON(`${BASE}/news/sectors`).then((r) => r.data),
-
-  // Ecosystem map
-  getEcosystemMap: (params = {}) =>
-    fetchJSON(`${BASE}/ecosystem/map`, params).then((r) => r.data),
-
-  getStructuralHoles: (params = {}) =>
-    fetchJSON(`${BASE}/analytics/structural-holes`, params).then((r) => r.data),
-
-  getEcosystemGaps: (params = {}) =>
-    fetchJSON(`${BASE}/ecosystem/gaps`, params).then((r) => r.data),
-
-  getGraphClusters: (type = 'community') =>
-    fetchJSON(`${BASE}/graph/clusters`, { type }).then((r) => r.data),
-
-  getGraphAnalytics: () =>
-    fetchJSON(`${BASE}/graph/analytics`).then((r) => r.data),
-
-  getRegionalSummary: () =>
-    fetchJSON(`${BASE}/regional/summary`).then((r) => r.data),
-
-  getMacroEvents: () =>
-    fetchJSON(`${BASE}/macro-events`).then((r) => r.data),
-
-  getModelLeaderboard: (outputType = 'composite_score', limit = 20) =>
-    fetchJSON(`${BASE}/model-outputs/leaderboard`, {
-      output_type: outputType,
-      limit,
+  // Temporal Graph
+  getTemporalGraph: (date, nodeTypes, region) =>
+    fetchJSON(`${BASE}/graph/temporal`, {
+      date,
+      nodeTypes: nodeTypes?.join(','),
+      region,
     }).then((r) => r.data),
 
-  refreshNews: () =>
-    fetch(`${BASE}/news/refresh`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(localStorage.getItem('bbi_token')
-          ? { Authorization: `Bearer ${localStorage.getItem('bbi_token')}` }
-          : {}),
-      },
-    }).then((r) => r.json()),
+  getNodeFeatures: () =>
+    fetchJSON(`${BASE}/graph/node-features`).then((r) => r.data),
 
+  getNodeMetricsHistory: (nodeId) =>
+    fetchJSON(`${BASE}/graph/metrics/${encodeURIComponent(nodeId)}/history`).then((r) => r.data),
+
+  getStageTransitions: (companyId) =>
+    fetchJSON(`${BASE}/graph/stage-transitions/${companyId}`).then((r) => r.data),
 };

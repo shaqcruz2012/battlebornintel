@@ -302,7 +302,7 @@ export function SearchOverlay({ isOpen, onClose, onViewChange }) {
 
           {isTyping && isEmpty && (
             <div className={styles.emptyState}>
-              <span className={styles.emptyNoResults}>No results for &ldquo;{query}&rdquo;</span>
+              <span className={styles.emptyNoResults}>No results for {'\u201C'}{query}{'\u201D'}</span>
               <span className={styles.emptyHint}>Try a different term</span>
             </div>
           )}

@@ -73,5 +73,3 @@ export const DataQualityLegend = memo(function DataQualityLegend() {
     </div>
   );
 });
-
-export default DataQualityLegend;

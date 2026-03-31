@@ -1,170 +1,105 @@
 /**
- * D3 Layout Web Worker — v5 Community-first galaxy layout
+ * D3 Layout Web Worker — v2 with clustering, BBV/GOED anchoring, edge fix
  * Offloads expensive force-simulation computations from the main thread.
  *
- * Layout concept: "solar systems within a galaxy"
- * Each community forms a tight cluster (solar system) positioned around the
- * canvas center. The largest community sits at the center; remaining communities
- * are arranged in a tilted elliptical ring. Within each community, nodes
- * arrange themselves by force simulation with type-based sub-offsets.
- *
- * Key improvements over v4:
- *  - Community-first clustering: nodes cluster by community_id, not by type
- *  - Communities that span types (fund + portfolio companies + accelerator) stay together
- *  - Intra-community edges use shorter ideal distance and stronger springs
- *  - Cross-community edges use longer distances to keep clusters separated
- *  - Community centers computed from node counts and arranged in tilted ellipse
+ * Key improvements over v1:
+ *  - Builds an id-to-index map so string-ID edges resolve correctly
+ *  - Cluster force pulls each node type toward a dedicated canvas zone
+ *  - BBV / GOED hub nodes are strongly attracted to canvas center
+ *  - Collision avoidance prevents node overlap
+ *  - Boundary force keeps nodes within canvas margins
+ *  - Node positions initialized across 20-80% of canvas (avoids edge pile-up)
  */
 
-/**
- * L-5: Deterministic hash of a string to a float in [0, 1).
- * Used for stable cluster target jitter — layout is identical across re-runs.
- */
-function hashFloat(str) {
-  let h = 2166136261; // FNV-1a 32-bit offset basis
-  for (let i = 0; i < str.length; i++) {
-    h ^= str.charCodeAt(i);
-    h = (h * 16777619) >>> 0; // FNV prime, keep 32-bit unsigned
-  }
-  return (h >>> 0) / 0x100000000;
-}
-
-const TILT = 15 * Math.PI / 180;
-const cosTilt = Math.cos(TILT);
-const sinTilt = Math.sin(TILT);
-
-// Module-level community centers — set once per simulation run
-let communityCenters = {};
-
-/**
- * Pre-compute community center positions.
- * Largest community gets the center. Remaining communities are arranged in a
- * tilted elliptical ring, with larger communities closer to center.
- */
-function computeCommunityCenters(nodes, width, height) {
-  const commSizes = {};
-  nodes.forEach(n => {
-    const comm = n._communityId;
-    if (comm !== undefined && comm !== null) {
-      commSizes[comm] = (commSizes[comm] || 0) + 1;
-    }
-  });
-
-  // Sort communities by size (largest first)
-  const sorted = Object.entries(commSizes)
-    .sort((a, b) => b[1] - a[1]);
-
-  if (sorted.length === 0) return {};
-
-  const cx = width / 2;
-  const cy = height / 2;
-  // Use most of the available canvas — communities need room to breathe
-  const majorAxis = width * 0.42;
-  const minorAxis = height * 0.32;
-  const centers = {};
-
-  // Only the single largest community gets the true center
-  centers[sorted[0][0]] = { x: cx, y: cy };
-
-  // All other communities spread out in a wide elliptical arrangement
-  // using the full canvas area — no cramped bulge, no overlapping arms
-  if (sorted.length > 1) {
-    const rest = sorted.slice(1);
-    rest.forEach(([commId, size], idx) => {
-      // Distribute evenly around ellipse with golden-angle spacing
-      // Golden angle prevents communities from lining up
-      const goldenAngle = 2.399963; // radians (~137.5°)
-      const angle = idx * goldenAngle;
-
-      // Distance: larger communities closer to center, smaller further out
-      const sizeRatio = size / sorted[0][1];
-      const minDist = 0.35; // minimum distance from center (fraction of axis)
-      const maxDist = 0.90;
-      const dist = minDist + (1 - sizeRatio) * (maxDist - minDist);
-
-      // Add per-community jitter so same-size communities don't overlap
-      const jitterR = (hashFloat('jR_' + commId) - 0.5) * 0.15;
-
-      const rawX = Math.cos(angle) * majorAxis * (dist + jitterR);
-      const rawY = Math.sin(angle) * minorAxis * (dist + jitterR);
-
-      // Apply 15° tilt
-      centers[commId] = {
-        x: cx + rawX * cosTilt - rawY * sinTilt,
-        y: cy + rawX * sinTilt + rawY * cosTilt,
-      };
-    });
-  }
-
-  return centers;
-}
+// Hub nodes that should gravitate strongly toward the canvas center
+const HUB_IDS = new Set([
+  'f_bbv',
+  'bbv',
+  'goed',
+  'x_goed',
+  'f_battle-born',
+  'battle-born-ventures',
+]);
 
 /**
  * Returns the cluster target position and attraction strength for a node.
+ * Positions are expressed as absolute canvas coordinates derived from
+ * fractions of (width, height) centered on (cx, cy).
  *
- * Community-first: nodes are pulled toward their community's center position.
- * Within each community, nodes get small type-based sub-offsets so different
- * node types don't pile directly on top of each other.
- *
- * Nodes without a community fall back to a central position with weak pull.
+ * @param {object} node  - graph node with at minimum { id, type, region, label }
+ * @param {number} width  - canvas width in px
+ * @param {number} height - canvas height in px
+ * @returns {{ x: number, y: number, strength: number }}
  */
 function clusterTarget(node, width, height) {
-  const comm = node._communityId;
-  if (comm !== undefined && comm !== null && communityCenters[comm]) {
-    const center = communityCenters[comm];
-    // Type-based sub-offset within the community — keeps different types
-    // slightly separated while staying in the same cluster
-    const typeOffset = {
-      company:     { dx: 0,   dy: 0   },
-      fund:        { dx: -20, dy: -15 },
-      external:    { dx: 20,  dy: 10  },
-      accelerator: { dx: -15, dy: 15  },
-      ecosystem:   { dx: 15,  dy: -10 },
-      person:      { dx: 10,  dy: -15 },
-      sector:      { dx: -10, dy: 10  },
-      region:      { dx: 12,  dy: 8   },
-      exchange:    { dx: -8,  dy: -12 },
-      program:     { dx: 8,   dy: 12  },
-    };
-    const off = typeOffset[node.type] || { dx: 0, dy: 0 };
-    const jitter = 40; // spread within community — enough room to see individual nodes
-    return {
-      x: center.x + off.dx + (hashFloat(node.id + '_cx') - 0.5) * jitter,
-      y: center.y + off.dy + (hashFloat(node.id + '_cy') - 0.5) * jitter,
-      strength: 0.18, // moderate pull — tight enough to cluster, loose enough to breathe
-    };
-  }
-  // Fallback for nodes without a community — weak pull to periphery
   const cx = width / 2;
   const cy = height / 2;
-  const dAngle = hashFloat(node.id) * Math.PI * 2;
-  const dR = 0.6 + hashFloat(node.id + '_r') * 0.3;
-  return {
-    x: cx + Math.cos(dAngle) * dR * width * 0.3,
-    y: cy + Math.sin(dAngle) * dR * height * 0.15,
-    strength: 0.05,
-  };
-}
 
-// Module-level set so getNodeRadius() doesn't allocate on every call
-const _HUB_RADIUS_IDS = new Set(['f_bbv', 'goed', 'eco_goed', 'bbv', 'f_dfv', 'dfv']);
+  // Hub nodes strongly attracted to center
+  if (
+    HUB_IDS.has(node.id) ||
+    (node.type === 'fund' && (node.label || '').toLowerCase().includes('battle born'))
+  ) {
+    return { x: cx, y: cy, strength: 0.8 };
+  }
 
-/**
- * Returns the visual radius for a node, matching GraphCanvas.nodeRadius().
- * Used by collision detection so the physics radius matches the rendered size.
- */
-function getNodeRadius(node) {
-  if (_HUB_RADIUS_IDS.has(node.id)) return 13;
-  if (node.type === 'fund' || node.type === 'accelerator') return 8;
-  if (node.type === 'sector' || node.type === 'ecosystem' || node.type === 'region') return 6;
-  if (node.type === 'company') return 6;  // conservative mid-range for companies
-  if (node.type === 'external') return 4;
-  return 5;
+  switch (node.type) {
+    case 'fund':
+      // Other funds cluster near center, spread slightly around BBV
+      return {
+        x: cx + (Math.random() - 0.5) * width * 0.15,
+        y: cy + (Math.random() - 0.5) * height * 0.15,
+        strength: 0.30,
+      };
+
+    case 'company': {
+      // Portfolio companies cluster by Nevada region around the canvas
+      const regionZones = {
+        las_vegas:       { x: cx + width * 0.28, y: cy + height * 0.10 },  // right
+        henderson:       { x: cx + width * 0.25, y: cy + height * 0.22 },  // lower-right
+        las_vegas_metro: { x: cx + width * 0.22, y: cy + height * 0.05 },
+        reno:            { x: cx - width * 0.28, y: cy - height * 0.10 },  // left
+        washoe:          { x: cx - width * 0.25, y: cy - height * 0.05 },
+        northern_nevada: { x: cx - width * 0.10, y: cy - height * 0.28 },  // upper
+        sparks:          { x: cx - width * 0.20, y: cy - height * 0.08 },
+        elko:            { x: cx + width * 0.05, y: cy - height * 0.32 },  // upper-right
+        statewide:       { x: cx,                y: cy + height * 0.30 },  // lower-center
+      };
+      const zone = regionZones[node.region] || { x: cx, y: cy + height * 0.20 };
+      return { ...zone, strength: 0.12 };
+    }
+
+    case 'person':
+      // People rely primarily on edge force to stay near their company;
+      // light cluster toward lower-center keeps them from drifting off-canvas
+      return { x: cx, y: cy + height * 0.28, strength: 0.08 };
+
+    case 'accelerator':
+      // Accelerators — innovation support layer — lower-left
+      return { x: cx - width * 0.30, y: cy + height * 0.25, strength: 0.22 };
+
+    case 'ecosystem':
+      // Ecosystem / government / policy — upper-right
+      return { x: cx + width * 0.28, y: cy - height * 0.22, strength: 0.22 };
+
+    case 'external':
+      // National / external players — outer ring right
+      return { x: cx + width * 0.35, y: cy + height * 0.30, strength: 0.15 };
+
+    case 'sector':
+      return { x: cx - width * 0.35, y: cy + height * 0.30, strength: 0.15 };
+
+    case 'region':
+      return { x: cx - width * 0.35, y: cy - height * 0.30, strength: 0.15 };
+
+    default:
+      return { x: cx, y: cy, strength: 0.05 };
+  }
 }
 
 class ForceSimulation {
   /**
-   * @param {object[]} nodes  - graph nodes (must include { id, x, y, type, _communityId })
+   * @param {object[]} nodes  - graph nodes (must include { id, x, y, type, region, label })
    * @param {object[]} edges  - graph edges with source/target as string IDs or numeric indices
    * @param {number}   width  - canvas width in px
    * @param {number}   height - canvas height in px
@@ -172,19 +107,6 @@ class ForceSimulation {
   constructor(nodes, edges, width, height) {
     this.width = width;
     this.height = height;
-
-    // ── Compute community centers before building node targets ──────────
-    communityCenters = computeCommunityCenters(nodes, width, height);
-
-    // ── Degree map: count how many edges touch each node ID ──────────────
-    // High-degree nodes repel more strongly and are pushed to the core.
-    const degree = {};
-    edges.forEach((e) => {
-      const s = typeof e.source === 'number' ? String(e.source) : e.source;
-      const t = typeof e.target === 'number' ? String(e.target) : e.target;
-      degree[s] = (degree[s] || 0) + 1;
-      degree[t] = (degree[t] || 0) + 1;
-    });
 
     // Build id-to-index map so string-ID edges resolve to the correct node
     this.idToIndex = {};
@@ -199,185 +121,78 @@ class ForceSimulation {
       vy: 0,
       fx: null,
       fy: null,
-      degree: degree[n.id] || 0,
-      _r: getNodeRadius(n),                        // visual radius for collision
       _clusterTarget: clusterTarget(n, width, height),
     }));
 
     // Resolve edge source/target to numeric indices using the id map.
     // Edges with unresolvable or self-referential endpoints are dropped.
-    // Preserve relationship type and community membership for spring scaling.
     this.edges = edges
       .map((e) => {
         const si =
           typeof e.source === 'number' ? e.source : this.idToIndex[e.source];
         const ti =
           typeof e.target === 'number' ? e.target : this.idToIndex[e.target];
-        if (si === undefined || ti === undefined || si === ti) return null;
-        return {
-          source: si,
-          target: ti,
-          rel: e.rel || e.type || '',
-          sourceType: nodes[si] ? nodes[si].type : null,
-          targetType: nodes[ti] ? nodes[ti].type : null,
-          _sameCommunity: (
-            nodes[si]?._communityId !== undefined &&
-            nodes[si]?._communityId !== null &&
-            nodes[si]?._communityId === nodes[ti]?._communityId
-          ),
-        };
+        return si !== undefined && ti !== undefined && si !== ti
+          ? { source: si, target: ti }
+          : null;
       })
       .filter(Boolean);
 
     this.alpha = 1;
-    this.alphaDecay = 0.045;  // aggressive cooling — converges in ~120 ticks (~40% faster)
-    this.alphaMin = 0.008;    // stop earlier — last frames add no visible improvement
-    this.velocityDecay = 0.42; // higher damping for faster convergence with fewer ticks
-
-    // Pre-built sets for edge spring classification — avoids re-allocating on
-    // every tick call (applyEdgeAttraction is called hundreds of times).
-    this._tightRels = new Set([
-      'invested_in', 'loaned_to', 'founder_of', 'manages', 'funds',
-      'grants_to', 'acquired',
-    ]);
-    this._mediumRels = new Set([
-      'accelerated_by', 'incubated_by', 'won_pitch', 'partners_with',
-      'contracts_with', 'collaborated_with', 'supports', 'housed_at',
-    ]);
-  }
-
-  /**
-   * Build a spatial hash grid for fast neighbor lookups.
-   * Nodes are binned into cells of size `cellSize`. Only nodes in the same
-   * or adjacent cells are checked for interaction, reducing O(n^2) to ~O(n).
-   */
-  _buildSpatialGrid(cellSize) {
-    const grid = new Map();
-    for (let i = 0; i < this.nodes.length; ++i) {
-      const n = this.nodes[i];
-      const cx = Math.floor((n.x || 0) / cellSize);
-      const cy = Math.floor((n.y || 0) / cellSize);
-      const key = cx + ',' + cy;
-      if (!grid.has(key)) grid.set(key, { cx, cy, indices: [] });
-      grid.get(key).indices.push(i);
-    }
-    return grid;
-  }
-
-  _gridKey(cx, cy) {
-    return cx + ',' + cy;
+    this.alphaDecay = 0.018;  // slower cooldown = more motion/settling
+    this.alphaMin = 0.008;    // stop earlier than D3 default (0.001)
+    this.velocityDecay = 0.30;
   }
 
   /**
    * Many-body Coulomb repulsion — pushes all node pairs apart.
-   * Uses spatial hashing with cell size = distMax so only nearby pairs
-   * are checked, reducing complexity from O(n^2) to ~O(n * k) where k
-   * is the average number of neighbors within distMax.
+   * Strength -55 gives more breathing room than the old -30.
    */
   applyRepulsion() {
-    const distMax = 700;
-    const distMax2 = distMax * distMax;
-    const cellSize = distMax;
-    const grid = this._buildSpatialGrid(cellSize);
-
-    // Iterate each cell and check against same + 4 forward neighbors
-    // (right, below-left, below, below-right) to visit each pair once.
-    const offsets = [[0, 0], [1, 0], [-1, 1], [0, 1], [1, 1]];
-
-    for (const [, cell] of grid) {
-      const { cx, cy, indices: cellIndices } = cell;
-
-      for (let oi = 0; oi < offsets.length; oi++) {
-        const ncx = cx + offsets[oi][0];
-        const ncy = cy + offsets[oi][1];
-        const neighbor = oi === 0 ? cell : grid.get(this._gridKey(ncx, ncy));
-        if (!neighbor) continue;
-        const neighborIndices = neighbor.indices;
-
-        const isSameCell = oi === 0;
-
-        for (let ii = 0; ii < cellIndices.length; ii++) {
-          const idxA = cellIndices[ii];
-          const a = this.nodes[idxA];
-          const strengthA = -40 - a.degree * 10;
-          const jStart = isSameCell ? ii + 1 : 0;
-
-          for (let jj = jStart; jj < neighborIndices.length; jj++) {
-            const idxB = neighborIndices[jj];
-            const b = this.nodes[idxB];
-            let dx = b.x - a.x || 0.01;
-            let dy = b.y - a.y || 0.01;
-            const dist2 = dx * dx + dy * dy;
-            if (dist2 > distMax2) continue;
-            const dist = Math.sqrt(dist2);
-            if (dist < 1) {
-              dx = Math.random() * 2 - 1;
-              dy = Math.random() * 2 - 1;
-            }
-            const strength = (strengthA + (-40 - b.degree * 10)) * 0.5;
-            const f = (strength * this.alpha) / Math.max(dist2, 1);
-            const fx = (dx / Math.max(dist, 1)) * f;
-            const fy = (dy / Math.max(dist, 1)) * f;
-            a.vx += fx;
-            a.vy += fy;
-            b.vx -= fx;
-            b.vy -= fy;
-          }
+    const strength = -22;
+    for (let i = 0; i < this.nodes.length; ++i) {
+      const a = this.nodes[i];
+      for (let j = i + 1; j < this.nodes.length; ++j) {
+        const b = this.nodes[j];
+        let dx = b.x - a.x || 0.01;
+        let dy = b.y - a.y || 0.01;
+        const dist2 = dx * dx + dy * dy;
+        const dist = Math.sqrt(dist2);
+        // Jitter if nodes are stacked on top of each other
+        if (dist < 1) {
+          dx = Math.random() * 2 - 1;
+          dy = Math.random() * 2 - 1;
         }
+        const f = (strength * this.alpha) / Math.max(dist2, 1);
+        const fx = (dx / Math.max(dist, 1)) * f;
+        const fy = (dy / Math.max(dist, 1)) * f;
+        a.vx += fx;
+        a.vy += fy;
+        b.vx -= fx;
+        b.vy -= fy;
       }
     }
   }
 
   /**
    * Collision avoidance — prevents nodes from overlapping by enforcing
-   * a minimum center-to-center distance equal to the sum of their visual
-   * radii plus a 6px padding gap.
-   *
-   * Uses the spatial grid built by applyRepulsion() (same tick) to check
-   * only nearby pairs, reducing from O(n^2) to ~O(n * k).
-   * Reduced to 1 sub-iteration (from 3) — sufficient with the higher tick count.
+   * a minimum center-to-center distance.
    */
   applyCollision() {
-    const strength = 0.85;
-    const padding = 6;
-    // Max possible collision distance: 13 + 13 + 6 = 32px.
-    // Use a larger cell size for fewer grid lookups with 1 sub-iteration.
-    const cellSize = 60;
-    const grid = this._buildSpatialGrid(cellSize);
-    const offsets = [[0, 0], [1, 0], [-1, 1], [0, 1], [1, 1]];
-
-    for (const [, cell] of grid) {
-      const { cx, cy, indices: cellIndices } = cell;
-
-      for (let oi = 0; oi < offsets.length; oi++) {
-        const ncx = cx + offsets[oi][0];
-        const ncy = cy + offsets[oi][1];
-        const neighbor = oi === 0 ? cell : grid.get(this._gridKey(ncx, ncy));
-        if (!neighbor) continue;
-        const neighborIndices = neighbor.indices;
-
-        const isSameCell = oi === 0;
-
-        for (let ii = 0; ii < cellIndices.length; ii++) {
-          const idxA = cellIndices[ii];
-          const a = this.nodes[idxA];
-          const jStart = isSameCell ? ii + 1 : 0;
-
-          for (let jj = jStart; jj < neighborIndices.length; jj++) {
-            const idxB = neighborIndices[jj];
-            const b = this.nodes[idxB];
-            const minDist = (a._r || 5) + (b._r || 5) + padding;
-            const dx = b.x - a.x || 0.01;
-            const dy = b.y - a.y || 0.01;
-            const dist = Math.sqrt(dx * dx + dy * dy) || 0.01;
-            if (dist < minDist) {
-              const overlap = ((minDist - dist) / dist) * strength * 0.5;
-              a.vx -= dx * overlap;
-              a.vy -= dy * overlap;
-              b.vx += dx * overlap;
-              b.vy += dy * overlap;
-            }
-          }
+    const minDist = 5;
+    for (let i = 0; i < this.nodes.length; ++i) {
+      for (let j = i + 1; j < this.nodes.length; ++j) {
+        const a = this.nodes[i];
+        const b = this.nodes[j];
+        const dx = b.x - a.x || 0.01;
+        const dy = b.y - a.y || 0.01;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist < minDist) {
+          const overlap = ((minDist - dist) / dist) * 0.10;
+          a.vx -= dx * overlap;
+          a.vy -= dy * overlap;
+          b.vx += dx * overlap;
+          b.vy += dy * overlap;
         }
       }
     }
@@ -385,50 +200,15 @@ class ForceSimulation {
 
   /**
    * Edge spring attraction — pulls connected nodes toward an ideal separation.
-   *
-   * Community-aware: intra-community edges use shorter ideal distance (25-40px)
-   * and stronger springs to keep community members tightly clustered.
-   * Cross-community edges use longer distances and weaker springs to maintain
-   * separation between clusters.
-   *
    * Respects fixed (fx/fy) nodes.
    */
   applyEdgeAttraction() {
+    const idealLength = 80;  // target edge length in pixels
+    const strength = 0.04;
     for (const edge of this.edges) {
       const a = this.nodes[edge.source];
       const b = this.nodes[edge.target];
       if (!a || !b) continue;
-
-      let idealLength, strength;
-      const rel = edge.rel;
-      const sameCommunity = edge._sameCommunity;
-
-      if (sameCommunity) {
-        // Intra-community: tight clustering — short distance, strong spring
-        if (this._tightRels.has(rel)) {
-          idealLength = 25;
-          strength = 0.14;
-        } else if (this._mediumRels.has(rel)) {
-          idealLength = 35;
-          strength = 0.10;
-        } else {
-          idealLength = 40;
-          strength = 0.08;
-        }
-      } else {
-        // Cross-community: push clusters apart — long distance, very weak spring
-        if (this._tightRels.has(rel)) {
-          idealLength = 150;
-          strength = 0.02;
-        } else if (this._mediumRels.has(rel)) {
-          idealLength = 200;
-          strength = 0.012;
-        } else {
-          idealLength = 250;
-          strength = 0.008;
-        }
-      }
-
       const dx = b.x - a.x;
       const dy = b.y - a.y;
       const dist = Math.sqrt(dx * dx + dy * dy) || 1;
@@ -442,7 +222,7 @@ class ForceSimulation {
   }
 
   /**
-   * Cluster force — pulls each node toward its community zone.
+   * Cluster force — pulls each node toward its type/region zone.
    * Hub nodes use a high strength (0.6) so they gravitate firmly to center.
    */
   applyClusterForce() {
@@ -540,39 +320,17 @@ function marginRand(dim) {
 
 /**
  * Serialize only the fields consumers need, stripping internal simulation
- * state (vx, vy, fx, fy, index, degree, _r, _clusterTarget) to keep message
- * size lean and avoid polluting the node objects received by GraphCanvas.
- * Preserve _communityId so the renderer can draw community labels.
+ * state (vx, vy, fx, fy, index, _clusterTarget) to keep message size lean.
  */
 function serializeNodes(nodes) {
-  // eslint-disable-next-line no-unused-vars
-  return nodes.map(({ id, type, label, x, y, vx, vy, fx, fy, index, degree, _r, _clusterTarget, _cx, _cy, _communityId, ...rest }) => ({
+  return nodes.map(({ id, type, label, x, y, ...rest }) => ({
     id,
     type,
     label,
+    ...rest,
     x,
     y,
-    _communityId,
-    ...rest,
   }));
-}
-
-/**
- * Build a transferable ArrayBuffer containing node positions.
- * Layout: [x0, y0, x1, y1, ...] as Float32.
- * Also returns an id-order array so the consumer can map indices back to node IDs.
- * Using transferable ArrayBuffers avoids the structured-clone overhead of posting
- * full node objects (saves ~2-5ms for 700+ nodes).
- */
-function buildPositionBuffer(nodes) {
-  const buffer = new Float32Array(nodes.length * 2);
-  const ids = new Array(nodes.length);
-  for (let i = 0; i < nodes.length; i++) {
-    ids[i] = nodes[i].id;
-    buffer[i * 2] = nodes[i].x;
-    buffer[i * 2 + 1] = nodes[i].y;
-  }
-  return { buffer, ids };
 }
 
 // ---------------------------------------------------------------------------
@@ -584,16 +342,9 @@ self.addEventListener('message', (e) => {
     edges,
     width = 1200,
     height = 700,
-    iterations: _iterations,
-    _requestId,
+    iterations = 600,
+    requestId,
   } = e.data;
-
-  // Cap total iterations — with alphaDecay 0.045 the simulation converges
-  // in ~120 ticks. 150 is a safe budget; anything beyond wastes CPU.
-  const iterations = Math.min(_iterations || 150, 150);
-
-  // Check if caller requested ArrayBuffer transfer mode (faster for large graphs)
-  const useTransfer = e.data.useTransfer || false;
 
   try {
     // Initialize positions for nodes that haven't been placed yet
@@ -605,35 +356,52 @@ self.addEventListener('message', (e) => {
 
     const sim = new ForceSimulation(initializedNodes, edges, width, height);
 
-    // Skip interim messages entirely — post only the final frame.
-    // This eliminates 2 intermediate React re-renders (~5-15ms each) and
-    // avoids structured-clone overhead for large node arrays.
-    // The user sees a loading skeleton for 1-2s then the full graph appears at once.
-    sim.run(iterations, null, iterations + 1);
+    // ── Pass 1: quick layout (150 ticks) ──────────────────────────────────
+    // Post an interim frame every 60 ticks so the canvas can render a rough
+    // layout within ~1-2 seconds instead of waiting for all 600 ticks.
+    const PASS1_TICKS = 150;
+    const INTERIM_EVERY = 60;
+
+    sim.run(PASS1_TICKS, (currentNodes) => {
+      self.postMessage({
+        success: true,
+        interim: true,
+        nodes: serializeNodes(currentNodes),
+        requestId,
+      });
+    }, INTERIM_EVERY);
+
+    // Guarantee at least one interim frame after the first pass even if
+    // PASS1_TICKS is not a multiple of INTERIM_EVERY.
+    self.postMessage({
+      success: true,
+      interim: true,
+      nodes: serializeNodes(sim.nodes),
+      requestId,
+    });
+
+    // ── Pass 2: refinement (remaining iterations) ─────────────────────────
+    // Continue the simulation from where it left off, posting interim frames
+    // every 60 ticks until the alpha cools or we exhaust the budget.
+    const remainingTicks = Math.max(0, iterations - PASS1_TICKS);
+
+    sim.run(remainingTicks, (currentNodes) => {
+      self.postMessage({
+        success: true,
+        interim: true,
+        nodes: serializeNodes(currentNodes),
+        requestId,
+      });
+    }, INTERIM_EVERY);
 
     // ── Final frame ────────────────────────────────────────────────────────
-    if (useTransfer) {
-      // ArrayBuffer transfer mode: send positions as Float32Array (zero-copy)
-      // plus serialized nodes for the first frame only.
-      const { buffer, ids } = buildPositionBuffer(sim.nodes);
-      self.postMessage({
-        success: true,
-        interim: false,
-        transfer: true,
-        positions: buffer.buffer,
-        ids,
-        nodes: serializeNodes(sim.nodes),
-        _requestId,
-      }, [buffer.buffer]);
-    } else {
-      self.postMessage({
-        success: true,
-        interim: false,
-        nodes: serializeNodes(sim.nodes),
-        _requestId,
-      });
-    }
+    self.postMessage({
+      success: true,
+      interim: false,
+      nodes: serializeNodes(sim.nodes),
+      requestId,
+    });
   } catch (error) {
-    self.postMessage({ success: false, error: error.message, _requestId });
+    self.postMessage({ success: false, error: error.message, requestId });
   }
 });

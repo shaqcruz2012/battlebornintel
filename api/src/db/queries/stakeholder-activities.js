@@ -1,7 +1,8 @@
 import pool from '../pool.js';
+import { logger } from '../../logger.js';
 
 /**
- * Get stakeholder activities from the unified events table.
+ * Get stakeholder activities (from timeline events and analysis results)
  * Supports filtering by:
  * - location: Nevada region (las_vegas, reno, henderson, carson_city, etc.)
  * - since: ISO date string (e.g., 2025-01-01)
@@ -23,22 +24,127 @@ export async function getStakeholderActivities(filters = {}) {
   } = filters;
 
   let sql = `
+    WITH timeline_data AS (
+      SELECT
+        t.id::text,
+        t.event_date as date,
+        t.event_type as activity_type,
+        t.company_name,
+        t.detail as description,
+        c.city || ', ' || c.region as location,
+        'timeline_event' as source,
+        t.source_url,
+        true as verified,
+        c.city,
+        c.region,
+        CASE
+          WHEN t.event_type IN ('funding', 'investment') THEN 'risk_capital'
+          WHEN t.event_type IN ('grant', 'legislation', 'policy') THEN 'gov_policy'
+          WHEN t.event_type IN ('research', 'academic') THEN 'university'
+          WHEN t.event_type IN ('partnership', 'expansion') THEN 'corporate'
+          ELSE 'ecosystem'
+        END as stakeholder_type
+      FROM timeline_events t
+      LEFT JOIN companies c ON LOWER(c.name) = LOWER(t.company_name)
+    ),
+    graph_edge_activities AS (
+      SELECT
+        'graph-' || g.id as id,
+        (g.event_year::text || '-01-01')::date as date,
+        CASE g.rel
+          WHEN 'invested_in' THEN 'Funding'
+          WHEN 'funded' THEN 'Funding'
+          WHEN 'funded_by' THEN 'Funding'
+          WHEN 'grants_to' THEN 'Grant'
+          WHEN 'awarded' THEN 'Award'
+          WHEN 'partners_with' THEN 'Partnership'
+          WHEN 'contracts_with' THEN 'Partnership'
+          WHEN 'corporate_partner' THEN 'Partnership'
+          WHEN 'collaborated_with' THEN 'Partnership'
+          WHEN 'research_partnership' THEN 'Partnership'
+          WHEN 'pilots_with' THEN 'Partnership'
+          WHEN 'acquired' THEN 'Acquisition'
+          WHEN 'acquired_by' THEN 'Acquisition'
+          WHEN 'accelerated_by' THEN 'Milestone'
+          WHEN 'won_pitch' THEN 'Milestone'
+          ELSE 'Milestone'
+        END as activity_type,
+        c.name as company_name,
+        g.note as description,
+        c.city || ', ' || c.region as location,
+        'graph_edge' as source,
+        NULL::text as source_url,
+        false as verified,
+        c.city,
+        c.region,
+        CASE
+          WHEN g.source_type = 'fund' OR g.rel IN ('invested_in', 'funded', 'funded_by') THEN 'risk_capital'
+          WHEN g.source_type = 'external' AND e.entity_type IN ('University', 'University System') THEN 'university'
+          WHEN g.source_type = 'external' AND e.entity_type IN ('Gov Agency', 'Government', 'Federal Agency', 'Federal Program') THEN 'gov_policy'
+          WHEN g.source_type = 'external' AND e.entity_type IN ('Corporation', 'PE Firm', 'Investment Co') THEN 'corporate'
+          WHEN g.rel IN ('accelerated_by', 'won_pitch') THEN 'ecosystem'
+          WHEN g.rel IN ('grants_to', 'awarded') THEN 'gov_policy'
+          ELSE 'ecosystem'
+        END as stakeholder_type
+      FROM graph_edges g
+      JOIN companies c ON 'c_' || c.id::text = g.target_id OR 'c_' || c.id::text = g.source_id
+      LEFT JOIN externals e ON g.source_type = 'external' AND e.id = g.source_id
+      WHERE g.event_year IS NOT NULL
+    ),
+    enriched_activities AS (
+      SELECT
+        'sa-' || sa.id::text as id,
+        sa.activity_date as date,
+        sa.activity_type,
+        COALESCE(sa.display_name, c.name, sa.company_id) as company_name,
+        sa.description,
+        sa.location,
+        sa.source,
+        sa.source_url,
+        (sa.data_quality = 'VERIFIED') as verified,
+        split_part(sa.location, ',', 1) as city,
+        TRIM(split_part(sa.location, ',', 2)) as region,
+        COALESCE(sa.stakeholder_type, CASE
+          WHEN sa.activity_type IN ('Funding') THEN 'risk_capital'
+          WHEN sa.activity_type IN ('Grant', 'Award') THEN 'gov_policy'
+          WHEN sa.activity_type IN ('Partnership', 'Expansion', 'Acquisition') THEN 'corporate'
+          WHEN sa.activity_type IN ('Hiring') THEN 'corporate'
+          WHEN sa.activity_type IN ('Patent', 'Milestone', 'Launch') THEN 'ecosystem'
+          ELSE 'ecosystem'
+        END) as stakeholder_type
+      FROM stakeholder_activities sa
+      LEFT JOIN LATERAL (
+        SELECT name FROM companies
+        WHERE slug = sa.company_id
+        UNION ALL
+        SELECT name FROM companies
+        WHERE LOWER(name) = LOWER(sa.company_id)
+          AND slug != sa.company_id
+        LIMIT 1
+      ) c ON true
+    ),
+    combined_activities AS (
+      SELECT * FROM timeline_data
+      UNION ALL
+      SELECT * FROM graph_edge_activities
+      UNION ALL
+      SELECT * FROM enriched_activities
+    )
     SELECT
-      e.id::text AS id,
-      e.event_date AS date,
-      e.event_type AS activity_type,
-      e.company_name,
-      e.description,
-      e.location,
-      e.source,
-      e.source_url,
-      e.verified,
-      e.confidence,
-      e.stakeholder_type,
-      split_part(e.location, ',', 1) AS city,
-      TRIM(split_part(e.location, ',', 2)) AS region
-    FROM events e
-    WHERE e.quarantined = FALSE AND e.verified = TRUE
+      id,
+      date,
+      activity_type,
+      company_name,
+      description,
+      location,
+      source,
+      source_url,
+      verified,
+      city,
+      region,
+      stakeholder_type
+    FROM combined_activities
+    WHERE 1=1
   `;
 
   const params = [];
@@ -46,35 +152,35 @@ export async function getStakeholderActivities(filters = {}) {
 
   // Filter by location
   if (location && location !== 'all') {
-    sql += ` AND (LOWER(TRIM(split_part(e.location, ',', 2))) = $${paramIndex} OR LOWER(split_part(e.location, ',', 1)) LIKE $${paramIndex + 1})`;
+    sql += ` AND (LOWER(region) = $${paramIndex} OR LOWER(city) LIKE $${paramIndex + 1})`;
     params.push(location.toLowerCase(), `%${location.toLowerCase()}%`);
     paramIndex += 2;
   }
 
   // Filter by since date
   if (since) {
-    sql += ` AND e.event_date >= $${paramIndex}::date`;
+    sql += ` AND date >= $${paramIndex}::date`;
     params.push(since);
     paramIndex++;
   }
 
   // Filter by until date
   if (until) {
-    sql += ` AND e.event_date <= $${paramIndex}::date`;
+    sql += ` AND date <= $${paramIndex}::date`;
     params.push(until);
     paramIndex++;
   }
 
   // Filter by activity type (case-insensitive to handle both Title Case and lowercase inputs)
   if (type && type !== 'all') {
-    sql += ` AND LOWER(e.event_type) = $${paramIndex}`;
+    sql += ` AND LOWER(activity_type) = $${paramIndex}`;
     params.push(type.toLowerCase());
     paramIndex++;
   }
 
   // Filter by stakeholder type category
   if (stakeholderType && stakeholderType !== 'all') {
-    sql += ` AND e.stakeholder_type = $${paramIndex}`;
+    sql += ` AND stakeholder_type = $${paramIndex}`;
     params.push(stakeholderType.toLowerCase());
     paramIndex++;
   }
@@ -82,60 +188,70 @@ export async function getStakeholderActivities(filters = {}) {
   // Count-only mode: return just the total matching rows
   if (countOnly) {
     const countSql = `SELECT COUNT(*) as total FROM (${sql}) _counted`;
-    const { rows } = await pool.query(countSql, params);
-    return parseInt(rows[0].total, 10);
+    try {
+      const { rows } = await pool.query(countSql, params);
+      return parseInt(rows[0].total, 10);
+    } catch (error) {
+      logger.error('Error counting stakeholder activities:', error);
+      throw error;
+    }
   }
 
-  // Wrap the filtered query with COUNT(*) OVER() so we get the total
-  // matching rows and paginated data in a single round-trip.
-  let finalSql = `SELECT *, COUNT(*) OVER() AS _total_count FROM (${sql}) _filtered ORDER BY date DESC`;
+  // Run paginated data query and total count query in parallel to avoid
+  // the COUNT(*) OVER() window function which forces a full scan.
+  const countSql = `SELECT COUNT(*) AS total FROM (${sql}) _filtered`;
+  const countParams = [...params];
 
+  let dataSql = `SELECT * FROM (${sql}) _filtered ORDER BY date DESC`;
   if (limit != null) {
-    finalSql += ` LIMIT $${paramIndex}`;
+    dataSql += ` LIMIT $${paramIndex}`;
     params.push(limit);
   }
 
-  const { rows } = await pool.query(finalSql, params);
-  const totalCount = rows.length > 0 ? parseInt(rows[0]._total_count, 10) : 0;
-  const mappedRows = rows.map((row) => ({
-    id: row.id,
-    date: row.date,
-    activity_type: row.activity_type,
-    company_name: row.company_name,
-    description: row.description,
-    location: row.location,
-    source: row.source,
-    source_url: row.source_url || null,
-    verified: row.verified,
-    stakeholder_type: row.stakeholder_type,
-  }));
-  return { rows: mappedRows, totalCount };
+  try {
+    const [dataResult, countResult] = await Promise.all([
+      pool.query(dataSql, params),
+      pool.query(countSql, countParams),
+    ]);
+
+    const totalCount = parseInt(countResult.rows[0]?.total || '0', 10);
+    const mappedRows = dataResult.rows.map((row) => ({
+      id: row.id,
+      date: row.date,
+      activity_type: row.activity_type,
+      company_name: row.company_name,
+      description: row.description,
+      location: row.location,
+      source: row.source,
+      source_url: row.source_url || null,
+      verified: row.verified,
+      stakeholder_type: row.stakeholder_type,
+    }));
+    return { rows: mappedRows, totalCount };
+  } catch (error) {
+    logger.error('Error fetching stakeholder activities:', error);
+    throw error;
+  }
 }
 
 /**
  * Get recent activities for a specific company
  */
 export async function getCompanyActivities(companyId, limit = 20) {
-  // Use a CTE to resolve the company name once, then match by either
-  // company_id or company_name — avoids re-executing subquery per row.
   const sql = `
-    WITH target AS (
-      SELECT id, LOWER(name) AS lname FROM companies WHERE id = $1
-    )
     SELECT
-      e.id,
-      e.event_date AS date,
-      e.event_type AS activity_type,
-      e.company_name,
-      e.description,
-      e.location,
-      e.source,
-      e.source_url,
-      e.verified
-    FROM events e, target t
-    WHERE e.quarantined = FALSE AND e.verified = TRUE
-      AND (e.company_id = t.id OR LOWER(e.company_name) = t.lname)
-    ORDER BY e.event_date DESC
+      t.id,
+      t.event_date as date,
+      t.event_type as activity_type,
+      t.company_name,
+      t.detail as description,
+      c.city || ', ' || c.region as location,
+      'timeline_event' as source,
+      true as verified
+    FROM timeline_events t
+    LEFT JOIN companies c ON c.id = $1
+    WHERE LOWER(t.company_name) = (SELECT LOWER(name) FROM companies WHERE id = $1)
+    ORDER BY t.event_date DESC
     LIMIT $2
   `;
 
@@ -148,22 +264,25 @@ export async function getCompanyActivities(companyId, limit = 20) {
  */
 export async function getActivitiesByLocationAndDateRange(location, startDate, endDate) {
   const sql = `
-    SELECT
-      e.id,
-      e.event_date AS date,
-      e.event_type AS activity_type,
-      e.company_name,
-      e.description,
-      e.location,
-      e.source,
-      e.source_url,
-      e.verified
-    FROM events e
-    WHERE e.quarantined = FALSE AND e.verified = TRUE
-      AND ($1 = 'all' OR LOWER(e.location) ILIKE $2)
-      AND e.event_date >= $3::date
-      AND e.event_date <= $4::date
-    ORDER BY e.event_date DESC
+    WITH timeline_data AS (
+      SELECT
+        t.id,
+        t.event_date as date,
+        t.event_type as activity_type,
+        t.company_name,
+        t.detail as description,
+        c.city || ', ' || c.region as location,
+        'timeline_event' as source,
+        true as verified
+      FROM timeline_events t
+      LEFT JOIN companies c ON LOWER(c.name) = LOWER(t.company_name)
+    )
+    SELECT *
+    FROM timeline_data
+    WHERE ($1 = 'all' OR LOWER(location) ILIKE $2)
+      AND date >= $3::date
+      AND date <= $4::date
+    ORDER BY date DESC
   `;
 
   const { rows } = await pool.query(sql, [
@@ -181,12 +300,14 @@ export async function getActivitiesByLocationAndDateRange(location, startDate, e
  */
 export async function countActivitiesByType() {
   const sql = `
+    WITH timeline_data AS (
+      SELECT event_type as activity_type FROM timeline_events
+    )
     SELECT
-      event_type AS activity_type,
-      COUNT(*) AS count
-    FROM events
-    WHERE quarantined = FALSE AND verified = TRUE
-    GROUP BY event_type
+      activity_type,
+      COUNT(*) as count
+    FROM timeline_data
+    GROUP BY activity_type
     ORDER BY count DESC
   `;
 
@@ -199,11 +320,18 @@ export async function countActivitiesByType() {
  */
 export async function countActivitiesByLocation() {
   const sql = `
+    WITH timeline_data AS (
+      SELECT
+        c.city || ', ' || c.region as location
+      FROM timeline_events t
+      LEFT JOIN companies c ON LOWER(c.name) = LOWER(t.company_name)
+      WHERE c.id IS NOT NULL
+    )
     SELECT
       location,
-      COUNT(*) AS count
-    FROM events
-    WHERE location IS NOT NULL AND quarantined = FALSE
+      COUNT(*) as count
+    FROM timeline_data
+    WHERE location IS NOT NULL
     GROUP BY location
     ORDER BY count DESC
   `;

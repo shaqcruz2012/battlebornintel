@@ -32,6 +32,7 @@ export class ErrorBoundary extends Component {
 
       return (
         <div
+          role="alert"
           style={{
             padding: '2rem',
             textAlign: 'center',

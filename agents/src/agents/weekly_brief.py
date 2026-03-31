@@ -1,60 +1,21 @@
 import json
-from datetime import date
+import logging
+
 from .base_agent import BaseAgent
+from .utils import extract_json, load_prompt
 
+logger = logging.getLogger(__name__)
 
-SYSTEM_PROMPT = """You are a senior economist and startup ecosystem analyst preparing a weekly intelligence brief
+_SYSTEM_PROMPT_FALLBACK = """You are a senior economist and startup ecosystem analyst preparing a weekly intelligence brief
 for the Nevada Governor's Office of Economic Development (GOED) and SSBCI fund managers.
 
-Your brief must be data-driven and actionable.  You receive pre-aggregated data sections
-and must synthesise them into a single JSON object that matches the schema below EXACTLY.
+Structure the brief using the MIT REAP framework:
+1. Inputs (capital flows, new funding)
+2. Capacities (talent, infrastructure, programs)
+3. Outputs (new companies, products, partnerships)
+4. Impact (jobs, economic growth, ecosystem health)
 
-Use the MIT REAP framework for the "reap_assessment" section:
-1. Inputs   — capital flows, new funding, investor activity
-2. Capacities — talent, infrastructure, programs, accelerators
-3. Outputs  — new companies, products, partnerships, deals closed
-4. Impact   — jobs, economic growth, ecosystem health metrics
-
-Rules:
-- Every claim must be traceable to the data provided.  Do NOT fabricate companies, numbers, or URLs.
-- If a section has no data, return an empty array or a brief "No activity this period." summary.
-- Return ONLY the JSON object — no markdown fences, no preamble.
-
-Required JSON schema:
-{
-  "week_ending": "YYYY-MM-DD",
-  "headline": "<compelling headline, under 80 chars>",
-  "key_metrics": {
-    "total_companies": N,
-    "total_funding_m": N,
-    "avg_momentum": N,
-    "ssbci_deployed_pct": N,
-    "new_edges_this_week": N,
-    "verified_events_this_week": N
-  },
-  "top_movers": [
-    {"name": "...", "momentum_delta": N, "trigger": "..."}
-  ],
-  "recent_events": [
-    {"date": "...", "type": "...", "company": "...", "detail": "...", "source_url": "..."}
-  ],
-  "risk_alerts": [
-    {"severity": "...", "title": "...", "recommendation": "..."}
-  ],
-  "ecosystem_pulse": {
-    "new_entities": N,
-    "new_edges": N,
-    "communities": N,
-    "bridge_nodes": ["...", "..."]
-  },
-  "reap_assessment": {
-    "inputs": "...",
-    "capacities": "...",
-    "outputs": "...",
-    "impact": "..."
-  },
-  "action_items": ["...", "..."]
-}"""
+Be concise, data-driven, and actionable. Output valid JSON."""
 
 
 class WeeklyBrief(BaseAgent):
@@ -63,313 +24,335 @@ class WeeklyBrief(BaseAgent):
     def __init__(self):
         super().__init__("weekly_brief")
 
-    # ── Data gathering helpers ────────────────────────────────────────────
+    async def _gather_agent_insights(self, pool):
+        """Fetch recent outputs from other agents to enrich the brief.
 
-    async def _fetch_company_stats(self, pool):
-        """Portfolio-level stats and top movers by momentum."""
-        companies = await pool.fetch(
-            "SELECT id, name, stage, momentum, funding_m, employees "
-            "FROM companies ORDER BY momentum DESC"
-        )
-        # Previous-week momentum via computed_scores history
-        scored = await pool.fetch(
-            """SELECT cs.company_id, cs.irs_score, c.name, c.momentum
-               FROM computed_scores cs
-               JOIN companies c ON c.id = cs.company_id
-               ORDER BY cs.irs_score DESC NULLS LAST
-               LIMIT 10"""
-        )
-        return companies, scored
+        Queries analysis_results and scenario_results for the latest
+        company narratives, risk assessments, causal evaluations, and
+        ecosystem forecasts.  Each query is wrapped in try/except so that
+        missing data never breaks the brief.
 
-    async def _fetch_fund_stats(self, pool):
-        """SSBCI deployment tracking."""
-        return await pool.fetch("SELECT * FROM funds")
+        Returns a dict with keys: recent_company_analyses, latest_risks,
+        causal_insights, ecosystem_forecast.  Any key whose query returned
+        no data is omitted.
+        """
+        insights: dict = {}
 
-    async def _fetch_verified_events(self, pool):
-        """Verified events from the consolidated events table (last 7 days)."""
-        return await pool.fetch(
-            """SELECT event_date, event_type, company_name, description,
-                      source_url, amount_m
-               FROM events
-               WHERE verified = TRUE
-                 AND event_date >= CURRENT_DATE - INTERVAL '7 days'
-               ORDER BY event_date DESC
-               LIMIT 25"""
-        )
-
-    async def _fetch_graph_pulse(self, pool):
-        """Community stats, bridge nodes, and recent edge activity."""
-        # New edges created this week
-        new_edges_row = await pool.fetchrow(
-            """SELECT COUNT(*) AS cnt FROM graph_edges
-               WHERE created_at >= NOW() - INTERVAL '7 days'"""
-        )
-        new_edges = new_edges_row["cnt"] if new_edges_row else 0
-
-        # Community count from graph_metrics_cache
-        community_row = await pool.fetchrow(
-            """SELECT COUNT(DISTINCT community_id) AS cnt
-               FROM graph_metrics_cache
-               WHERE community_id IS NOT NULL"""
-        )
-        communities = community_row["cnt"] if community_row else 0
-
-        # Bridge nodes = highest betweenness centrality
-        bridge_rows = await pool.fetch(
-            """SELECT gmc.node_id, er.label
-               FROM graph_metrics_cache gmc
-               LEFT JOIN entity_registry er ON er.canonical_id = gmc.node_id
-               WHERE gmc.betweenness IS NOT NULL
-               ORDER BY gmc.betweenness DESC
-               LIMIT 5"""
-        )
-        bridge_nodes = [
-            r["label"] or r["node_id"] for r in bridge_rows
-        ]
-
-        return {
-            "new_edges": new_edges,
-            "communities": communities,
-            "bridge_nodes": bridge_nodes,
-        }
-
-    async def _fetch_entity_changes(self, pool):
-        """Recent entity state history — stage transitions, funding rounds, etc."""
-        return await pool.fetch(
-            """SELECT esh.canonical_id, er.label, esh.change_type,
-                      esh.property_name, esh.old_value, esh.new_value,
-                      esh.changed_at
-               FROM entity_state_history esh
-               LEFT JOIN entity_registry er ON er.canonical_id = esh.canonical_id
-               WHERE esh.changed_at >= NOW() - INTERVAL '7 days'
-                 AND esh.change_type != 'created'
-               ORDER BY esh.changed_at DESC
-               LIMIT 20"""
-        )
-
-    async def _fetch_new_entities(self, pool):
-        """Count of entities registered in the last 7 days."""
-        row = await pool.fetchrow(
-            """SELECT COUNT(*) AS cnt FROM entity_registry
-               WHERE created_at >= NOW() - INTERVAL '7 days'"""
-        )
-        return row["cnt"] if row else 0
-
-    async def _fetch_risk_signals(self, pool):
-        """Identify risk conditions from current data."""
-        # Momentum decay candidates
-        decay_rows = await pool.fetch(
-            """SELECT c.id, c.name, c.momentum, cs.irs_score,
-                      LAG(cs.irs_score) OVER (
-                          PARTITION BY cs.company_id
-                          ORDER BY cs.computed_at
-                      ) AS prev_irs
-               FROM computed_scores cs
-               JOIN companies c ON c.id = cs.company_id
-               ORDER BY cs.computed_at DESC"""
-        )
-        signals = []
-        seen = set()
-        for r in decay_rows:
-            if r["id"] in seen:
-                continue
-            seen.add(r["id"])
-            if r["prev_irs"] is not None and r["irs_score"] is not None:
-                delta = r["irs_score"] - r["prev_irs"]
-                if delta <= -10:
-                    severity = (
-                        "critical" if delta <= -20
-                        else "high" if delta <= -15
-                        else "medium"
-                    )
-                    signals.append({
-                        "severity": severity,
-                        "title": f"Momentum Decay: {r['name']}",
-                        "recommendation": (
-                            f"IRS score declined {abs(delta)} pts "
-                            f"({r['prev_irs']} -> {r['irs_score']}). "
-                            f"Review recent activity for {r['name']}."
-                        ),
+        # 1. Recent company analyses (analysis_type = 'company_narrative')
+        try:
+            rows = await pool.fetch(
+                """SELECT entity_id, content, created_at
+                   FROM analysis_results
+                   WHERE analysis_type = 'company_narrative'
+                   ORDER BY created_at DESC
+                   LIMIT 5"""
+            )
+            if rows:
+                analyses = []
+                for r in rows:
+                    content = r["content"]
+                    if isinstance(content, str):
+                        content = json.loads(content)
+                    analyses.append({
+                        "entity_id": r["entity_id"],
+                        "summary": content.get("executive_summary", "N/A"),
+                        "recommendation": content.get("recommendation", "N/A"),
+                        "created_at": str(r["created_at"]),
                     })
+                insights["recent_company_analyses"] = analyses
+        except Exception:
+            logger.debug("Could not fetch company analyses for weekly brief.", exc_info=True)
 
-        # SSBCI deployment pace risk
-        funds = await pool.fetch(
-            "SELECT * FROM funds WHERE fund_type = 'SSBCI'"
-        )
-        total_alloc = sum(
-            float(f["allocated_m"]) for f in funds if f["allocated_m"]
-        )
-        total_deployed = sum(float(f["deployed_m"]) for f in funds)
-        if total_alloc > 0:
-            pct = total_deployed / total_alloc * 100
-            if pct < 40:
-                signals.append({
-                    "severity": "high",
-                    "title": "SSBCI Deployment Behind Pace",
-                    "recommendation": (
-                        f"Only {pct:.0f}% of SSBCI capital deployed "
-                        f"(${total_deployed:.1f}M of ${total_alloc:.0f}M). "
-                        "Accelerate deal pipeline review."
-                    ),
-                })
+        # 2. Latest risk assessment
+        try:
+            rows = await pool.fetch(
+                """SELECT content, created_at
+                   FROM analysis_results
+                   WHERE analysis_type = 'risk_assessment'
+                   ORDER BY created_at DESC
+                   LIMIT 1"""
+            )
+            if rows:
+                content = rows[0]["content"]
+                if isinstance(content, str):
+                    content = json.loads(content)
+                risks = content.get("risks", [])
+                if risks:
+                    insights["latest_risks"] = risks
+        except Exception:
+            logger.debug("Could not fetch risk assessment for weekly brief.", exc_info=True)
 
-        return signals[:10]
+        # 3. Latest causal evaluation summaries
+        try:
+            rows = await pool.fetch(
+                """SELECT entity_id, content, created_at
+                   FROM analysis_results
+                   WHERE analysis_type = 'causal_evaluation'
+                   ORDER BY created_at DESC
+                   LIMIT 3"""
+            )
+            if rows:
+                causal = []
+                for r in rows:
+                    content = r["content"]
+                    if isinstance(content, str):
+                        content = json.loads(content)
+                    analyses = content.get("analyses", {})
+                    did = analyses.get("accelerator_did", {})
+                    causal.append({
+                        "entity_id": r["entity_id"],
+                        "att": did.get("att"),
+                        "is_accelerated": did.get("is_significant", False),
+                    })
+                insights["causal_insights"] = causal
+        except Exception:
+            logger.debug("Could not fetch causal evaluations for weekly brief.", exc_info=True)
 
-    async def _fetch_rotation_stats(self, pool):
-        """How many entities were queried by agents this week."""
-        row = await pool.fetchrow(
-            """SELECT COUNT(DISTINCT canonical_id) AS cnt
-               FROM agent_search_log
-               WHERE searched_at >= NOW() - INTERVAL '7 days'"""
-        )
-        return row["cnt"] if row else 0
+        # 4. Ecosystem forecast from the latest completed scenario
+        try:
+            scenario = await pool.fetchrow(
+                """SELECT id FROM scenarios
+                   WHERE status = 'complete'
+                   ORDER BY updated_at DESC
+                   LIMIT 1"""
+            )
+            if scenario:
+                agg = await pool.fetchrow(
+                    """SELECT
+                         SUM(CASE WHEN metric_name = 'funding_m' THEN value END) AS total_funding,
+                         SUM(CASE WHEN metric_name = 'employees' THEN value END) AS total_employees,
+                         AVG(CASE WHEN metric_name = 'momentum' THEN value END) AS avg_momentum
+                       FROM scenario_results
+                       WHERE scenario_id = $1""",
+                    scenario["id"],
+                )
+                if agg and any(
+                    agg[k] is not None
+                    for k in ("total_funding", "total_employees", "avg_momentum")
+                ):
+                    insights["ecosystem_forecast"] = {
+                        "total_funding": (
+                            float(agg["total_funding"])
+                            if agg["total_funding"] is not None
+                            else None
+                        ),
+                        "total_employees": (
+                            float(agg["total_employees"])
+                            if agg["total_employees"] is not None
+                            else None
+                        ),
+                        "avg_momentum": (
+                            round(float(agg["avg_momentum"]), 1)
+                            if agg["avg_momentum"] is not None
+                            else None
+                        ),
+                    }
+        except Exception:
+            logger.debug("Could not fetch ecosystem forecast for weekly brief.", exc_info=True)
 
-    # ── Main run ──────────────────────────────────────────────────────────
+        # 5. Structural hole analysis
+        try:
+            holes = await pool.fetch(
+                """SELECT entity_id, metric_name, value FROM metric_snapshots
+                   WHERE metric_name IN ('structural_hole_severity', 'accelerator_connectivity_gap')
+                   AND entity_type = 'company' AND value > 0
+                   ORDER BY value DESC LIMIT 10"""
+            )
+            if holes:
+                disconnected_count = sum(1 for h in holes if h["metric_name"] == "accelerator_connectivity_gap")
+                max_severity = max((float(h["value"]) for h in holes if h["metric_name"] == "structural_hole_severity"), default=0)
+                insights["structural_gaps"] = {
+                    "disconnected_companies": disconnected_count,
+                    "max_hole_severity": round(max_severity, 2),
+                    "top_gaps": [{"entity": h["entity_id"], "metric": h["metric_name"], "value": float(h["value"])} for h in holes[:5]]
+                }
+        except Exception:
+            logger.debug("Could not fetch structural hole data for weekly brief.", exc_info=True)
+
+        # 6. Policy opportunity scores
+        try:
+            policies = await pool.fetch(
+                """SELECT entity_id, value FROM metric_snapshots
+                   WHERE metric_name = 'policy_opportunity_score' AND entity_type = 'policy'
+                   ORDER BY value DESC LIMIT 5"""
+            )
+            if policies:
+                insights["policy_opportunities"] = [
+                    {"gap": p["entity_id"], "score": float(p["value"])} for p in policies
+                ]
+        except Exception:
+            logger.debug("Could not fetch policy opportunities for weekly brief.", exc_info=True)
+
+        # 7. Interstate comparison
+        try:
+            benchmarks = await pool.fetch(
+                """SELECT entity_id, metric_name, value FROM metric_snapshots
+                   WHERE metric_name IN ('vc_deployed_annual_m', 'accelerator_program_count', 'tech_workforce_pct')
+                   AND entity_type = 'state'
+                   ORDER BY entity_id, metric_name"""
+            )
+            if benchmarks:
+                by_state = {}
+                for b in benchmarks:
+                    state = b["entity_id"]
+                    by_state.setdefault(state, {})[b["metric_name"]] = float(b["value"])
+                insights["interstate_benchmarks"] = by_state
+        except Exception:
+            logger.debug("Could not fetch interstate benchmarks for weekly brief.", exc_info=True)
+
+        return insights
+
+    @staticmethod
+    def _format_agent_insights(insights):
+        """Format the agent insights dict into a prompt section string.
+
+        Only includes subsections for which data was gathered.  Returns an
+        empty string when *insights* is empty.
+        """
+        if not insights:
+            return ""
+
+        parts = ["\n## Agent Intelligence (from automated analysis)"]
+
+        if "recent_company_analyses" in insights:
+            lines = []
+            for a in insights["recent_company_analyses"]:
+                lines.append(
+                    f"- {a['entity_id']}: {a['summary']} "
+                    f"(Recommendation: {a['recommendation']}, as of {a['created_at']})"
+                )
+            parts.append("\n### Recent Company Analyses\n" + "\n".join(lines))
+
+        if "latest_risks" in insights:
+            lines = []
+            for r in insights["latest_risks"]:
+                sev = r.get("severity", "unknown")
+                title = r.get("title", "Untitled")
+                desc = r.get("description", "")
+                lines.append(f"- [{sev.upper()}] {title}: {desc}")
+            parts.append("\n### Current Risk Alerts\n" + "\n".join(lines))
+
+        if "causal_insights" in insights:
+            lines = []
+            for c in insights["causal_insights"]:
+                att_str = f"ATT={c['att']}" if c["att"] is not None else "ATT=N/A"
+                sig = "significant" if c["is_accelerated"] else "not significant"
+                lines.append(f"- {c['entity_id'] or 'ecosystem'}: {att_str} ({sig})")
+            parts.append("\n### Causal Insights\n" + "\n".join(lines))
+
+        if "ecosystem_forecast" in insights:
+            ef = insights["ecosystem_forecast"]
+            lines = []
+            if ef.get("total_funding") is not None:
+                lines.append(f"- Projected total funding: ${ef['total_funding']:.1f}M")
+            if ef.get("total_employees") is not None:
+                lines.append(f"- Projected total employees: {ef['total_employees']:,.0f}")
+            if ef.get("avg_momentum") is not None:
+                lines.append(f"- Projected avg momentum: {ef['avg_momentum']}/100")
+            if lines:
+                parts.append("\n### Ecosystem Forecast\n" + "\n".join(lines))
+
+        if "structural_gaps" in insights:
+            sg = insights["structural_gaps"]
+            parts.append(f"\n### Structural Gaps\n- {sg['disconnected_companies']} companies lack accelerator connections\n- Max structural hole severity: {sg['max_hole_severity']}")
+
+        if "policy_opportunities" in insights:
+            lines = [f"- {p['gap']}: score {p['score']}" for p in insights["policy_opportunities"]]
+            parts.append("\n### Policy Opportunities\n" + "\n".join(lines))
+
+        if "interstate_benchmarks" in insights:
+            lines = []
+            for state, metrics in insights["interstate_benchmarks"].items():
+                vc = metrics.get("vc_deployed_annual_m", "N/A")
+                acc = metrics.get("accelerator_program_count", "N/A")
+                lines.append(f"- {state}: VC ${vc}M, {acc} accelerators")
+            parts.append("\n### Interstate Benchmarks\n" + "\n".join(lines))
+
+        return "\n".join(parts) if len(parts) > 1 else ""
 
     async def run(self, pool):
-        # Gather all data
-        companies, scored = await self._fetch_company_stats(pool)
-        funds = await self._fetch_fund_stats(pool)
-        verified_events = await self._fetch_verified_events(pool)
-        graph_pulse = await self._fetch_graph_pulse(pool)
-        entity_changes = await self._fetch_entity_changes(pool)
-        new_entity_count = await self._fetch_new_entities(pool)
-        risk_signals = await self._fetch_risk_signals(pool)
-        rotation_count = await self._fetch_rotation_stats(pool)
+        # Aggregate data for the brief
+        companies = await pool.fetch(
+            "SELECT * FROM companies ORDER BY momentum DESC"
+        )
+        funds = await pool.fetch("SELECT * FROM funds")
+        recent_events = await pool.fetch(
+            "SELECT * FROM timeline_events ORDER BY event_date DESC LIMIT 10"
+        )
+        scores = await pool.fetch(
+            """SELECT cs.*, c.name FROM computed_scores cs
+               JOIN companies c ON c.id = cs.company_id
+               ORDER BY cs.irs_score DESC NULLS LAST LIMIT 10"""
+        )
 
         # Build summary stats
         total_funding = sum(float(c["funding_m"]) for c in companies)
         total_employees = sum(c["employees"] for c in companies)
         avg_momentum = (
             sum(c["momentum"] for c in companies) / len(companies)
-            if companies else 0
+            if companies
+            else 0
         )
-
         ssbci_funds = [f for f in funds if f["fund_type"] == "SSBCI"]
         ssbci_deployed = sum(float(f["deployed_m"]) for f in ssbci_funds)
         ssbci_allocated = sum(
             float(f["allocated_m"]) for f in ssbci_funds if f["allocated_m"]
         )
         deploy_pct = (
-            round(ssbci_deployed / ssbci_allocated * 100)
-            if ssbci_allocated else 0
+            round(ssbci_deployed / ssbci_allocated * 100) if ssbci_allocated else 0
         )
 
-        # Format top movers
-        top_movers_text = "\n".join(
-            f"- {c['name']} | momentum={c['momentum']} | "
-            f"stage={c['stage']} | funding=${float(c['funding_m']):.1f}M"
-            for c in companies[:8]
-        )
-
-        # Format top IRS-scored
-        top_scored_text = "\n".join(
-            f"- {s['name']} (IRS: {s['irs_score']}, momentum: {s['momentum']})"
-            for s in scored[:5]
-        )
-
-        # Format verified events
+        top_movers = [
+            f"{c['name']} (momentum: {c['momentum']})"
+            for c in companies[:5]
+        ]
+        top_scored = [
+            f"{s['name']} (IRS: {s['irs_score']}, {s['grade']})"
+            for s in scores[:5]
+        ]
         events_text = "\n".join(
-            f"- {e['event_date']}: [{e['event_type']}] "
-            f"{e['company_name'] or 'N/A'} - {e['description']}"
-            + (f" (${float(e['amount_m']):.1f}M)" if e["amount_m"] else "")
-            + (f" [source: {e['source_url']}]" if e["source_url"] else "")
-            for e in verified_events
-        ) or "No verified events this week."
+            f"- {e['event_date']}: {e['company_name']} - {e['detail']}"
+            for e in recent_events
+        )
 
-        # Format entity state changes
-        changes_text = "\n".join(
-            f"- {r['label'] or r['canonical_id']}: "
-            f"{r['change_type']} on {r['property_name'] or 'N/A'} "
-            f"({r['old_value']} -> {r['new_value']}) at {r['changed_at']}"
-            for r in entity_changes
-        ) or "No entity state changes this week."
-
-        # Format risk signals
-        risk_text = "\n".join(
-            f"- [{s['severity'].upper()}] {s['title']}: {s['recommendation']}"
-            for s in risk_signals
-        ) or "No risk signals this week."
-
-        # Format graph pulse
-        bridge_text = ", ".join(
-            graph_pulse["bridge_nodes"][:5]
-        ) or "None identified"
-
-        today_str = date.today().isoformat()
+        # Gather recent outputs from other agents
+        agent_insights = await self._gather_agent_insights(pool)
+        agent_section = self._format_agent_insights(agent_insights)
 
         user_prompt = f"""Generate a weekly intelligence brief for Nevada's startup ecosystem.
-Week ending: {today_str}
 
--------------------------------------------------------------------
-PORTFOLIO STATS
--------------------------------------------------------------------
+ECOSYSTEM STATS:
 - Total companies tracked: {len(companies)}
-- Total funding: ${total_funding:.1f}M
+- Total funding: ${total_funding:.0f}M
 - Total employees: {total_employees:,}
 - Average momentum score: {avg_momentum:.0f}/100
 - SSBCI deployment: ${ssbci_deployed:.1f}M of ${ssbci_allocated:.0f}M ({deploy_pct}%)
 
--------------------------------------------------------------------
-TOP MOMENTUM COMPANIES
--------------------------------------------------------------------
-{top_movers_text}
+TOP MOMENTUM COMPANIES:
+{chr(10).join(f'- {m}' for m in top_movers)}
 
--------------------------------------------------------------------
-TOP IRS-SCORED COMPANIES
--------------------------------------------------------------------
-{top_scored_text}
+TOP IRS-SCORED COMPANIES:
+{chr(10).join(f'- {s}' for s in top_scored)}
 
--------------------------------------------------------------------
-VERIFIED EVENTS (LAST 7 DAYS)
--------------------------------------------------------------------
+RECENT EVENTS:
 {events_text}
+{agent_section}
 
--------------------------------------------------------------------
-ENTITY STATE CHANGES (LAST 7 DAYS)
--------------------------------------------------------------------
-{changes_text}
+Return JSON with:
+- "week_ending": today's date string
+- "headline": one compelling headline (under 80 chars)
+- "inputs": object with "summary" and "highlights" (array of strings)
+- "capacities": object with "summary" and "highlights"
+- "outputs": object with "summary" and "highlights"
+- "impact": object with "summary" and "highlights"
+- "ssbci_update": brief SSBCI deployment status
+- "action_items": array of 2-3 recommended actions for stakeholders"""
 
--------------------------------------------------------------------
-RISK SIGNALS
--------------------------------------------------------------------
-{risk_text}
+        system_prompt = load_prompt("weekly_brief") or _SYSTEM_PROMPT_FALLBACK
+        response_text = self.call_claude(system_prompt, user_prompt)
 
--------------------------------------------------------------------
-ECOSYSTEM GRAPH PULSE
--------------------------------------------------------------------
-- New entities this week: {new_entity_count}
-- New edges this week: {graph_pulse['new_edges']}
-- Active communities: {graph_pulse['communities']}
-- Top bridge nodes: {bridge_text}
-- Entities queried by agents this week: {rotation_count}
-
--------------------------------------------------------------------
-INSTRUCTIONS
--------------------------------------------------------------------
-Produce a JSON object matching the required schema from the system prompt.
-For "top_movers", infer momentum_delta from the data and identify the trigger (stage, funding round, event).
-For "risk_alerts", include all signals above plus any you infer from the data.
-For "reap_assessment", write 1-2 sentences per dimension grounded in the data.
-For "action_items", give 3-5 specific, actionable recommendations for GOED/fund managers.
-
-Populate key_metrics with:
-- total_companies: {len(companies)}
-- total_funding_m: {total_funding:.1f}
-- avg_momentum: {avg_momentum:.0f}
-- ssbci_deployed_pct: {deploy_pct}
-- new_edges_this_week: {graph_pulse['new_edges']}
-- verified_events_this_week: {len(verified_events)}
-
-Return ONLY the JSON object."""
-
-        response_text = self.call_claude(SYSTEM_PROMPT, user_prompt)
-
-        try:
-            start = response_text.find("{")
-            end = response_text.rfind("}") + 1
-            content = json.loads(response_text[start:end])
-        except (json.JSONDecodeError, ValueError):
+        content = extract_json(response_text)
+        if content is None:
             content = {"raw_brief": response_text}
 
         await self.save_analysis(

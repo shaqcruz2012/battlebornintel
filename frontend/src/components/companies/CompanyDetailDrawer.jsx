@@ -275,7 +275,7 @@ export function CompanyDetailDrawer({ companyId, onClose }) {
                   <SectionLabel>
                     Relationships
                     <span className={styles.sectionCount}>
-                      {company.edges.length}
+                      {(company.edges || []).length}
                     </span>
                   </SectionLabel>
                   <div className={styles.edgeGroups}>
@@ -292,7 +292,7 @@ export function CompanyDetailDrawer({ companyId, onClose }) {
                             <span className={styles.edgeGroupCount}>{edges.length}</span>
                           </div>
                           <div className={styles.edgeList}>
-                            {edges.slice(0, 12).map((edge, i) => {
+                            {(edges || []).slice(0, 12).map((edge, i) => {
                               const targetName =
                                 edge.target_name ||
                                 edge.target_label ||

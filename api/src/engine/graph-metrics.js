@@ -1,18 +1,8 @@
 /**
  * Graph analytics — PageRank, Betweenness Centrality, Community Detection, Watchlist.
  * Pure computation on (nodes, edges) arrays.
- *
- * @param {Array<{ id: string, type: string, label?: string, funding?: number }>} nodes
- * @param {Array<{ source: string|Object, target: string|Object }>} edges
- * @returns {{
- *   pagerank: Record<string, number>,
- *   betweenness: Record<string, number>,
- *   communities: Record<string, number>,
- *   communityNames: Record<string, string>,
- *   watchlist: Array<Object>,
- *   numCommunities: number
- * }}
  */
+
 export function computeGraphMetrics(nodes, edges) {
   if (!nodes.length)
     return { pagerank: {}, betweenness: {}, communities: {}, watchlist: [], numCommunities: 0 };
@@ -22,38 +12,26 @@ export function computeGraphMetrics(nodes, edges) {
   ids.forEach((id, i) => { idx[id] = i; });
   const N = ids.length;
 
-  // Build weighted adjacency list (undirected)
-  // adj[i] stores neighbor indices; wadj[i] stores {neighbor, weight} for PageRank
+  // Build adjacency list (undirected)
   const adj = Array.from({ length: N }, () => []);
-  const wadj = Array.from({ length: N }, () => []);  // weighted adjacency
-  const outWeightSum = new Float64Array(N).fill(0);   // sum of outgoing weights per node
-
   for (const e of edges) {
     const si = idx[typeof e.source === 'object' ? e.source.id : e.source];
     const ti = idx[typeof e.target === 'object' ? e.target.id : e.target];
     if (si !== undefined && ti !== undefined && si !== ti) {
-      const w = parseFloat(e.weight) || 0.5;
       adj[si].push(ti);
       adj[ti].push(si);
-      wadj[si].push({ neighbor: ti, weight: w });
-      wadj[ti].push({ neighbor: si, weight: w });
-      outWeightSum[si] += w;
-      outWeightSum[ti] += w;
     }
   }
 
   // PageRank (power iteration, damping=0.85, 40 iterations)
-  // Distributes rank proportional to edge weight instead of equally
   const d = 0.85;
   let pr = new Float64Array(N).fill(1 / N);
   for (let iter = 0; iter < 40; iter++) {
     const next = new Float64Array(N).fill((1 - d) / N);
     for (let i = 0; i < N; i++) {
-      if (wadj[i].length > 0) {
-        const totalW = outWeightSum[i];
-        for (const { neighbor: j, weight: w } of wadj[i]) {
-          next[j] += d * pr[i] * (w / totalW);
-        }
+      if (adj[i].length > 0) {
+        const share = pr[i] / adj[i].length;
+        for (const j of adj[i]) next[j] += d * share;
       } else {
         for (let j = 0; j < N; j++) next[j] += (d * pr[i]) / N;
       }
@@ -159,99 +137,126 @@ export function computeGraphMetrics(nodes, edges) {
 
   watchlist.sort((a, b) => b.priority - a.priority);
 
-  // ── Community Naming ──
-  // Auto-generate descriptive names for each community based on member attributes.
-  const communityMembers = {};  // cid -> [node]
+  // --- Co-Investment Density ---
+  // For each company node, count how many of its investor neighbors also invest
+  // in other companies in the graph.
+  const coInvestmentDensity = {};
+  // Build a set of investor node indices → set of company indices they invest in
+  // "invested_in" edges go from fund/investor → company
+  const investorToCompanies = {}; // investorIdx → Set<companyIdx>
+  for (const e of edges) {
+    if (e.rel !== 'invested_in') continue;
+    const si = idx[typeof e.source === 'object' ? e.source.id : e.source];
+    const ti = idx[typeof e.target === 'object' ? e.target.id : e.target];
+    if (si === undefined || ti === undefined) continue;
+    // source = investor, target = company
+    const targetNode = nodeMap[ids[ti]];
+    if (!targetNode || targetNode.type !== 'company') continue;
+    if (!investorToCompanies[si]) investorToCompanies[si] = new Set();
+    investorToCompanies[si].add(ti);
+  }
+  // For each company, find its investors and check co-investment
   ids.forEach((id, i) => {
-    const cid = communities[id];
-    if (!communityMembers[cid]) communityMembers[cid] = [];
     const n = nodeMap[id];
-    communityMembers[cid].push({ ...n, degree: adj[i].length });
-  });
-
-  const communityNames = {};
-  for (const [cid, members] of Object.entries(communityMembers)) {
-    communityNames[cid] = nameCommunity(members);
-  }
-
-  return { pagerank, betweenness, communities, communityNames, watchlist, numCommunities: nextCid };
-}
-
-/* ── Community Naming ── */
-
-/**
- * Generate a human-readable name for a community based on its members.
- *
- * Strategy priority:
- *   1. Dominant sector (most common sector tag across members)
- *   2. Dominant region (most common region)
- *   3. Hub node label (highest degree member)
- *   4. Dominant node type
- *
- * Produces names like: "AI · Las Vegas", "CleanTech · Reno", "BBV Portfolio"
- */
-function nameCommunity(members) {
-  if (!members || members.length === 0) return 'Empty Cluster';
-
-  // Sector frequency
-  const sectorCounts = {};
-  members.forEach(m => {
-    const sectors = m.sector || m.sectors || [];
-    const sArr = Array.isArray(sectors) ? sectors : [sectors];
-    sArr.forEach(s => {
-      if (s) sectorCounts[s] = (sectorCounts[s] || 0) + 1;
-    });
-  });
-  const topSector = Object.entries(sectorCounts).sort((a, b) => b[1] - a[1])[0];
-
-  // Region frequency
-  const regionCounts = {};
-  members.forEach(m => {
-    if (m.region) regionCounts[m.region] = (regionCounts[m.region] || 0) + 1;
-  });
-  const topRegion = Object.entries(regionCounts).sort((a, b) => b[1] - a[1])[0];
-
-  // Hub node (highest degree)
-  const sorted = [...members].sort((a, b) => (b.degree || 0) - (a.degree || 0));
-  const hubNode = sorted[0];
-
-  // Dominant node type
-  const typeCounts = {};
-  members.forEach(m => {
-    if (m.type) typeCounts[m.type] = (typeCounts[m.type] || 0) + 1;
-  });
-  const topType = Object.entries(typeCounts).sort((a, b) => b[1] - a[1])[0];
-
-  // Region display name mapping
-  const regionNames = {
-    las_vegas: 'Las Vegas',
-    reno: 'Reno',
-    henderson: 'Henderson',
-    'reno-sparks': 'Reno-Sparks',
-    rural: 'Rural NV',
-    statewide: 'Statewide',
-  };
-
-  const parts = [];
-  if (topSector && topSector[1] >= 2) parts.push(topSector[0]);
-  if (topRegion && topRegion[1] >= 2) parts.push(regionNames[topRegion[0]] || titleCase(topRegion[0]));
-
-  // If we have nothing descriptive yet, use hub node or dominant type
-  if (!parts.length) {
-    if (hubNode && hubNode.label && hubNode.label !== hubNode.id) {
-      parts.push(hubNode.label);
-    } else if (topType) {
-      parts.push(titleCase(topType[0]) + ' Group');
+    if (!n || n.type !== 'company') return;
+    // Find all investors of this company
+    const investors = [];
+    for (const [invIdx, compSet] of Object.entries(investorToCompanies)) {
+      if (compSet.has(i)) investors.push(parseInt(invIdx));
     }
+    if (investors.length === 0) { coInvestmentDensity[id] = 0; return; }
+    let coInvestors = 0;
+    for (const invIdx of investors) {
+      const compSet = investorToCompanies[invIdx];
+      // Check if this investor invests in OTHER companies (not just this one)
+      for (const cIdx of compSet) {
+        if (cIdx !== i) { coInvestors++; break; }
+      }
+    }
+    coInvestmentDensity[id] = Math.round((coInvestors / investors.length) * 100) / 100;
+  });
+
+  // --- Founder Mobility Score ---
+  // For each company, count people connected via founded_by / employed_at edges
+  // who also connect to OTHER companies.
+  const founderMobility = {};
+  // Build person → set of companies they connect to (via founded_by, employed_at)
+  const personToCompanies = {}; // personId → Set<companyId>
+  for (const e of edges) {
+    if (e.rel !== 'founded_by' && e.rel !== 'employed_at' && e.rel !== 'founder_of') continue;
+    const srcId = typeof e.source === 'object' ? e.source.id : e.source;
+    const tgtId = typeof e.target === 'object' ? e.target.id : e.target;
+    const srcNode = nodeMap[srcId];
+    const tgtNode = nodeMap[tgtId];
+    if (!srcNode || !tgtNode) continue;
+    // Determine which is the person and which is the company
+    let personId, companyId;
+    if (srcNode.type === 'person' && tgtNode.type === 'company') {
+      personId = srcId; companyId = tgtId;
+    } else if (srcNode.type === 'company' && tgtNode.type === 'person') {
+      personId = tgtId; companyId = srcId;
+    } else if (srcNode.type === 'company' && tgtNode.type === 'company') {
+      // founded_by can link company→company in some schemas; skip
+      continue;
+    } else {
+      continue;
+    }
+    if (!personToCompanies[personId]) personToCompanies[personId] = new Set();
+    personToCompanies[personId].add(companyId);
   }
+  ids.forEach((id) => {
+    const n = nodeMap[id];
+    if (!n || n.type !== 'company') return;
+    // Find all people connected to this company
+    const people = [];
+    for (const [pId, compSet] of Object.entries(personToCompanies)) {
+      if (compSet.has(id)) people.push(pId);
+    }
+    if (people.length === 0) { founderMobility[id] = 0; return; }
+    let multiCompanyPeople = 0;
+    for (const pId of people) {
+      if (personToCompanies[pId].size > 1) multiCompanyPeople++;
+    }
+    founderMobility[id] = Math.round((multiCompanyPeople / people.length) * 100) / 100;
+  });
 
-  // If still empty, generic fallback
-  if (!parts.length) return `Cluster ${members.length}`;
+  // --- Structural Hole Score (Burt's constraint) ---
+  // For each node, measure how much it bridges disconnected parts of the network.
+  // constraint(i) = sum_j (p_ij + sum_q p_iq * p_qj)^2
+  // structural_hole_score = 1 - constraint (normalized to 0-1)
+  const structuralHole = {};
+  const rawConstraint = new Float64Array(N);
+  for (let i = 0; i < N; i++) {
+    const neighbors = adj[i];
+    const deg = neighbors.length;
+    if (deg === 0) { rawConstraint[i] = 1; continue; } // isolated = max constraint
+    // p_ij = 1 / degree(i) for each neighbor j (unweighted)
+    const p_ij = 1 / deg;
+    const neighborSet = new Set(neighbors);
+    let constraint = 0;
+    for (const j of neighbors) {
+      // Direct proportion
+      let indirect = 0;
+      // sum_q p_iq * p_qj where q is a common neighbor of i and j (q != i, q != j)
+      for (const q of neighbors) {
+        if (q === j) continue;
+        // p_qj = 1/degree(q) if j is neighbor of q, else 0
+        if (adj[q].includes(j)) {
+          indirect += p_ij * (1 / adj[q].length);
+        }
+      }
+      const total = p_ij + indirect;
+      constraint += total * total;
+    }
+    rawConstraint[i] = Math.min(constraint, 1); // clamp to [0,1]
+  }
+  // Normalize: structural_hole_score = 1 - constraint
+  ids.forEach((id, i) => {
+    structuralHole[id] = Math.round((1 - rawConstraint[i]) * 100) / 100;
+  });
 
-  return parts.join(' \u00B7 ');
-}
-
-function titleCase(str) {
-  if (!str) return '';
-  return str.charAt(0).toUpperCase() + str.slice(1);
+  return {
+    pagerank, betweenness, communities, watchlist, numCommunities: nextCid,
+    coInvestmentDensity, founderMobility, structuralHole,
+  };
 }
