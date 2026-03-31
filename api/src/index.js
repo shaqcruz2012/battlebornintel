@@ -210,7 +210,7 @@ app.use(errorHandler);
 
 const port = parseInt(process.env.PORT || process.env.API_PORT || '3001', 10);
 const server = app.listen(port, '0.0.0.0', () => {
-  console.log(`BBI API listening on 0.0.0.0:${port} (PORT=${process.env.PORT}, API_PORT=${process.env.API_PORT})`);
+  logger.info('BBI API listening', { host: '0.0.0.0', port });
 });
 
 async function shutdown(signal) {

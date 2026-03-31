@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { NODE_CFG } from '../../data/constants';
 import styles from './PathFinder.module.css';
 
-const API = import.meta.env.VITE_API_URL || '';
+const API = '';
 
 function useNodeSearch(nodes, query, isOpen) {
   if (!isOpen || query.length < 2) return [];

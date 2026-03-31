@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { STAGE_COLORS } from '../../data/constants';
 import styles from './CompanyTimeline.module.css';
 
-const API_BASE = import.meta.env.VITE_API_URL || '';
+const API_BASE = '';
 
 const STAGE_LABELS = {
   pre_seed: 'Pre-Seed',
