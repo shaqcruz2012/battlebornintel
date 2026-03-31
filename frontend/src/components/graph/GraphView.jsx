@@ -1,13 +1,14 @@
 import { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import { useFilters } from '../../hooks/useFilters';
-import { useGraph, useGraphMetrics } from '../../api/hooks';
+import { useGraphLight, useGraph, useGraphMetrics, usePredictedLinks, useGraphAnalytics } from '../../api/hooks';
 import { useGraphLayout } from '../../hooks/useGraphLayout';
-import { useWindowSize } from '../../hooks/useWindowSize';
 import { GraphOverlayControls } from './GraphControls';
 import { GraphCanvas } from './GraphCanvas';
 import { GraphLegend } from './GraphLegend';
 import { NodeDetail } from './NodeDetail';
 import { TemporalSlider } from './TemporalSlider';
+import { AnalysisOverlayBar } from './AnalysisOverlayBar';
+import { OverlayDetailPanel } from './OverlayDetailPanel';
 import styles from './GraphView.module.css';
 
 const DEFAULT_NODE_FILTERS = {
@@ -25,7 +26,6 @@ const DEFAULT_NODE_FILTERS = {
 
 export function GraphView() {
   const { filters } = useFilters();
-  const { width: winW, height: winH } = useWindowSize();
   const [nodeFilters, setNodeFilters] = useState(DEFAULT_NODE_FILTERS);
   const [colorMode, setColorMode] = useState('type');
   const [search, setSearch] = useState('');
@@ -34,14 +34,28 @@ export function GraphView() {
   const [opportunityFilter, setOpportunityFilter] = useState('all');
   const [showValues, setShowValues] = useState(false);
   const [focusNodeId, setFocusNodeId] = useState(null);
-  const [temporalYear, setTemporalYear] = useState(2026);
-  const [temporalDate, setTemporalDate] = useState(null); // null = live mode (no temporal filter)
+  const [yearMax, setYearMax] = useState(2026);
+  const [debouncedYearMax, setDebouncedYearMax] = useState(2026);
+  const [selectedCluster, setSelectedCluster] = useState(null);
 
-  const handleTemporalChange = useCallback((dateStr) => {
-    const year = parseInt(dateStr.split('-')[0], 10);
-    setTemporalYear(year);
-    setTemporalDate(year >= 2026 ? null : dateStr); // 2026 = live mode
+  // Analysis overlay toggles
+  const [overlays, setOverlays] = useState({
+    communities: false,
+    capitalFlows: false,
+    predictedLinks: false,
+    bridges: false,
+  });
+  const toggleOverlay = useCallback((key) => {
+    setOverlays(prev => ({ ...prev, [key]: !prev[key] }));
   }, []);
+
+  // Debounce yearMax by 300ms so scrubbing the slider doesn't flood API requests
+  const yearDebounceRef = useRef(null);
+  useEffect(() => {
+    clearTimeout(yearDebounceRef.current);
+    yearDebounceRef.current = setTimeout(() => setDebouncedYearMax(yearMax), 300);
+    return () => clearTimeout(yearDebounceRef.current);
+  }, [yearMax]);
 
   // FIX 7a: Wrap in useCallback so GraphOverlayControls gets a stable reference
   // and doesn't re-render on every parent state change.
@@ -69,37 +83,44 @@ export function GraphView() {
     return () => clearTimeout(t);
   }, [focusNodeId]);
 
-  // Debounce dimensions so D3 layout doesn't recompute on every resize pixel.
-  // No controls bar above canvas any more — just header(64) + tabs(40) = 104px overhead.
-  const rawW = Math.min(winW - 16, 1800);
-  const rawH = Math.max(640, winH - 104);
-  const [dims, setDims] = useState({ w: rawW, h: rawH });
-  const debounceRef = useRef(null);
-  useEffect(() => {
-    clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => {
-      // Only update dims when the change is significant (>50px) to avoid
-      // unnecessary re-renders from minor resize events.
-      setDims((prev) => {
-        if (Math.abs(rawW - prev.w) > 50 || Math.abs(rawH - prev.h) > 50) {
-          return { w: rawW, h: rawH };
-        }
-        return prev;
-      });
-    }, 200);
-    return () => clearTimeout(debounceRef.current);
-  }, [rawW, rawH]);
-
-  // Ref to measure the actual canvas container size after mount.
+  // Measure the actual canvas container via ResizeObserver so the D3 layout
+  // worker uses the real DOM size instead of a fragile window-based estimate.
+  // This eliminates mismatches between worker coordinate space and render size.
   const canvasRef = useRef(null);
+  const [dims, setDims] = useState({ w: 1200, h: 700 }); // safe initial fallback
+  const debounceRef = useRef(null);
+
   useEffect(() => {
     const el = canvasRef.current;
     if (!el) return;
+    // Seed immediately from DOM measurement
     const rect = el.getBoundingClientRect();
     if (rect.width > 0 && rect.height > 0) {
       setDims({ w: rect.width, h: rect.height });
     }
-  }, []); // run once on mount
+    // Track subsequent resizes with debounce
+    const ro = new ResizeObserver((entries) => {
+      const entry = entries[0];
+      if (!entry) return;
+      const { width, height } = entry.contentRect;
+      if (width > 0 && height > 0) {
+        clearTimeout(debounceRef.current);
+        debounceRef.current = setTimeout(() => {
+          setDims((prev) => {
+            if (Math.abs(width - prev.w) > 20 || Math.abs(height - prev.h) > 20) {
+              return { w: width, h: height };
+            }
+            return prev;
+          });
+        }, 200);
+      }
+    });
+    ro.observe(el);
+    return () => {
+      ro.disconnect();
+      clearTimeout(debounceRef.current);
+    };
+  }, []); // run once on mount — observer handles subsequent changes
 
   // Active node types for API query
   const activeNodeTypes = useMemo(
@@ -107,15 +128,81 @@ export function GraphView() {
     [nodeFilters]
   );
 
-  // Fetch graph data from API with region filtering
-  const { data: graphData, isLoading: loadingGraph, error: graphError } = useGraph(activeNodeTypes, temporalYear, filters.region);
+  // Fetch lightweight graph data for fast initial render (smaller payload)
+  // When opportunities toggle is ON, include opportunity edges from the API
+  const { data: lightGraphData, isLoading: loadingLightGraph, error: lightGraphError } = useGraphLight(activeNodeTypes, debouncedYearMax, filters.region, showOpportunities);
+
+  // Fetch full graph data in background for detail features ($ values, notes, node detail)
+  const { data: fullDetailData } = useGraph(activeNodeTypes, debouncedYearMax, filters.region, showOpportunities);
+
+  // Use light data for initial render, upgrade to full data when available
+  const graphData = fullDetailData || lightGraphData;
+  const loadingGraph = loadingLightGraph && !lightGraphData;
+  const graphError = lightGraphError;
+
+  // Fetch total edge count (yearMax=2026) for the edge count indicator
+  const { data: fullGraphData } = useGraphLight(activeNodeTypes, 2026, filters.region);
   const { data: metricsData, isLoading: loadingMetrics, error: metricsError } = useGraphMetrics(activeNodeTypes);
+
+  // Fetch predicted links only when that overlay is active (lazy load)
+  const { data: predictedLinksData } = usePredictedLinks(30, overlays.predictedLinks);
+
+  // Fetch graph analytics for K-means cluster coloring
+  const { data: analyticsData } = useGraphAnalytics();
+
+  // Build kmeans map: nodeId -> { cluster, label }
+  const kmeansMap = useMemo(() => {
+    if (!analyticsData) return {};
+    const map = {};
+    analyticsData.forEach(a => {
+      if (a.kmeans_cluster != null) {
+        map[a.node_id] = { cluster: a.kmeans_cluster, label: a.kmeans_label };
+      }
+    });
+    return map;
+  }, [analyticsData]);
 
   // Compute D3 layout in Web Worker to keep UI responsive
   const rawNodes = graphData?.nodes || [];
   const rawEdges = graphData?.edges || [];
+
+  const metrics = metricsData || { pagerank: {}, betweenness: {}, communities: {}, communityNames: {} };
+
+  // Attach community_id to each node before sending to the layout worker.
+  // The worker uses _communityId for community-first clustering (v5 layout).
+  // Use metricsData directly (not the fallback) so the dep is referentially stable.
+  const communities = metricsData?.communities;
+  const nodesWithCommunity = useMemo(() => {
+    if (!rawNodes.length || !communities) return rawNodes;
+    return rawNodes.map(n => ({
+      ...n,
+      _communityId: communities[n.id],
+    }));
+  }, [rawNodes, communities]);
+
   // isLoading stays true until the worker's final frame — used to gate fitAll.
-  const { layout: workerLayout, isLoading: layoutLoading } = useGraphLayout(rawNodes, rawEdges, { width: dims.w, height: dims.h });
+  const { layout: workerLayout, isLoading: layoutLoading } = useGraphLayout(nodesWithCommunity, rawEdges, { width: dims.w, height: dims.h });
+
+  // ── Progressive disclosure ────────────────────────────────────────────────
+  // Compute degree from raw edges so we can filter low-degree leaf nodes on
+  // initial render. The worker still runs on ALL nodes so positions are stable.
+  // Hub nodes (degree ≥ 4) and any selected/focused node are always shown.
+  // Isolated nodes (degree 0) are hidden by default — they add visual noise
+  // without contributing to the relationship graph.
+  //
+  // Level 0 (default): degree ≥ 1  — show everything connected
+  // This keeps the graph readable for the current dataset size (~700 nodes)
+  // while hiding true isolates that have no edges at all.
+  const nodeDegreeMap = useMemo(() => {
+    const map = {};
+    rawEdges.forEach((e) => {
+      const s = typeof e.source === 'object' ? e.source.id : e.source;
+      const t = typeof e.target === 'object' ? e.target.id : e.target;
+      map[s] = (map[s] || 0) + 1;
+      map[t] = (map[t] || 0) + 1;
+    });
+    return map;
+  }, [rawEdges]);
 
   // Resolve edge source/target from string IDs to node objects (required by GraphCanvas)
   const layout = useMemo(() => {
@@ -123,13 +210,27 @@ export function GraphView() {
     if (!nodes.length) return { nodes: [], edges: [] };
     const nodeById = {};
     nodes.forEach((n) => { nodeById[n.id] = n; });
+
+    // Filter out isolated nodes (degree 0) — they have no edges and only
+    // create visual clutter in the periphery. Always keep hub nodes regardless.
+    const HUB_RENDER_IDS = new Set(['f_bbv', 'goed', 'eco_goed', 'bbv', 'f_dfv', 'dfv']);
+    const searchLower = search?.toLowerCase();
+    const visibleNodes = nodes.filter((n) => {
+      if (HUB_RENDER_IDS.has(n.id)) return true;
+      if (selectedNode === n.id) return true;
+      if (searchLower && n.label?.toLowerCase().includes(searchLower)) return true;
+      return (nodeDegreeMap[n.id] || 0) >= 1;
+    });
+    const visibleNodeIds = new Set(visibleNodes.map((n) => n.id));
+
+    // At this stage edges from the worker have string IDs for source/target.
+    // Only keep edges where both endpoints are visible and resolvable.
     const resolvedEdges = edges
+      .filter((e) => visibleNodeIds.has(e.source) && visibleNodeIds.has(e.target))
       .filter((e) => nodeById[e.source] && nodeById[e.target])
       .map((e) => ({ ...e, source: nodeById[e.source], target: nodeById[e.target] }));
-    return { nodes, edges: resolvedEdges };
-  }, [workerLayout]);
-
-  const metrics = metricsData || { pagerank: {}, betweenness: {}, communities: {}, watchlist: [] };
+    return { nodes: visibleNodes, edges: resolvedEdges };
+  }, [workerLayout, nodeDegreeMap, selectedNode, search]);
 
   // Error state — show message with retry button
   if (graphError || metricsError) {
@@ -138,26 +239,19 @@ export function GraphView() {
         <div className={styles.errorState}>
           <h3>Graph data unavailable</h3>
           <p>{graphError?.message || metricsError?.message || 'An unexpected error occurred.'}</p>
-          <button type="button" onClick={() => window.location.reload()}>Retry</button>
+          <button onClick={() => window.location.reload()}>Retry</button>
         </div>
       </div>
     );
   }
 
-  // Block render only while raw graph data is being fetched from the API.
-  // D3 layout streams interim frames so the canvas renders progressively.
-  if (loadingGraph || loadingMetrics) {
-    return (
-      <div className={styles.graphPage}>
-        <div className={styles.loadingCenter}>
-          Loading graph...
-        </div>
-      </div>
-    );
-  }
+  // Show graph shell immediately — controls, legend, and empty canvas render
+  // while data loads. The GraphCanvas handles its own empty/loading state.
+  // This eliminates the blank white screen during initial data fetch.
+  const isInitialLoading = loadingGraph || loadingMetrics;
 
-  // Empty state — data loaded but no visible nodes
-  if (rawNodes.length === 0) {
+  // Empty state — data loaded but no visible nodes (only show if not still loading)
+  if (!isInitialLoading && rawNodes.length === 0) {
     return (
       <div className={styles.graphPage}>
         <div className={styles.emptyState}>
@@ -175,47 +269,72 @@ export function GraphView() {
   return (
     <div className={styles.graphPage}>
       <div className={styles.body}>
-        {/* Canvas area — fills all available space */}
-        <div className={styles.canvasOuter} ref={canvasRef}>
-          <GraphCanvas
-            layout={layout}
-            metrics={metrics}
-            colorMode={colorMode}
-            selectedNode={selectedNode}
-            onSelectNode={handleSelectNode}
-            searchTerm={search}
-            showOpportunities={showOpportunities}
-            opportunityFilter={opportunityFilter}
-            showValues={showValues}
-            focusNodeId={focusNodeId}
-            layoutSettled={!layoutLoading}
-          />
-          {/* Left overlay: legend (minimizable) */}
-          <GraphLegend colorMode={colorMode} nodeFilters={nodeFilters} layout={layout} />
-          {/* Right overlay: node/color/edge controls + search (minimizable) */}
-          <GraphOverlayControls
-            nodeFilters={nodeFilters}
-            onToggleNode={toggleNode}
-            onSetNodeFilters={setNodeFilters}
-            colorMode={colorMode}
-            onColorModeChange={setColorMode}
-            showOpportunities={showOpportunities}
-            onToggleOpportunities={handleToggleOpportunities}
-            opportunityFilter={opportunityFilter}
-            onOpportunityFilterChange={setOpportunityFilter}
-            showValues={showValues}
-            onToggleValues={handleToggleValues}
-            search={search}
-            onSearchChange={setSearch}
+        {/* Main column: canvas + overlay detail panel stacked vertically */}
+        <div className={styles.mainColumn}>
+          {/* Canvas area — fills all available space */}
+          <div className={styles.canvasOuter} ref={canvasRef}>
+            <GraphCanvas
+              layout={layout}
+              metrics={metrics}
+              colorMode={colorMode}
+              selectedNode={selectedNode}
+              onSelectNode={handleSelectNode}
+              searchTerm={search}
+              showOpportunities={showOpportunities}
+              opportunityFilter={opportunityFilter}
+              showValues={showValues}
+              focusNodeId={focusNodeId}
+              layoutSettled={!layoutLoading}
+              layoutWidth={dims.w}
+              layoutHeight={dims.h}
+              overlays={overlays}
+              predictedLinks={predictedLinksData}
+              nodeDegreeMap={nodeDegreeMap}
+              selectedCluster={selectedCluster}
+              onSelectCluster={setSelectedCluster}
+              kmeansMap={kmeansMap}
+            />
+            {/* Left overlay: legend (minimizable) */}
+            <GraphLegend colorMode={colorMode} nodeFilters={nodeFilters} layout={layout} kmeansMap={kmeansMap} />
+            {/* Right overlay: node/color/edge controls + search (minimizable) */}
+            <GraphOverlayControls
+              nodeFilters={nodeFilters}
+              onToggleNode={toggleNode}
+              onSetNodeFilters={setNodeFilters}
+              colorMode={colorMode}
+              onColorModeChange={setColorMode}
+              showOpportunities={showOpportunities}
+              onToggleOpportunities={handleToggleOpportunities}
+              opportunityFilter={opportunityFilter}
+              onOpportunityFilterChange={setOpportunityFilter}
+              showValues={showValues}
+              onToggleValues={handleToggleValues}
+              search={search}
+              onSearchChange={setSearch}
+              nodes={layout.nodes}
+              onFocusNode={handleFocusNode}
+            />
+            {/* Analysis overlay toggle bar */}
+            <AnalysisOverlayBar overlays={overlays} onToggle={toggleOverlay} />
+            {/* Bottom-dock temporal slider */}
+            <TemporalSlider
+              min={2015}
+              max={2026}
+              value={yearMax}
+              onChange={setYearMax}
+              visibleEdges={rawEdges.length}
+              totalEdges={fullGraphData?.edges?.length || rawEdges.length}
+            />
+          </div>
+
+          {/* Overlay detail tables — slides in when overlays active */}
+          <OverlayDetailPanel
+            overlays={overlays}
             nodes={layout.nodes}
-            onFocusNode={handleFocusNode}
-          />
-          {/* Bottom overlay: temporal scrubber */}
-          <TemporalSlider
-            value={temporalYear}
-            onDateChange={handleTemporalChange}
-            nodeCount={layout.nodes.length}
-            edgeCount={layout.edges.length}
+            edges={layout.edges}
+            metrics={metrics}
+            predictedLinks={predictedLinksData}
+            onSelectCluster={setSelectedCluster}
           />
         </div>
 

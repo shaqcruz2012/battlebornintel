@@ -175,7 +175,7 @@ export function GraphSearchDropdown({ nodes, searchTerm, onSelect, onClose }) {
   if (filteredNodes.length === 0) {
     return (
       <div ref={containerRef} className={styles.dropdown}>
-        <div className={styles.emptyState}>No results for {'\u201C'}{searchTerm}{'\u201D'}</div>
+        <div className={styles.emptyState}>No results for &ldquo;{searchTerm}&rdquo;</div>
       </div>
     );
   }

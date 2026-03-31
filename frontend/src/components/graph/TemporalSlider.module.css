@@ -1,106 +1,78 @@
-/* ── TemporalSlider: bottom-left floating time control ──── */
+/* ── TemporalSlider: bottom-dock time scrubber ─────────── */
 
-.container {
+.wrapper {
   position: absolute;
-  bottom: var(--space-md);
-  left: var(--space-md);
-  z-index: var(--z-sticky);
+  bottom: var(--space-sm, 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: var(--z-sticky, 10);
   display: flex;
-  flex-direction: column;
-  gap: 4px;
-  background: rgba(10, 14, 20, 0.90);
+  align-items: center;
+  gap: 10px;
+  background: rgba(10, 14, 20, 0.92);
   backdrop-filter: blur(10px);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-md);
-  padding: var(--space-sm) var(--space-md);
-  min-width: 260px;
-  max-width: 340px;
+  border: 1px solid var(--border-subtle, rgba(255,255,255,0.08));
+  border-radius: var(--radius-md, 8px);
+  padding: 8px 16px;
+  min-width: 420px;
+  max-width: 640px;
+  width: 50vw;
   user-select: none;
 }
 
-/* ── Header row: play button + year + counts ── */
-
-.header {
-  display: flex;
-  align-items: center;
-  gap: var(--space-sm);
-}
-
+/* Play / Pause button */
 .playBtn {
-  width: 24px;
-  height: 24px;
+  width: 28px;
+  height: 28px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-sm);
-  color: var(--accent-teal);
-  font-size: 11px;
-  cursor: pointer;
-  transition: all var(--transition-fast);
   flex-shrink: 0;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border-subtle, rgba(255,255,255,0.08));
+  border-radius: var(--radius-sm, 4px);
+  color: var(--text-disabled, #6b7280);
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  font-family: var(--font-body, sans-serif);
   line-height: 1;
-  padding: 0;
 }
 
 .playBtn:hover {
-  background: rgba(69, 215, 198, 0.12);
+  background: rgba(69, 215, 198, 0.1);
+  color: var(--accent-teal, #45d7c6);
   border-color: rgba(69, 215, 198, 0.3);
 }
 
+.playBtn.active {
+  background: rgba(69, 215, 198, 0.15);
+  color: var(--accent-teal, #45d7c6);
+  border-color: rgba(69, 215, 198, 0.4);
+}
+
+/* Year display */
 .yearLabel {
-  font-family: var(--font-mono);
-  font-size: var(--text-body);
-  font-weight: var(--weight-semibold);
-  color: var(--text-primary);
-  letter-spacing: 0.04em;
-}
-
-.counts {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  margin-left: auto;
-}
-
-.count {
-  font-family: var(--font-body);
-  font-size: var(--text-caption-sm);
-  color: var(--text-secondary);
-}
-
-.sep {
-  font-size: var(--text-caption-sm);
-  color: var(--text-muted);
-}
-
-/* ── Slider row ── */
-
-.sliderRow {
-  display: flex;
-  align-items: center;
-  gap: var(--space-sm);
-}
-
-.tick {
-  font-family: var(--font-mono);
-  font-size: var(--text-micro);
-  color: var(--text-muted);
+  font-family: var(--font-mono, 'JetBrains Mono', monospace);
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--accent-teal, #45d7c6);
+  min-width: 38px;
+  text-align: center;
   flex-shrink: 0;
-  min-width: 28px;
+  letter-spacing: 0.02em;
 }
 
-.trackWrap {
+/* Slider track container */
+.sliderContainer {
   flex: 1;
-  position: relative;
   display: flex;
   flex-direction: column;
   gap: 2px;
+  min-width: 0;
 }
 
-/* ── Range input styling ── */
-
+/* Custom range input */
 .slider {
   -webkit-appearance: none;
   appearance: none;
@@ -109,15 +81,7 @@
   border-radius: 2px;
   outline: none;
   cursor: pointer;
-  /* Two-tone track via gradient */
-  background: linear-gradient(
-    to right,
-    var(--accent-teal) 0%,
-    var(--accent-teal) var(--fill-pct, 0%),
-    rgba(255, 255, 255, 0.08) var(--fill-pct, 0%),
-    rgba(255, 255, 255, 0.08) 100%
-  );
-  transition: background var(--transition-fast);
+  /* filled portion via inline style background */
 }
 
 .slider::-webkit-slider-thumb {
@@ -126,51 +90,63 @@
   width: 14px;
   height: 14px;
   border-radius: 50%;
-  background: var(--accent-teal);
-  border: 2px solid var(--bg-card);
-  box-shadow: 0 0 6px rgba(69, 215, 198, 0.4);
+  background: var(--accent-teal, #45d7c6);
+  border: 2px solid rgba(10, 14, 20, 0.9);
+  box-shadow: 0 0 6px rgba(69, 215, 198, 0.5);
   cursor: pointer;
-  transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+  transition: box-shadow 0.15s ease;
 }
 
 .slider::-webkit-slider-thumb:hover {
-  transform: scale(1.2);
-  box-shadow: 0 0 10px rgba(69, 215, 198, 0.6);
+  box-shadow: 0 0 10px rgba(69, 215, 198, 0.7);
 }
 
 .slider::-moz-range-thumb {
   width: 14px;
   height: 14px;
   border-radius: 50%;
-  background: var(--accent-teal);
-  border: 2px solid var(--bg-card);
-  box-shadow: 0 0 6px rgba(69, 215, 198, 0.4);
+  background: var(--accent-teal, #45d7c6);
+  border: 2px solid rgba(10, 14, 20, 0.9);
+  box-shadow: 0 0 6px rgba(69, 215, 198, 0.5);
   cursor: pointer;
 }
 
 .slider::-moz-range-track {
   height: 4px;
   border-radius: 2px;
-  background: rgba(255, 255, 255, 0.08);
+  background: transparent;
 }
 
-/* ── Tick dots beneath slider ── */
-
-.tickMarks {
+/* Tick labels row */
+.ticks {
   display: flex;
   justify-content: space-between;
-  padding: 0 1px;
+  padding: 0 2px;
 }
 
-.tickDot {
-  width: 3px;
-  height: 3px;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.12);
-  transition: background var(--transition-fast);
+.tick {
+  font-family: var(--font-body, sans-serif);
+  font-size: 8px;
+  color: var(--text-disabled, #6b7280);
+  letter-spacing: 0.02em;
 }
 
-.tickDotActive {
-  background: var(--accent-teal);
-  box-shadow: 0 0 4px rgba(69, 215, 198, 0.5);
+.tick.activeTick {
+  color: var(--accent-teal, #45d7c6);
+  font-weight: 600;
+}
+
+/* Edge count indicator */
+.edgeCount {
+  font-family: var(--font-body, sans-serif);
+  font-size: 9px;
+  color: var(--text-muted, #9ca3af);
+  white-space: nowrap;
+  flex-shrink: 0;
+  letter-spacing: 0.02em;
+}
+
+.edgeCount strong {
+  color: var(--text-secondary, #d1d5db);
+  font-weight: 600;
 }
