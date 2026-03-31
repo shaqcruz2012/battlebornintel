@@ -24,7 +24,7 @@ const TabFallback = () => (
 );
 
 export default function App() {
-  const [view, setView] = useState('executive');
+  const [view, setView] = useState('graph');
   const [searchOpen, setSearchOpen] = useState(false);
 
   // Global Cmd+K / Ctrl+K listener — opens the overlay
