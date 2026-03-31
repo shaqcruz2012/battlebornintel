@@ -7,8 +7,7 @@ config({ path: resolve(__dirname, '../../.env') });
 
 const databaseUrl = process.env.DATABASE_URL;
 if (!databaseUrl && process.env.NODE_ENV !== 'test') {
-  console.error('FATAL: DATABASE_URL environment variable is not set');
-  process.exit(1);
+  console.error('WARNING: DATABASE_URL environment variable is not set — DB queries will fail');
 }
 
 if (process.env.NODE_ENV === 'production' && !process.env.ADMIN_API_KEY) {
