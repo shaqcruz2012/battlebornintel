@@ -317,13 +317,13 @@ function useEdgeCanvas(canvasRef, edges, zoom, pan, w, h, {
 
     for (let i = 0; i < edges.length; i++) {
       const e = edges[i];
-      const sx = e.source?.x ?? e.source ?? 0;
-      const sy = e.source?.y ?? e.source ?? 0;
-      const tx = e.target?.x ?? e.target ?? 0;
-      const ty = e.target?.y ?? e.target ?? 0;
+      const sx = e.source?.x ?? 0;
+      const sy = e.source?.y ?? 0;
+      const tx = e.target?.x ?? 0;
+      const ty = e.target?.y ?? 0;
 
       // Skip edges with no valid positions
-      if (sx === 0 && sy === 0 && tx === 0 && ty === 0) continue;
+      if ((sx === 0 && sy === 0 && tx === 0 && ty === 0) || isNaN(sx) || isNaN(sy) || isNaN(tx) || isNaN(ty)) continue;
 
       const isOpportunity = e.category === 'opportunity' || e.rel === 'qualifies_for' || e.rel === 'fund_opportunity' || e.rel === 'potential_lp';
       if (isOpportunity && !showOpportunities) continue;
