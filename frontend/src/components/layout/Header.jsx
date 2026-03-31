@@ -22,8 +22,8 @@ export function Header() {
   return (
     <header className={styles.header} role="banner">
       <div className={styles.brand}>
-        <h1 className={styles.title}>Battle Born Intelligence</h1>
-        <span className={styles.subtitle}>Nevada Startup Ecosystem</span>
+        <h1 className={styles.title}>ATLAS</h1>
+        <span className={styles.subtitle}>Nevada Innovation Ecosystem</span>
       </div>
 
       <nav className={styles.controls} aria-label="Filters">

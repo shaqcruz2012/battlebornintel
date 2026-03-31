@@ -73,7 +73,7 @@ export function LoginModal({ onClose }) {
         aria-label="Sign in"
       >
         <h2 className={styles.title}>Sign In</h2>
-        <p className={styles.subtitle}>Battle Born Intelligence Platform</p>
+        <p className={styles.subtitle}>ATLAS — Nevada Innovation Ecosystem</p>
 
         {error && <div className={styles.error}>{error}</div>}
 
