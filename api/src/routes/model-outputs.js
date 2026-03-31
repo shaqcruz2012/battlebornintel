@@ -16,6 +16,7 @@ router.get('/', async (req, res, next) => {
     if (output_type) { conditions.push(`mo.output_type = $${idx}`); params.push(output_type); idx++; }
 
     const lim = Math.min(parseInt(limit) || 100, 500);
+    params.push(lim);
     const { rows } = await pool.query(`
       SELECT mo.id, mo.entity_type, mo.entity_id, mo.output_type, mo.metric_name,
              mo.value, mo.confidence_lo, mo.confidence_hi, mo.horizon_date, mo.as_of_date,
@@ -24,7 +25,7 @@ router.get('/', async (req, res, next) => {
       LEFT JOIN models m ON m.id = mo.model_id
       WHERE ${conditions.join(' AND ')}
       ORDER BY mo.value DESC
-      LIMIT ${lim}
+      LIMIT $${idx}
     `, params);
     res.json({ data: rows });
   } catch (err) {

@@ -102,9 +102,9 @@ function HistoryPanel({ metric }) {
           {records.map((r, idx) => {
             const pct = r.pct_change ?? r.change_pct ?? r.change;
             return (
-              <tr key={r.date || r.period || idx}>
+              <tr key={r.period_start || r.date || r.period || idx}>
                 <td className={`${styles.historyTd} ${styles.historyDate}`}>
-                  {formatDate(r.date || r.period)}
+                  {formatDate(r.period_start || r.date || r.period)}
                 </td>
                 <td className={styles.historyTd}>{formatValue(r.value)}</td>
                 <td className={`${styles.historyTd} ${changeClass(pct)}`}>
@@ -159,9 +159,10 @@ export function IndicatorsView() {
         {/* Summary cards */}
         <div className={styles.indicatorGrid}>
           {indicators.map((ind) => {
-            const metric = ind.metric || ind.name || ind.indicator;
+            const metric = ind.metric_name || ind.metric || ind.name || ind.indicator;
             const value = ind.latest_value ?? ind.value ?? ind.latest;
             const pct = ind.pct_change ?? ind.change_pct ?? ind.change;
+            const unit = ind.unit || '';
             const isActive = selectedMetric === metric;
 
             return (
