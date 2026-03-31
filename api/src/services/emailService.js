@@ -1,6 +1,7 @@
 import { Resend } from 'resend';
 import pool from '../db/pool.js';
 import cfg from '../config.js';
+import logger from '../logger.js';
 
 const resend = cfg.resendApiKey ? new Resend(cfg.resendApiKey) : null;
 
@@ -28,8 +29,8 @@ export async function sendEmail({ to, subject, html, text, type = 'notification'
         text: text || undefined,
       });
     } else {
-      console.log(`[email] TO: ${to} | SUBJECT: ${subject}`);
-      console.log(`[email] Body preview: ${(text || '').substring(0, 200)}...`);
+      logger.info(`[email] TO: ${to} | SUBJECT: ${subject}`);
+      logger.info(`[email] Body preview: ${(text || '').substring(0, 200)}...`);
     }
 
     await pool.query(

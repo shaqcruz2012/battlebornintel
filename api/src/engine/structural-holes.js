@@ -8,6 +8,7 @@
 import pool from '../db/pool.js';
 import { getGraphData, getGraphMetrics } from '../db/queries/graph.js';
 import { resolveNodesFromRegistry } from '../db/queries/entities.js';
+import logger from '../logger.js';
 
 /* ── 1. Burt's Constraint ─────────────────────────────────────────────────── */
 
@@ -499,7 +500,7 @@ export async function analyzeStructuralHoles() {
     }
   } catch (trendErr) {
     // Non-fatal: trends are informational only
-    console.error('structural-holes: trend computation skipped:', trendErr.message);
+    logger.error('structural-holes: trend computation skipped', { error: trendErr });
   }
 
   // ── Connect to gap_interventions table ──
@@ -541,7 +542,7 @@ export async function analyzeStructuralHoles() {
     }
   } catch (interventionErr) {
     // Non-fatal: interventions are supplementary
-    console.error('structural-holes: intervention lookup skipped:', interventionErr.message);
+    logger.error('structural-holes: intervention lookup skipped', { error: interventionErr });
   }
 
   return {

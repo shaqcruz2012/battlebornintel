@@ -89,12 +89,11 @@ export const MomentumTable = memo(function MomentumTable({ companies, sortBy, on
           <span className={styles.headerWithTip} role="columnheader">IRS</span>
         </Tooltip>
         <span role="columnheader">Trend</span>
-        <span role="columnheader" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-          Signal
-          <IrsExplainer>
-            <span style={{ cursor: 'pointer', opacity: 0.5, fontSize: 10 }}>?</span>
-          </IrsExplainer>
-        </span>
+        <IrsExplainer>
+          <span role="columnheader" style={{ display: 'inline-flex', alignItems: 'center', gap: 4, cursor: 'pointer' }}>
+            Signal
+          </span>
+        </IrsExplainer>
         <span role="columnheader" />
       </div>
 

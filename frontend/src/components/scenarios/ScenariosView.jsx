@@ -193,7 +193,19 @@ export function ScenariosView() {
     return (
       <MainGrid>
         <div className={styles.wrapper}>
-          <div className={styles.emptyState}>No scenarios available</div>
+          <div className={styles.emptyState}>
+            <div style={{ maxWidth: 480, margin: '0 auto', textAlign: 'center' }}>
+              <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 8, color: 'var(--text-primary)' }}>
+                No scenarios yet
+              </div>
+              <p style={{ fontSize: 12, lineHeight: 1.6, color: 'var(--text-secondary)', margin: 0 }}>
+                Scenarios are Monte Carlo simulations that model "what-if" outcomes for the Nevada ecosystem
+                — such as changes in SSBCI deployment, fund allocation, or sector investment.
+                They are generated automatically by the scenario simulator agent on a monthly schedule.
+                Check back after the next scheduled run.
+              </p>
+            </div>
+          </div>
         </div>
       </MainGrid>
     );

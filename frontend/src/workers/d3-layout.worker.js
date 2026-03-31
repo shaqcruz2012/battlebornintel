@@ -139,17 +139,23 @@ class ForceSimulation {
       .filter(Boolean);
 
     this.alpha = 1;
-    this.alphaDecay = 0.018;  // slower cooldown = more motion/settling
-    this.alphaMin = 0.008;    // stop earlier than D3 default (0.001)
-    this.velocityDecay = 0.30;
+    this.alphaDecay = 0.012;  // slower cooldown = more settling time for 700+ nodes
+    this.alphaMin = 0.005;    // let it settle more before stopping
+    this.velocityDecay = 0.35;
   }
 
   /**
    * Many-body Coulomb repulsion — pushes all node pairs apart.
-   * Strength -55 gives more breathing room than the old -30.
+   * Uses Barnes-Hut-inspired distance cutoff: pairs beyond `maxDist` are
+   * ignored, which brings the effective complexity well below O(n^2) for
+   * graphs with spread-out nodes.
+   *
+   * Strength -60 provides enough breathing room for 700+ node graphs.
    */
   applyRepulsion() {
-    const strength = -22;
+    const strength = -60;
+    const maxDist = 300; // ignore pairs farther than this
+    const maxDist2 = maxDist * maxDist;
     for (let i = 0; i < this.nodes.length; ++i) {
       const a = this.nodes[i];
       for (let j = i + 1; j < this.nodes.length; ++j) {
@@ -157,6 +163,8 @@ class ForceSimulation {
         let dx = b.x - a.x || 0.01;
         let dy = b.y - a.y || 0.01;
         const dist2 = dx * dx + dy * dy;
+        // Skip distant pairs — negligible force contribution
+        if (dist2 > maxDist2) continue;
         const dist = Math.sqrt(dist2);
         // Jitter if nodes are stacked on top of each other
         if (dist < 1) {
@@ -179,16 +187,16 @@ class ForceSimulation {
    * a minimum center-to-center distance.
    */
   applyCollision() {
-    const minDist = 5;
+    const minDist = 18; // must exceed largest node radius (~13px) to prevent visual overlap
     for (let i = 0; i < this.nodes.length; ++i) {
+      const a = this.nodes[i];
       for (let j = i + 1; j < this.nodes.length; ++j) {
-        const a = this.nodes[i];
         const b = this.nodes[j];
         const dx = b.x - a.x || 0.01;
         const dy = b.y - a.y || 0.01;
         const dist = Math.sqrt(dx * dx + dy * dy);
         if (dist < minDist) {
-          const overlap = ((minDist - dist) / dist) * 0.10;
+          const overlap = ((minDist - dist) / dist) * 0.35;
           a.vx -= dx * overlap;
           a.vy -= dy * overlap;
           b.vx += dx * overlap;
@@ -203,8 +211,8 @@ class ForceSimulation {
    * Respects fixed (fx/fy) nodes.
    */
   applyEdgeAttraction() {
-    const idealLength = 80;  // target edge length in pixels
-    const strength = 0.04;
+    const idealLength = 120;  // target edge length — larger to give 700+ nodes room
+    const strength = 0.03;
     for (const edge of this.edges) {
       const a = this.nodes[edge.source];
       const b = this.nodes[edge.target];
@@ -311,7 +319,7 @@ class ForceSimulation {
  * @returns {number}
  */
 function marginRand(dim) {
-  return dim * 0.2 + Math.random() * dim * 0.6;
+  return dim * 0.1 + Math.random() * dim * 0.8;
 }
 
 // ---------------------------------------------------------------------------
@@ -323,7 +331,7 @@ function marginRand(dim) {
  * state (vx, vy, fx, fy, index, _clusterTarget) to keep message size lean.
  */
 function serializeNodes(nodes) {
-  return nodes.map(({ id, type, label, x, y, ...rest }) => ({
+  return nodes.map(({ id, type, label, x, y, vx, vy, fx, fy, index, _clusterTarget, ...rest }) => ({
     id,
     type,
     label,
@@ -342,7 +350,7 @@ self.addEventListener('message', (e) => {
     edges,
     width = 1200,
     height = 700,
-    iterations = 600,
+    iterations = 800,
     requestId,
   } = e.data;
 
@@ -359,7 +367,7 @@ self.addEventListener('message', (e) => {
     // ── Pass 1: quick layout (150 ticks) ──────────────────────────────────
     // Post an interim frame every 60 ticks so the canvas can render a rough
     // layout within ~1-2 seconds instead of waiting for all 600 ticks.
-    const PASS1_TICKS = 150;
+    const PASS1_TICKS = 200;
     const INTERIM_EVERY = 60;
 
     sim.run(PASS1_TICKS, (currentNodes) => {

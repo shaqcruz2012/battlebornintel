@@ -50,12 +50,24 @@
 
 .strip {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: 1px;
   background: var(--border-grid);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-md);
   overflow: hidden;
+}
+
+@media (min-width: 1400px) {
+  .strip {
+    grid-template-columns: repeat(8, 1fr);
+  }
+}
+
+@media (min-width: 1201px) and (max-width: 1399px) {
+  .strip {
+    grid-template-columns: repeat(4, 1fr);
+  }
 }
 
 /* Remove individual card borders when inside strip grid */

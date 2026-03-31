@@ -1,4 +1,5 @@
 import cfg from '../config.js';
+import logger from '../logger.js';
 
 // Nevada-relevant keywords for filtering
 const NEVADA_KEYWORDS = [
@@ -135,7 +136,7 @@ export async function refreshNewsCache(pool) {
          tag = EXCLUDED.tag,
          fetched_at = NOW()`,
       values
-    ).catch(err => console.warn('[news] Batch upsert failed:', err.message));
+    ).catch(err => logger.warn('[news] Batch upsert failed', { error: err }));
   }
 
   // Prune stories older than 7 days
@@ -143,7 +144,7 @@ export async function refreshNewsCache(pool) {
     `DELETE FROM frontier_news_cache WHERE fetched_at < NOW() - INTERVAL '7 days'`
   ).catch(() => {});
 
-  console.log(`[news] Cached ${stories.length} frontier stories`);
+  logger.info(`[news] Cached ${stories.length} frontier stories`);
   return stories.length;
 }
 
@@ -153,8 +154,8 @@ export async function initTrackedCompanies(pool) {
     const { rows } = await pool.query('SELECT id, name, slug FROM companies');
     TRACKED_COMPANIES.length = 0;
     TRACKED_COMPANIES.push(...rows);
-    console.log(`[news] Loaded ${rows.length} tracked companies for matching`);
+    logger.info(`[news] Loaded ${rows.length} tracked companies for matching`);
   } catch (err) {
-    console.warn('[news] Failed to load tracked companies:', err.message);
+    logger.warn('[news] Failed to load tracked companies', { error: err });
   }
 }

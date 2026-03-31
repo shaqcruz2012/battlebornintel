@@ -1,4 +1,5 @@
 import pool from '../pool.js';
+import logger from '../../logger.js';
 
 /**
  * Resolve node IDs to { id, label, type } from the unified entity_registry.
@@ -64,7 +65,7 @@ export async function resolveNodesFromRegistry(nodeIds) {
       }
     }
   } catch (err) {
-    console.error('[entities] resolveNodesFromRegistry failed:', err.message);
+    logger.error('[entities] resolveNodesFromRegistry failed', { error: err });
   }
 
   // Fallback for unresolved IDs (derived nodes like sectors/regions, or missing data)
@@ -116,7 +117,7 @@ export async function searchEntities(query, { types = [], limit = 20 } = {}) {
       type: r.entity_type,
     }));
   } catch (err) {
-    console.error('[entities] searchEntities failed:', err.message);
+    logger.error('[entities] searchEntities failed', { error: err });
     return [];
   }
 }
@@ -135,7 +136,7 @@ export async function getRegistryStats() {
     );
     return rows;
   } catch (err) {
-    console.error('[entities] getRegistryStats failed:', err.message);
+    logger.error('[entities] getRegistryStats failed', { error: err });
     return [];
   }
 }

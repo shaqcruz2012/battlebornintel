@@ -1,5 +1,6 @@
 import pool from '../pool.js';
 import { resolveNodesFromRegistry } from './entities.js';
+import logger from '../../logger.js';
 
 /**
  * Resolve node labels and types from IDs using the unified entity_registry.
@@ -355,7 +356,7 @@ export async function getCommunities() {
         companyMeta[`c_${row.id}`] = { sectors: row.sectors || [], region: row.region };
       }
     } catch (err) {
-      console.error('[communities] company metadata query failed:', err.message);
+      logger.error('[communities] company metadata query failed', { error: err });
     }
   }
 

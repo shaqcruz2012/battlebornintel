@@ -1,6 +1,7 @@
 import pool from '../db/pool.js';
 import { getGraphData } from '../db/queries/graph.js';
 import { computeGraphMetrics } from '../engine/graph-metrics.js';
+import logger from '../logger.js';
 
 // ── K-Means Implementation ──────────────────────────────────────────────────
 
@@ -176,7 +177,7 @@ function buildDegreeMap(nodes, edges) {
 // ── Main Compute + Persist ──────────────────────────────────────────────────
 
 export async function recomputeGraphAnalytics() {
-  console.log('[GraphAnalytics] Starting recomputation...');
+  logger.info('[GraphAnalytics] Starting recomputation...');
   const start = Date.now();
 
   // 1. Load graph data
@@ -185,11 +186,11 @@ export async function recomputeGraphAnalytics() {
     yearMax: 2026,
   });
   const { nodes, edges } = graphData;
-  console.log(`[GraphAnalytics] Loaded ${nodes.length} nodes, ${edges.length} edges`);
+  logger.info(`[GraphAnalytics] Loaded ${nodes.length} nodes, ${edges.length} edges`);
 
   // 2. Run existing graph metrics (PageRank, betweenness, community detection)
   const metrics = computeGraphMetrics(nodes, edges);
-  console.log(
+  logger.info(
     `[GraphAnalytics] Computed metrics: ${Object.keys(metrics.communities).length} community assignments, ${metrics.numCommunities} communities`
   );
 
@@ -216,7 +217,7 @@ export async function recomputeGraphAnalytics() {
       );
       scores.forEach(s => { scoresMap[`c_${s.company_id}`] = s; });
     } catch (err) {
-      console.warn('[GraphAnalytics] Could not load IRS scores:', err.message);
+      logger.warn('[GraphAnalytics] Could not load IRS scores', { error: err });
     }
   }
 
@@ -226,7 +227,7 @@ export async function recomputeGraphAnalytics() {
 
   // Choose k based on data size: sqrt(n/2) is a reasonable heuristic
   const k = Math.max(3, Math.min(15, Math.round(Math.sqrt(companyNodes.length / 2))));
-  console.log(`[GraphAnalytics] Running K-means with k=${k} on ${companyNodes.length} company nodes`);
+  logger.info(`[GraphAnalytics] Running K-means with k=${k} on ${companyNodes.length} company nodes`);
 
   const kmeansAssignments = vectors.length > 0 ? kmeans(vectors, k) : [];
 
@@ -365,7 +366,7 @@ export async function recomputeGraphAnalytics() {
 
     await client.query('COMMIT');
     const elapsed = Date.now() - start;
-    console.log(
+    logger.info(
       `[GraphAnalytics] Persisted ${nodes.length} node analytics + ` +
       `${Object.keys(communityMembers).length} communities + ` +
       `${Object.keys(kmeansGroups).length} K-means clusters in ${elapsed}ms`

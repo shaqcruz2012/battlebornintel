@@ -23,7 +23,8 @@ function nodeRadius(node, pagerank) {
     if (pr !== undefined) {
       return MIN_R + (MAX_R - MIN_R) * Math.log(1 + pr * 9) / Math.log(10);
     }
-    return Math.min(MAX_R, 4 + Math.sqrt(Math.max(0, node.funding || 0)) * 0.15);
+    const f = Number(node.funding) || 0;
+    return Math.min(MAX_R, 4 + Math.sqrt(Math.max(0, f)) * 0.15);
   }
   // External nodes: 20% smaller than default to reduce visual dominance of the cloud
   if (node.type === 'external') return 4;
