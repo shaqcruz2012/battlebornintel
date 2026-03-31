@@ -3,6 +3,8 @@ import cors from 'cors';
 import compression from 'compression';
 import helmet from 'helmet';
 import { randomUUID } from 'crypto';
+import { resolve, dirname } from 'path';
+import { fileURLToPath } from 'url';
 import cfg from './config.js';
 import pool from './db/pool.js';
 import { errorHandler } from './middleware/errorHandler.js';
@@ -190,6 +192,18 @@ apiRouter.use('/macro-events', publicLimit, cacheMiddleware('macroEvents', 300_0
 // Mount the API router at both /api (backwards compat) and /api/v1 (versioned)
 app.use('/api/v1', apiRouter);
 app.use('/api', apiRouter);
+
+// Serve frontend static files from api/public (built by root npm run build)
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+const publicDir = resolve(__dirname, '../public');
+app.use(express.static(publicDir));
+
+// SPA fallback — serve index.html for any non-API route
+app.get('*', (req, res, next) => {
+  if (req.path.startsWith('/api')) return next();
+  res.sendFile(resolve(publicDir, 'index.html'));
+});
 
 // Error handler
 app.use(errorHandler);
