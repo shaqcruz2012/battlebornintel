@@ -30,6 +30,9 @@ import temporalRouter from './routes/temporal.js';
 import graphAnalysisDetailRouter from './routes/graph-analysis.js';
 import featureIngestionRouter from './routes/feature-ingestion.js';
 import authRouter from './routes/auth.js';
+import regionalRouter from './routes/regional.js';
+import modelOutputsRouter from './routes/model-outputs.js';
+import macroEventsRouter from './routes/macro-events.js';
 import { optionalAuth } from './middleware/auth.js';
 
 const app = express();
@@ -147,6 +150,15 @@ apiRouter.use('/features', adminLimit, requireAdminKey, featureIngestionRouter);
 
 // High-impact batch endpoint for dashboard
 apiRouter.use('/dashboard-batch', publicLimit, dashboardBatchRouter);
+
+// Regional economic indicators (FRED + BLS data)
+apiRouter.use('/regional', publicLimit, cacheMiddleware('regional', 300_000, { cacheControl: 'public, max-age=3600' }), regionalRouter);
+
+// Model outputs and predictions
+apiRouter.use('/model-outputs', publicLimit, cacheMiddleware('modelOutputs', 120_000, { cacheControl: 'public, max-age=120' }), modelOutputsRouter);
+
+// Macro events and shock exposure
+apiRouter.use('/macro-events', publicLimit, cacheMiddleware('macroEvents', 300_000, { cacheControl: 'public, max-age=3600' }), macroEventsRouter);
 
 // Mount the API router at both /api (backwards compat) and /api/v1 (versioned)
 app.use('/api/v1', apiRouter);

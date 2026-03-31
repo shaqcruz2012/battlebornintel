@@ -155,6 +155,8 @@ export function cacheMiddleware(keyPrefix = '', ttlMs = 300000, options = {}) {
         resolveInflight = resolve;
         rejectInflight = reject;
       });
+      // Prevent unhandled rejection crash if rejectInflight is called
+      promise.catch(() => {});
       inflight.set(key, promise);
     }
 
@@ -171,22 +173,25 @@ export function cacheMiddleware(keyPrefix = '', ttlMs = 300000, options = {}) {
           inflight.delete(key);
         }
       } else if (req.method === 'GET') {
-        // Non-200 response — reject so waiters retry on their own
+        // Non-200 response — clean up inflight without crashing
+        inflight.delete(key);
         if (rejectInflight) {
-          rejectInflight(new Error('upstream non-200'));
-          inflight.delete(key);
+          try { rejectInflight(new Error('upstream non-200')); } catch {}
         }
       }
       return originalJson(data);
     };
 
     // Guard against cases where the handler errors without calling res.json
-    // (e.g., Express error middleware kicks in).
+    // (e.g., Express error middleware kicks in, or non-JSON responses).
     const originalEnd = res.end.bind(res);
     res.end = function(...args) {
-      if (req.method === 'GET' && inflight.has(key) && rejectInflight) {
-        rejectInflight(new Error('response ended without json'));
+      if (req.method === 'GET' && inflight.has(key)) {
+        // Clean up inflight entry without crashing — waiters get a cache miss
         inflight.delete(key);
+        if (rejectInflight) {
+          try { rejectInflight(new Error('response ended without json')); } catch {}
+        }
       }
       return originalEnd(...args);
     };
