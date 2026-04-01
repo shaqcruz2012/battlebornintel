@@ -1,13 +1,26 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useScenarios, useScenario } from '../../api/hooks';
 import { MainGrid } from '../layout/AppShell';
 import styles from './ScenariosView.module.css';
 
 const STATUS_CLASS = {
+  complete: styles.statusCompleted,
   completed: styles.statusCompleted,
   running: styles.statusRunning,
   pending: styles.statusPending,
+  draft: styles.statusPending,
   failed: styles.statusFailed,
+  archived: styles.statusFailed,
+};
+
+const METRIC_LABELS = {
+  funding_m_simulated: 'Funding ($M)',
+  funding_m_simulated_mean: 'Funding ($M) Mean',
+  employees_simulated: 'Employees',
+  employees_simulated_mean: 'Employees Mean',
+  momentum_simulated: 'Momentum',
+  momentum_simulated_mean: 'Momentum Mean',
+  new_companies_simulated: 'New Companies',
 };
 
 function formatDate(dateStr) {
@@ -43,6 +56,68 @@ function LoadingSkeleton() {
   );
 }
 
+/**
+ * Aggregate raw scenario_results rows into a summary per metric.
+ * Groups by metric_name, takes the latest-period row, and computes
+ * an aggregate across all entities for that metric/period.
+ */
+function summarizeResults(results) {
+  if (!results || results.length === 0) return [];
+
+  // Group by metric_name
+  const byMetric = {};
+  for (const r of results) {
+    const key = r.metric_name;
+    if (!byMetric[key]) byMetric[key] = [];
+    byMetric[key].push(r);
+  }
+
+  // For each metric, find the latest period and aggregate across entities
+  const summaries = [];
+  for (const [metric, rows] of Object.entries(byMetric)) {
+    // Skip _mean variants to avoid duplication -- show only median
+    if (metric.endsWith('_mean')) continue;
+
+    // Sort by period descending
+    const sorted = [...rows].sort(
+      (a, b) => new Date(b.period) - new Date(a.period)
+    );
+    const latestPeriod = sorted[0].period;
+    const latestRows = sorted.filter((r) => r.period === latestPeriod);
+
+    // Aggregate: median of values, min of confidence_lo, max of confidence_hi
+    const values = latestRows.map((r) => parseFloat(r.value)).filter((v) => !isNaN(v));
+    const ciLows = latestRows.map((r) => parseFloat(r.confidence_lo)).filter((v) => !isNaN(v));
+    const ciHighs = latestRows.map((r) => parseFloat(r.confidence_hi)).filter((v) => !isNaN(v));
+
+    if (values.length === 0) continue;
+
+    values.sort((a, b) => a - b);
+    const median = values[Math.floor(values.length / 2)];
+
+    // Also find earliest period values for comparison
+    const earliestPeriod = sorted[sorted.length - 1].period;
+    const earliestRows = sorted.filter((r) => r.period === earliestPeriod);
+    const earlyValues = earliestRows.map((r) => parseFloat(r.value)).filter((v) => !isNaN(v));
+    earlyValues.sort((a, b) => a - b);
+    const earlyMedian = earlyValues.length > 0 ? earlyValues[Math.floor(earlyValues.length / 2)] : null;
+
+    summaries.push({
+      metric,
+      label: METRIC_LABELS[metric] || metric.replace(/_/g, ' '),
+      value: median,
+      baseline: earlyMedian,
+      ciLow: ciLows.length > 0 ? Math.min(...ciLows) : null,
+      ciHigh: ciHighs.length > 0 ? Math.max(...ciHighs) : null,
+      entityCount: latestRows.length,
+      period: latestPeriod,
+      unit: latestRows[0].unit,
+    });
+  }
+
+  return summaries;
+}
+
 function ForecastTable({ forecasts }) {
   if (!forecasts || forecasts.length === 0) {
     return <div className={styles.emptyState}>No forecast data available</div>;
@@ -53,39 +128,34 @@ function ForecastTable({ forecasts }) {
       <thead>
         <tr>
           <th className={styles.forecastTh}>Metric</th>
-          <th className={styles.forecastTh}>Current</th>
-          <th className={styles.forecastTh}>Predicted</th>
-          <th className={styles.forecastTh}>CI Low</th>
-          <th className={styles.forecastTh}>CI High</th>
+          <th className={styles.forecastTh}>Q1 Median</th>
+          <th className={styles.forecastTh}>Final Quarter</th>
+          <th className={styles.forecastTh} title="Lower bound (p5) of the confidence interval across all entities at the final forecast quarter">CI Low</th>
+          <th className={styles.forecastTh} title="Upper bound (p95) of the confidence interval across all entities at the final forecast quarter">CI High</th>
         </tr>
       </thead>
       <tbody>
-        {forecasts.map((f, idx) => {
-          const current = f.current_value ?? f.current ?? f.baseline;
-          const predicted = f.predicted_value ?? f.predicted ?? f.forecast;
-          const ciLow = f.ci_low ?? f.confidence_low ?? f.lower;
-          const ciHigh = f.ci_high ?? f.confidence_high ?? f.upper;
-
+        {forecasts.map((f) => {
           let colorClass = styles.neutral;
-          if (current != null && predicted != null) {
-            colorClass = predicted > current
+          if (f.baseline != null && f.value != null) {
+            colorClass = f.value > f.baseline
               ? styles.positive
-              : predicted < current
+              : f.value < f.baseline
                 ? styles.negative
                 : styles.neutral;
           }
 
           return (
-            <tr key={f.metric || f.name || idx}>
+            <tr key={f.metric}>
               <td className={`${styles.forecastTd} ${styles.forecastMetricName}`}>
-                {f.metric || f.name || f.label || `Metric ${idx + 1}`}
+                {f.label}
               </td>
-              <td className={styles.forecastTd}>{formatNumber(current)}</td>
+              <td className={styles.forecastTd}>{formatNumber(f.baseline)}</td>
               <td className={`${styles.forecastTd} ${colorClass}`}>
-                {formatNumber(predicted)}
+                {formatNumber(f.value)}
               </td>
-              <td className={styles.forecastTd}>{formatNumber(ciLow)}</td>
-              <td className={styles.forecastTd}>{formatNumber(ciHigh)}</td>
+              <td className={styles.forecastTd}>{formatNumber(f.ciLow)}</td>
+              <td className={styles.forecastTd}>{formatNumber(f.ciHigh)}</td>
             </tr>
           );
         })}
@@ -123,7 +193,14 @@ function ScenarioDetail({ scenarioId }) {
     );
   }
 
-  const forecasts = scenario.results || scenario.forecasts || scenario.entities || [];
+  const rawResults = scenario.results || scenario.forecasts || scenario.entities || [];
+  const forecasts = useMemo(() => summarizeResults(rawResults), [rawResults]);
+
+  // Parse assumptions for display
+  const assumptions = scenario.assumptions || {};
+  const interventions = assumptions.interventions || [];
+  const nSims = assumptions.n_simulations;
+  const horizonQ = assumptions.horizon_quarters;
 
   return (
     <div className={styles.detailPanel}>
@@ -144,10 +221,22 @@ function ScenarioDetail({ scenarioId }) {
             {formatDate(scenario.created_at || scenario.date)}
           </span>
         )}
-        {scenario.type && (
+        {scenario.model_name && (
           <span className={styles.detailMetaItem}>
-            <span className={styles.detailMetaLabel}>Type</span>
-            {scenario.type}
+            <span className={styles.detailMetaLabel}>Model</span>
+            {scenario.model_name}
+          </span>
+        )}
+        {nSims && (
+          <span className={styles.detailMetaItem}>
+            <span className={styles.detailMetaLabel}>Simulations</span>
+            {nSims.toLocaleString()}
+          </span>
+        )}
+        {horizonQ && (
+          <span className={styles.detailMetaItem}>
+            <span className={styles.detailMetaLabel}>Horizon</span>
+            {horizonQ} quarters
           </span>
         )}
       </div>
@@ -156,8 +245,29 @@ function ScenarioDetail({ scenarioId }) {
         <p className={styles.detailDesc}>{scenario.description}</p>
       )}
 
+      {interventions.length > 0 && (
+        <div className={styles.forecastSection}>
+          <h3 className={styles.forecastHeading}>Interventions</h3>
+          <div className={styles.interventionList}>
+            {interventions.map((iv, i) => (
+              <div key={i} className={styles.interventionTag}>
+                {iv.type === 'funding_increase' && `+$${iv.amount_m}M ${iv.target || 'funding'} from ${iv.start_quarter}`}
+                {iv.type === 'new_accelerator' && `New accelerator in ${iv.region} (${iv.capacity} companies/yr) from ${iv.start_quarter}`}
+                {iv.type === 'interest_rate_change' && `Rate change: ${iv.bps > 0 ? '+' : ''}${iv.bps}bps from ${iv.start_quarter}`}
+                {iv.type === 'tax_incentive' && `Tax reduction: ${iv.pct_reduction}% from ${iv.start_quarter}`}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className={styles.forecastSection}>
-        <h3 className={styles.forecastHeading}>Entity Forecasts</h3>
+        <h3 className={styles.forecastHeading}>
+          Forecast Summary
+          <span className={styles.forecastSubheading}>
+            {rawResults.length} data points across {forecasts.length} metrics
+          </span>
+        </h3>
         <ForecastTable forecasts={forecasts} />
       </div>
     </div>
@@ -199,7 +309,8 @@ export function ScenariosView() {
                 No scenarios yet
               </div>
               <p style={{ fontSize: 12, lineHeight: 1.6, color: 'var(--text-secondary)', margin: 0 }}>
-                Scenarios are Monte Carlo simulations that model "what-if" outcomes for the Nevada ecosystem
+                Scenarios use Monte Carlo simulation (running thousands of random scenarios to estimate
+                probability ranges) to model &ldquo;what-if&rdquo; outcomes for the Nevada ecosystem
                 — such as changes in SSBCI deployment, fund allocation, or sector investment.
                 They are generated automatically by the scenario simulator agent on a monthly schedule.
                 Check back after the next scheduled run.
@@ -242,6 +353,11 @@ export function ScenariosView() {
                 )}
                 {s.description && (
                   <p className={styles.scenarioDesc}>{s.description}</p>
+                )}
+                {s.result_count != null && (
+                  <span className={styles.scenarioDate}>
+                    {s.result_count} forecast data points
+                  </span>
                 )}
               </div>
             );

@@ -287,7 +287,7 @@ const NodeCircle = memo(function NodeCircle({
 
 function useEdgeCanvas(canvasRef, edges, zoom, pan, w, h, {
   selectedNode, highlightedEdges, showOpportunities, opportunityFilter,
-  tooManyForFullOpacity,
+  tooManyForFullOpacity, loadPhase = 5,
 }) {
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -371,7 +371,8 @@ function useEdgeCanvas(canvasRef, edges, zoom, pan, w, h, {
     // Radial gradient centered on the node centroid simulates the luminous
     // core of the Milky Way. Uses 'screen' blending so it brightens edges
     // near the center without obscuring them.
-    if (edges.length > 50) {
+    // Only rendered when loadPhase >= 3 (glow activation phase).
+    if (edges.length > 50 && loadPhase >= 3) {
       let sumX = 0, sumY = 0, count = 0;
       for (let i = 0; i < edges.length; i++) {
         const sx = edges[i].source?.x; const sy = edges[i].source?.y;
@@ -395,7 +396,7 @@ function useEdgeCanvas(canvasRef, edges, zoom, pan, w, h, {
     }
 
     ctx.restore();
-  }, [canvasRef, edges, zoom, pan, w, h, selectedNode, highlightedEdges, showOpportunities, opportunityFilter, tooManyForFullOpacity]);
+  }, [canvasRef, edges, zoom, pan, w, h, selectedNode, highlightedEdges, showOpportunities, opportunityFilter, tooManyForFullOpacity, loadPhase]);
 }
 
 /* ── Main canvas ── */
@@ -420,12 +421,13 @@ export function GraphCanvas({
   nodeDegreeMap = {},
   layoutWidth = 1200,
   layoutHeight = 700,
+  loadPhase = 5, // default to fully loaded for backwards compat
 }) {
   const containerRef = useRef(null);
   const edgeCanvasRef = useRef(null);
   const layoutRef = useRef(layout);
   layoutRef.current = layout;
-  const [zoom, setZoom] = useState(1);
+  const [zoom, setZoom] = useState(0.85);
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [dragging, setDragging] = useState(false);
   const [dragStart, setDragStart] = useState(null);
@@ -456,7 +458,7 @@ export function GraphCanvas({
     const fitW = Math.max(maxX - minX, 1);
     const fitH = Math.max(maxY - minY, 1);
     // Clamp minimum zoom to 0.15 — prevents near-zero scale when positions are extreme
-    const s = Math.max(0.15, Math.min((w - padX * 2) / fitW, (h - padY * 2) / fitH, 2));
+    const s = Math.max(0.15, Math.min((w - padX * 2) / fitW, (h - padY * 2) / fitH, 0.9));
     const cx = (minX + maxX) / 2;
     const cy = (minY + maxY) / 2;
     setZoom(s);
@@ -701,7 +703,7 @@ export function GraphCanvas({
   const zoomTier = zoom < 0.6 ? 'cluster' : zoom > 1.2 ? 'detail' : 'region';
   // Progressive LOD — more nodes appear as you zoom in
   const minDegreeForRender = zoom < 0.4 ? 8 : zoom < 0.5 ? 5 : zoom < 0.6 ? 3 : zoom < 0.8 ? 1 : 0;
-  const labelMinR = zoom < 0.5 ? 13 : zoom < 0.7 ? 10 : zoom < 1.0 ? 7 : 5;
+  const labelMinR = zoom < 0.5 ? 13 : zoom < 0.7 ? 10 : zoom < 1.0 ? 8 : 5;
 
   // Canvas edge renderer — replaces 5000+ SVG <line> elements with one draw call
   useEdgeCanvas(edgeCanvasRef, edges, zoom, pan, w, h, {
@@ -710,6 +712,7 @@ export function GraphCanvas({
     showOpportunities,
     opportunityFilter,
     tooManyForFullOpacity,
+    loadPhase,
   });
 
   if (!nodes || nodes.length === 0) {
@@ -717,6 +720,17 @@ export function GraphCanvas({
       <div className={styles.canvasWrap} ref={containerRef}>
         <div style={{ padding: 40, color: 'var(--text-disabled)', textAlign: 'center' }}>
           No graph data. Enable node types in controls.
+        </div>
+      </div>
+    );
+  }
+
+  // ── Skeleton / pre-graph loading state ──────────────────────────────────
+  if (loadPhase < 2) {
+    return (
+      <div className={styles.canvasWrap} ref={containerRef} style={{ opacity: loadPhase >= 1 ? 1 : 0.5, transition: 'opacity 300ms ease' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'rgba(255,255,255,0.2)', fontSize: 12, letterSpacing: '2px', fontFamily: 'monospace' }}>
+          LOADING GRAPH DATA...
         </div>
       </div>
     );
@@ -733,17 +747,20 @@ export function GraphCanvas({
       onDoubleClick={handleDoubleClick}
       style={{ cursor: dragging ? 'grabbing' : undefined }}
     >
-      {/* Status indicator — real-time Bloomberg feel */}
+      {/* Status indicator */}
       <div className={styles.statusBar}>
-        <span className={styles.statusDot} />
-        <span>{nodes.length} nodes &middot; {edges.length} edges</span>
+        {nodes.length.toLocaleString()} NODES &middot; {edges.length.toLocaleString()} EDGES
       </div>
 
       {/* Canvas layer for edges — one draw call replaces 5000+ SVG elements */}
       <canvas
         ref={edgeCanvasRef}
         className={styles.edgeCanvas}
-        style={{ position: 'absolute', top: 0, left: 0, pointerEvents: 'none' }}
+        style={{
+          position: 'absolute', top: 0, left: 0, pointerEvents: 'none',
+          opacity: loadPhase >= 2 ? 1 : 0,
+          transition: 'opacity 300ms ease',
+        }}
       />
 
       <svg
@@ -752,7 +769,11 @@ export function GraphCanvas({
         height={h}
         viewBox={`0 0 ${w} ${h}`}
         preserveAspectRatio="none"
-        style={{ position: 'absolute', top: 0, left: 0 }}
+        style={{
+          position: 'absolute', top: 0, left: 0,
+          opacity: loadPhase >= 2 ? 1 : 0,
+          transition: 'opacity 300ms ease',
+        }}
       >
         <GlowFilters />
 
@@ -863,7 +884,7 @@ export function GraphCanvas({
         pointerEvents: 'none',
         zIndex: 10,
         transition: 'opacity 300ms ease',
-        opacity: 0.7,
+        opacity: loadPhase >= 2 ? 0.7 : 0,
       }}>
         <div style={{
           fontSize: 10,

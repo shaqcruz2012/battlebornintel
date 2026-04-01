@@ -15,13 +15,29 @@
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 }
 
-/* ── Collapsed state — small icon-only pill ── */
+/* ── Collapsed state — slim 32px rail ── */
 
-.collapsed {
+.legendRail {
   position: absolute;
   top: var(--space-lg);
   left: var(--space-lg);
-  z-index: 5;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(12, 16, 20, 0.85);
+  backdrop-filter: blur(8px);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  z-index: 15;
+  color: var(--text-disabled);
+  transition: color 200ms ease, background 200ms ease;
+}
+.legendRail:hover {
+  color: var(--text-primary);
+  background: rgba(12, 16, 20, 0.95);
 }
 
 /* ── Header row with title + collapse toggle ── */

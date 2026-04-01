@@ -9,7 +9,7 @@ const KMEANS_COLORS = [
 ];
 
 export function GraphLegend({ colorMode, nodeFilters, layout, kmeansMap = {} }) {
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsed, setCollapsed] = useState(true);
 
   const items = Object.entries(NODE_CFG)
     .filter(([key]) => nodeFilters[key])
@@ -43,15 +43,8 @@ export function GraphLegend({ colorMode, nodeFilters, layout, kmeansMap = {} }) 
 
   if (collapsed) {
     return (
-      <div className={styles.collapsed}>
-        <button
-          className={styles.collapseBtn}
-          onClick={() => setCollapsed(false)}
-          title="Expand legend"
-          aria-label="Expand legend"
-        >
-          ≡
-        </button>
+      <div className={styles.legendRail} onClick={() => setCollapsed(false)}>
+        <span style={{ fontSize: 14 }}>≡</span>
       </div>
     );
   }
@@ -61,7 +54,7 @@ export function GraphLegend({ colorMode, nodeFilters, layout, kmeansMap = {} }) 
       {/* Header with collapse button */}
       <div className={styles.header}>
         <span className={styles.title}>
-          {colorMode === 'attribute' ? 'K-Means Clusters' : colorMode === 'community' ? 'Community Colors' : 'Node Types'}
+          {colorMode === 'attribute' ? 'K-Means Clusters (auto-grouped by shared traits)' : colorMode === 'community' ? 'Community Colors' : 'Node Types'}
         </span>
         <button
           className={styles.collapseBtn}

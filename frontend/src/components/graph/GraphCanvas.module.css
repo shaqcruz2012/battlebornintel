@@ -155,38 +155,19 @@
   line-height: 1.2;
 }
 
-/* ── Status indicator — real-time feel ── */
+/* ── Status indicator — floating monospace text ── */
 
 .statusBar {
   position: absolute;
-  top: var(--space-md);
-  right: var(--space-lg);
-  display: flex;
-  align-items: center;
-  gap: var(--space-sm);
-  font-size: 10px;
-  font-family: var(--font-body);
+  top: var(--space-sm);
+  left: var(--space-sm);
+  font-size: 9px;
+  font-family: var(--font-mono);
   letter-spacing: 0.4px;
-  color: var(--text-disabled);
+  color: rgba(255, 255, 255, 0.4);
   text-transform: uppercase;
-  background: rgba(12, 16, 20, 0.8);
-  padding: 4px 10px;
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--border-subtle);
-  backdrop-filter: blur(8px);
-}
-
-.statusDot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--accent-teal);
-  animation: statusPulse 2s ease-in-out infinite;
-}
-
-@keyframes statusPulse {
-  0%, 100% { opacity: 0.5; }
-  50% { opacity: 1; }
+  pointer-events: none;
+  z-index: 1;
 }
 
 /* ── Node hover — Palantir-style glow on interactive node groups ── */

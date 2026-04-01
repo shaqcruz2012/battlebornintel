@@ -38,6 +38,11 @@ export function GraphView() {
   const [debouncedYearMax, setDebouncedYearMax] = useState(2026);
   const [selectedCluster, setSelectedCluster] = useState(null);
 
+  // ── Staged loading sequence ──────────────────────────────────────────────
+  // 0 = skeleton, 1 = KPIs visible, 2 = graph visible, 3 = glow active,
+  // 4 = labels, 5 = timeline
+  const [loadPhase, setLoadPhase] = useState(0);
+
   // Analysis overlay toggles
   const [overlays, setOverlays] = useState({
     communities: false,
@@ -139,6 +144,20 @@ export function GraphView() {
   const graphData = fullDetailData || lightGraphData;
   const loadingGraph = loadingLightGraph && !lightGraphData;
   const graphError = lightGraphError;
+
+  // ── Staged loading effects (depend on loadingGraph) ────────────────────
+  // Phase 0 -> 1: data has arrived
+  useEffect(() => {
+    if (loadPhase === 0 && !loadingGraph) setLoadPhase(1);
+  }, [loadingGraph, loadPhase]);
+
+  // Phase 1 -> 5: staggered reveal of UI layers
+  useEffect(() => {
+    if (loadPhase === 1) { const t = setTimeout(() => setLoadPhase(2), 400); return () => clearTimeout(t); }
+    if (loadPhase === 2) { const t = setTimeout(() => setLoadPhase(3), 400); return () => clearTimeout(t); }
+    if (loadPhase === 3) { const t = setTimeout(() => setLoadPhase(4), 600); return () => clearTimeout(t); }
+    if (loadPhase === 4) { const t = setTimeout(() => setLoadPhase(5), 700); return () => clearTimeout(t); }
+  }, [loadPhase]);
 
   // Fetch total edge count (yearMax=2026) for the edge count indicator
   const { data: fullGraphData } = useGraphLight(activeNodeTypes, 2026, filters.region);
@@ -273,6 +292,25 @@ export function GraphView() {
         <div className={styles.mainColumn}>
           {/* Canvas area — fills all available space */}
           <div className={styles.canvasOuter} ref={canvasRef}>
+            {/* KPI strip — visible from phase 1 onward */}
+            <div style={{
+              position: 'absolute', top: 8, left: '50%', transform: 'translateX(-50%)',
+              display: 'flex', gap: 24, padding: '6px 16px',
+              background: 'rgba(10,13,18,0.7)', backdropFilter: 'blur(8px)',
+              borderRadius: 6, border: '1px solid rgba(255,255,255,0.06)',
+              fontFamily: "'SF Mono', 'Cascadia Code', Consolas, monospace",
+              fontSize: 11, letterSpacing: '0.5px', color: 'rgba(255,255,255,0.6)',
+              zIndex: 20, pointerEvents: 'none',
+              opacity: loadPhase >= 1 ? 1 : 0,
+              transition: 'opacity 300ms ease-out',
+            }}>
+              <span><span style={{ color: 'rgba(255,255,255,0.9)' }}>{layout.nodes.length.toLocaleString()}</span> ENTITIES</span>
+              <span><span style={{ color: 'rgba(255,255,255,0.9)' }}>{layout.edges.length.toLocaleString()}</span> EDGES</span>
+              <span><span style={{ color: 'rgba(255,255,255,0.9)' }}>{Object.keys(
+                Object.entries(metrics.communities || {}).reduce((acc, [, cid]) => { acc[cid] = true; return acc; }, {})
+              ).length}</span> COMMUNITIES</span>
+              <span><span style={{ color: 'rgba(255,255,255,0.9)' }}>$186M</span> DEPLOYED</span>
+            </div>
             <GraphCanvas
               layout={layout}
               metrics={metrics}
@@ -293,6 +331,7 @@ export function GraphView() {
               selectedCluster={selectedCluster}
               onSelectCluster={setSelectedCluster}
               kmeansMap={kmeansMap}
+              loadPhase={loadPhase}
             />
             {/* Left overlay: legend (minimizable) */}
             <GraphLegend colorMode={colorMode} nodeFilters={nodeFilters} layout={layout} kmeansMap={kmeansMap} />
@@ -325,6 +364,14 @@ export function GraphView() {
               visibleEdges={rawEdges.length}
               totalEdges={fullGraphData?.edges?.length || rawEdges.length}
             />
+
+            {/* Inspector panel - slides in from right as overlay */}
+            <NodeDetail
+              nodeId={selectedNode}
+              layout={layout}
+              metrics={metrics}
+              onClose={handleCloseNode}
+            />
           </div>
 
           {/* Overlay detail tables — slides in when overlays active */}
@@ -335,16 +382,9 @@ export function GraphView() {
             metrics={metrics}
             predictedLinks={predictedLinksData}
             onSelectCluster={setSelectedCluster}
+            collapsed={!!selectedNode}
           />
         </div>
-
-        {/* Node detail sidebar — slides in on node select */}
-        <NodeDetail
-          nodeId={selectedNode}
-          layout={layout}
-          metrics={metrics}
-          onClose={handleCloseNode}
-        />
       </div>
     </div>
   );

@@ -101,7 +101,7 @@ const CommunitiesTable = memo(function CommunitiesTable({ nodes, communities, co
         CLUSTERS DETECTED: {rows.length}
       </h4>
       <p className={styles.sectionDesc}>
-        Clusters are groups of densely connected nodes identified by label propagation algorithm.
+        Clusters are groups of tightly-connected entities found by label propagation (an algorithm that discovers natural groupings by spreading labels through the network).
       </p>
       <table className={styles.table}>
         <thead>
@@ -227,6 +227,7 @@ const CapitalFlowsTable = memo(function CapitalFlowsTable({ nodes, edges }) {
 /* ── Predicted Links Table ── */
 
 const PredictedLinksTable = memo(function PredictedLinksTable({ predictedLinks }) {
+  const [methodOpen, setMethodOpen] = useState(false);
   const { sortKey, sortDir, toggle, sort } = useSortable('score');
 
   const rows = useMemo(() => {
@@ -254,8 +255,67 @@ const PredictedLinksTable = memo(function PredictedLinksTable({ predictedLinks }
         PREDICTED CONNECTIONS: {count} above threshold
       </h4>
       <p className={styles.sectionDesc}>
-        Triadic closure predictions using Jaccard similarity, sector overlap, geographic proximity, and recency.
+        Predictions based on triadic closure (if A connects to B and B connects to C, then A and C are likely to connect), using Jaccard similarity (shared connection overlap), sector overlap, geographic proximity, and recency.
       </p>
+      <div className={styles.methodBox}>
+        <button
+          className={styles.methodToggle}
+          onClick={() => setMethodOpen((o) => !o)}
+          aria-expanded={methodOpen}
+        >
+          <span className={styles.methodLabel}>METHODOLOGY</span>
+          <span className={`${styles.methodChevron} ${methodOpen ? styles.methodChevronOpen : ''}`}>
+            {methodOpen ? '\u25B4' : '\u25BE'}
+          </span>
+        </button>
+        {methodOpen && (
+          <div className={styles.methodContent}>
+            <ul className={styles.methodList}>
+              <li>
+                <strong>Triadic closure</strong> &mdash; If A connects to B, and B connects to C, then
+                A and C are likely to connect too. For every such open triad without a direct
+                A&#8211;C edge, we score the likelihood that connection will form. Bridge node B
+                appears in the &ldquo;Via&rdquo; column.
+              </li>
+              <li>
+                <strong>Weighted Jaccard (25%)</strong> &mdash; Measures how many connections two entities
+                share in common, weighted by connection strength. Higher overlap means more mutual
+                contacts suggesting the two entities travel in the same circles.
+              </li>
+              <li>
+                <strong>Sector overlap (20%)</strong> &mdash; Ratio of shared sectors to total
+                sectors between both nodes. Entities in the same industry verticals
+                are more likely to connect.
+              </li>
+              <li>
+                <strong>Geographic proximity (15%)</strong> &mdash; Same city scores 1.0,
+                same region 0.5, otherwise 0. Co-location enables face-to-face
+                collaboration.
+              </li>
+              <li>
+                <strong>Recency (15%)</strong> &mdash; How recent are the bridge edges?
+                Connections active within the last 1&ndash;2 years score highest.
+                Stale edges decay over a 5-year window.
+              </li>
+              <li>
+                <strong>Type compatibility (15%)</strong> &mdash; Certain node-type pairs
+                (fund&rarr;company, accelerator&rarr;company) connect more often
+                and receive a higher base score.
+              </li>
+              <li>
+                <strong>Edge quality (10%)</strong> &mdash; Average confidence of the two
+                bridge edges A&#8211;B and B&#8211;C. High-confidence, verified
+                connections produce more reliable predictions.
+              </li>
+            </ul>
+            <p className={styles.methodNote}>
+              Score range is 0&ndash;1. Values above 0.7 indicate high-confidence
+              recommendations with multiple strong signals; 0.5&ndash;0.7 are
+              moderate and worth exploring through the shared connection.
+            </p>
+          </div>
+        )}
+      </div>
       <table className={styles.table}>
         <thead>
           <tr>
@@ -359,7 +419,7 @@ const BridgesTable = memo(function BridgesTable({ nodes, betweenness, communitie
         BRIDGE NODES: {rows.length} inter-community connectors
       </h4>
       <p className={styles.sectionDesc}>
-        Nodes with high betweenness centrality spanning multiple communities. These are critical ecosystem connectors.
+        Entities that act as bridges between different groups (high betweenness centrality — i.e., they appear frequently on the shortest paths connecting other entities). These are critical ecosystem connectors.
       </p>
       <table className={styles.table}>
         <thead>
@@ -403,11 +463,20 @@ export const OverlayDetailPanel = memo(function OverlayDetailPanel({
   metrics,
   predictedLinks,
   onSelectCluster,
+  collapsed = false,
 }) {
   const [expanded, setExpanded] = useState(true);
 
   const anyActive = overlays?.communities || overlays?.capitalFlows || overlays?.predictedLinks || overlays?.bridges;
   if (!anyActive) return null;
+
+  // When a node is selected, collapse this panel to give focus to the inspector
+  if (collapsed) {
+    return (
+      <div className={styles.wrapper} style={{ maxHeight: 0, overflow: 'hidden', transition: 'max-height 250ms ease' }}>
+      </div>
+    );
+  }
 
   const activeCount = [
     overlays.communities,

@@ -148,14 +148,14 @@ export function NodeMetricsChart({ nodeId }) {
       <div className={styles.legend}>
         <span className={styles.legendItem}>
           <span className={styles.legendSwatch} style={{ background: 'var(--accent-teal)' }} />
-          PageRank
+          PageRank (importance)
         </span>
         <span className={styles.legendItem}>
           <span
             className={styles.legendSwatch}
             style={{ background: 'var(--accent-gold)' }}
           />
-          Degree
+          Degree (# connections)
         </span>
       </div>
     </div>

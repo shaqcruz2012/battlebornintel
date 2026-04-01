@@ -81,7 +81,9 @@ async function loadGraphData() {
       pool.query(
         `SELECT source_id, target_id, rel, event_year, event_date,
                 COALESCE(weight, 0.5) AS weight, COALESCE(confidence, 0.5) AS confidence
-         FROM graph_edges`
+         FROM graph_edges
+         WHERE (edge_category IS NULL OR edge_category = 'historical')
+           AND rel NOT IN ('qualifies_for', 'fund_opportunity', 'potential_lp')`
       ),
       pool.query(
         `SELECT id, name, stage, sectors, city, region

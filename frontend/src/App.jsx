@@ -19,7 +19,7 @@ const InvestorsView = lazy(() => import('./components/investors/InvestorsView').
 const SectorsView = lazy(() => import('./components/sectors/SectorsView').then(m => ({ default: m.SectorsView })));
 const StakeholderFeedView = lazy(() => import('./components/feed/StakeholderFeedView').then(m => ({ default: m.StakeholderFeedView })));
 const ScenariosView = lazy(() => import('./components/scenarios/ScenariosView').then(m => ({ default: m.ScenariosView })));
-const IndicatorsView = lazy(() => import('./components/indicators/IndicatorsView').then(m => ({ default: m.IndicatorsView })));
+// const IndicatorsView = lazy(() => import('./components/indicators/IndicatorsView').then(m => ({ default: m.IndicatorsView }))); // saved for future feature
 const ResourceMatrix = lazy(() => import('./components/ecosystem/ResourceMatrix'));
 const EcosystemGaps = lazy(() => import('./components/analytics/EcosystemGaps').then(m => ({ default: m.EcosystemGaps || m.default })));
 const RecommendedConnections = lazy(() => import('./components/analytics/RecommendedConnections').then(m => ({ default: m.RecommendedConnections || m.default })));
@@ -121,7 +121,7 @@ export default function App() {
                 {view === 'graph' && <GraphView />}
                 {view === 'galaxy' && <GalaxyView />}
                 {view === 'scenarios' && <ScenariosView />}
-                {view === 'indicators' && <IndicatorsView />}
+                {/* {view === 'indicators' && <IndicatorsView />} */}
                 {view === 'ecosystem' && <ResourceMatrix />}
                 {view === 'ecosystemGaps' && <EcosystemGaps />}
                 {view === 'capitalFlows' && <CapitalFlowView />}

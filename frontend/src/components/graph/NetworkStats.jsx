@@ -103,7 +103,7 @@ export default function NetworkStats({ layout, metrics }) {
           <span className={healthClass}><span className={s.healthDot} /> {health}</span>
         </div>
         <div className={s.statRow}>
-          <span className={s.statLabel}>Density</span>
+          <span className={s.statLabel}>Density (% of possible connections that exist)</span>
           <span className={s.statValue}>{(density * 100).toFixed(3)}%</span>
         </div>
         <div className={s.statRow}>
@@ -145,7 +145,7 @@ export default function NetworkStats({ layout, metrics }) {
 
       {/* Degree Distribution */}
       <div className={s.statGroup}>
-        <div className={s.groupLabel}>Degree Distribution</div>
+        <div className={s.groupLabel}>Degree Distribution (connections per entity)</div>
         <div className={s.statRow}>
           <span className={s.statLabel}>Min</span>
           <span className={s.statValue}>{degree.min}</span>
@@ -167,7 +167,7 @@ export default function NetworkStats({ layout, metrics }) {
       {/* Centrality Leaders */}
       {leaders.length > 0 && (
         <div className={s.statGroup}>
-          <div className={s.groupLabel}>PageRank Leaders</div>
+          <div className={s.groupLabel}>PageRank Leaders (ranked by connection importance)</div>
           {leaders.map((l) => (
             <div key={l.id} className={s.leaderRow}>
               <span className={s.typeDot} style={{ background: NODE_CFG[l.type]?.color || '#666' }} />

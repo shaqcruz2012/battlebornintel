@@ -7,7 +7,7 @@ import styles from './CapitalFlowView.module.css';
 // ── Concept Tooltips ────────────────────────────────────────────────────────
 
 const CONCEPT_TOOLTIPS = {
-  pagerank: 'Measures how much capital a fund attracts from the network, weighted by the size and diversity of its connections. Funds connected to other well-connected funds score higher.',
+  pagerank: 'PageRank ranks importance based on the number and quality of connections. Here it measures how much capital a fund attracts from the network, weighted by the size and diversity of its connections. Funds connected to other well-connected funds score higher.',
   sourceSink: 'Identifies net capital deployers (sources) vs. net capital attractors (sinks). Sources push more capital into the ecosystem than they pull; sinks attract more than they deploy.',
   capitalMagnet: 'Ranks entities by their ability to attract capital from multiple diverse sources. Higher scores indicate broader network influence, not just larger dollar amounts.',
   sankey: 'Shows how capital flows from funds through sectors to individual companies. Wider bands represent larger capital amounts. Follow a band to trace where a fund\'s capital ends up.',
@@ -146,7 +146,7 @@ function MagnetMethodologyPopup({ magnet, onClose }) {
         </div>
         <div className={styles.popupBody}>
           <div className={styles.popupRow}>
-            <span className={styles.popupLabel}>PageRank Score</span>
+            <span className={styles.popupLabel}>PageRank Score (importance by connections)</span>
             <span className={styles.popupValue}>{magnet.score}</span>
           </div>
           <div className={styles.popupRow}>
@@ -164,7 +164,8 @@ function MagnetMethodologyPopup({ magnet, onClose }) {
           <div className={styles.popupMethodology}>
             <span className={styles.popupMethodLabel}>METHODOLOGY</span>
             <p className={styles.popupMethodText}>
-              PageRank measures how much capital this entity attracts from the broader network,
+              PageRank ranks importance based on the number and quality of connections.
+              Here it measures how much capital this entity attracts from the broader network,
               weighted by the diversity and connectedness of its sources. Entities connected to
               other well-connected entities score higher. This score of {magnet.score} ranks
               this entity among the top capital magnets in the Nevada ecosystem.

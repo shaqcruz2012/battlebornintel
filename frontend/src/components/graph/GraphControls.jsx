@@ -12,7 +12,7 @@ const NODE_TYPES = Object.entries(NODE_CFG).map(([key, cfg]) => ({
 const COLOR_MODES = [
   { value: 'type', label: 'By Type' },
   { value: 'community', label: 'Community' },
-  { value: 'attribute', label: 'K-Means' },
+  { value: 'attribute', label: 'K-Means (auto-grouped by traits)' },
 ];
 
 const STAKEHOLDER_PRESETS = [
@@ -75,7 +75,10 @@ export function GraphOverlayControls({
   nodes = [],
   onFocusNode,
 }) {
-  const [collapsed, setCollapsed] = useState(() => sessionStorage.getItem('graphControlsCollapsed') === 'true');
+  const [collapsed, setCollapsed] = useState(() => {
+    const saved = sessionStorage.getItem('graphControlsCollapsed');
+    return saved !== null ? saved === 'true' : true; // default collapsed
+  });
   useEffect(() => { sessionStorage.setItem('graphControlsCollapsed', String(collapsed)); }, [collapsed]);
   const activePreset = STAKEHOLDER_PRESETS.find((p) => matchesPreset(nodeFilters, p));
 

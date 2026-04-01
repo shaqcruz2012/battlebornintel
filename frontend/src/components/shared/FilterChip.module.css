@@ -1,29 +1,27 @@
-/* ── FilterChip: Palantir-style compact filter pill ──────── */
+/* ── FilterChip: institutional outlined toggle ──────────── */
 
 .chip {
   display: inline-flex;
   align-items: center;
   gap: 3px;
-  padding: 3px 8px;
-  border-radius: var(--radius-xs);
+  padding: 4px 10px;
+  border-radius: 3px;
   font-family: var(--font-mono);
-  font-size: 9px;
+  font-size: 10px;
   font-weight: var(--weight-medium);
-  border: 1px solid var(--border-subtle);
+  border: 1px solid rgba(255, 255, 255, 0.12);
   background: transparent;
-  color: var(--text-disabled);
+  color: rgba(255, 255, 255, 0.5);
   cursor: pointer;
   transition: all var(--transition-instant);
   white-space: nowrap;
   user-select: none;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.8px;
   text-transform: uppercase;
 }
 
 .chip:hover {
-  border-color: var(--border-hover);
-  color: var(--text-secondary);
-  background: rgba(255, 255, 255, 0.02);
+  border-color: rgba(255, 255, 255, 0.25);
 }
 
 .chip:active {
@@ -34,9 +32,9 @@
 /* ── Active state ──────────────────────────────────────── */
 
 .active {
-  background: rgba(69, 215, 198, 0.08);
+  background: rgba(69, 215, 198, 0.10);
   border-color: rgba(69, 215, 198, 0.3);
-  color: var(--accent-teal);
+  color: #fff;
 }
 
 .active:hover {
@@ -47,9 +45,9 @@
 /* ── Small variant ─────────────────────────────────────── */
 
 .small {
-  padding: 1px 6px;
-  font-size: 8px;
-  border-radius: var(--radius-xs);
+  padding: 2px 8px;
+  font-size: 9px;
+  border-radius: 3px;
 }
 
 /* ── Count ─────────────────────────────────────────────── */

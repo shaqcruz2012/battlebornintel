@@ -295,8 +295,8 @@ function ScenarioDetailPanel({ scenarioId }) {
                 <th>Metric</th>
                 <th>Baseline</th>
                 <th>Predicted</th>
-                <th>CI Low</th>
-                <th>CI High</th>
+                <th title="Confidence interval lower bound — range where the true value likely falls">CI Low</th>
+                <th title="Confidence interval upper bound — range where the true value likely falls">CI High</th>
               </tr>
             </thead>
             <tbody>

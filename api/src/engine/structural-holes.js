@@ -365,16 +365,23 @@ export async function analyzeStructuralHoles() {
     }
   }
 
+  // Filter to historical edges — opportunity edges inflate constraint/bridge calculations
+  const EXCLUDED_RELS = new Set(['qualifies_for', 'fund_opportunity', 'potential_lp']);
+  const historicalEdges = edges.filter(e => {
+    if (e.category === 'opportunity' || e.category === 'projected') return false;
+    return !EXCLUDED_RELS.has(e.rel || '');
+  });
+
   // If cache is empty, compute communities on the fly
   let communities = cachedCommunities;
   if (!communities || Object.keys(communities).length === 0) {
     const { computeGraphMetrics } = await import('./graph-metrics.js');
-    const metrics = computeGraphMetrics(nodes, edges);
+    const metrics = computeGraphMetrics(nodes, historicalEdges);
     communities = metrics.communities;
   }
 
   // Step 2: Compute Burt's Constraint
-  const constraints = computeConstraints(nodes, edges);
+  const constraints = computeConstraints(nodes, historicalEdges);
 
   // Step 3: Find bridges
   const { bridgeNodes, pairCount, nodeCommunities } = findBridges(

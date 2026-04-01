@@ -79,7 +79,7 @@ const SIGNAL_CONTEXT = {
     situation:
       'Portfolio concentration exceeds healthy thresholds — too much capital is deployed into too few companies, sectors, or stages. This creates fragility: if a single large position fails, it can impair the entire portfolio and damage investor confidence in the ecosystem.',
     framework:
-      'Apply Portfolio Diversification Analysis: calculate Herfindahl-Hirschman Index (HHI) across sectors, stages, and individual positions. Compare against target allocation ranges. Identify whether concentration is intentional (strategic bets) or accidental (follow-on bias).',
+      'Apply Portfolio Diversification Analysis: calculate Herfindahl-Hirschman Index (HHI) — a standard measure of concentration where higher values mean capital is more concentrated in fewer places — across sectors, stages, and individual positions. Compare against target allocation ranges. Identify whether concentration is intentional (strategic bets) or accidental (follow-on bias).',
     recommendation:
       'Rebalance new deployments toward underweight sectors and stages. Establish concentration limits in fund mandates (e.g., no single company > 15% of fund, no single sector > 30%). For existing concentrated positions, explore syndication or secondary sales to reduce exposure.',
   },
@@ -95,7 +95,7 @@ const SIGNAL_CONTEXT = {
     situation:
       'The ecosystem graph shows structural weakness — key nodes (connector companies, active investors, serial mentors) have reduced their engagement, creating the risk that network partitions could isolate subgroups of companies from deal flow and knowledge sharing.',
     framework:
-      'Apply Network Resilience Analysis: compute betweenness centrality and identify single points of failure. Model what happens if the top 3-5 connector nodes disengage. Measure clustering coefficient to assess whether subnetworks are self-sustaining or dependent on hub nodes.',
+      'Apply Network Resilience Analysis: compute betweenness centrality (how often each entity acts as a bridge between groups) and identify single points of failure. Model what happens if the top 3-5 connector nodes disengage. Measure clustering coefficient (how tightly each entity\'s contacts are connected to each other) to assess whether subnetworks are self-sustaining or dependent on hub nodes.',
     recommendation:
       'Strengthen network redundancy by cultivating backup connectors in each subcluster. Launch cross-sector networking events to create alternative pathways. Engage disengaging connectors to understand and address their reasons for withdrawal.',
   },
@@ -111,7 +111,7 @@ const SIGNAL_CONTEXT = {
     situation:
       'A significant portion of tracked entities have not been updated recently, meaning current risk assessments may be based on outdated information. Stale data creates blind spots where emerging risks go undetected until they become crises.',
     framework:
-      'Apply Data Freshness Analysis: calculate the age distribution of entity records and identify clusters of staleness. Determine whether staleness is uniform (system-wide collection issue) or concentrated (specific sectors or stages). Assess the impact on risk model confidence intervals.',
+      'Apply Data Freshness Analysis: calculate the age distribution of entity records and identify clusters of staleness. Determine whether staleness is uniform (system-wide collection issue) or concentrated (specific sectors or stages). Assess the impact on risk model confidence intervals (the range where the true value likely falls).',
     recommendation:
       'Prioritize data refresh for high-risk and high-value entities. Investigate and repair any broken data collection pipelines. For entities with chronic staleness, evaluate whether they should be reclassified as inactive or flagged for manual verification.',
   },

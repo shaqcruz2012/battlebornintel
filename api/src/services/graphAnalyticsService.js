@@ -189,7 +189,14 @@ export async function recomputeGraphAnalytics() {
   logger.info(`[GraphAnalytics] Loaded ${nodes.length} nodes, ${edges.length} edges`);
 
   // 2. Run existing graph metrics (PageRank, betweenness, community detection)
-  const metrics = computeGraphMetrics(nodes, edges);
+  // Filter to historical edges only — opportunity/projected edges inflate metrics
+  const EXCLUDED_RELS = new Set(['qualifies_for', 'fund_opportunity', 'potential_lp']);
+  const historicalEdges = edges.filter(e => {
+    if (e.category === 'opportunity' || e.category === 'projected') return false;
+    return !EXCLUDED_RELS.has(e.rel || '');
+  });
+  logger.info(`[GraphAnalytics] Using ${historicalEdges.length}/${edges.length} historical edges for metrics`);
+  const metrics = computeGraphMetrics(nodes, historicalEdges);
   logger.info(
     `[GraphAnalytics] Computed metrics: ${Object.keys(metrics.communities).length} community assignments, ${metrics.numCommunities} communities`
   );

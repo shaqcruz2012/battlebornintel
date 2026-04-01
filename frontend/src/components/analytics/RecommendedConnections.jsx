@@ -299,7 +299,7 @@ export function RecommendedConnections() {
             onChange={handleSortChange}
           >
             <option value="score">Sort: Score</option>
-            <option value="jaccard">Sort: Jaccard</option>
+            <option value="jaccard">Sort: Shared Connections</option>
             <option value="recency">Sort: Recency</option>
           </select>
         </div>
@@ -308,7 +308,7 @@ export function RecommendedConnections() {
       {stats && (
         <div className={styles.statsBar}>
           <span>
-            Open triads: <span className={styles.statVal}>{stats.totalOpenTriads.toLocaleString()}</span>
+            Open triads (A-B-C paths without a direct A-C link): <span className={styles.statVal}>{stats.totalOpenTriads.toLocaleString()}</span>
           </span>
           <span>
             Above threshold: <span className={styles.statVal}>{stats.predictionsAboveThreshold}</span>

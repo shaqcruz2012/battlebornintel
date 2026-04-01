@@ -185,6 +185,94 @@
   margin-right: 6px;
 }
 
+/* ── Methodology collapsible ── */
+.methodBox {
+  margin: 4px 0 10px;
+  border: 1px solid rgba(38, 166, 154, 0.15);
+  border-radius: 3px;
+  background: rgba(38, 166, 154, 0.04);
+}
+
+.methodToggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 5px 10px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  user-select: none;
+}
+
+.methodToggle:hover {
+  background: rgba(38, 166, 154, 0.08);
+}
+
+.methodLabel {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 1.2px;
+  color: #26A69A;
+}
+
+.methodChevron {
+  font-size: 10px;
+  color: #26A69A;
+  transition: transform 0.2s ease;
+}
+
+.methodChevronOpen {
+  transform: rotate(0deg);
+}
+
+.methodContent {
+  padding: 4px 10px 8px;
+  border-top: 1px solid rgba(38, 166, 154, 0.12);
+}
+
+.methodList {
+  margin: 0;
+  padding: 0 0 0 14px;
+  list-style: none;
+}
+
+.methodList li {
+  position: relative;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px;
+  line-height: 1.5;
+  color: var(--text-secondary, #6B6A72);
+  margin-bottom: 4px;
+  padding-left: 8px;
+}
+
+.methodList li::before {
+  content: '\25B8';
+  position: absolute;
+  left: -8px;
+  color: #26A69A;
+  font-size: 8px;
+  top: 1px;
+}
+
+.methodList li strong {
+  color: var(--text-primary, #D4D0C8);
+  font-weight: 600;
+}
+
+.methodNote {
+  margin: 6px 0 0;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px;
+  line-height: 1.4;
+  color: var(--text-secondary, #6B6A72);
+  font-style: italic;
+  border-top: 1px solid rgba(255, 255, 255, 0.04);
+  padding-top: 5px;
+}
+
 /* Truncated community list */
 .commList {
   font-size: 10px;

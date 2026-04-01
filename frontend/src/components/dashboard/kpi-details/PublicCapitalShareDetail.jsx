@@ -16,7 +16,7 @@ export default function PublicCapitalShareDetail({ kpi }) {
   return (
     <div className={styles.detailContent}>
       <AnalystAssessment
-        text={`Public institutions contribute approximately ${shareValue.toFixed(1)}% of the ecosystem's total ${fmtDollars(totalTracked)} in tracked funding directly. However, this dramatically understates their impact: they occupy high-betweenness positions in the network graph, sitting on the shortest paths between Nevada entrepreneurs and institutional capital. Removing nodes like GOED, BBV, or accelerator programs would dramatically increase average path length between startups and funding sources.`}
+        text={`Public institutions contribute approximately ${shareValue.toFixed(1)}% of the ecosystem's total ${fmtDollars(totalTracked)} in tracked funding directly. However, this dramatically understates their impact: they occupy high-betweenness positions in the network graph (i.e., they act as critical bridges between groups), sitting on the shortest paths between Nevada entrepreneurs and institutional capital. Removing nodes like GOED, BBV, or accelerator programs would dramatically increase average path length between startups and funding sources.`}
         status={{ key: shareValue > 0 ? 'on-track' : 'caution', label: 'Critical Bridge Nodes' }}
       />
 
@@ -50,7 +50,7 @@ export default function PublicCapitalShareDetail({ kpi }) {
         />
         <ActionItem
           icon={'\u2139'}
-          text="T-GNN analysis confirms high-betweenness positions for public nodes — the structural definition of critical bridges"
+          text="Temporal graph neural network (T-GNN) analysis confirms these public entities frequently act as bridges between groups — the structural definition of critical connectors"
           priority="info"
         />
       </div>

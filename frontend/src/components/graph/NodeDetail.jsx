@@ -116,7 +116,9 @@ function ScoreBar({ label, value, max = 100, color }) {
   );
 }
 
-export function NodeDetail({ nodeId, layout, metrics, onClose }) {
+/* ── Inner panel content (only rendered when a node is selected) ── */
+
+function PanelContent({ nodeId, layout, metrics, onClose }) {
   const [showAllHistorical, setShowAllHistorical] = useState(false);
   const [showAllOpportunities, setShowAllOpportunities] = useState(false);
   const { nodes, edges } = layout;
@@ -159,18 +161,7 @@ export function NodeDetail({ nodeId, layout, metrics, onClose }) {
     return { historical, opportunities };
   }, [connections]);
 
-  if (!nodeId || !node) {
-    return (
-      <div className={styles.drawer}>
-        <div className={styles.placeholder}>
-          <div className={styles.placeholderIcon}>&#x25C9;</div>
-          <div className={styles.placeholderText}>
-            Select a node on the graph to view detailed intelligence
-          </div>
-        </div>
-      </div>
-    );
-  }
+  if (!node) return null;
 
   const pr = metrics?.pagerank?.[nodeId];
   const bc = metrics?.betweenness?.[nodeId];
@@ -178,7 +169,7 @@ export function NodeDetail({ nodeId, layout, metrics, onClose }) {
   const cfg = NODE_CFG[node.type] || {};
 
   return (
-    <div className={styles.drawer}>
+    <>
       {/* Header */}
       <div className={styles.header}>
         <div>
@@ -249,10 +240,10 @@ export function NodeDetail({ nodeId, layout, metrics, onClose }) {
           <CollapsibleSection label="Graph Centrality" defaultOpen={true}>
             <div className={styles.metricGrid}>
               {pr !== undefined && (
-                <ScoreBar label="PageRank" value={pr} max={Math.max(pr * 2, 0.01)} color="var(--accent-teal)" />
+                <ScoreBar label="PageRank (importance by connection quality)" value={pr} max={Math.max(pr * 2, 0.01)} color="var(--accent-teal)" />
               )}
               {bc !== undefined && (
-                <ScoreBar label="Betweenness" value={bc} max={Math.max(bc * 2, 0.01)} color="var(--accent-gold)" />
+                <ScoreBar label="Betweenness (how often this bridges groups)" value={bc} max={Math.max(bc * 2, 0.01)} color="var(--accent-gold)" />
               )}
             </div>
           </CollapsibleSection>
@@ -435,6 +426,21 @@ export function NodeDetail({ nodeId, layout, metrics, onClose }) {
           </div>
         )}
       </div>
-    </div>
+    </>
+  );
+}
+
+export function NodeDetail({ nodeId, layout, metrics, onClose }) {
+  return (
+    <>
+      <div className={`${styles.panel} ${nodeId ? styles.panelOpen : ''}`}>
+        {nodeId && <PanelContent nodeId={nodeId} layout={layout} metrics={metrics} onClose={onClose} />}
+      </div>
+      {!nodeId && (
+        <div className={styles.inspectorRail}>
+          <span style={{ fontSize: 11, opacity: 0.3 }}>ⓘ</span>
+        </div>
+      )}
+    </>
   );
 }

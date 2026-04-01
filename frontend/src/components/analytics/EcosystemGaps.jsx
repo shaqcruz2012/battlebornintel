@@ -36,7 +36,7 @@ function StatsStrip({ stats }) {
         <span className={styles.statValueAmber}>{stats.gapCount}</span>
       </div>
       <div className={styles.statCard}>
-        <span className={styles.statLabel}>Avg Constraint</span>
+        <span className={styles.statLabel} title="Average Burt constraint — lower means more brokerage opportunity between groups">Avg Constraint</span>
         <span className={styles.statValue}>{stats.avgConstraint}</span>
       </div>
       <div className={styles.statCard}>
@@ -65,11 +65,11 @@ function BridgeCards({ bridges, onSelect }) {
               <span className={styles.bridgeType}>{b.type}</span>
             </div>
             <div className={styles.bridgeMetrics}>
-              <span className={styles.bridgeMetric}>
+              <span className={styles.bridgeMetric} title="How effectively this entity bridges separate groups">
                 <span className={styles.bridgeMetricLabel}>score</span>
                 <span className={styles.bridgeMetricValue}>{b.bridgeScore.toFixed(2)}</span>
               </span>
-              <span className={styles.bridgeMetric}>
+              <span className={styles.bridgeMetric} title="Lower constraint = contacts don't all know each other, giving more brokerage power">
                 <span className={styles.bridgeMetricLabel}>constraint</span>
                 <span className={styles.bridgeMetricValue}>{b.constraint.toFixed(3)}</span>
               </span>
@@ -399,7 +399,7 @@ export function EcosystemGaps() {
         <div className={styles.header}>
           <h2 className={styles.title}>Ecosystem Gaps</h2>
           <p className={styles.subtitle}>
-            Structural hole analysis — bridges, isolated clusters, and missing connections
+            Structural hole analysis (gaps between groups where a bridge connection could add value) — bridges, isolated clusters, and missing connections
           </p>
           <button
             className={styles.exportBtn}
@@ -419,7 +419,7 @@ export function EcosystemGaps() {
         <section>
           <h3 className={styles.sectionHeader}>Bridge Nodes</h3>
           <p className={styles.sectionDesc}>
-            Nodes with low Burt constraint spanning 3+ communities — they broker connections across otherwise disconnected groups.
+            Entities that connect 3 or more otherwise separate communities. Low Burt constraint means they are not redundantly connected (i.e., their contacts don't all know each other), giving them unique brokerage power across groups.
           </p>
           <BridgeCards bridges={bridges} onSelect={handleSelectGap} />
         </section>
@@ -437,7 +437,7 @@ export function EcosystemGaps() {
         <section>
           <h3 className={styles.sectionHeader}>Missing Connections</h3>
           <p className={styles.sectionDesc}>
-            Community pairs with internal density but zero or minimal inter-community edges — structural holes where new connections would have outsized impact.
+            Pairs of tightly-knit groups with zero or minimal connections between them — these are structural holes (gaps between communities) where forming even one new bridge connection could have outsized impact on information and deal flow.
           </p>
           <GapsTable gaps={gaps} onSelect={handleSelectGap} />
         </section>

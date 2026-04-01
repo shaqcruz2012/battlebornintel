@@ -23,7 +23,7 @@ const BASE_VIEWS = [
   { id: 'feed', label: 'Activity Feed' },
   { id: 'economics', label: 'Economics' },
   { id: 'scenarios', label: 'Scenarios' },
-  { id: 'indicators', label: 'Indicators' },
+  // { id: 'indicators', label: 'Indicators' },  // saved for future feature
 ];
 
 const ADMIN_VIEWS = [

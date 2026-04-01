@@ -30,15 +30,16 @@
 .toggle {
   display: inline-flex;
   align-items: center;
-  padding: 2px 8px;
-  border-radius: var(--radius-xs);
+  padding: 4px 10px;
+  border-radius: 3px;
   font-family: var(--font-body);
   font-size: 10px;
   font-weight: var(--weight-medium);
-  letter-spacing: 0.02em;
-  border: 1px solid var(--border-subtle);
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
   background: transparent;
-  color: var(--text-disabled);
+  color: rgba(255, 255, 255, 0.5);
   cursor: pointer;
   transition: all 120ms ease;
   white-space: nowrap;
@@ -46,9 +47,7 @@
 }
 
 .toggle:hover {
-  border-color: var(--overlay-color, var(--border-hover));
-  color: var(--text-secondary);
-  background: rgba(255, 255, 255, 0.03);
+  border-color: rgba(255, 255, 255, 0.25);
 }
 
 .toggle:active {
@@ -56,5 +55,11 @@
 }
 
 .active {
-  /* colors set inline via style prop */
+  background: rgba(69, 215, 198, 0.10);
+  border-color: rgba(69, 215, 198, 0.3);
+  color: #fff;
+}
+
+.active:hover {
+  border-color: rgba(69, 215, 198, 0.4);
 }

@@ -7,16 +7,16 @@ export const GP = {
 };
 
 export const NODE_CFG = {
-  company:{color:GP.gold,label:"Companies",icon:"\u2B21"},
-  fund:{color:GP.purple,label:"Funds",icon:"\u25C8"},
-  sector:{color:GP.blue,label:"Sectors",icon:"\u25C9"},
-  region:{color:GP.orange,label:"Regions",icon:"\u229E"},
-  person:{color:GP.purple,label:"People",icon:"\u25CF"},
-  external:{color:GP.cyan,label:"External",icon:"\u25B3"},
-  exchange:{color:GP.pink,label:"Exchanges",icon:"\u25E7"},
-  accelerator:{color:GP.lime,label:"Accelerators",icon:"\u25B2"},
-  ecosystem:{color:"#7986CB",label:"Ecosystem Orgs",icon:"\u2295"},
-  program:{color:GP.teal,label:"Programs",icon:"\u25A1"},
+  company:{color:"#D4973A",label:"Companies",icon:"\u2B21"},
+  fund:{color:"#A77BDB",label:"Funds",icon:"\u25C8"},
+  sector:{color:"#7A8A9E",label:"Sectors",icon:"\u25C9"},
+  region:{color:"#6B7D8E",label:"Regions",icon:"\u229E"},
+  person:{color:"#D94E4E",label:"People",icon:"\u25CF"},
+  external:{color:"#3DBFB0",label:"External",icon:"\u25B3"},
+  exchange:{color:"#8E8E6B",label:"Exchanges",icon:"\u25E7"},
+  accelerator:{color:"#5AA65E",label:"Accelerators",icon:"\u25B2"},
+  ecosystem:{color:"#5160B0",label:"Ecosystem Orgs",icon:"\u2295"},
+  program:{color:"#7B9E6B",label:"Programs",icon:"\u25A1"},
 };
 
 export const REL_CFG = {
