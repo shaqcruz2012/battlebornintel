@@ -167,6 +167,10 @@ function ForecastTable({ forecasts }) {
 function ScenarioDetail({ scenarioId }) {
   const { data: scenario, isLoading, isError, error } = useScenario(scenarioId);
 
+  // useMemo must be called before any conditional returns (React hooks rule)
+  const rawResults = scenario?.results || scenario?.forecasts || scenario?.entities || [];
+  const forecasts = useMemo(() => summarizeResults(rawResults), [rawResults]);
+
   if (isLoading) {
     return (
       <div className={styles.detailPanel}>
@@ -192,9 +196,6 @@ function ScenarioDetail({ scenarioId }) {
       </div>
     );
   }
-
-  const rawResults = scenario.results || scenario.forecasts || scenario.entities || [];
-  const forecasts = useMemo(() => summarizeResults(rawResults), [rawResults]);
 
   // Parse assumptions for display
   const assumptions = scenario.assumptions || {};
