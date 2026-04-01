@@ -184,15 +184,31 @@ function generateCommunityNames(nodes, edges, communities) {
       .sort((a, b) => b[1] - a[1])[0];
     const regionConcentrated = topRegion && topRegion[1] > members.length * 0.4;
 
-    // Build name
-    const parts = [];
-    if (topSector) parts.push(topSector[0]);
-    if (regionConcentrated) parts.push(topRegion[0]);
-    if (hubNode) parts.push(`(${hubNode.label || hubNode.name || hubNode.id})`);
+    // Build name: "Region Descriptor — N" e.g. "Las Vegas AI — 45"
+    // Format: up to 2 descriptors (region, sector, or hub name) + dash + member count
+    const REGION_LABELS = {
+      las_vegas: 'Las Vegas', reno: 'Reno', henderson: 'Henderson',
+      las_vegas_metro: 'Las Vegas', northern_nevada: 'Northern NV',
+      sparks: 'Sparks', washoe: 'Washoe', carson_city: 'Carson City',
+    };
 
-    communityNames[cid] = parts.length > 0
-      ? parts.join(' \u2014 ')
+    const descriptors = [];
+    if (regionConcentrated && REGION_LABELS[topRegion[0]]) {
+      descriptors.push(REGION_LABELS[topRegion[0]]);
+    }
+    if (topSector) {
+      // Shorten sector names for display
+      const short = topSector[0].replace('/Entertainment', '').replace('Mining/', '');
+      descriptors.push(short);
+    }
+    if (descriptors.length < 2 && hubNode) {
+      descriptors.push(hubNode.label || hubNode.name || hubNode.id);
+    }
+
+    const label = descriptors.length > 0
+      ? descriptors.slice(0, 2).join(' ')
       : `Cluster ${cid}`;
+    communityNames[cid] = `${label} \u2014 ${members.length}`;
   }
 
   return communityNames;
