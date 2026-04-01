@@ -13,23 +13,45 @@ const INDICATOR_LABELS = {
   gdp_m: 'GDP',
   housing_price_index: 'HOUSING PRICE INDEX',
   labor_force_participation: 'LABOR FORCE',
-  labor_force_size: 'LABOR FORCE PARTICIPATION RATE',
+  labor_force_size: 'LABOR FORCE SIZE',
   population: 'POPULATION',
   startup_density: 'STARTUP DENSITY',
   unemployment_rate: 'UNEMPLOYMENT',
   venture_deployed_m: 'VENTURE DEPLOYED',
 };
 
+// Override formatting for metrics where the DB unit doesn't match the actual data
+const METRIC_FORMAT_OVERRIDES = {
+  // labor_force_participation: DB says "percent" but value is a raw count (~1.6M)
+  // It's actually the labor force count, not a rate — format as millions
+  labor_force_participation: (v) => {
+    const n = Number(v);
+    if (n > 10000) return `${(n / 1000000).toFixed(2)}M`; // raw count like 1657949
+    if (n > 100) return `${(n / 1000).toFixed(2)}M`; // already in thousands like 1657
+    return `${n.toFixed(1)}%`; // actually a percentage
+  },
+  // labor_force_size: DB says "thousands" but duplicates participation — hide or format properly
+  labor_force_size: (v) => {
+    const n = Number(v);
+    if (n >= 1000) return `${(n / 1000).toFixed(2)}M`;
+    return `${n.toFixed(1)}K`;
+  },
+};
+
 const INDICATOR_SUBTITLES = {
   housing_price_index: 'Jan 2000 = 100',
 };
 
-/** Ordering for display — most important first */
+/** Ordering for display — most important first.
+ * labor_force_size removed (duplicates labor_force_participation) */
 const INDICATOR_ORDER = [
   'gdp_m', 'unemployment_rate', 'avg_weekly_wage', 'population',
-  'labor_force_participation', 'labor_force_size', 'venture_deployed_m',
+  'labor_force_participation', 'venture_deployed_m',
   'startup_density', 'housing_price_index',
 ];
+
+// Hide these metrics — they duplicate other indicators
+const HIDDEN_INDICATORS = new Set(['labor_force_size']);
 
 /* ── Helpers ─────────────────────────────────────────────── */
 
@@ -48,6 +70,9 @@ function formatIndicatorValue(value, unit, metricName) {
   if (value == null) return '--';
   const n = Number(value);
   if (Number.isNaN(n)) return String(value);
+
+  // Check for metric-specific overrides (handles mismatched DB units)
+  if (METRIC_FORMAT_OVERRIDES[metricName]) return METRIC_FORMAT_OVERRIDES[metricName](n);
 
   // USD millions — show as $XM or $XB
   if (unit === 'usd_millions' || (metricName && metricName.endsWith('_m'))) {
@@ -162,12 +187,14 @@ function KpiStrip({ data, isLoading, error }) {
   // labor_force_participation, swap it to show the actual participation rate.
   // labor_force_participation actually holds labor force SIZE (count in thousands),
   // so relabel it. labor_force_size, if present, should show as participation rate.
-  const transformed = data.map((item) => {
-    const name = item.indicator_name || item.indicator;
-    const value = item.indicator_value ?? item.value;
-    const unit = item.unit || '';
-    return { ...item, _name: name, _value: value, _unit: unit };
-  });
+  const transformed = data
+    .filter((item) => !HIDDEN_INDICATORS.has(item.indicator_name || item.indicator))
+    .map((item) => {
+      const name = item.indicator_name || item.indicator;
+      const value = item.indicator_value ?? item.value;
+      const unit = item.unit || '';
+      return { ...item, _name: name, _value: value, _unit: unit };
+    });
 
   // Sort by defined order, unknowns at end
   transformed.sort((a, b) => {
