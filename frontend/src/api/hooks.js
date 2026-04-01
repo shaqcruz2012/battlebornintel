@@ -21,6 +21,16 @@ export function useCompany(id) {
   });
 }
 
+/** Enriched dimension scores for a company (lazy — only fetched when enabled) */
+export function useCompanyDimensions(id, enabled = false) {
+  return useQuery({
+    queryKey: ['companyDimensions', id],
+    queryFn: () => api.getCompanyDimensions(id),
+    enabled: !!id && enabled,
+    staleTime: 300_000,
+  });
+}
+
 /** All funds — optionally filtered by region */
 export function useFunds(filters = {}) {
   return useQuery({

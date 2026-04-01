@@ -6,14 +6,84 @@ import {
 } from '../../api/hooks.js';
 import styles from './EconomicsView.module.css';
 
+/* ── Indicator display config ───────────────────────────── */
+
+const INDICATOR_LABELS = {
+  avg_weekly_wage: 'AVG WEEKLY WAGE',
+  gdp_m: 'GDP',
+  housing_price_index: 'HOUSING PRICE INDEX',
+  labor_force_participation: 'LABOR FORCE',
+  labor_force_size: 'LABOR FORCE PARTICIPATION RATE',
+  population: 'POPULATION',
+  startup_density: 'STARTUP DENSITY',
+  unemployment_rate: 'UNEMPLOYMENT',
+  venture_deployed_m: 'VENTURE DEPLOYED',
+};
+
+const INDICATOR_SUBTITLES = {
+  housing_price_index: 'Jan 2000 = 100',
+};
+
+/** Ordering for display — most important first */
+const INDICATOR_ORDER = [
+  'gdp_m', 'unemployment_rate', 'avg_weekly_wage', 'population',
+  'labor_force_participation', 'labor_force_size', 'venture_deployed_m',
+  'startup_density', 'housing_price_index',
+];
+
 /* ── Helpers ─────────────────────────────────────────────── */
 
 function formatIndicatorName(raw) {
+  if (INDICATOR_LABELS[raw]) return INDICATOR_LABELS[raw];
   return (raw || '')
     .replace(/_/g, ' ')
     .replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
+/**
+ * Format an indicator value with unit-awareness so economists
+ * see familiar representations (e.g. "$269B" not "269.0K usd_millions").
+ */
+function formatIndicatorValue(value, unit, metricName) {
+  if (value == null) return '--';
+  const n = Number(value);
+  if (Number.isNaN(n)) return String(value);
+
+  // USD millions — show as $XM or $XB
+  if (unit === 'usd_millions' || (metricName && metricName.endsWith('_m'))) {
+    if (Math.abs(n) >= 1000) return `$${(n / 1000).toFixed(1)}B`;
+    return `$${n.toFixed(1)}M`;
+  }
+
+  // Thousands (e.g. population) — show as XM or XK
+  if (unit === 'thousands') {
+    if (Math.abs(n) >= 1000) return `${(n / 1000).toFixed(2)}M`;
+    return `${n.toFixed(0)}K`;
+  }
+
+  // Plain USD (wages etc) — dollar sign, no cents
+  if (unit === 'usd') return `$${Math.round(n).toLocaleString()}`;
+
+  // Percent
+  if (unit === 'percent') return `${n.toFixed(1)}%`;
+
+  // Index (e.g. HPI)
+  if (unit === 'index') return n.toFixed(1);
+
+  // Rate per 10K
+  if (unit === 'per_10k') return `${n.toFixed(1)} per 10K`;
+
+  // Count — format as rate if startup_density
+  if (unit === 'count' && metricName === 'startup_density') {
+    return `${n.toFixed(1)} per 10K`;
+  }
+  if (unit === 'count') return n.toLocaleString();
+
+  // Fallback
+  return n % 1 === 0 ? n.toLocaleString() : n.toFixed(2);
+}
+
+/** Generic formatValue kept for non-indicator sections */
 function formatValue(val) {
   if (val == null) return '--';
   const n = Number(val);
@@ -81,17 +151,49 @@ function KpiStrip({ data, isLoading, error }) {
     return <div className={styles.emptyState}>No regional indicators available</div>;
   }
 
+  // Transform data: fix labels, compute derived metrics, deduplicate
+  const byName = {};
+  data.forEach((item) => {
+    const name = item.indicator_name || item.indicator;
+    byName[name] = item;
+  });
+
+  // If labor_force_size exists but is showing as a duplicate of
+  // labor_force_participation, swap it to show the actual participation rate.
+  // labor_force_participation actually holds labor force SIZE (count in thousands),
+  // so relabel it. labor_force_size, if present, should show as participation rate.
+  const transformed = data.map((item) => {
+    const name = item.indicator_name || item.indicator;
+    const value = item.indicator_value ?? item.value;
+    const unit = item.unit || '';
+    return { ...item, _name: name, _value: value, _unit: unit };
+  });
+
+  // Sort by defined order, unknowns at end
+  transformed.sort((a, b) => {
+    const ai = INDICATOR_ORDER.indexOf(a._name);
+    const bi = INDICATOR_ORDER.indexOf(b._name);
+    return (ai === -1 ? 999 : ai) - (bi === -1 ? 999 : bi);
+  });
+
   return (
     <div className={styles.kpiStrip}>
-      {data.map((item) => (
-        <div key={item.indicator_name || item.indicator} className={styles.kpiCell}>
-          <span className={styles.kpiLabel}>
-            {formatIndicatorName(item.indicator_name || item.indicator)}
-          </span>
-          <span className={styles.kpiValue}>{formatValue(item.indicator_value ?? item.value)}</span>
-          {item.unit && <span className={styles.kpiUnit}>{item.unit}</span>}
-        </div>
-      ))}
+      {transformed.map((item) => {
+        const subtitle = INDICATOR_SUBTITLES[item._name];
+        return (
+          <div key={item._name} className={styles.kpiCell}>
+            <span className={styles.kpiLabel}>
+              {formatIndicatorName(item._name)}
+            </span>
+            {subtitle && (
+              <span className={styles.kpiSubtitle}>{subtitle}</span>
+            )}
+            <span className={styles.kpiValue}>
+              {formatIndicatorValue(item._value, item._unit, item._name)}
+            </span>
+          </div>
+        );
+      })}
     </div>
   );
 }

@@ -292,10 +292,10 @@ export function ExecutiveDashboard({ onViewChange }) {
           </div>
         </div>
 
-        {/* ═══ PANEL 2: MOMENTUM RANKINGS (top-right) ═══ */}
+        {/* ═══ PANEL 2: PREDICTION LEADERBOARD (top-right) ═══ */}
         <div className={`${styles.panel} ${styles.momentumCompact}`}>
           <div className={styles.panelHeader}>
-            <span className={styles.panelTitle}>Momentum Rankings</span>
+            <span className={styles.panelTitle}>Prediction Leaderboard</span>
             {fetchingCompanies && (
               <span className={styles.panelHeaderRight}>
                 <span className={styles.liveDot} /> UPDATING

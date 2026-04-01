@@ -1,8 +1,9 @@
-/* ── MomentumRow: Bloomberg-style compact data row ─────── */
+/* ── MomentumRow: Prediction Leaderboard row ───────── */
 
 .row {
   border-bottom: 1px solid rgba(28, 39, 51, 0.5);
   transition: background var(--transition-instant);
+  position: relative;
 }
 
 /* Alternating row shading */
@@ -22,20 +23,20 @@
 
 .summary {
   display: grid;
-  grid-template-columns: 2.5fr 1fr 1fr 1fr 56px 1fr 40px;
+  grid-template-columns: 2.5fr 1fr 1.2fr 0.8fr 56px 0.6fr;
   align-items: center;
   padding: 2px 10px;
   cursor: pointer;
   gap: 8px;
-  min-height: 24px;
-  height: 24px;
+  min-height: 28px;
+  height: 28px;
 }
 
 .rank {
   font-family: 'IBM Plex Mono', var(--font-mono), monospace;
   font-size: 10px;
   color: rgba(255, 255, 255, 0.3);
-  width: 20px;
+  width: 18px;
   text-align: right;
   padding-right: 4px;
   transition: color var(--transition-instant);
@@ -48,6 +49,19 @@
   align-items: center;
   gap: 4px;
   min-width: 0;
+}
+
+.stageBadge {
+  font-family: 'IBM Plex Mono', var(--font-mono), monospace;
+  font-size: 7px;
+  font-weight: 700;
+  color: var(--accent-teal);
+  background: rgba(69, 215, 198, 0.1);
+  padding: 1px 3px;
+  border-radius: 2px;
+  letter-spacing: 0.5px;
+  flex-shrink: 0;
+  line-height: 1.2;
 }
 
 .name {
@@ -85,37 +99,132 @@
 .metricLabel {
   font-size: 0;
   display: none;
-  /* Hidden in table view -- column header provides context */
 }
 
-/* ── Grade (color-coded) ───────────────────────────────── */
+/* ── Score cell with inline bar ──────────────────────────── */
 
-.grade {
+.scoreCell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-right: 4px;
+}
+
+.scoreValue {
   font-family: 'IBM Plex Mono', var(--font-mono), monospace;
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 700;
-  text-align: center;
-  letter-spacing: 0.03em;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
 }
 
-/* ── Chevron ───────────────────────────────────────────── */
-
-.chevron {
-  font-size: var(--text-micro);
-  color: var(--text-muted);
-  text-align: center;
-  transition: transform var(--transition-fast), color var(--transition-fast);
-  opacity: 0.4;
+.scoreBarTrack {
+  height: 2px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 1px;
+  overflow: hidden;
 }
 
-.row:hover .chevron {
-  opacity: 0.8;
+.scoreBarFill {
+  height: 100%;
+  border-radius: 1px;
+  transition: width 0.3s ease;
 }
 
-.chevronOpen {
-  transform: rotate(180deg);
-  opacity: 1;
+/* ── Score type badge ────────────────────────────────────── */
+
+.typeBadge {
+  font-family: 'IBM Plex Mono', var(--font-mono), monospace;
+  font-size: 7px;
+  font-weight: 600;
+  padding: 1px 4px;
+  border-radius: 2px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.typeBlended {
   color: var(--accent-teal);
+  background: rgba(69, 215, 198, 0.1);
+}
+
+.typeHeuristic {
+  color: rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+/* ── Score breakdown tooltip ─────────────────────────────── */
+
+.scoreTooltip {
+  position: absolute;
+  top: 100%;
+  right: 10px;
+  z-index: 100;
+  background: #141b24;
+  border: 1px solid #1c2733;
+  border-radius: 4px;
+  padding: 0;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  min-width: 200px;
+  animation: tooltipFadeIn 0.12s ease-out;
+}
+
+@keyframes tooltipFadeIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.tooltipContent {
+  padding: 8px 10px;
+}
+
+.tooltipTitle {
+  font-family: 'IBM Plex Mono', var(--font-mono), monospace;
+  font-size: 8px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.4);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 6px;
+}
+
+.tooltipSubtitle {
+  font-family: 'IBM Plex Mono', var(--font-mono), monospace;
+  font-size: 8px;
+  font-weight: 500;
+  color: var(--accent-teal);
+  letter-spacing: 0.5px;
+  margin-bottom: 4px;
+  margin-top: 2px;
+}
+
+.tooltipRow {
+  display: flex;
+  justify-content: space-between;
+  font-family: 'IBM Plex Mono', var(--font-mono), monospace;
+  font-size: 9px;
+  color: rgba(255, 255, 255, 0.6);
+  padding: 1px 0;
+}
+
+.tooltipRow span:last-child {
+  font-variant-numeric: tabular-nums;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.tooltipDivider {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.06);
+  margin: 4px 0;
+}
+
+.tooltipNote {
+  font-family: 'IBM Plex Mono', var(--font-mono), monospace;
+  font-size: 8px;
+  color: rgba(255, 255, 255, 0.25);
+  font-style: italic;
+  line-height: 1.3;
 }
 
 /* ── Expanded content ──────────────────────────────────── */
@@ -191,9 +300,12 @@
 
 @media (max-width: 768px) {
   .summary {
-    grid-template-columns: 2fr 1fr 48px 40px;
+    grid-template-columns: 2fr 1.2fr 0.8fr 56px;
   }
   .hideMobile {
+    display: none;
+  }
+  .scoreTooltip {
     display: none;
   }
 }
@@ -205,9 +317,12 @@
 
   .row,
   .rank,
-  .chevron,
-  .dimFill,
-  .companyItem {
+  .scoreBarFill,
+  .dimFill {
     transition: none !important;
+  }
+
+  .scoreTooltip {
+    animation: none !important;
   }
 }

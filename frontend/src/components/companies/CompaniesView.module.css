@@ -388,6 +388,27 @@
   gap: 3px;
 }
 
+.dimItemClickable {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  cursor: pointer;
+  padding: 4px 6px;
+  border-radius: var(--radius-sm);
+  transition: background var(--transition-fast);
+}
+
+.dimItemClickable:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.dimItemHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+
 .dimLabel {
   font-family: var(--font-mono);
   font-size: 8px;
@@ -528,6 +549,41 @@
   transform: rotate(180deg);
   opacity: 1;
   color: var(--accent-teal);
+}
+
+/* ── Dimension evidence cards ────────────────────────────── */
+
+.dimEvidence {
+  padding: 6px 8px;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: var(--radius-sm);
+  margin-top: 4px;
+  animation: fadeSlide 0.15s ease-out;
+}
+
+.dimContext {
+  font-family: var(--font-body);
+  font-size: 11px;
+  color: var(--text-secondary);
+  margin-bottom: 4px;
+  line-height: 1.4;
+}
+
+.dimMetrics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.dimPill {
+  font-size: 9px;
+  padding: 2px 6px;
+  background: rgba(69, 215, 198, 0.08);
+  border: 1px solid rgba(69, 215, 198, 0.15);
+  border-radius: 3px;
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  white-space: nowrap;
 }
 
 /* ── Responsive ───────────────────────────────────────────── */

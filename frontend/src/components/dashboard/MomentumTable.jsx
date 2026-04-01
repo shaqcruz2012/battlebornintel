@@ -1,29 +1,111 @@
 import { memo, useMemo, useRef, useEffect, useState } from 'react';
 import { MomentumRow } from './MomentumRow';
 import { Tooltip } from '../shared/Tooltip';
-import { IrsExplainer } from '../shared/IrsExplainer';
 import styles from './MomentumTable.module.css';
 
 const SORTS = [
+  { value: 'prediction', label: 'Predict' },
   { value: 'irs', label: 'IRS' },
   { value: 'momentum', label: 'Momentum' },
-  { value: 'funding', label: 'Funding' },
   { value: 'name', label: 'A-Z' },
 ];
 
-const IRS_TOOLTIP =
-  '8-dimension weighted composite: Momentum (20%) — raw momentum score; Funding Velocity (15%) — funding vs. stage norm, capped at 100; Team (15%) — base 30 + bonuses for headcount >10 and eligible fund access; Hiring Signal (12%) — employee count mapped to 10-80 scale; Base (12%) — floor of 50; Market Timing (10%) — peak sector heat score; Data Quality (8%) — completeness of profile data; Network (8%) — eligible fund count + headcount bonus. Range 0–100.';
+const METHODOLOGY_TEXT =
+  'Ranks companies by predicted likelihood of advancing to next funding stage within 12 months. ' +
+  'Score combines current performance (40%) with forward-looking signals: trend trajectory, ' +
+  'forecast confidence, and network position (60%).';
 
-const GRADE_TOOLTIP =
-  'Letter grade mapped from IRS score: A (≥85), A- (≥78), B+ (≥72), B (≥65), B- (≥58), C+ (≥50), C (≥42), D (<42). Grades are relative to the Nevada ecosystem — a B+ here means strong investment readiness by local standards, not a national benchmark.';
+const SCORE_TOOLTIP =
+  'Prediction Score: 40% IRS (backward-looking heuristic) + 60% Forward Score ' +
+  '(trend 40%, confidence 20%, causal 15%, network 15%, survival 10%). ' +
+  'When forward data is unavailable, IRS is stage-adjusted to produce meaningful spread.';
+
+// Stage adjustment multipliers for when forward_score is null
+const STAGE_MULTIPLIERS = {
+  pre_seed: 0.70,
+  seed: 0.85,
+  series_a: 1.0,
+  series_b: 1.0,
+  series_c_plus: 1.0,
+  growth: 1.0,
+};
+
+// Compute the display prediction score for a company
+function computePredictionScore(company) {
+  const irs = company.irs || 0;
+  const forward = company.forward_score;
+
+  if (forward != null && typeof forward === 'number') {
+    // Weighted blend: 40% IRS + 60% forward
+    return Math.round(0.4 * irs + 0.6 * forward);
+  }
+
+  // Fallback: stage-adjusted IRS for spread
+  const multiplier = STAGE_MULTIPLIERS[company.stage] || 0.85;
+  return Math.round(irs * multiplier);
+}
+
+// Compute confidence percentage
+function computeConfidence(company) {
+  // Priority 1: forward_components.confidence
+  if (company.forward_components?.confidence != null) {
+    return Math.round(company.forward_components.confidence);
+  }
+
+  // Priority 2: compute from data completeness
+  const fields = [
+    company.irs, company.momentum, company.funding,
+    company.employees, company.description, company.stage,
+    company.city, company.sector?.length > 0 ? true : null,
+    company.eligible?.length > 0 ? true : null,
+    company.dims,
+  ];
+  const filled = fields.filter(f => f != null && f !== 0 && f !== '').length;
+  return Math.round((filled / fields.length) * 100);
+}
+
+// Assign quintile color class based on rank position
+function quintileClass(rank, total) {
+  const pct = rank / total;
+  if (pct <= 0.2) return 'quintileTeal';
+  if (pct <= 0.4) return 'quintileGreen';
+  if (pct <= 0.6) return 'quintileYellow';
+  return 'quintileGray';
+}
+
+// Limit to top 10
+const MAX_DISPLAY = 10;
 
 // Virtual window configuration
-const ROW_HEIGHT = 24; // Compact Bloomberg-style row height
-const BUFFER_SIZE = 3; // Extra rows to render above/below visible window
+const ROW_HEIGHT = 28;
+const BUFFER_SIZE = 3;
 
 export const MomentumTable = memo(function MomentumTable({ companies, sortBy, onSortChange, isFetching, error }) {
   const containerRef = useRef(null);
-  const [visibleRange, setVisibleRange] = useState({ start: 0, end: 15 });
+  const [visibleRange, setVisibleRange] = useState({ start: 0, end: MAX_DISPLAY });
+
+  // Enrich and sort companies by prediction score
+  const enriched = useMemo(() => {
+    const arr = companies.map(c => ({
+      ...c,
+      predictionScore: computePredictionScore(c),
+      confidence: computeConfidence(c),
+    }));
+
+    // Sort by active criteria
+    const effectiveSort = sortBy === 'prediction' || !sortBy ? 'prediction' : sortBy;
+    if (effectiveSort === 'prediction') {
+      arr.sort((a, b) => b.predictionScore - a.predictionScore);
+    } else if (effectiveSort === 'irs') {
+      arr.sort((a, b) => (b.irs || 0) - (a.irs || 0));
+    } else if (effectiveSort === 'momentum') {
+      arr.sort((a, b) => (b.momentum || 0) - (a.momentum || 0));
+    } else if (effectiveSort === 'name') {
+      arr.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+    }
+
+    return arr.slice(0, MAX_DISPLAY);
+  }, [companies, sortBy]);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -33,10 +115,9 @@ export const MomentumTable = memo(function MomentumTable({ companies, sortBy, on
       const scrollTop = container.scrollTop;
       const viewportHeight = container.clientHeight;
 
-      // Calculate visible range with buffer
       const start = Math.max(0, Math.floor((scrollTop - ROW_HEIGHT * BUFFER_SIZE) / ROW_HEIGHT));
       const end = Math.min(
-        companies.length,
+        enriched.length,
         Math.ceil((scrollTop + viewportHeight + ROW_HEIGHT * BUFFER_SIZE) / ROW_HEIGHT)
       );
 
@@ -45,34 +126,53 @@ export const MomentumTable = memo(function MomentumTable({ companies, sortBy, on
 
     container.addEventListener('scroll', handleScroll);
     return () => container.removeEventListener('scroll', handleScroll);
-  }, [companies.length]);
+  }, [enriched.length]);
 
-  // Calculate offscreen spacer heights for efficiency
   const topSpacerHeight = visibleRange.start * ROW_HEIGHT;
-  const bottomSpacerHeight = Math.max(0, (companies.length - visibleRange.end) * ROW_HEIGHT);
-  const totalHeight = companies.length * ROW_HEIGHT;
+  const bottomSpacerHeight = Math.max(0, (enriched.length - visibleRange.end) * ROW_HEIGHT);
+  const totalHeight = enriched.length * ROW_HEIGHT;
 
-  // Memoize visible companies to prevent unnecessary renders
   const visibleCompanies = useMemo(() => {
-    return companies.slice(visibleRange.start, visibleRange.end).map((c, i) => ({
+    return enriched.slice(visibleRange.start, visibleRange.end).map((c, i) => ({
       company: c,
       rank: visibleRange.start + i + 1,
     }));
-  }, [companies, visibleRange]);
+  }, [enriched, visibleRange]);
+
+  // Map sortBy=prediction to the internal sort handler
+  const handleSortChange = (val) => {
+    // For "prediction" sort, pass it through; the API sort falls back to irs
+    onSortChange(val === 'prediction' ? 'irs' : val);
+  };
+
+  // Determine active sort display
+  const activeSortDisplay = (!sortBy || sortBy === 'irs') ? 'prediction' : sortBy;
 
   return (
-    <div className={styles.wrapper} role="table" aria-label="Momentum rankings table">
+    <div className={styles.wrapper} role="table" aria-label="Prediction leaderboard table">
+      {/* Methodology header */}
+      <div className={styles.methodologyHeader}>
+        <span className={styles.methodologyText}>{METHODOLOGY_TEXT}</span>
+      </div>
+
       <div className={styles.header}>
         <h2 className={styles.title}>
-          Momentum Rankings
-          {isFetching && <span className={styles.fetchingDot} title="Updating…" />}
+          Prediction Leaderboard
+          {isFetching && <span className={styles.fetchingDot} title="Updating..." />}
+          <span className={styles.countBadge}>Top {enriched.length}</span>
         </h2>
         <div className={styles.sortControls}>
           {SORTS.map((s) => (
             <button
               key={s.value}
-              className={`${styles.sortBtn} ${sortBy === s.value ? styles.sortActive : ''}`}
-              onClick={() => onSortChange(s.value)}
+              className={`${styles.sortBtn} ${activeSortDisplay === s.value ? styles.sortActive : ''}`}
+              onClick={() => {
+                if (s.value === 'prediction') {
+                  onSortChange('irs');
+                } else {
+                  onSortChange(s.value);
+                }
+              }}
               type="button"
             >
               {s.label}
@@ -84,24 +184,19 @@ export const MomentumTable = memo(function MomentumTable({ companies, sortBy, on
       <div className={styles.colHeaders} role="row">
         <span role="columnheader">Company</span>
         <span className={styles.hideMobile} role="columnheader">Stage</span>
-        <span className={styles.hideMobile} role="columnheader">Funding</span>
-        <Tooltip title="Investment Readiness Score" text={IRS_TOOLTIP} position="below">
-          <span className={styles.headerWithTip} role="columnheader">IRS</span>
+        <Tooltip title="Prediction Score" text={SCORE_TOOLTIP} position="below">
+          <span className={styles.headerWithTip} role="columnheader">Score</span>
         </Tooltip>
+        <span role="columnheader">Conf.</span>
         <span role="columnheader">Trend</span>
-        <IrsExplainer>
-          <span role="columnheader" style={{ display: 'inline-flex', alignItems: 'center', gap: 4, cursor: 'pointer' }}>
-            Signal
-          </span>
-        </IrsExplainer>
-        <span role="columnheader" />
+        <span role="columnheader">Type</span>
       </div>
 
       {error ? (
         <div className={styles.empty} role="alert">
-          Unable to load momentum data. Try refreshing.
+          Unable to load prediction data. Try refreshing.
         </div>
-      ) : companies.length === 0 ? (
+      ) : enriched.length === 0 ? (
         <div className={styles.empty}>No companies match current filters</div>
       ) : (
         <div
@@ -110,17 +205,20 @@ export const MomentumTable = memo(function MomentumTable({ companies, sortBy, on
           role="rowgroup"
         >
           <div style={{ height: `${totalHeight}px`, position: 'relative' }}>
-            {/* Top spacer */}
             {topSpacerHeight > 0 && (
               <div style={{ height: `${topSpacerHeight}px` }} />
             )}
 
-            {/* Visible rows */}
             {visibleCompanies.map(({ company: c, rank }) => (
-              <MomentumRow key={c.id} company={c} rank={rank} />
+              <MomentumRow
+                key={c.id}
+                company={c}
+                rank={rank}
+                quintile={quintileClass(rank, enriched.length)}
+                totalCount={enriched.length}
+              />
             ))}
 
-            {/* Bottom spacer */}
             {bottomSpacerHeight > 0 && (
               <div style={{ height: `${bottomSpacerHeight}px` }} />
             )}
