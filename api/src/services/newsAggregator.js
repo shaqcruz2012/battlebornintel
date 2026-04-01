@@ -67,9 +67,13 @@ export async function fetchHackerNewsTop(limit = 100) {
 
 // ---------- SBIR.gov Awards ----------
 export async function fetchSBIRNews() {
+  // Correct SBIR API: api.www.sbir.gov/public/api/awards (not www.sbir.gov/api/awards.json)
+  // No state filter available — query by firm names of known NV companies
   const urls = [
-    'https://www.sbir.gov/api/awards.json?state=NV&rows=50',
-    'https://www.sbir.gov/api/awards.json?keyword=Nevada&rows=50',
+    'https://api.www.sbir.gov/public/api/awards?agency=DOE&rows=100',
+    'https://api.www.sbir.gov/public/api/awards?agency=DOD&rows=100',
+    'https://api.www.sbir.gov/public/api/awards?agency=NASA&rows=100',
+    'https://api.www.sbir.gov/public/api/awards?agency=NSF&rows=100',
   ];
   const allAwards = [];
   const seenIds = new Set();
@@ -89,6 +93,9 @@ export async function fetchSBIRNews() {
       const data = await res.json();
       const awards = Array.isArray(data) ? data : (data.results || data.awards || []);
       for (const a of awards) {
+        // Filter to Nevada companies only
+        const state = (a.state || a.company_state || a.address?.state || '').toUpperCase();
+        if (state !== 'NV' && state !== 'NEVADA') continue;
         const id = a.id || a.award_id || a.awardId;
         if (!id || seenIds.has(String(id))) continue;
         seenIds.add(String(id));
