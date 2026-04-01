@@ -424,7 +424,7 @@ export function GraphCanvas({
   const edgeCanvasRef = useRef(null);
   const layoutRef = useRef(layout);
   layoutRef.current = layout;
-  const [zoom, setZoom] = useState(2);
+  const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [dragging, setDragging] = useState(false);
   const [dragStart, setDragStart] = useState(null);
@@ -466,11 +466,19 @@ export function GraphCanvas({
   // Fitting on early interim frames produces near-zero zoom because node positions
   // are still exploding outward from the force simulation's initial state.
   const hasFitRef = useRef(false);
+  const hasInitialFitRef = useRef(false);
   useEffect(() => {
     if (layout.nodes.length === 0) {
       hasFitRef.current = false;
+      hasInitialFitRef.current = false;
       return;
     }
+    // Fit immediately when nodes first appear (centers the graph early)
+    if (layout.nodes.length > 0 && !hasInitialFitRef.current) {
+      hasInitialFitRef.current = true;
+      requestAnimationFrame(fitAll);
+    }
+    // Fit again when layout settles (final positions)
     if (layout.nodes.length > 0 && !hasFitRef.current && layoutSettled) {
       hasFitRef.current = true;
       requestAnimationFrame(fitAll);
