@@ -424,7 +424,7 @@ export function GraphCanvas({
   const edgeCanvasRef = useRef(null);
   const layoutRef = useRef(layout);
   layoutRef.current = layout;
-  const [zoom, setZoom] = useState(0.85);
+  const [zoom, setZoom] = useState(2);
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [dragging, setDragging] = useState(false);
   const [dragStart, setDragStart] = useState(null);
@@ -785,11 +785,6 @@ export function GraphCanvas({
       onDoubleClick={handleDoubleClick}
       style={{ cursor: dragging ? 'grabbing' : undefined }}
     >
-      {/* Status indicator */}
-      <div className={styles.statusBar}>
-        {nodes.length.toLocaleString()} NODES &middot; {edges.length.toLocaleString()} EDGES
-      </div>
-
       {/* Canvas layer for edges — one draw call replaces 5000+ SVG elements */}
       <canvas
         ref={edgeCanvasRef}
