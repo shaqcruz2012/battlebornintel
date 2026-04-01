@@ -153,7 +153,11 @@ DELETE FROM externals WHERE id IN (SELECT dup_id FROM dup_merge);
 -- ============================================================
 -- STEP 11: Refresh materialized views
 -- ============================================================
-REFRESH MATERIALIZED VIEW IF EXISTS graph_data_snapshot;
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM pg_matviews WHERE matviewname = 'graph_data_snapshot') THEN
+    REFRESH MATERIALIZED VIEW graph_data_snapshot;
+  END IF;
+END $$;
 
 -- ============================================================
 -- VERIFICATION: Count remaining GOED and UNR node references
