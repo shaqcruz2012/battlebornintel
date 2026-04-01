@@ -418,15 +418,35 @@ export function computeGraphMetrics(nodes, edges) {
     }
   }
 
-  // Third pass: merge all small communities (< 3 members) into the largest community
-  // This handles completely disconnected nodes (no similarity edges at all)
+  // Third pass: merge small communities (< 3 members) into their nearest
+  // non-small neighbor's community — NOT the largest community, which
+  // would create a mega-cluster absorbing everything.
+  for (let i = 0; i < N; i++) {
+    if (commSizes[bestComm[i]] >= 3) continue;
+    let bestNeighborComm = bestComm[i];
+    let bestW = 0;
+    for (const jStr of Object.keys(wAdj[i])) {
+      const j = parseInt(jStr);
+      const w = wAdj[i][jStr];
+      if (w > bestW && commSizes[bestComm[j]] >= 3) {
+        bestW = w;
+        bestNeighborComm = bestComm[j];
+      }
+    }
+    if (bestNeighborComm !== bestComm[i]) {
+      commSizes[bestComm[i]]--;
+      bestComm[i] = bestNeighborComm;
+      commSizes[bestNeighborComm]++;
+    }
+  }
+  // Final fallback: any remaining tiny communities go to the largest
   let largestComm = bestComm[0];
   let largestSize = 0;
   for (const [c, size] of Object.entries(commSizes)) {
     if (size > largestSize) { largestSize = size; largestComm = parseInt(c); }
   }
   for (let i = 0; i < N; i++) {
-    if (commSizes[bestComm[i]] < 3) {
+    if (commSizes[bestComm[i]] < 2) {
       commSizes[bestComm[i]]--;
       bestComm[i] = largestComm;
       commSizes[largestComm]++;

@@ -101,7 +101,7 @@ const CommunitiesTable = memo(function CommunitiesTable({ nodes, communities, co
         CLUSTERS DETECTED: {rows.length}
       </h4>
       <p className={styles.sectionDesc}>
-        Clusters are groups of tightly-connected entities found by label propagation (an algorithm that discovers natural groupings by spreading labels through the network).
+        Clusters are groups of tightly-connected entities found by multi-signal community detection — combining co-investment, shared sectors, geographic proximity, and historical relationships to discover natural groupings.
       </p>
       <table className={styles.table}>
         <thead>
