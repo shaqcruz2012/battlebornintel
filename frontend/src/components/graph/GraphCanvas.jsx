@@ -455,7 +455,7 @@ export function GraphCanvas({
     const fitW = Math.max(maxX - minX, 1);
     const fitH = Math.max(maxY - minY, 1);
     // Clamp minimum zoom to 0.15 — prevents near-zero scale when positions are extreme
-    const s = Math.max(0.15, Math.min((w - padX * 2) / fitW, (h - padY * 2) / fitH, 0.9));
+    const s = Math.max(0.15, Math.min((w - padX * 2) / fitW, (h - padY * 2) / fitH, 1.4));
     const cx = (minX + maxX) / 2;
     const cy = (minY + maxY) / 2;
     setZoom(s);
