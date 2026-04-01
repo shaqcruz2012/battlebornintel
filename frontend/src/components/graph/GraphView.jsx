@@ -137,8 +137,8 @@ export function GraphView() {
   // When opportunities toggle is ON, include opportunity edges from the API
   const { data: lightGraphData, isLoading: loadingLightGraph, error: lightGraphError } = useGraphLight(activeNodeTypes, debouncedYearMax, filters.region, showOpportunities);
 
-  // Fetch full graph data in background for detail features ($ values, notes, node detail)
-  const { data: fullDetailData } = useGraph(activeNodeTypes, debouncedYearMax, filters.region, showOpportunities);
+  // Fetch full graph data only when a node is selected (detail sidebar needs notes, source_urls)
+  const { data: fullDetailData } = useGraph(activeNodeTypes, debouncedYearMax, filters.region, showOpportunities, !!selectedNode);
 
   // Use light data for initial render, upgrade to full data when available
   const graphData = fullDetailData || lightGraphData;
@@ -161,7 +161,7 @@ export function GraphView() {
 
   // Fetch total edge count (yearMax=2026) for the edge count indicator
   const { data: fullGraphData } = useGraphLight(activeNodeTypes, 2026, filters.region);
-  const { data: metricsData, isLoading: loadingMetrics, error: metricsError } = useGraphMetrics(activeNodeTypes);
+  const { data: metricsData, isLoading: loadingMetrics, error: metricsError } = useGraphMetrics(activeNodeTypes, loadPhase >= 2);
 
   // Fetch predicted links only when that overlay is active (lazy load)
   const { data: predictedLinksData } = usePredictedLinks(30, overlays.predictedLinks);
@@ -267,7 +267,8 @@ export function GraphView() {
   // Show graph shell immediately — controls, legend, and empty canvas render
   // while data loads. The GraphCanvas handles its own empty/loading state.
   // This eliminates the blank white screen during initial data fetch.
-  const isInitialLoading = loadingGraph || loadingMetrics;
+  // Metrics are deferred until loadPhase >= 2, so don't block initial render on them
+  const isInitialLoading = loadingGraph;
 
   // Empty state — data loaded but no visible nodes (only show if not still loading)
   if (!isInitialLoading && rawNodes.length === 0) {

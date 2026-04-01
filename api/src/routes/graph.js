@@ -15,7 +15,8 @@ router.get('/', async (req, res, next) => {
       : ['company', 'fund', 'person', 'external', 'accelerator', 'ecosystem', 'program'];
     const yearMax = parseInt(req.query.yearMax || '2026', 10);
     const region = req.query.region || 'all';
-    const data = await getGraphData({ nodeTypes, yearMax, region });
+    const light = req.query.light === 'true';
+    const data = await getGraphData({ nodeTypes, yearMax, region, light });
     res.json({ data });
   } catch (err) {
     next(err);

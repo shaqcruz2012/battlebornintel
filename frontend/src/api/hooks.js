@@ -30,13 +30,14 @@ export function useFunds(filters = {}) {
   });
 }
 
-/** Graph nodes + edges */
-export function useGraph(nodeTypes, yearMax, region, opportunities = false) {
+/** Graph nodes + edges (full detail — deferred until needed) */
+export function useGraph(nodeTypes, yearMax, region, opportunities = false, enabled = true) {
   return useQuery({
     queryKey: ['graph', nodeTypes, yearMax, region, opportunities],
     queryFn: () => api.getGraph(nodeTypes, yearMax, region, opportunities),
     staleTime: 300_000,
     placeholderData: (previousData) => previousData,
+    enabled,
   });
 }
 
@@ -51,11 +52,12 @@ export function useGraphLight(nodeTypes, yearMax, region, opportunities = false)
 }
 
 /** Graph metrics (PageRank, Betweenness, Communities, Watchlist) */
-export function useGraphMetrics(nodeTypes) {
+export function useGraphMetrics(nodeTypes, enabled = true) {
   return useQuery({
     queryKey: ['graphMetrics', nodeTypes],
     queryFn: () => api.getGraphMetrics(nodeTypes),
     staleTime: 300_000,
+    enabled,
   });
 }
 

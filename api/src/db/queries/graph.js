@@ -2,7 +2,7 @@ import pool from '../pool.js';
 import { logger } from '../../logger.js';
 import { expandRegion } from '../../utils/regionMapping.js';
 
-export async function getGraphData({ nodeTypes = [], yearMax = 2026, region } = {}) {
+export async function getGraphData({ nodeTypes = [], yearMax = 2026, region, light = false } = {}) {
   const nodes = [];
   const nodeSet = new Set();
 
@@ -102,7 +102,7 @@ export async function getGraphData({ nodeTypes = [], yearMax = 2026, region } = 
   // Build nodes from loaded data
   if (nodeTypes.includes('company')) {
     for (const c of companyRows) {
-      add(`c_${c.id}`, c.name, 'company', {
+      const extra = {
         stage: c.stage,
         funding: parseFloat(c.funding_m),
         momentum: c.momentum,
@@ -110,9 +110,13 @@ export async function getGraphData({ nodeTypes = [], yearMax = 2026, region } = 
         city: c.city,
         region: c.region,
         sector: c.sectors,
-        eligible: c.eligible,
-        founded: c.founded,
-      });
+      };
+      // eligible[] and founded are only needed for full detail, not graph rendering
+      if (!light) {
+        extra.eligible = c.eligible;
+        extra.founded = c.founded;
+      }
+      add(`c_${c.id}`, c.name, 'company', extra);
     }
   }
 
@@ -271,10 +275,10 @@ export async function getGraphData({ nodeTypes = [], yearMax = 2026, region } = 
       rel: e.rel,
       y: e.event_year,
     };
-    // Include note when present (contains dollar amounts and context for edge labels)
-    if (e.note) edge.note = e.note;
-    // Include source_url for evidence/source links in sidebar
-    if (e.source_url) edge.source_url = e.source_url;
+    // Include note and source_url only for full (non-light) payloads — they are
+    // free-text strings used by the NodeDetail sidebar, not needed for rendering.
+    if (!light && e.note) edge.note = e.note;
+    if (!light && e.source_url) edge.source_url = e.source_url;
     // Include matching score for opportunity edges
     if (e.matching_score != null) edge.matching_score = parseFloat(e.matching_score);
     // Include visual metadata only when present to keep payload lean
