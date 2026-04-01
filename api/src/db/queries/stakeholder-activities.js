@@ -73,9 +73,9 @@ export async function getStakeholderActivities(filters = {}) {
         c.name as company_name,
         g.note as description,
         c.city || ', ' || c.region as location,
-        'graph_edge' as source,
-        NULL::text as source_url,
-        false as verified,
+        COALESCE(g.source_url, 'graph_edge') as source,
+        CASE WHEN g.source_url LIKE 'http%' THEN g.source_url ELSE NULL END as source_url,
+        (g.source_url LIKE 'http%') as verified,
         c.city,
         c.region,
         CASE
