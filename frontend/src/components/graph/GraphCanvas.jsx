@@ -163,11 +163,8 @@ const NodeCircle = memo(function NodeCircle({
 }) {
   const showLabel = r >= labelMinR || isSelected || (isConnected && hasSelection);
 
-  // Hub nodes are always fully visible; selection states take precedence over radial fade
-  const groupOpacity = dim ? 0.1
-    : isHub ? 1
-    : isSelected || isConnected ? 1
-    : (baseOpacity ?? 1);
+  // Layer opacity is now pre-computed by the parent (includes 3-layer hierarchy + radial falloff)
+  const groupOpacity = baseOpacity ?? 1;
 
   return (
     <g opacity={groupOpacity} style={{ transition: 'opacity 300ms ease' }}>
@@ -331,11 +328,11 @@ function useEdgeCanvas(canvasRef, edges, zoom, pan, w, h, {
       const category = e.category || 'operational';
       let categoryOpacity;
       if (category === 'historical') {
-        categoryOpacity = tooManyForFullOpacity ? 0.18 : 0.25;
+        categoryOpacity = tooManyForFullOpacity ? 0.10 : 0.12;
       } else if (category === 'opportunity') {
-        categoryOpacity = 0.15;
+        categoryOpacity = 0.08;
       } else {
-        categoryOpacity = tooManyForFullOpacity ? 0.22 : 0.35;
+        categoryOpacity = tooManyForFullOpacity ? 0.10 : 0.15;
       }
 
       const edgeOpacity = isOpportunity
@@ -705,6 +702,47 @@ export function GraphCanvas({
   const minDegreeForRender = zoom < 0.4 ? 8 : zoom < 0.5 ? 5 : zoom < 0.6 ? 3 : zoom < 0.8 ? 1 : 0;
   const labelMinR = zoom < 0.5 ? 13 : zoom < 0.7 ? 10 : zoom < 1.0 ? 8 : 5;
 
+  // Label collision suppression — only show labels for top nodes, suppress overlaps
+  const labelsToShow = useMemo(() => {
+    if (!nodes.length) return new Set();
+
+    const maxLabels = zoom < 0.6 ? 12 : 20; // Hard cap: 12 at cluster zoom, 20 at default
+
+    // Candidates: nodes that pass the LOD threshold
+    const candidates = nodes
+      .filter(n => {
+        const r = nodeRadius(n, metrics?.pagerank);
+        const degree = nodeDegreeMap[n.id] || 0;
+        // Only consider foreground + midground nodes with sufficient radius
+        return (r >= labelMinR || HUB_NODE_IDS.has(n.id)) && degree >= 2;
+      })
+      .sort((a, b) => (nodeDegreeMap[b.id] || 0) - (nodeDegreeMap[a.id] || 0))
+      .slice(0, maxLabels);
+
+    // Collision detection: suppress labels that would overlap
+    const shown = new Set();
+    const occupied = []; // array of {x, y, w, h} rects
+
+    for (const n of candidates) {
+      const labelW = (n.label?.length || 5) * 5.5; // approximate width
+      const labelH = 12;
+      const lx = (n.x || 0) - labelW / 2;
+      const ly = (n.y || 0) + 14; // label sits below node
+
+      // Check collision with already-placed labels
+      const collides = occupied.some(r =>
+        lx < r.x + r.w && lx + labelW > r.x && ly < r.y + r.h && ly + labelH > r.y
+      );
+
+      if (!collides) {
+        shown.add(n.id);
+        occupied.push({ x: lx, y: ly, w: labelW, h: labelH });
+      }
+    }
+
+    return shown;
+  }, [nodes, metrics?.pagerank, nodeDegreeMap, labelMinR, zoom]);
+
   // Canvas edge renderer — replaces 5000+ SVG <line> elements with one draw call
   useEdgeCanvas(edgeCanvasRef, edges, zoom, pan, w, h, {
     selectedNode,
@@ -844,18 +882,40 @@ export function GraphCanvas({
               && !isSelected && !isConnected;
             const dim = dimBySearch || dimBySelection || dimByCluster;
 
-            // Galactic core radial opacity — only computed when graph is large enough
-            // and the node is not already highlighted/dimmed by selection/search.
-            const baseOpacity = (!dim && !isSelected && !isConnected && maxDist > 0)
-              ? radialOpacity(n, centroidX, centroidY, maxDist)
-              : 1;
+            // Three-layer visual hierarchy: foreground / midground / background
+            // Foreground: hubs, selected, connected, high-degree (degree >= 6) — full opacity
+            // Midground: medium-degree nodes (degree 2-5) — 70% opacity, normal size
+            // Background: low-degree leaf nodes (degree 0-1) — 35% opacity, smaller radius
+            const isForeground = isHub || isSelected || isConnected || degree >= 6;
+            const isMidground = !isForeground && degree >= 2;
+            // Everything else is background
+
+            const layerOpacity = dim ? 0.08
+              : isForeground ? 1.0
+              : isMidground ? 0.7
+              : 0.35; // background nodes at 35%
+
+            // Background nodes rendered 1px smaller
+            const adjustedR = (!isForeground && !isMidground) ? Math.max(2, r - 1) : r;
+
+            // Galactic core radial falloff multiplied with layer opacity
+            const radial = (!dim && maxDist > 0) ? radialOpacity(n, centroidX, centroidY, maxDist) : 1;
+            const finalOpacity = layerOpacity * radial;
+
+            // Desaturated gray-blue for peripheral external nodes
+            const displayFill = (!isForeground && !isMidground && n.type === 'external')
+              ? '#4A6070'
+              : fill;
+
+            // Label collision: only show if in labelsToShow set, or selected/connected
+            const forceShowLabel = labelsToShow.has(n.id) || isSelected || (isConnected && !!selectedNode);
 
             const inner = (
               <NodeCircle
                 key={n.id}
                 node={n}
-                r={r}
-                fill={fill}
+                r={adjustedR}
+                fill={displayFill}
                 isSelected={isSelected}
                 isConnected={isConnected}
                 hasSelection={!!selectedNode}
@@ -863,9 +923,9 @@ export function GraphCanvas({
                 onSelect={handleNodeSelect}
                 onHover={handleNodeHover}
                 onLeave={hideTooltip}
-                baseOpacity={baseOpacity}
+                baseOpacity={finalOpacity}
                 isHub={isHub}
-                labelMinR={labelMinR}
+                labelMinR={forceShowLabel ? 0 : 9999}
               />
             );
 

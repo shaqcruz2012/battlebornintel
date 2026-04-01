@@ -290,27 +290,32 @@ export function GraphView() {
       <div className={styles.body}>
         {/* Main column: canvas + overlay detail panel stacked vertically */}
         <div className={styles.mainColumn}>
+          {/* KPI header band — solid backdrop, above canvas */}
+          <div style={{
+            display: 'flex',
+            justifyContent: 'center',
+            gap: 32,
+            padding: '6px 16px',
+            background: '#0D1117',
+            borderBottom: '1px solid rgba(255,255,255,0.06)',
+            fontFamily: "'SF Mono', 'Cascadia Code', Consolas, monospace",
+            fontSize: 11,
+            letterSpacing: '0.5px',
+            color: 'rgba(255,255,255,0.5)',
+            flexShrink: 0,
+            opacity: loadPhase >= 1 ? 1 : 0,
+            transition: 'opacity 300ms ease-out',
+          }}>
+            <span><span style={{ color: 'rgba(255,255,255,0.9)' }}>{layout.nodes.length.toLocaleString()}</span> ENTITIES</span>
+            <span><span style={{ color: 'rgba(255,255,255,0.9)' }}>{layout.edges.length.toLocaleString()}</span> EDGES</span>
+            <span><span style={{ color: 'rgba(255,255,255,0.9)' }}>{Object.keys(
+              Object.entries(metrics.communities || {}).reduce((acc, [, cid]) => { acc[cid] = true; return acc; }, {})
+            ).length}</span> COMMUNITIES</span>
+            <span><span style={{ color: 'rgba(255,255,255,0.9)' }}>$186M</span> DEPLOYED</span>
+          </div>
+
           {/* Canvas area — fills all available space */}
           <div className={styles.canvasOuter} ref={canvasRef}>
-            {/* KPI strip — visible from phase 1 onward */}
-            <div style={{
-              position: 'absolute', top: 8, left: '50%', transform: 'translateX(-50%)',
-              display: 'flex', gap: 24, padding: '6px 16px',
-              background: 'rgba(10,13,18,0.7)', backdropFilter: 'blur(8px)',
-              borderRadius: 6, border: '1px solid rgba(255,255,255,0.06)',
-              fontFamily: "'SF Mono', 'Cascadia Code', Consolas, monospace",
-              fontSize: 11, letterSpacing: '0.5px', color: 'rgba(255,255,255,0.6)',
-              zIndex: 20, pointerEvents: 'none',
-              opacity: loadPhase >= 1 ? 1 : 0,
-              transition: 'opacity 300ms ease-out',
-            }}>
-              <span><span style={{ color: 'rgba(255,255,255,0.9)' }}>{layout.nodes.length.toLocaleString()}</span> ENTITIES</span>
-              <span><span style={{ color: 'rgba(255,255,255,0.9)' }}>{layout.edges.length.toLocaleString()}</span> EDGES</span>
-              <span><span style={{ color: 'rgba(255,255,255,0.9)' }}>{Object.keys(
-                Object.entries(metrics.communities || {}).reduce((acc, [, cid]) => { acc[cid] = true; return acc; }, {})
-              ).length}</span> COMMUNITIES</span>
-              <span><span style={{ color: 'rgba(255,255,255,0.9)' }}>$186M</span> DEPLOYED</span>
-            </div>
             <GraphCanvas
               layout={layout}
               metrics={metrics}

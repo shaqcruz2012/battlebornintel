@@ -35,13 +35,14 @@
   overflow: hidden;
 }
 
-/* Canvas area fills all horizontal space left after NodeDetail */
+/* Canvas area fills all available space between KPI band and timeline dock */
 .canvasOuter {
   flex: 1;
   min-height: 0;           /* allow flex shrink — prevents overflow */
   min-width: 0;
   position: relative;
   overflow: hidden;
+  /* No extra margin/padding — graph uses every pixel */
 }
 
 /* Centered loading indicator */
