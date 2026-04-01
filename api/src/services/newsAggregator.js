@@ -7,6 +7,16 @@ const NEVADA_KEYWORDS = [
   'gigafactory', 'tahoe', 'ssbci', 'goed',
 ];
 
+// SBIR agency-to-sector mapping
+const SBIR_AGENCY_SECTOR = {
+  DOD: 'Defense',
+  DOE: 'CleanTech',
+  NIH: 'Biotech',
+  NSF: 'AI/ML',
+  NASA: 'Space',
+  DHS: 'Cybersecurity',
+};
+
 // Sector/vertical keywords matching our ecosystem clusters
 const SECTOR_KEYWORDS = {
   'AI/ML': ['artificial intelligence', 'machine learning', 'llm', 'gpu', 'tensor', 'neural', 'deep learning', 'transformer', 'inference'],
@@ -55,6 +65,272 @@ export async function fetchHackerNewsTop(limit = 100) {
   }));
 }
 
+// ---------- SBIR.gov Awards ----------
+export async function fetchSBIRNews() {
+  const urls = [
+    'https://www.sbir.gov/api/awards.json?state=NV&rows=50',
+    'https://www.sbir.gov/api/awards.json?keyword=Nevada&rows=50',
+  ];
+  const allAwards = [];
+  const seenIds = new Set();
+
+  for (const url of urls) {
+    try {
+      const res = await fetch(url, { signal: AbortSignal.timeout(15000) });
+      if (!res.ok) {
+        logger.warn(`[news:sbir] HTTP ${res.status} from ${url}`);
+        continue;
+      }
+      const contentType = res.headers.get('content-type') || '';
+      if (!contentType.includes('json')) {
+        logger.warn('[news:sbir] Non-JSON response, skipping');
+        continue;
+      }
+      const data = await res.json();
+      const awards = Array.isArray(data) ? data : (data.results || data.awards || []);
+      for (const a of awards) {
+        const id = a.id || a.award_id || a.awardId;
+        if (!id || seenIds.has(String(id))) continue;
+        seenIds.add(String(id));
+        const agency = (a.agency || a.department || '').toUpperCase();
+        const sector = SBIR_AGENCY_SECTOR[agency] || null;
+        allAwards.push({
+          id: `sbir_${id}`,
+          source: 'SBIR.gov',
+          title: a.title || a.abstract || `SBIR Award ${id}`,
+          url: `https://www.sbir.gov/node/${id}`,
+          score: 0,
+          comments: 0,
+          author: a.firm || a.company || null,
+          timestamp: a.award_date ? new Date(a.award_date).toISOString() : new Date().toISOString(),
+          relevance: 80,
+          nevadaMatch: true,
+          matchedSectors: sector ? [sector] : [],
+          companyMatches: a.firm ? [a.firm] : [],
+          tag: 'NEVADA DIRECT',
+        });
+      }
+    } catch (err) {
+      logger.warn('[news:sbir] Fetch failed', { error: err.message });
+    }
+  }
+
+  logger.info(`[news:sbir] Fetched ${allAwards.length} NV SBIR awards`);
+  return allAwards;
+}
+
+// ---------- Sam.gov Contract Awards ----------
+export async function fetchSamGovNews() {
+  const stories = [];
+  const apiKey = cfg.SAM_GOV_API_KEY || 'DEMO_KEY';
+
+  try {
+    const url = `https://api.sam.gov/opportunities/v2/search?keywords=Nevada&limit=20&api_key=${apiKey}`;
+    const res = await fetch(url, { signal: AbortSignal.timeout(15000) });
+
+    if (!res.ok) {
+      logger.warn(`[news:sam] HTTP ${res.status} — API may be restricted`);
+      return stories;
+    }
+    const contentType = res.headers.get('content-type') || '';
+    if (!contentType.includes('json')) {
+      logger.warn('[news:sam] Non-JSON response (possible HTML error page), skipping');
+      return stories;
+    }
+
+    const data = await res.json();
+    const opps = data.opportunitiesData || data.opportunities || data.results || [];
+
+    for (const opp of opps) {
+      const id = opp.noticeId || opp.id || opp.solicitationNumber;
+      if (!id) continue;
+
+      // Filter for NV relevance
+      const perfState = opp.placeOfPerformance?.state?.code || opp.placeOfPerformance?.state || '';
+      const desc = (opp.description || opp.title || '').toLowerCase();
+      const isNV = perfState === 'NV' || perfState === 'Nevada' ||
+        desc.includes('nevada') || desc.includes('las vegas') || desc.includes('reno');
+
+      if (!isNV) continue;
+
+      stories.push({
+        id: `sam_${id}`,
+        source: 'Sam.gov',
+        title: opp.title || `Contract Opportunity ${id}`,
+        url: `https://sam.gov/opp/${id}/view`,
+        score: 0,
+        comments: 0,
+        author: opp.department || opp.agency || null,
+        timestamp: opp.postedDate ? new Date(opp.postedDate).toISOString() : new Date().toISOString(),
+        relevance: 70,
+        nevadaMatch: true,
+        matchedSectors: opp.department?.toLowerCase().includes('defense') ? ['Defense'] : [],
+        companyMatches: [],
+        tag: 'NEVADA DIRECT',
+      });
+    }
+  } catch (err) {
+    logger.warn('[news:sam] Fetch failed', { error: err.message });
+  }
+
+  logger.info(`[news:sam] Fetched ${stories.length} NV Sam.gov opportunities`);
+  return stories;
+}
+
+// ---------- SEC EDGAR Full-Text Search ----------
+export async function fetchSECEdgarNews() {
+  const stories = [];
+
+  try {
+    const startYear = new Date().getFullYear();
+    const url = `https://efts.sec.gov/LATEST/search-index?q=%22Las+Vegas%22+OR+%22Reno%22+OR+%22Nevada%22&forms=8-K&dateRange=custom&startdt=${startYear}-01-01`;
+    const res = await fetch(url, {
+      signal: AbortSignal.timeout(15000),
+      headers: { 'User-Agent': 'BattleBornIntel/1.0 support@battlebornintel.com' },
+    });
+
+    if (!res.ok) {
+      logger.warn(`[news:sec] HTTP ${res.status}`);
+      return stories;
+    }
+    const contentType = res.headers.get('content-type') || '';
+    if (!contentType.includes('json')) {
+      logger.warn('[news:sec] Non-JSON response, skipping');
+      return stories;
+    }
+
+    const data = await res.json();
+    const filings = data.hits?.hits || data.filings || data.results || [];
+
+    for (const entry of filings) {
+      const filing = entry._source || entry;
+      const id = filing.file_num || filing.id || filing.accession_no;
+      if (!id) continue;
+
+      const entityName = filing.entity_name || filing.display_names?.[0] || 'Unknown Entity';
+      const formType = filing.form_type || filing.file_type || '8-K';
+      const fileUrl = filing.file_url || (filing.accession_no
+        ? `https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&accession=${filing.accession_no}`
+        : `https://www.sec.gov/cgi-bin/browse-edgar?company=${encodeURIComponent(entityName)}&CIK=&type=${formType}&owner=include&count=10&action=getcompany`);
+
+      stories.push({
+        id: `sec_${String(id).replace(/[^a-zA-Z0-9_-]/g, '_')}`,
+        source: 'SEC EDGAR',
+        title: `${entityName} — ${formType}`,
+        url: fileUrl,
+        score: 0,
+        comments: 0,
+        author: entityName,
+        timestamp: filing.file_date ? new Date(filing.file_date).toISOString() : new Date().toISOString(),
+        relevance: 75,
+        nevadaMatch: true,
+        matchedSectors: [],
+        companyMatches: [entityName],
+        tag: 'NEVADA DIRECT',
+      });
+    }
+  } catch (err) {
+    logger.warn('[news:sec] Fetch failed', { error: err.message });
+  }
+
+  logger.info(`[news:sec] Fetched ${stories.length} NV SEC filings`);
+  return stories;
+}
+
+// ---------- GOED Newsroom (RSS / page scrape) ----------
+export async function fetchGOEDNews() {
+  const stories = [];
+  const rssUrls = ['https://goed.nv.gov/feed/', 'https://goed.nv.gov/feed/rss/'];
+
+  for (const rssUrl of rssUrls) {
+    try {
+      const res = await fetch(rssUrl, { signal: AbortSignal.timeout(15000) });
+      if (!res.ok) continue;
+
+      const text = await res.text();
+      // Simple XML parsing for RSS <item> elements
+      const itemRegex = /<item>([\s\S]*?)<\/item>/gi;
+      let match;
+      let idx = 0;
+      while ((match = itemRegex.exec(text)) !== null && idx < 30) {
+        const itemXml = match[1];
+        const getTag = (tag) => {
+          const m = itemXml.match(new RegExp(`<${tag}[^>]*>(?:<!\\[CDATA\\[)?(.*?)(?:\\]\\]>)?</${tag}>`, 'is'));
+          return m ? m[1].trim() : null;
+        };
+
+        const title = getTag('title');
+        const link = getTag('link');
+        const pubDate = getTag('pubDate');
+        if (!title) continue;
+
+        stories.push({
+          id: `goed_${idx++}`,
+          source: 'GOED',
+          title,
+          url: link || 'https://goed.nv.gov/newsroom/',
+          score: 0,
+          comments: 0,
+          author: 'Governor\'s Office of Economic Development',
+          timestamp: pubDate ? new Date(pubDate).toISOString() : new Date().toISOString(),
+          relevance: 90,
+          nevadaMatch: true,
+          matchedSectors: [],
+          companyMatches: [],
+          tag: 'NEVADA DIRECT',
+        });
+      }
+
+      if (stories.length > 0) {
+        logger.info(`[news:goed] Fetched ${stories.length} GOED stories from RSS`);
+        return stories;
+      }
+    } catch (err) {
+      logger.warn(`[news:goed] RSS fetch failed (${rssUrl})`, { error: err.message });
+    }
+  }
+
+  // Fallback: try scraping the newsroom page for article links
+  try {
+    const res = await fetch('https://goed.nv.gov/newsroom/', { signal: AbortSignal.timeout(15000) });
+    if (res.ok) {
+      const html = await res.text();
+      // Extract article links: <a href="...">title</a> patterns within article/post elements
+      const linkRegex = /<a[^>]+href="(https:\/\/goed\.nv\.gov\/[^"]*)"[^>]*>([^<]+)<\/a>/gi;
+      let linkMatch;
+      let idx = 0;
+      const seenUrls = new Set();
+      while ((linkMatch = linkRegex.exec(html)) !== null && idx < 20) {
+        const [, href, text] = linkMatch;
+        // Skip nav/footer links, only keep newsroom-style paths
+        if (seenUrls.has(href) || href.includes('/wp-') || text.length < 10) continue;
+        seenUrls.add(href);
+        stories.push({
+          id: `goed_${idx++}`,
+          source: 'GOED',
+          title: text.trim(),
+          url: href,
+          score: 0,
+          comments: 0,
+          author: 'Governor\'s Office of Economic Development',
+          timestamp: new Date().toISOString(),
+          relevance: 90,
+          nevadaMatch: true,
+          matchedSectors: [],
+          companyMatches: [],
+          tag: 'NEVADA DIRECT',
+        });
+      }
+    }
+  } catch (err) {
+    logger.warn('[news:goed] Page scrape failed', { error: err.message });
+  }
+
+  // TODO: If both RSS and scrape fail, consider adding a static fallback or monitoring alert
+  logger.info(`[news:goed] Fetched ${stories.length} GOED stories`);
+  return stories;
+}
+
 export function classifyStory(story) {
   const text = `${story.title} ${story.url || ''}`.toLowerCase();
 
@@ -93,9 +369,50 @@ export function classifyStory(story) {
 }
 
 export async function getRelevantNews({ minRelevance = 5, limit = 50 } = {}) {
-  const stories = await fetchHackerNewsTop(200);
-  const classified = stories.map(classifyStory);
-  return classified
+  // Fetch from all sources in parallel — one failure won't break others
+  const results = await Promise.allSettled([
+    fetchHackerNewsTop(200),
+    fetchSBIRNews(),
+    fetchSamGovNews(),
+    fetchSECEdgarNews(),
+    fetchGOEDNews(),
+  ]);
+
+  const allStories = [];
+  const sourceNames = ['Hacker News', 'SBIR.gov', 'Sam.gov', 'SEC EDGAR', 'GOED'];
+  for (let i = 0; i < results.length; i++) {
+    if (results[i].status === 'fulfilled') {
+      allStories.push(...results[i].value);
+    } else {
+      logger.warn(`[news] ${sourceNames[i]} fetcher failed`, { error: results[i].reason?.message });
+    }
+  }
+
+  // Classify HN stories (others come pre-classified)
+  const classified = allStories.map(s =>
+    s.source === 'Hacker News' ? classifyStory(s) : s
+  );
+
+  // Deduplicate by title similarity (simple lowercase exact-match + prefix check)
+  const seen = new Map();
+  const deduped = [];
+  for (const s of classified) {
+    const normTitle = s.title?.toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 60);
+    if (!normTitle) continue;
+    if (seen.has(normTitle)) {
+      // Keep the one with higher relevance
+      const existing = seen.get(normTitle);
+      if (s.relevance > existing.relevance) {
+        deduped[deduped.indexOf(existing)] = s;
+        seen.set(normTitle, s);
+      }
+      continue;
+    }
+    seen.set(normTitle, s);
+    deduped.push(s);
+  }
+
+  return deduped
     .filter(s => s.relevance >= minRelevance)
     .sort((a, b) => b.relevance - a.relevance)
     .slice(0, limit);
