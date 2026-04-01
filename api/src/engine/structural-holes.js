@@ -131,10 +131,11 @@ export function findBridges(edges, communities, constraints, nodeMap) {
     }
   }
 
-  // Bridge nodes: connected to 3+ distinct communities
+  // Bridge nodes: connected to 2+ distinct communities
+  // (lowered from 3 since hybrid clustering produces fewer, larger communities)
   const bridgeNodes = [];
   for (const [nodeId, comms] of Object.entries(nodeCommunities)) {
-    if (comms.size >= 3) {
+    if (comms.size >= 2) {
       const node = nodeMap[nodeId] || {};
       bridgeNodes.push({
         nodeId,
@@ -380,19 +381,20 @@ export async function analyzeStructuralHoles() {
     communities = metrics.communities;
   }
 
-  // Step 2: Compute Burt's Constraint
+  // Step 2: Compute Burt's Constraint (historical edges only)
   const constraints = computeConstraints(nodes, historicalEdges);
 
-  // Step 3: Find bridges
+  // Step 3: Find bridges — use historicalEdges so bridge detection
+  // reflects real relationships, not inflated opportunity edges
   const { bridgeNodes, pairCount, nodeCommunities } = findBridges(
-    edges, communities, constraints, nodeMap
+    historicalEdges, communities, constraints, nodeMap
   );
 
   // Step 3b: Find isolated islands
   const islands = findIslands(communities, pairCount, nodeMap, constraints);
 
-  // Step 4: Find ecosystem gaps
-  const gaps = findGaps(communities, pairCount, edges, nodeMap, constraints);
+  // Step 4: Find ecosystem gaps (historical edges only)
+  const gaps = findGaps(communities, pairCount, historicalEdges, nodeMap, constraints);
 
   // Build community names from node attributes
   const communityMemberMap = {};
