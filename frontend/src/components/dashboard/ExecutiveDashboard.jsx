@@ -312,16 +312,16 @@ export function ExecutiveDashboard({ onViewChange }) {
           </div>
         </div>
 
-        {/* ═══ PANEL 3: LIVE ACTIVITY FEED (bottom-left) ═══ */}
+        {/* ═══ PANEL 3: FRONTIER INTEL FEED (bottom-left) ═══ */}
         <div className={styles.panel}>
           <div className={styles.panelHeader}>
-            <span className={styles.panelTitle}>Live Activity Feed</span>
+            <span className={styles.panelTitle}>Frontier Intel</span>
             <span className={styles.panelHeaderRight}>
-              <span className={styles.liveDot} /> AUTO 60s
+              <span className={styles.liveDot} /> AUTO 30m
             </span>
           </div>
           <div className={styles.panelBody}>
-            <LiveActivityFeed />
+            <LiveActivityFeed onViewChange={onViewChange} />
           </div>
         </div>
 

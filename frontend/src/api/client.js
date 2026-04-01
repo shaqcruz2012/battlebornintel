@@ -177,11 +177,12 @@ export const api = {
     fetchJSON(`${BASE}/investors/stats`, params).then((r) => r.data),
 
   // News
+  // Return full response { data: [...], meta: {...} } so components can access both
   getNews: (params = {}) =>
-    fetchJSON(`${BASE}/news/frontier`, params).then((r) => r.data),
+    fetchJSON(`${BASE}/news/frontier`, params),
 
   getNewsNevada: (params = {}) =>
-    fetchJSON(`${BASE}/news/nevada`, params).then((r) => r.data),
+    fetchJSON(`${BASE}/news/nevada`, params),
 
   getNewsSectors: () =>
     fetchJSON(`${BASE}/news/sectors`).then((r) => r.data),

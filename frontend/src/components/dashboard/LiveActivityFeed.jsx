@@ -1,24 +1,122 @@
-import { memo, useEffect, useState, useCallback } from 'react';
-import { useStakeholderActivities } from '../../api/hooks';
-import { useFilters } from '../../hooks/useFilters';
-import { useQueryClient } from '@tanstack/react-query';
-import { EventCard } from '../shared/EventCard';
+import { memo, useState, useCallback } from 'react';
+import { useNews } from '../../api/hooks';
 import styles from './TerminalGrid.module.css';
 
-export const LiveActivityFeed = memo(function LiveActivityFeed() {
-  const queryClient = useQueryClient();
-  const { filters } = useFilters();
-  const { data: activities = [], isLoading, isError } = useStakeholderActivities({ limit: 20, location: filters.region });
+function timeAgo(dateStr) {
+  if (!dateStr) return '';
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  return `${Math.floor(hrs / 24)}d ago`;
+}
+
+function NewsItem({ story, isExpanded, onToggle }) {
+  const sectorColor = story.nevada_match ? '#45D7C6' : 'rgba(255,255,255,0.4)';
+
+  return (
+    <div
+      style={{
+        padding: '8px 0',
+        borderBottom: '1px solid rgba(255,255,255,0.04)',
+        cursor: 'pointer',
+      }}
+      onClick={() => onToggle(story.id)}
+      role="button"
+      tabIndex={0}
+    >
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <a
+            href={story.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+              color: 'rgba(255,255,255,0.85)',
+              textDecoration: 'none',
+              fontSize: 12,
+              fontWeight: 500,
+              lineHeight: '1.3',
+              display: '-webkit-box',
+              WebkitLineClamp: isExpanded ? 'none' : 2,
+              WebkitBoxOrient: 'vertical',
+              overflow: 'hidden',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {story.title}
+          </a>
+          <div style={{
+            display: 'flex',
+            gap: 8,
+            marginTop: 3,
+            fontSize: 9,
+            color: 'rgba(255,255,255,0.35)',
+            fontFamily: "'SF Mono', 'Cascadia Code', monospace",
+          }}>
+            <span>{story.source}</span>
+            <span>{timeAgo(story.published_at)}</span>
+            {story.score > 0 && <span>{story.score} pts</span>}
+          </div>
+        </div>
+        <div style={{ display: 'flex', gap: 4, flexShrink: 0, alignItems: 'center' }}>
+          {story.nevada_match && (
+            <span style={{
+              fontSize: 8,
+              padding: '1px 5px',
+              borderRadius: 2,
+              background: 'rgba(69, 215, 198, 0.12)',
+              color: '#45D7C6',
+              letterSpacing: '0.5px',
+              fontWeight: 600,
+            }}>
+              NV
+            </span>
+          )}
+          {story.matched_sectors?.[0] && (
+            <span style={{
+              fontSize: 8,
+              padding: '1px 5px',
+              borderRadius: 2,
+              background: 'rgba(255,255,255,0.06)',
+              color: 'rgba(255,255,255,0.5)',
+              letterSpacing: '0.5px',
+            }}>
+              {story.matched_sectors[0]}
+            </span>
+          )}
+        </div>
+      </div>
+
+      {isExpanded && (
+        <div style={{ marginTop: 6, fontSize: 10, color: 'rgba(255,255,255,0.5)' }}>
+          {story.company_matches?.length > 0 && (
+            <div>Companies: {story.company_matches.join(' · ')}</div>
+          )}
+          <div style={{ marginTop: 4 }}>
+            <a
+              href={story.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ color: '#45D7C6', textDecoration: 'none', fontSize: 10 }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              Read full story ↗
+            </a>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+export const LiveActivityFeed = memo(function LiveActivityFeed({ onViewChange }) {
+  const { data: newsResp, isLoading, isError } = useNews({ minRelevance: 1, limit: 15 });
   const [expandedId, setExpandedId] = useState(null);
   const handleToggle = useCallback((id) => setExpandedId(prev => prev === id ? null : id), []);
 
-  // Auto-refresh every 60 seconds
-  useEffect(() => {
-    const interval = setInterval(() => {
-      queryClient.invalidateQueries({ queryKey: ['stakeholderActivities'] });
-    }, 60000);
-    return () => clearInterval(interval);
-  }, [queryClient]);
+  const stories = newsResp?.data || [];
 
   if (isLoading) {
     return (
@@ -30,37 +128,46 @@ export const LiveActivityFeed = memo(function LiveActivityFeed() {
     );
   }
 
-  if (isError) {
-    return <div className={styles.activityEmpty}>FAILED TO LOAD ACTIVITY DATA</div>;
-  }
-
-  if (!activities.length) {
-    return <div className={styles.activityEmpty}>NO ACTIVITY DATA</div>;
+  if (isError || !stories.length) {
+    return <div className={styles.activityEmpty}>NO FRONTIER INTEL DATA</div>;
   }
 
   return (
-    <div aria-live="polite" aria-label="Live ecosystem activity feed">
-      {activities.map((a, i) => (
-        <EventCard
-          key={a.id || i}
-          event={{
-            id: a.id || i,
-            date: a.activity_date || a.date || a.created_at,
-            activity_type: a.activity_type || a.type || '',
-            company_name: a.stakeholder_name || a.company_name || a.entity || 'Unknown',
-            description: a.description || a.title || a.activity_type || '',
-            location: a.location || '',
-            stakeholder_type: a.stakeholder_type || '',
-            source_url: a.source_url,
-            source: a.source,
-            verified: a.verified,
-            confidence: a.confidence,
-          }}
-          isExpanded={expandedId === (a.id || i)}
+    <div>
+      {stories.map((story) => (
+        <NewsItem
+          key={story.id}
+          story={story}
+          isExpanded={expandedId === story.id}
           onToggle={handleToggle}
-          compact
         />
       ))}
+      {onViewChange && (
+        <div
+          style={{
+            textAlign: 'center',
+            padding: '8px 0 4px',
+            borderTop: '1px solid rgba(255,255,255,0.06)',
+          }}
+        >
+          <button
+            onClick={() => onViewChange('frontierIntel')}
+            style={{
+              background: 'none',
+              border: '1px solid rgba(69, 215, 198, 0.2)',
+              borderRadius: 3,
+              color: '#45D7C6',
+              fontSize: 9,
+              letterSpacing: '1px',
+              padding: '4px 12px',
+              cursor: 'pointer',
+              fontFamily: "'SF Mono', 'Cascadia Code', monospace",
+            }}
+          >
+            VIEW ALL FRONTIER INTEL →
+          </button>
+        </div>
+      )}
     </div>
   );
 });
