@@ -123,7 +123,7 @@ function buildSimilarityEdges(nodes, historicalEdges) {
  * Generate human-readable community names from dominant characteristics.
  * Names reflect the most common sector, hub fund/accelerator, and region.
  */
-function generateCommunityNames(nodes, edges, communities) {
+export function generateCommunityNames(nodes, edges, communities) {
   const nodeMap = {};
   nodes.forEach(n => { nodeMap[n.id] = n; });
 

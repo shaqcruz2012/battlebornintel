@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { logger } from '../logger.js';
 import { getGraphData, getGraphMetrics } from '../db/queries/graph.js';
 import { computeAndReturnMetrics } from '../services/graphService.js';
+import { generateCommunityNames } from '../engine/graph-metrics.js';
 const router = Router();
 
 // NOTE: Cache middleware is applied at the mount level in index.js
@@ -42,6 +43,19 @@ router.get('/metrics', async (req, res, next) => {
           data: { pagerank: {}, betweenness: {}, communities: {}, watchlist: [], numCommunities: 0, coInvestmentDensity: {}, founderMobility: {}, structuralHole: {} },
           source: 'empty',
         });
+      }
+    }
+    // Generate community names from cached assignments if missing
+    if (!cached.communityNames || Object.keys(cached.communityNames).length === 0) {
+      try {
+        const nodeTypes = req.query.nodeTypes
+          ? req.query.nodeTypes.split(',')
+          : ['company', 'fund', 'person', 'external', 'accelerator', 'ecosystem', 'program'];
+        const { nodes, edges } = await getGraphData({ nodeTypes, yearMax: 2026, light: true });
+        cached.communityNames = generateCommunityNames(nodes, edges, cached.communities || {});
+      } catch (nameErr) {
+        logger.warn('[graph/metrics] Could not generate community names:', nameErr.message);
+        cached.communityNames = {};
       }
     }
     res.json({ data: cached, source: 'cache' });
