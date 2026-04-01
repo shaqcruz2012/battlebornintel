@@ -3,6 +3,48 @@ import { NODE_CFG, REL_CFG } from '../../data/constants';
 import { fmt, stageLabel } from '../../engine/formatters';
 import styles from './NodeDetail.module.css';
 
+/* ── Extract URL from note text if present ── */
+
+function extractUrl(note) {
+  if (!note) return null;
+  const match = note.match(/https?:\/\/[^\s,;)]+/);
+  return match ? match[0] : null;
+}
+
+/* ── Source link icon for connection rows ── */
+
+function SourceLink({ sourceUrl, note }) {
+  // Prefer explicit source_url, fall back to URL embedded in note
+  const url = sourceUrl || extractUrl(note);
+  if (url) {
+    return (
+      <a
+        href={url}
+        target="_blank"
+        rel="noopener noreferrer"
+        className={styles.edgeSourceLink}
+        title={note || url}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {'\u2197'}
+      </a>
+    );
+  }
+  // Note text without URL — show icon with tooltip
+  if (note) {
+    return (
+      <span
+        className={styles.edgeSourceLinkDimmed}
+        title={note}
+      >
+        {'\u2197'}
+      </span>
+    );
+  }
+  // No note at all — don't render
+  return null;
+}
+
 /* ── Extract 1-2 word tag from edge note ── */
 
 function extractTag(note, rel, nodeName) {
@@ -262,17 +304,7 @@ export function NodeDetail({ nodeId, layout, metrics, onClose }) {
                     {tag && !c.impactType && (
                       <span className={styles.edgeTag}>{tag}</span>
                     )}
-                    {c.source_url && (
-                      <a
-                        href={c.source_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className={styles.edgeSourceLink}
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        {'\u2197'}
-                      </a>
-                    )}
+                    <SourceLink sourceUrl={c.source_url} note={c.note} />
                     <span
                       className={styles.connectionRel}
                       style={rc.color ? {
@@ -327,6 +359,7 @@ export function NodeDetail({ nodeId, layout, metrics, onClose }) {
                         style={{ background: NODE_CFG[c.node.type]?.color || '#666' }}
                       />
                       <span className={styles.connectionName}>{c.node.label}</span>
+                      <SourceLink sourceUrl={c.source_url} note={c.note} />
                       <span
                         className={styles.connectionRel}
                         style={rc.color ? {

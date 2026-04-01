@@ -32,7 +32,8 @@ router.get('/brief', async (req, res, next) => {
 
 router.get('/risks', async (req, res, next) => {
   try {
-    const data = await getRiskAssessments();
+    const { region } = req.query;
+    const data = await getRiskAssessments({ region });
     res.json({ data: data.map((r) => r.content) });
   } catch (err) {
     next(err);

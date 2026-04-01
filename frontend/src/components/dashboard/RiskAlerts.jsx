@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { useRiskAssessments } from '../../api/hooks';
+import { useFilters } from '../../hooks/useFilters';
 import styles from './RiskAlerts.module.css';
 
 const SEVERITY_MAP = {
@@ -78,7 +79,8 @@ function aiRisksToAlerts(risks) {
 }
 
 export function RiskAlerts({ companies, funds = [] }) {
-  const { data: aiRisks, isError } = useRiskAssessments();
+  const { filters } = useFilters();
+  const { data: aiRisks, isError } = useRiskAssessments({ region: filters.region });
 
   const aiAlerts = useMemo(() => aiRisksToAlerts(aiRisks), [aiRisks]);
   const fallbackAlerts = useMemo(

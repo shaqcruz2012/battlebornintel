@@ -1,4 +1,5 @@
 import pool from '../pool.js';
+import { regionCondition } from '../../utils/regionMapping.js';
 
 export async function getAllCompanies({ stage, region, sector, search, sortBy } = {}) {
   let sql = `
@@ -32,9 +33,12 @@ export async function getAllCompanies({ stage, region, sector, search, sortBy } 
   }
 
   if (region && region !== 'all') {
-    conditions.push(`c.region = $${idx}`);
-    params.push(region);
-    idx++;
+    const rc = regionCondition(region, 'c.region', idx);
+    if (rc.condition) {
+      conditions.push(rc.condition);
+      params.push(...rc.params);
+      idx = rc.nextIdx;
+    }
   }
 
   if (sector && sector !== 'all') {

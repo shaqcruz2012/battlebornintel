@@ -1,12 +1,20 @@
-import { useState, useRef, useCallback, useMemo, useEffect, useLayoutEffect, memo } from 'react';
+import { useState, useRef, useCallback, useMemo, useEffect, memo } from 'react';
 import { NODE_CFG, REL_CFG, COMM_COLORS } from '../../data/constants';
-import { useWindowSize } from '../../hooks/useWindowSize';
 import { fmt } from '../../engine/formatters';
+import { AnalysisOverlays } from './AnalysisOverlays';
 import styles from './GraphCanvas.module.css';
+
+// TODO: KMEANS_COLORS is duplicated in GraphLegend.jsx — extract to data/constants.js
+const KMEANS_COLORS = [
+  '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7',
+  '#DDA0DD', '#98D8C8', '#F7DC6F', '#BB8FCE', '#85C1E9',
+  '#82E0AA', '#F0B27A', '#AEB6BF', '#D7BDE2', '#A3E4D7',
+];
 
 const MIN_R = 3;
 const MAX_R = 11;
 const DPR = typeof window !== 'undefined' ? (window.devicePixelRatio || 1) : 1;
+const TIER_LABELS = { cluster: 'CLUSTER', region: 'REGION', detail: 'DETAIL' };
 
 // Hub node IDs that anchor the galactic core — boosted radius + glow prominence
 const HUB_NODE_IDS = new Set(['f_bbv', 'goed', 'eco_goed', 'bbv', 'f_dfv', 'dfv']);
@@ -31,10 +39,15 @@ function nodeRadius(node, pagerank) {
   return 5;
 }
 
-function nodeColor(node, colorMode, communities) {
+function nodeColor(node, colorMode, communities, kmeansMap) {
   if (colorMode === 'community' && communities) {
     const cid = communities[node.id];
     return cid !== undefined ? COMM_COLORS[cid % COMM_COLORS.length] : '#555';
+  }
+  if (colorMode === 'attribute' && kmeansMap) {
+    const km = kmeansMap[node.id];
+    if (km) return KMEANS_COLORS[km.cluster % KMEANS_COLORS.length];
+    return '#555';
   }
   return NODE_CFG[node.type]?.color || '#888';
 }
@@ -80,40 +93,18 @@ const GlowFilters = memo(function GlowFilters() {
         <feGaussianBlur in="SourceGraphic" stdDeviation="3" result="blur" />
         <feComposite in="SourceGraphic" in2="blur" operator="over" />
       </filter>
-      {/* Selected node stronger glow */}
+      {/* Selected node stronger glow — only applied to the single selected node */}
       <filter id="nodeGlowStrong" x="-60%" y="-60%" width="220%" height="220%">
         <feGaussianBlur in="SourceGraphic" stdDeviation="5" result="blur" />
         <feComposite in="SourceGraphic" in2="blur" operator="over" />
       </filter>
-      {/* Hub node (BBV/GOED) persistent glow — reduced blur for performance */}
-      <filter id="nodeGlowHub" x="-60%" y="-60%" width="220%" height="220%">
-        <feGaussianBlur in="SourceGraphic" stdDeviation="4" result="blur" />
-        <feComposite in="SourceGraphic" in2="blur" operator="over" />
-      </filter>
+      {/* Hub node glow removed — hub nodes use CSS-equivalent concentric circles
+          (fillOpacity rings in NodeCircle) which avoid GPU compositing layer overhead */}
     </defs>
   );
 });
 
 /* ── Memoized sub-components ── */
-
-const EdgeLine = memo(function EdgeLine({ sx, sy, tx, ty, color, strokeWidth, dash, opacity, isOpportunity, isHighlighted, animateDash }) {
-  return (
-    <line
-      x1={sx} y1={sy} x2={tx} y2={ty}
-      stroke={color}
-      strokeWidth={strokeWidth}
-      strokeDasharray={dash}
-      opacity={opacity}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      // FIX 3: Only animate dashes when the caller explicitly enables it (showOpportunities + count < 50)
-      style={isOpportunity && isHighlighted && animateDash ? {
-        animation: 'dashFlow 1.5s linear infinite',
-        strokeDashoffset: 0,
-      } : undefined}
-    />
-  );
-});
 
 const EdgeLabel = memo(function EdgeLabel({ sx, sy, tx, ty, label, val, relColor }) {
   const mx = (sx + tx) / 2;
@@ -161,13 +152,16 @@ const EdgeLabel = memo(function EdgeLabel({ sx, sy, tx, ty, label, val, relColor
 // FIX 1 + FIX 5: NodeCircle no longer receives inline arrow callbacks (defeats memo) and
 // no longer applies the glow filter via inline style — the parent renders a single
 // <g filter="url(#nodeGlowStrong)"> wrapper only for the selected node.
+// FIX 8: onHover now receives (nodeId, event) via a single stable callback from parent,
+// instead of a per-node closure map that defeated React.memo on every layout frame.
 const NodeCircle = memo(function NodeCircle({
   node, r, fill, isSelected, isConnected, hasSelection, dim,
   onSelect, onHover, onLeave,
   baseOpacity,  // radial galactic-core opacity (0.68–1.0), applied when not dim/selected
   isHub,        // true for BBV/GOED hub nodes — always full opacity + persistent glow
+  labelMinR = 10, // LOD: minimum radius to show label (varies by zoom tier)
 }) {
-  const showLabel = r >= 10 || isSelected || (isConnected && hasSelection);
+  const showLabel = r >= labelMinR || isSelected || (isConnected && hasSelection);
 
   // Hub nodes are always fully visible; selection states take precedence over radial fade
   const groupOpacity = dim ? 0.1
@@ -242,10 +236,10 @@ const NodeCircle = memo(function NodeCircle({
         strokeWidth={isHub && !isSelected ? 1 : isSelected ? 1.5 : isConnected && hasSelection ? 1 : 0.4}
         style={{
           cursor: 'pointer',
-          transition: 'stroke-width 200ms ease, stroke 200ms ease',
+          transition: 'r 150ms ease, stroke-width 200ms ease, stroke 200ms ease',
         }}
         onClick={() => onSelect(node.id)}
-        onMouseEnter={onHover}
+        onMouseEnter={(e) => onHover(node.id, e)}
         onMouseLeave={onLeave}
       />
       {/* Node label */}
@@ -373,6 +367,33 @@ function useEdgeCanvas(canvasRef, edges, zoom, pan, w, h, {
       ctx.stroke();
     }
 
+    // ── Galactic core glow ────────────────────────────────────────────────
+    // Radial gradient centered on the node centroid simulates the luminous
+    // core of the Milky Way. Uses 'screen' blending so it brightens edges
+    // near the center without obscuring them.
+    if (edges.length > 50) {
+      let sumX = 0, sumY = 0, count = 0;
+      for (let i = 0; i < edges.length; i++) {
+        const sx = edges[i].source?.x; const sy = edges[i].source?.y;
+        if (sx != null && sy != null) { sumX += sx; sumY += sy; count++; }
+      }
+      if (count > 0) {
+        const coreCx = sumX / count;
+        const coreCy = sumY / count;
+        const glowR = Math.min(w, h) * 0.6;
+        const gradient = ctx.createRadialGradient(coreCx, coreCy, 0, coreCx, coreCy, glowR);
+        gradient.addColorStop(0, 'rgba(255, 220, 150, 0.07)');   // warm gold core
+        gradient.addColorStop(0.25, 'rgba(180, 210, 255, 0.04)'); // blue-white disc
+        gradient.addColorStop(0.6, 'rgba(100, 140, 200, 0.02)'); // faint blue halo
+        gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');            // transparent edge
+        ctx.globalCompositeOperation = 'screen';
+        ctx.globalAlpha = 1;
+        ctx.fillStyle = gradient;
+        ctx.fillRect(coreCx - glowR, coreCy - glowR, glowR * 2, glowR * 2);
+        ctx.globalCompositeOperation = 'source-over';
+      }
+    }
+
     ctx.restore();
   }, [canvasRef, edges, zoom, pan, w, h, selectedNode, highlightedEdges, showOpportunities, opportunityFilter, tooManyForFullOpacity]);
 }
@@ -391,12 +412,19 @@ export function GraphCanvas({
   showValues = false,
   focusNodeId = null,
   layoutSettled = false,
+  // Overlay + clustering props
+  overlays = {},
+  predictedLinks = null,
+  kmeansMap = null,
+  selectedCluster = null,
+  nodeDegreeMap = {},
+  layoutWidth = 1200,
+  layoutHeight = 700,
 }) {
   const containerRef = useRef(null);
   const edgeCanvasRef = useRef(null);
   const layoutRef = useRef(layout);
   layoutRef.current = layout;
-  const { width: winW, height: winH } = useWindowSize();
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [dragging, setDragging] = useState(false);
@@ -405,20 +433,25 @@ export function GraphCanvas({
   // FIX 2: Tooltip state moved to refs — mouse-move no longer triggers React re-renders.
   // We imperatively update a DOM div so the SVG subtree is untouched on hover.
   const tooltipRef = useRef(null);
-  const tooltipActiveRef = useRef(false);
 
-  const w = Math.min(winW - 16, 1800);
-  const h = Math.max(640, winH - 104); // header(64) + tabs(40)
+  // Use the actual container dimensions (from ResizeObserver in GraphView)
+  // instead of window-based estimates. This ensures canvas and SVG use the
+  // exact same coordinate space as the container they render into.
+  const w = layoutWidth;
+  const h = layoutHeight;
 
   const fitAll = useCallback(() => {
     const { nodes } = layout;
     if (!nodes || !nodes.length) return;
-    const xs = nodes.map((n) => n.x || 0);
-    const ys = nodes.map((n) => n.y || 0);
-    const minX = Math.min(...xs);
-    const maxX = Math.max(...xs);
-    const minY = Math.min(...ys);
-    const maxY = Math.max(...ys);
+    // Single-pass bounds computation — avoids 4 spread operations + 2 temp arrays
+    let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+    for (let i = 0; i < nodes.length; ++i) {
+      const nx = nodes[i].x || 0, ny = nodes[i].y || 0;
+      if (nx < minX) minX = nx;
+      if (nx > maxX) maxX = nx;
+      if (ny < minY) minY = ny;
+      if (ny > maxY) maxY = ny;
+    }
     const padX = 60, padY = 60;
     const fitW = Math.max(maxX - minX, 1);
     const fitH = Math.max(maxY - minY, 1);
@@ -581,13 +614,11 @@ export function GraphCanvas({
     el.style.left = `${clientX + 14}px`;
     el.style.top  = `${clientY - 10}px`;
     el.style.display = 'block';
-    tooltipActiveRef.current = true;
   }, [metrics]);
 
   const hideTooltip = useCallback(() => {
     const el = tooltipRef.current;
     if (el) el.style.display = 'none';
-    tooltipActiveRef.current = false;
   }, []);
 
   // Compute connected node IDs and highlighted edges for selected node
@@ -615,15 +646,22 @@ export function GraphCanvas({
     [selectedNode, onSelectNode],
   );
 
-  const hoverCallbacks = useMemo(() => {
-    const map = {};
-    nodes.forEach((n) => {
-      map[n.id] = (e) => showTooltip(n, e.clientX, e.clientY);
-    });
-    return map;
-  }, [nodes, showTooltip]);
+  // FIX 8: Single stable hover callback — replaces per-node closure map that
+  // defeated React.memo on every layout frame. NodeCircle calls onHover(nodeId, event)
+  // and this callback looks up the node from a ref (no closure over `nodes`).
+  const nodeByIdRef = useRef(new Map());
+  useEffect(() => {
+    const map = new Map();
+    nodes.forEach((n) => map.set(n.id, n));
+    nodeByIdRef.current = map;
+  }, [nodes]);
 
-  // FIX 3 + FIX 4: Pre-compute display thresholds once.
+  const handleNodeHover = useCallback((nodeId, e) => {
+    const node = nodeByIdRef.current.get(nodeId);
+    if (node) showTooltip(node, e.clientX, e.clientY);
+  }, [showTooltip]);
+
+  // FIX 4: Pre-compute display thresholds once.
   const nodeCount = nodes.length;
   const tooManyForEdgeLabels = nodeCount > 150;   // skip edge labels entirely
   const tooManyForFullOpacity = nodeCount > 300;  // reduce non-selected edge opacity
@@ -646,17 +684,6 @@ export function GraphCanvas({
     return { centroidX: cx, centroidY: cy, maxDist: maxD };
   }, [nodes, nodeCount]);
 
-  // FIX 3: Count opportunity edges to gate dash animation.
-  const opportunityEdgeCount = useMemo(() => {
-    if (!showOpportunities) return 0;
-    return edges.filter(e =>
-      e.category === 'opportunity' || e.rel === 'qualifies_for' ||
-      e.rel === 'fund_opportunity' || e.rel === 'potential_lp'
-    ).length;
-  }, [edges, showOpportunities]);
-
-  const animateDash = showOpportunities && opportunityEdgeCount < 50;
-
   // Pre-compute edge dollar values once when edges change (avoids regex per render per edge)
   const edgeValueMap = useMemo(() => {
     const map = new Map();
@@ -666,6 +693,15 @@ export function GraphCanvas({
     });
     return map;
   }, [edges]);
+
+  // ── LOD Zoom Tiers ──────────────────────────────────────────────────────
+  // Cluster (<0.6): high-level overview — only hubs + high-degree nodes visible
+  // Region (0.6–1.2): all nodes shown, labels on hubs + medium nodes
+  // Detail (>1.2): full labels, edge labels for selection, full tooltip detail
+  const zoomTier = zoom < 0.6 ? 'cluster' : zoom > 1.2 ? 'detail' : 'region';
+  // Progressive LOD — more nodes appear as you zoom in
+  const minDegreeForRender = zoom < 0.4 ? 8 : zoom < 0.5 ? 5 : zoom < 0.6 ? 3 : zoom < 0.8 ? 1 : 0;
+  const labelMinR = zoom < 0.5 ? 13 : zoom < 0.7 ? 10 : zoom < 1.0 ? 7 : 5;
 
   // Canvas edge renderer — replaces 5000+ SVG <line> elements with one draw call
   useEdgeCanvas(edgeCanvasRef, edges, zoom, pan, w, h, {
@@ -695,7 +731,7 @@ export function GraphCanvas({
       onMouseUp={handleMouseUp}
       onMouseLeave={handleMouseUp}
       onDoubleClick={handleDoubleClick}
-      style={{ cursor: dragging ? 'grabbing' : 'grab' }}
+      style={{ cursor: dragging ? 'grabbing' : undefined }}
     >
       {/* Status indicator — real-time Bloomberg feel */}
       <div className={styles.statusBar}>
@@ -712,15 +748,27 @@ export function GraphCanvas({
 
       <svg
         className={styles.svg}
+        width={w}
+        height={h}
         viewBox={`0 0 ${w} ${h}`}
-        preserveAspectRatio="xMidYMid meet"
+        preserveAspectRatio="none"
+        style={{ position: 'absolute', top: 0, left: 0 }}
       >
         <GlowFilters />
 
         <g transform={`translate(${pan.x},${pan.y}) scale(${zoom})`}>
 
-          {/* Edge labels — show for selected node connections, or all edges with $ values when showValues is on */}
-          {(!tooManyForEdgeLabels || showValues) && (selectedNode || showValues) &&
+          {/* Analysis overlays — rendered BEHIND nodes so hulls/flows appear underneath */}
+          <AnalysisOverlays
+            overlays={overlays}
+            nodes={nodes}
+            edges={edges}
+            metrics={metrics}
+            predictedLinks={predictedLinks}
+          />
+
+          {/* Edge labels — only in detail/region view, for selected connections or $ values */}
+          {zoomTier !== 'cluster' && (!tooManyForEdgeLabels || showValues) && (selectedNode || showValues) &&
             edges.map((e, i) => {
               const isHighlighted = highlightedEdges.has(i);
               if (selectedNode && !isHighlighted) return null;
@@ -743,16 +791,37 @@ export function GraphCanvas({
               );
             })}
 
-          {/* Nodes */}
+          {/* Nodes — LOD + viewport culled */}
           {nodes.map((n) => {
-            const r = nodeRadius(n, metrics?.pagerank);
-            const fill = nodeColor(n, colorMode, metrics?.communities);
             const isSelected = selectedNode === n.id;
             const isConnected = connectedIds.has(n.id);
+            const isHub = HUB_NODE_IDS.has(n.id);
+            const degree = nodeDegreeMap[n.id] || 0;
+
+            // Progressive LOD: degree-based filtering at all zoom levels
+            if (!isSelected && !isConnected && !isHub && degree < minDegreeForRender) {
+              return null;
+            }
+
+            // Viewport culling: skip nodes outside the visible area (with 50px margin)
+            // Always render selected, connected, and hub nodes regardless of viewport
+            if (!isSelected && !isConnected && !isHub) {
+              const screenX = (n.x || 0) * zoom + pan.x;
+              const screenY = (n.y || 0) * zoom + pan.y;
+              if (screenX < -50 || screenX > w + 50 || screenY < -50 || screenY > h + 50) {
+                return null;
+              }
+            }
+
+            const r = nodeRadius(n, metrics?.pagerank);
+            const fill = nodeColor(n, colorMode, metrics?.communities, kmeansMap);
             const dimBySearch = searchTerm && !matchesSearch(n);
             const dimBySelection = selectedNode && !isSelected && !isConnected;
-            const dim = dimBySearch || dimBySelection;
-            const isHub = HUB_NODE_IDS.has(n.id);
+            // Dim nodes not in the selected cluster (when a cluster is selected from overlay)
+            const dimByCluster = selectedCluster != null
+              && metrics?.communities?.[n.id] !== selectedCluster
+              && !isSelected && !isConnected;
+            const dim = dimBySearch || dimBySelection || dimByCluster;
 
             // Galactic core radial opacity — only computed when graph is large enough
             // and the node is not already highlighted/dimmed by selection/search.
@@ -760,8 +829,6 @@ export function GraphCanvas({
               ? radialOpacity(n, centroidX, centroidY, maxDist)
               : 1;
 
-            // FIX 5: Glow filter applied as a <g> wrapper ONLY on the selected node.
-            // Hub nodes get a separate persistent glow filter wrapper.
             const inner = (
               <NodeCircle
                 key={n.id}
@@ -773,19 +840,53 @@ export function GraphCanvas({
                 hasSelection={!!selectedNode}
                 dim={dim}
                 onSelect={handleNodeSelect}
-                onHover={hoverCallbacks[n.id]}
+                onHover={handleNodeHover}
                 onLeave={hideTooltip}
                 baseOpacity={baseOpacity}
                 isHub={isHub}
+                labelMinR={labelMinR}
               />
             );
 
             if (isSelected) return <g key={n.id} filter="url(#nodeGlowStrong)">{inner}</g>;
-            if (isHub && !isSelected) return <g key={n.id} filter="url(#nodeGlowHub)">{inner}</g>;
             return inner;
           })}
         </g>
       </svg>
+
+      {/* Zoom tier — light text overlay, bottom-right above controls */}
+      <div style={{
+        position: 'absolute',
+        bottom: 108,
+        right: 'var(--space-lg, 12px)',
+        textAlign: 'right',
+        pointerEvents: 'none',
+        zIndex: 10,
+        transition: 'opacity 300ms ease',
+        opacity: 0.7,
+      }}>
+        <div style={{
+          fontSize: 10,
+          fontWeight: 700,
+          letterSpacing: '1.5px',
+          color: zoomTier === 'detail' ? '#45D7C6' : zoomTier === 'region' ? '#C8A55A' : '#9B72CF',
+          textTransform: 'uppercase',
+          fontFamily: 'var(--font-body)',
+          transition: 'color 300ms ease',
+          textShadow: '0 1px 4px rgba(0,0,0,0.6)',
+        }}>
+          {TIER_LABELS[zoomTier]}
+        </div>
+        <div style={{
+          fontSize: 8,
+          letterSpacing: '0.5px',
+          color: 'rgba(255,255,255,0.35)',
+          fontFamily: "'SF Mono', 'Cascadia Code', monospace",
+          marginTop: 1,
+        }}>
+          {(zoom * 100).toFixed(0)}%
+        </div>
+      </div>
 
       {/* Zoom controls */}
       <div className={styles.zoomControls}>

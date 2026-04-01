@@ -1,12 +1,40 @@
 import pool from '../pool.js';
+import { expandRegion } from '../../utils/regionMapping.js';
 
-export async function getAllFunds() {
-  const { rows } = await pool.query(
-    `SELECT f.*,
-       (SELECT COUNT(*) FROM companies c WHERE f.id = ANY(c.eligible)) AS live_company_count
-     FROM funds f
-     ORDER BY f.deployed_m DESC NULLS LAST`
-  );
+export async function getAllFunds({ region } = {}) {
+  const expanded = expandRegion(region);
+  let sql;
+  let params = [];
+
+  if (expanded) {
+    // Filter funds by their own region OR by having portfolio companies in the selected region
+    if (expanded.length === 1) {
+      sql = `SELECT f.*,
+               (SELECT COUNT(*) FROM companies c WHERE f.id = ANY(c.eligible) AND c.region = $1) AS live_company_count
+             FROM funds f
+             WHERE f.region = $1
+                OR f.region = 'statewide'
+                OR EXISTS (SELECT 1 FROM companies c WHERE f.id = ANY(c.eligible) AND c.region = $1)
+             ORDER BY f.deployed_m DESC NULLS LAST`;
+      params = [expanded[0]];
+    } else {
+      sql = `SELECT f.*,
+               (SELECT COUNT(*) FROM companies c WHERE f.id = ANY(c.eligible) AND c.region = ANY($1)) AS live_company_count
+             FROM funds f
+             WHERE f.region = ANY($1)
+                OR f.region = 'statewide'
+                OR EXISTS (SELECT 1 FROM companies c WHERE f.id = ANY(c.eligible) AND c.region = ANY($1))
+             ORDER BY f.deployed_m DESC NULLS LAST`;
+      params = [expanded];
+    }
+  } else {
+    sql = `SELECT f.*,
+             (SELECT COUNT(*) FROM companies c WHERE f.id = ANY(c.eligible)) AS live_company_count
+           FROM funds f
+           ORDER BY f.deployed_m DESC NULLS LAST`;
+  }
+
+  const { rows } = await pool.query(sql, params);
   return rows.map(formatFund);
 }
 
@@ -44,6 +72,7 @@ function formatFund(row) {
     id: row.id,
     name: row.name,
     type: row.fund_type,
+    region: row.region || null,
     allocated: row.allocated_m != null ? parseFloat(row.allocated_m) : null,
     deployed: row.deployed_m != null ? parseFloat(row.deployed_m) : null,
     leverage: row.leverage != null ? parseFloat(row.leverage) : null,

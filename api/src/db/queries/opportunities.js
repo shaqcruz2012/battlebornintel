@@ -1,4 +1,5 @@
 import pool from '../pool.js';
+import { regionCondition } from '../../utils/regionMapping.js';
 
 const THRESHOLDS = { excellent: 0.85, good: 0.70, fair: 0.50 };
 const FUND_THRESHOLDS = { excellent: 0.80, good: 0.65, fair: 0.50 };
@@ -40,7 +41,7 @@ function formatOpportunity(row) {
 }
 
 export async function getOpportunities(filters = {}) {
-  const { quality, entityType, sector, stage, search, sortBy = 'score',
+  const { quality, entityType, sector, stage, region, search, sortBy = 'score',
     limit: rawLimit = 100, offset: rawOffset = 0 } = filters;
 
   const limit = Math.min(parseInt(rawLimit, 10) || 100, 500);
@@ -56,6 +57,10 @@ export async function getOpportunities(filters = {}) {
   if (entityType === 'program') { conditions.push(`ge.rel = 'qualifies_for'`); }
   else if (entityType === 'fund') { conditions.push(`ge.rel = 'fund_opportunity'`); }
 
+  if (region && region !== 'all') {
+    const rc = regionCondition(region, 'c.region', idx);
+    if (rc.condition) { conditions.push(rc.condition); params.push(...rc.params); idx = rc.nextIdx; }
+  }
   if (sector) { conditions.push(`$${idx} = ANY(c.sectors)`); params.push(sector); idx++; }
   if (stage) { conditions.push(`c.stage = $${idx}`); params.push(stage); idx++; }
   if (search) { conditions.push(`(c.name ILIKE $${idx} OR COALESCE(p.name, f.name, '') ILIKE $${idx})`); params.push(`%${search}%`); idx++; }

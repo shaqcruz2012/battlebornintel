@@ -14,8 +14,9 @@ const WeeklyBriefView = lazy(() => import('./components/brief/WeeklyBriefView').
 const GoedView = lazy(() => import('./components/goed/GoedView').then(m => ({ default: m.GoedView })));
 const GraphView = lazy(() => import('./components/graph/GraphView').then(m => ({ default: m.GraphView })));
 const CompaniesView = lazy(() => import('./components/companies/CompaniesView').then(m => ({ default: m.CompaniesView })));
-const FundsView = lazy(() => import('./components/funds/FundsView').then(m => ({ default: m.FundsView })));
+
 const InvestorsView = lazy(() => import('./components/investors/InvestorsView').then(m => ({ default: m.InvestorsView })));
+const SectorsView = lazy(() => import('./components/sectors/SectorsView').then(m => ({ default: m.SectorsView })));
 const StakeholderFeedView = lazy(() => import('./components/feed/StakeholderFeedView').then(m => ({ default: m.StakeholderFeedView })));
 const ScenariosView = lazy(() => import('./components/scenarios/ScenariosView').then(m => ({ default: m.ScenariosView })));
 const IndicatorsView = lazy(() => import('./components/indicators/IndicatorsView').then(m => ({ default: m.IndicatorsView })));
@@ -112,8 +113,9 @@ export default function App() {
               <Suspense fallback={<TabFallback />}>
                 {view === 'brief' && <WeeklyBriefView />}
                 {view === 'companies' && <CompaniesView />}
-                {view === 'funds' && <FundsView />}
+
                 {view === 'investors' && <InvestorsView />}
+                {view === 'sectors' && <SectorsView />}
                 {view === 'goed' && <GoedView />}
                 {view === 'feed' && <StakeholderFeedView />}
                 {view === 'graph' && <GraphView />}

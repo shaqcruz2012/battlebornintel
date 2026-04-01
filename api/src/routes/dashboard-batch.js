@@ -7,7 +7,7 @@
 import { Router } from 'express';
 import { logger } from '../logger.js';
 import { cacheMiddleware } from '../middleware/cache.js';
-import { getAllCompanies, getCompanyById } from '../db/queries/companies.js';
+import { getAllCompanies } from '../db/queries/companies.js';
 import { getAllFunds } from '../db/queries/funds.js';
 import { getKpis } from '../db/queries/kpis.js';
 import { getSectorStats } from '../db/queries/kpis.js';
@@ -91,7 +91,7 @@ router.get('/', async (req, res, next) => {
 
     if (shouldFetchFunds) {
       promises.push(
-        getAllFunds().catch(err => {
+        getAllFunds(filters).catch(err => {
           logger.error('Funds query error:', err);
           return [];
         })
@@ -102,7 +102,7 @@ router.get('/', async (req, res, next) => {
 
     if (shouldFetchSectors) {
       promises.push(
-        getSectorStats().catch(err => {
+        getSectorStats(filters).catch(err => {
           logger.error('Sector stats query error:', err);
           return [];
         })

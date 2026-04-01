@@ -1,5 +1,6 @@
 import pool from '../pool.js';
 import { logger } from '../../logger.js';
+import { expandRegion } from '../../utils/regionMapping.js';
 
 export async function getGraphData({ nodeTypes = [], yearMax = 2026, region } = {}) {
   const nodes = [];
@@ -21,20 +22,27 @@ export async function getGraphData({ nodeTypes = [], yearMax = 2026, region } = 
 
   // Build conditional SQL strings before launching the parallel batch
   const regionFilter = region && region !== 'all';
+  const expandedRegions = expandRegion(region);
 
   let companySql = `SELECT id, name, stage, funding_m, momentum, employees, city, region, sectors, eligible, founded FROM companies`;
   const companyParams = [];
-  if (needCompanies && regionFilter) {
-    companySql += ` WHERE region = $1`;
-    companyParams.push(region);
+  if (needCompanies && regionFilter && expandedRegions) {
+    if (expandedRegions.length === 1) {
+      companySql += ` WHERE region = $1`;
+      companyParams.push(expandedRegions[0]);
+    } else {
+      companySql += ` WHERE region = ANY($1)`;
+      companyParams.push(expandedRegions);
+    }
   }
 
   const accelSql = nodeTypes.includes('accelerator')
-    ? `SELECT id, name, accel_type, city, region, founded FROM accelerators${regionFilter ? ` WHERE region = $1` : ''}`
+    ? `SELECT id, name, accel_type, city, region, founded FROM accelerators${regionFilter && expandedRegions ? (expandedRegions.length === 1 ? ` WHERE region = $1` : ` WHERE region = ANY($1)`) : ''}`
     : null;
   const ecoSql = nodeTypes.includes('ecosystem')
-    ? `SELECT id, name, entity_type, city, region FROM ecosystem_orgs${regionFilter ? ` WHERE region = $1` : ''}`
+    ? `SELECT id, name, entity_type, city, region FROM ecosystem_orgs${regionFilter && expandedRegions ? (expandedRegions.length === 1 ? ` WHERE region = $1` : ` WHERE region = ANY($1)`) : ''}`
     : null;
+  const regionParam = expandedRegions ? (expandedRegions.length === 1 ? expandedRegions[0] : expandedRegions) : null;
 
   // All DB queries run in parallel — no sequential awaits
   // note column included: contains dollar amounts for edge labels
@@ -74,13 +82,13 @@ export async function getGraphData({ nodeTypes = [], yearMax = 2026, region } = 
     // note columns excluded from accelerators and ecosystem_orgs — free-text
     // not needed for graph visualization and adds unnecessary payload weight
     accelSql
-      ? pool.query(accelSql, regionFilter ? [region] : []).then(r => r.rows)
+      ? pool.query(accelSql, regionFilter && regionParam ? [regionParam] : []).then(r => r.rows)
       : [],
     ecoSql
-      ? pool.query(ecoSql, regionFilter ? [region] : []).then(r => r.rows)
+      ? pool.query(ecoSql, regionFilter && regionParam ? [regionParam] : []).then(r => r.rows)
       : [],
     pool.query(
-      `SELECT source_id, target_id, rel, event_year, note, matching_score, edge_category, edge_style, edge_color, edge_opacity FROM graph_edges WHERE event_year <= $1`,
+      `SELECT source_id, target_id, rel, event_year, note, source_url, matching_score, edge_category, edge_style, edge_color, edge_opacity FROM graph_edges WHERE event_year <= $1`,
       [yearMax]
     ).then(r => r.rows),
     nodeTypes.includes('exchange')
@@ -265,6 +273,8 @@ export async function getGraphData({ nodeTypes = [], yearMax = 2026, region } = 
     };
     // Include note when present (contains dollar amounts and context for edge labels)
     if (e.note) edge.note = e.note;
+    // Include source_url for evidence/source links in sidebar
+    if (e.source_url) edge.source_url = e.source_url;
     // Include matching score for opportunity edges
     if (e.matching_score != null) edge.matching_score = parseFloat(e.matching_score);
     // Include visual metadata only when present to keep payload lean

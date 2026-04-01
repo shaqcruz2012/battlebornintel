@@ -187,7 +187,7 @@ export function ExecutiveDashboard({ onViewChange }) {
     sector: filters.sector,
   });
 
-  const { data: sectorStats = [], isLoading: loadingSectors } = useSectorStats();
+  const { data: sectorStats = [], isLoading: loadingSectors } = useSectorStats({ region: filters.region });
   const { data: funds = [] } = useFunds(
     filters.region && filters.region !== 'all' ? { region: filters.region } : {}
   );
@@ -195,7 +195,7 @@ export function ExecutiveDashboard({ onViewChange }) {
 
   const briefData = briefResponse?.data;
 
-  const { data: activities = [] } = useStakeholderActivities({ limit: 20 });
+  const { data: activities = [] } = useStakeholderActivities({ limit: 20, location: filters.region });
 
   const { velocity, tier, cssVars } = useEcosystemVelocity({
     activities,

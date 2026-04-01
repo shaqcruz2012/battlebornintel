@@ -74,31 +74,121 @@ export function computeGraphMetrics(nodes, edges) {
   const betweenness = {};
   ids.forEach((id, i) => { betweenness[id] = Math.round((bc[i] / bcMax) * 100); });
 
-  // Community Detection (Label Propagation)
-  const labels = Array.from({ length: N }, (_, i) => i);
-  for (let iter = 0; iter < 20; iter++) {
-    let changed = false;
-    const order = [...Array(N).keys()].sort(() => Math.random() - 0.5);
-    for (const i of order) {
-      if (adj[i].length === 0) continue;
-      const freq = {};
-      for (const j of adj[i]) freq[labels[j]] = (freq[labels[j]] || 0) + 1;
-      const maxFreq = Math.max(...Object.values(freq));
-      const candidates = Object.entries(freq)
-        .filter(([, f]) => f === maxFreq)
-        .map(([l]) => parseInt(l));
-      const newLabel = candidates[Math.floor(Math.random() * candidates.length)];
-      if (newLabel !== labels[i]) { labels[i] = newLabel; changed = true; }
+  // Community Detection (Louvain modularity maximization with resolution parameter)
+  // Higher resolution → more communities. Auto-tuned to produce ~12 clusters (8-15 range).
+  // Build weighted adjacency for modularity computation
+  const wAdj = Array.from({ length: N }, () => ({})); // wAdj[i][j] = weight
+  let totalWeight = 0;
+  const degree_w = new Float64Array(N);
+  for (const e of edges) {
+    const si = idx[typeof e.source === 'object' ? e.source.id : e.source];
+    const ti = idx[typeof e.target === 'object' ? e.target.id : e.target];
+    if (si !== undefined && ti !== undefined && si !== ti) {
+      const w = e.matching_score || e.weight || 1;
+      wAdj[si][ti] = (wAdj[si][ti] || 0) + w;
+      wAdj[ti][si] = (wAdj[ti][si] || 0) + w;
+      totalWeight += w;
     }
-    if (!changed) break;
+  }
+  for (let i = 0; i < N; i++) {
+    for (const j of Object.keys(wAdj[i])) degree_w[i] += wAdj[i][j];
+  }
+  const m2 = totalWeight || 1; // sum of all edge weights (each edge counted once in totalWeight)
+
+  function louvainPass(nodeComm, resolution) {
+    // One pass of Louvain: for each node, move to the community that maximizes modularity gain
+    // Maintain commDegreeSum incrementally for O(degree) per node instead of O(N)
+    let improved = true;
+    let iterations = 0;
+    while (improved && iterations < 50) {
+      improved = false;
+      iterations++;
+      // Precompute community degree sums
+      const commDegreeSum = {};
+      for (let k = 0; k < N; k++) {
+        const c = nodeComm[k];
+        commDegreeSum[c] = (commDegreeSum[c] || 0) + degree_w[k];
+      }
+      const order = [...Array(N).keys()].sort(() => Math.random() - 0.5);
+      for (const i of order) {
+        if (Object.keys(wAdj[i]).length === 0) continue;
+        const currentComm = nodeComm[i];
+        const ki = degree_w[i];
+        // Compute weight from node i to each neighboring community
+        const commWeights = {};
+        for (const jStr of Object.keys(wAdj[i])) {
+          const j = parseInt(jStr);
+          const c = nodeComm[j];
+          commWeights[c] = (commWeights[c] || 0) + wAdj[i][jStr];
+        }
+        // Temporarily remove node i from its community
+        commDegreeSum[currentComm] -= ki;
+
+        let bestComm = currentComm;
+        let bestGain = 0;
+        for (const cStr of Object.keys(commWeights)) {
+          const c = parseInt(cStr);
+          if (c === currentComm) continue;
+          const gain = (commWeights[cStr] || 0) / m2 - resolution * ki * (commDegreeSum[c] || 0) / (m2 * m2);
+          const lossFromCurrent = (commWeights[currentComm] || 0) / m2 - resolution * ki * (commDegreeSum[currentComm] || 0) / (m2 * m2);
+          const netGain = gain - lossFromCurrent;
+          if (netGain > bestGain) {
+            bestGain = netGain;
+            bestComm = c;
+          }
+        }
+        if (bestComm !== currentComm) {
+          nodeComm[i] = bestComm;
+          // Update commDegreeSum: add ki to new community
+          commDegreeSum[bestComm] = (commDegreeSum[bestComm] || 0) + ki;
+          improved = true;
+        } else {
+          // Restore node to current community
+          commDegreeSum[currentComm] += ki;
+        }
+      }
+    }
+    return nodeComm;
   }
 
+  function countCommunities(nodeComm) {
+    return new Set(nodeComm).size;
+  }
+
+  // Auto-tune resolution to get ~12 communities (range 8-15)
+  const TARGET_MIN = 8;
+  const TARGET_MAX = 15;
+  const TARGET = 12;
+  let bestComm = Array.from({ length: N }, (_, i) => i);
+  let bestDist = Infinity;
+
+  // Binary search on resolution parameter
+  let lo = 0.5, hi = 5.0;
+  for (let attempt = 0; attempt < 10; attempt++) {
+    const res = (lo + hi) / 2;
+    const comm = Array.from({ length: N }, (_, i) => i);
+    louvainPass(comm, res);
+    const numC = countCommunities(comm);
+    const dist = Math.abs(numC - TARGET);
+    if (dist < bestDist || (dist === bestDist && Math.abs(res - 1.5) < Math.abs((lo + hi) / 2 - 1.5))) {
+      bestDist = dist;
+      bestComm = [...comm];
+    }
+    if (numC >= TARGET_MIN && numC <= TARGET_MAX) break;
+    if (numC < TARGET) {
+      lo = res; // need more communities → higher resolution
+    } else {
+      hi = res; // need fewer communities → lower resolution
+    }
+  }
+
+  // Renumber communities sequentially
   const labelMap = {};
   let nextCid = 0;
   const communities = {};
   ids.forEach((id, i) => {
-    if (labelMap[labels[i]] === undefined) labelMap[labels[i]] = nextCid++;
-    communities[id] = labelMap[labels[i]];
+    if (labelMap[bestComm[i]] === undefined) labelMap[bestComm[i]] = nextCid++;
+    communities[id] = labelMap[bestComm[i]];
   });
 
   // Structural Watchlist

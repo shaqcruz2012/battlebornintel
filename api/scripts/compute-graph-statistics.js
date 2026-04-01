@@ -249,59 +249,122 @@ async function refreshGraphMetricsCache() {
     prScaled.set(k, maxPr > 0 ? Math.round((v / maxPr) * 100) : 0);
   }
 
-  // ── Label Propagation Community Detection (10 iterations) ──
-  const community = new Map();
-  let labelCounter = 0;
+  // ── Louvain Community Detection (modularity maximization, resolution-tuned for ~12 clusters) ──
+  // Load edge weights for better clustering
+  const weightedEdgesRes = await pool.query(
+    `SELECT source_id, target_id, COALESCE(matching_score, weight, 1) AS w
+     FROM graph_edges WHERE edge_category = 'historical'`
+  );
+  const wAdj = new Map(); // node -> Map(neighbor -> weight)
+  const degree_w = new Map(); // node -> weighted degree
+  let totalWeight = 0;
   for (const n of nodes) {
-    community.set(n, labelCounter++);
+    wAdj.set(n, new Map());
+    degree_w.set(n, 0);
   }
+  for (const e of weightedEdgesRes.rows) {
+    const s = e.source_id, t = e.target_id, w = parseFloat(e.w) || 1;
+    if (!wAdj.has(s) || !wAdj.has(t)) continue;
+    wAdj.get(s).set(t, (wAdj.get(s).get(t) || 0) + w);
+    wAdj.get(t).set(s, (wAdj.get(t).get(s) || 0) + w);
+    totalWeight += w;
+  }
+  for (const n of nodes) {
+    let dw = 0;
+    for (const w of wAdj.get(n).values()) dw += w;
+    degree_w.set(n, dw);
+  }
+  const m2 = totalWeight || 1;
 
-  for (let i = 0; i < 10; i++) {
-    // Shuffle order each iteration
-    const shuffled = [...nodes].sort(() => Math.random() - 0.5);
-    let changed = 0;
-    for (const n of shuffled) {
-      const neighbors = adj.get(n) || [];
-      if (neighbors.length === 0) continue;
-
-      // Count neighbor labels
-      const labelCounts = new Map();
-      for (const nb of neighbors) {
-        const lbl = community.get(nb);
-        labelCounts.set(lbl, (labelCounts.get(lbl) || 0) + 1);
+  function louvainPass(nodeComm, resolution) {
+    let improved = true;
+    let iterations = 0;
+    while (improved && iterations < 50) {
+      improved = false;
+      iterations++;
+      // Precompute community degree sums (maintained incrementally)
+      const commDegreeSum = new Map();
+      for (const nd of nodes) {
+        const c = nodeComm.get(nd);
+        commDegreeSum.set(c, (commDegreeSum.get(c) || 0) + degree_w.get(nd));
       }
+      const shuffled = [...nodes].sort(() => Math.random() - 0.5);
+      for (const n of shuffled) {
+        const neighbors = wAdj.get(n);
+        if (!neighbors || neighbors.size === 0) continue;
+        const currentComm = nodeComm.get(n);
+        const ki = degree_w.get(n);
+        // Weight from node to each neighboring community
+        const commWeights = new Map();
+        for (const [nb, w] of neighbors) {
+          const c = nodeComm.get(nb);
+          commWeights.set(c, (commWeights.get(c) || 0) + w);
+        }
+        // Temporarily remove node from its community
+        commDegreeSum.set(currentComm, (commDegreeSum.get(currentComm) || 0) - ki);
 
-      // Pick most frequent label
-      let bestLabel = community.get(n);
-      let bestCount = 0;
-      for (const [lbl, cnt] of labelCounts) {
-        if (cnt > bestCount) {
-          bestCount = cnt;
-          bestLabel = lbl;
+        let bestComm = currentComm;
+        let bestGain = 0;
+        for (const [c, wic] of commWeights) {
+          if (c === currentComm) continue;
+          const gain = wic / m2 - resolution * ki * (commDegreeSum.get(c) || 0) / (m2 * m2);
+          const lossCurrent = (commWeights.get(currentComm) || 0) / m2 - resolution * ki * (commDegreeSum.get(currentComm) || 0) / (m2 * m2);
+          const netGain = gain - lossCurrent;
+          if (netGain > bestGain) {
+            bestGain = netGain;
+            bestComm = c;
+          }
+        }
+        if (bestComm !== currentComm) {
+          nodeComm.set(n, bestComm);
+          commDegreeSum.set(bestComm, (commDegreeSum.get(bestComm) || 0) + ki);
+          improved = true;
+        } else {
+          // Restore node to current community
+          commDegreeSum.set(currentComm, (commDegreeSum.get(currentComm) || 0) + ki);
         }
       }
+    }
+  }
 
-      if (community.get(n) !== bestLabel) {
-        community.set(n, bestLabel);
-        changed++;
-      }
+  function countComms(nodeComm) {
+    return new Set(nodeComm.values()).size;
+  }
+
+  // Auto-tune resolution for ~12 communities (range 8-15)
+  const TARGET_MIN = 8, TARGET_MAX = 15, TARGET = 12;
+  let bestCommMap = new Map();
+  let bestDist = Infinity;
+  let lo = 0.5, hi = 5.0;
+  for (let attempt = 0; attempt < 10; attempt++) {
+    const res = (lo + hi) / 2;
+    const comm = new Map();
+    let lc = 0;
+    for (const n of nodes) comm.set(n, lc++);
+    louvainPass(comm, res);
+    const numC = countComms(comm);
+    const dist = Math.abs(numC - TARGET);
+    if (dist < bestDist) {
+      bestDist = dist;
+      bestCommMap = new Map(comm);
     }
-    if (changed === 0) {
-      console.log(`  Label propagation converged at iteration ${i + 1}`);
-      break;
-    }
+    if (numC >= TARGET_MIN && numC <= TARGET_MAX) break;
+    if (numC < TARGET) lo = res;
+    else hi = res;
   }
 
   // Renumber communities to sequential IDs
+  const community = new Map();
   const labelMap = new Map();
   let nextId = 1;
   for (const n of nodes) {
-    const lbl = community.get(n);
+    const lbl = bestCommMap.get(n);
     if (!labelMap.has(lbl)) labelMap.set(lbl, nextId++);
     community.set(n, labelMap.get(lbl));
   }
 
   const communityCount = labelMap.size;
+  console.log(`  Louvain converged with ${communityCount} communities (target: ~${TARGET})`);
 
   // ── Betweenness approximation (degree-based proxy) ──
   // Scale: degree / max_degree * 100

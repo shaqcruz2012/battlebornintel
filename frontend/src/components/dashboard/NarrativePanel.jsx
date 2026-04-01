@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { Card } from '../shared/Card';
 import { useWeeklyBrief, useRiskAssessments } from '../../api/hooks';
+import { useFilters } from '../../hooks/useFilters';
 import styles from './NarrativePanel.module.css';
 
 // ── Publication date helpers ────────────────────────────────────────────────
@@ -327,8 +328,9 @@ function SkeletonBlock({ lines = 3, width = '100%' }) {
 // ── Main component ──────────────────────────────────────────────────────────
 
 export function NarrativePanel({ companies = [], funds = [], activeSector = 'all', sectorStats: sectorStatsProp = [] }) {
+  const { filters } = useFilters();
   const { data: briefResponse, isLoading: briefLoading, isError: briefError } = useWeeklyBrief();
-  const { data: risksRaw, isLoading: risksLoading, isError: risksError } = useRiskAssessments();
+  const { data: risksRaw, isLoading: risksLoading, isError: risksError } = useRiskAssessments({ region: filters.region });
 
   const briefData = briefResponse?.data;
   const risks = Array.isArray(risksRaw) ? risksRaw : [];

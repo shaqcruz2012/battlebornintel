@@ -11,7 +11,7 @@ const BASE_VIEWS = [
   { id: 'executive', label: 'Executive Dashboard' },
   { id: 'companies', label: 'Companies' },
   { id: 'investors', label: 'Investors' },
-  { id: 'funds', label: 'Funds' },
+  { id: 'sectors', label: 'Sectors' },
   { id: 'ecosystem', label: 'Ecosystem Map' },
   { id: 'ecosystemGaps', label: 'Ecosystem Gaps' },
   { id: 'capitalFlows', label: 'Capital Flows' },

@@ -23,7 +23,7 @@ function filterAnalysisByRegion(analysis, region) {
   if (!region || region === 'all') return analysis;
 
   const filteredBridges = (analysis.bridges || []).filter(
-    (b) => b.region === region
+    (b) => !region || region === 'all' || b.region === region || !b.region
   );
   const filteredIslands = (analysis.islands || []).map((island) => ({
     ...island,

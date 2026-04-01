@@ -87,10 +87,10 @@ export function useKpis(filters = {}) {
 }
 
 /** Sector heat stats */
-export function useSectorStats() {
+export function useSectorStats(params = {}) {
   return useQuery({
-    queryKey: ['sectorStats'],
-    queryFn: () => api.getSectorStats(),
+    queryKey: ['sectorStats', params.region],
+    queryFn: () => api.getSectorStats(params),
     staleTime: 300_000,
   });
 }
@@ -133,10 +133,10 @@ export function useWeeklyBrief(params = {}) {
 }
 
 /** Risk assessments */
-export function useRiskAssessments() {
+export function useRiskAssessments(params = {}) {
   return useQuery({
-    queryKey: ['analysis', 'risks'],
-    queryFn: () => api.getRiskAssessments(),
+    queryKey: ['analysis', 'risks', params.region],
+    queryFn: () => api.getRiskAssessments(params),
     staleTime: 300_000,
   });
 }
@@ -153,7 +153,7 @@ export function useRiskSignals(params = {}) {
 /** Stakeholder activities digest */
 export function useStakeholderActivities(params = {}) {
   return useQuery({
-    queryKey: ['stakeholderActivities', params.region, params.type, params.stakeholderType, params.startDate, params.endDate, params.limit],
+    queryKey: ['stakeholderActivities', params.region, params.location, params.type, params.stakeholderType, params.startDate, params.endDate, params.limit],
     queryFn: () => api.getStakeholderActivities(params),
     staleTime: 300_000,
   });

@@ -332,14 +332,29 @@
 }
 
 .edgeSourceLink {
-  font-size: 7px;
-  color: rgba(69, 215, 198, 0.6);
+  font-size: 12px;
+  line-height: 1;
+  color: rgba(69, 215, 198, 0.4);
   text-decoration: none;
   flex-shrink: 0;
+  transition: color var(--transition-fast);
 }
 
 .edgeSourceLink:hover {
   color: #45d7c6;
+}
+
+.edgeSourceLinkDimmed {
+  font-size: 12px;
+  line-height: 1;
+  color: rgba(255, 255, 255, 0.12);
+  flex-shrink: 0;
+  cursor: default;
+  transition: color var(--transition-fast);
+}
+
+.edgeSourceLinkDimmed:hover {
+  color: rgba(255, 255, 255, 0.3);
 }
 
 .oppScoreRow {

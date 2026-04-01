@@ -1,12 +1,14 @@
 import { memo, useEffect } from 'react';
 import { useStakeholderActivities } from '../../api/hooks';
+import { useFilters } from '../../hooks/useFilters';
 import { useQueryClient } from '@tanstack/react-query';
 import { EventCard } from '../shared/EventCard';
 import styles from './TerminalGrid.module.css';
 
 export const LiveActivityFeed = memo(function LiveActivityFeed() {
   const queryClient = useQueryClient();
-  const { data: activities = [], isLoading, isError } = useStakeholderActivities({ limit: 20 });
+  const { filters } = useFilters();
+  const { data: activities = [], isLoading, isError } = useStakeholderActivities({ limit: 20, location: filters.region });
 
   // Auto-refresh every 60 seconds
   useEffect(() => {

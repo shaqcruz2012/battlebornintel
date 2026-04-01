@@ -1,5 +1,6 @@
 import pool from '../pool.js';
 import { logger } from '../../logger.js';
+import { expandRegion } from '../../utils/regionMapping.js';
 
 /**
  * Get stakeholder activities (from timeline events and analysis results)
@@ -150,11 +151,19 @@ export async function getStakeholderActivities(filters = {}) {
   const params = [];
   let paramIndex = 1;
 
-  // Filter by location
+  // Filter by location (supports region group expansion)
   if (location && location !== 'all') {
-    sql += ` AND (LOWER(region) = $${paramIndex} OR LOWER(city) LIKE $${paramIndex + 1})`;
-    params.push(location.toLowerCase(), `%${location.toLowerCase()}%`);
-    paramIndex += 2;
+    const expanded = expandRegion(location);
+    if (expanded && expanded.length > 1) {
+      sql += ` AND (LOWER(region) = ANY($${paramIndex}) OR LOWER(city) LIKE $${paramIndex + 1})`;
+      params.push(expanded.map(r => r.toLowerCase()), `%${location.toLowerCase()}%`);
+      paramIndex += 2;
+    } else {
+      const regionVal = expanded ? expanded[0].toLowerCase() : location.toLowerCase();
+      sql += ` AND (LOWER(region) = $${paramIndex} OR LOWER(city) LIKE $${paramIndex + 1})`;
+      params.push(regionVal, `%${location.toLowerCase()}%`);
+      paramIndex += 2;
+    }
   }
 
   // Filter by since date

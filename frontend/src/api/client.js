@@ -54,8 +54,8 @@ export const api = {
   getKpis: (filters = {}) =>
     fetchJSON(`${BASE}/kpis`, filters).then((r) => r.data),
 
-  getSectorStats: () =>
-    fetchJSON(`${BASE}/kpis/sectors`).then((r) => r.data),
+  getSectorStats: (params = {}) =>
+    fetchJSON(`${BASE}/kpis/sectors`, params).then((r) => r.data),
 
   // Timeline
   getTimeline: (params = {}) =>
@@ -78,8 +78,8 @@ export const api = {
       throw e;
     }),
 
-  getRiskAssessments: () =>
-    fetchJSON(`${BASE}/analysis/risks`).then((r) => r.data),
+  getRiskAssessments: (params = {}) =>
+    fetchJSON(`${BASE}/analysis/risks`, params).then((r) => r.data),
 
   // Stakeholder Activities
   getStakeholderActivities: (params = {}) =>

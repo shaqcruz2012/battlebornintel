@@ -11,10 +11,11 @@ const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
  */
 router.get('/', async (req, res, next) => {
   try {
-    const { limit, type } = req.query;
+    const { limit, type, region } = req.query;
     const data = await getTimeline({
       limit: Math.min(limit ? parseInt(limit, 10) : 30, 500),
       type,
+      region,
     });
     res.json({ data });
   } catch (err) {

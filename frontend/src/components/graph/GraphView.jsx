@@ -21,7 +21,7 @@ const DEFAULT_NODE_FILTERS = {
   exchange: false,
   accelerator: true,
   ecosystem: true,
-  program: false,
+  program: true,
 };
 
 export function GraphView() {

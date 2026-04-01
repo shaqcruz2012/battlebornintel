@@ -183,9 +183,28 @@ function truncateLabel(text, maxChars) {
   return text.slice(0, maxChars - 1) + '\u2026';
 }
 
-function SankeyDiagram({ flows, width = 900, height = 520 }) {
+function SankeyDiagram({ flows, width = 900 }) {
   const [hovered, setHovered] = useState(null);
   const [selectedNode, setSelectedNode] = useState(null);
+
+  // Compute dynamic height based on the number of nodes in each column
+  const height = useMemo(() => {
+    if (!flows || flows.length === 0) return 520;
+    const sourceSet = new Set();
+    const sectorSet = new Set();
+    const companySet = new Set();
+    for (const f of flows) {
+      if (f.type === 'fund_to_sector') {
+        sourceSet.add(f.source);
+        sectorSet.add(f.target);
+      } else if (f.type === 'sector_to_company') {
+        companySet.add(f.target);
+      }
+    }
+    const maxNodes = Math.max(sourceSet.size, sectorSet.size, companySet.size);
+    // 22px per node with a minimum of 520
+    return Math.max(520, maxNodes * 22);
+  }, [flows]);
 
   const layout = useMemo(() => {
     if (!flows || flows.length === 0) return null;

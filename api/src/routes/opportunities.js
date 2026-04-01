@@ -17,7 +17,7 @@ const VALID_SORTS = ['score', 'company', 'recent'];
  */
 router.get('/', async (req, res, next) => {
   try {
-    const { quality = 'all', entityType = 'all', sector, stage, search,
+    const { quality = 'all', entityType = 'all', sector, stage, region, search,
       sortBy = 'score', limit = '100', offset = '0' } = req.query;
 
     if (!VALID_QUALITIES.includes(quality)) {
@@ -33,13 +33,13 @@ router.get('/', async (req, res, next) => {
     const result = await getOpportunities({
       quality: quality !== 'all' ? quality : undefined,
       entityType: entityType !== 'all' ? entityType : undefined,
-      sector, stage, search, sortBy, limit, offset,
+      sector, stage, region, search, sortBy, limit, offset,
     });
 
     res.json({
       data: result.opportunities,
       meta: { total: result.total, limit: result.limit, offset: result.offset,
-        filters: { quality, entityType, sector, stage, search } },
+        filters: { quality, entityType, sector, stage, region, search } },
     });
   } catch (err) { next(err); }
 });

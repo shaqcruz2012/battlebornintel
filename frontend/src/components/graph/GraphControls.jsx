@@ -19,7 +19,7 @@ const STAKEHOLDER_PRESETS = [
   {
     id: 'all',
     label: 'All',
-    nodes: { company: true, fund: true, sector: false, region: false, person: true, external: true, exchange: false, accelerator: true, ecosystem: true, program: false },
+    nodes: { company: true, fund: true, sector: false, region: false, person: true, external: true, exchange: false, accelerator: true, ecosystem: true, program: true },
   },
   {
     id: 'government',

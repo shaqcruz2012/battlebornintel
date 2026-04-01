@@ -1,5 +1,6 @@
 import pool from '../pool.js';
 import { logger } from '../../logger.js';
+import { regionCondition } from '../../utils/regionMapping.js';
 
 // Data quality constants
 const DATA_QUALITY = {
@@ -28,9 +29,12 @@ export async function getKpis({ stage, region, sector } = {}) {
     idx++;
   }
   if (region && region !== 'all') {
-    conditions.push(`region = $${idx}`);
-    params.push(region);
-    idx++;
+    const rc = regionCondition(region, 'region', idx);
+    if (rc.condition) {
+      conditions.push(rc.condition);
+      params.push(...rc.params);
+      idx = rc.nextIdx;
+    }
   }
   if (sector && sector !== 'all') {
     conditions.push(`$${idx} = ANY(sectors)`);
@@ -464,8 +468,11 @@ export async function getSectorStats({ region } = {}) {
   let sectorSql = `SELECT * FROM companies`;
   const sectorParams = [];
   if (region && region !== 'all') {
-    sectorSql += ` WHERE region = $1`;
-    sectorParams.push(region);
+    const rc = regionCondition(region, 'region', 1);
+    if (rc.condition) {
+      sectorSql += ` WHERE ${rc.condition}`;
+      sectorParams.push(...rc.params);
+    }
   }
   // Fire both queries in parallel
   const [{ rows: companies }, { rows: heatRows }] = await Promise.all([

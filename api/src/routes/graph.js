@@ -12,7 +12,7 @@ router.get('/', async (req, res, next) => {
   try {
     const nodeTypes = req.query.nodeTypes
       ? req.query.nodeTypes.split(',')
-      : ['company', 'fund', 'person', 'external', 'accelerator', 'ecosystem'];
+      : ['company', 'fund', 'person', 'external', 'accelerator', 'ecosystem', 'program'];
     const yearMax = parseInt(req.query.yearMax || '2026', 10);
     const region = req.query.region || 'all';
     const data = await getGraphData({ nodeTypes, yearMax, region });

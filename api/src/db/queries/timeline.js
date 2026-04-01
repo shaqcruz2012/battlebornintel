@@ -1,4 +1,5 @@
 import pool from '../pool.js';
+import { regionCondition } from '../../utils/regionMapping.js';
 
 export async function getTimeline({ limit = 30, type, region } = {}) {
   let sql = `
@@ -29,9 +30,12 @@ export async function getTimeline({ limit = 30, type, region } = {}) {
   }
 
   if (region && region !== 'all') {
-    sql += ` AND LOWER(c.region) = $${idx}`;
-    params.push(region.toLowerCase());
-    idx++;
+    const rc = regionCondition(region, 'c.region', idx);
+    if (rc.condition) {
+      sql += ` AND ${rc.condition}`;
+      params.push(...rc.params);
+      idx = rc.nextIdx;
+    }
   }
 
   sql += ` ORDER BY e.event_date DESC LIMIT $${idx}`;

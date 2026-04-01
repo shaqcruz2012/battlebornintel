@@ -5,7 +5,8 @@ const router = Router();
 
 router.get('/', async (req, res, next) => {
   try {
-    const data = await getAllFunds();
+    const { region } = req.query;
+    const data = await getAllFunds({ region });
     res.json({ data });
   } catch (err) {
     next(err);

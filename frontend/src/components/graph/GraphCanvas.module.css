@@ -10,6 +10,7 @@
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-md);
   overflow: hidden;
+  cursor: crosshair;
   /* Subtle inner vignette for depth */
   box-shadow:
     inset 0 0 80px rgba(0, 0, 0, 0.15),
@@ -50,6 +51,7 @@
   border-radius: var(--radius-sm);
   padding: 2px;
   backdrop-filter: blur(8px);
+  z-index: 10;
 }
 
 .zoomBtn {
@@ -87,6 +89,7 @@
   padding: 0;
   background: rgba(12, 16, 20, 0.96);
   border: 1px solid rgba(69, 215, 198, 0.2);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: var(--radius-sm);
   font-size: var(--text-caption-sm);
   color: var(--text-primary);

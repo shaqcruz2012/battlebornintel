@@ -414,24 +414,56 @@ class GraphFeatureAgent(BaseModelAgent):
         return df
 
     @staticmethod
-    def _detect_communities(G_undirected: nx.Graph) -> dict:
-        """Detect communities using label propagation (or Louvain if available).
+    def _detect_communities(
+        G_undirected: nx.Graph,
+        target: int = 12,
+        target_min: int = 8,
+        target_max: int = 15,
+    ) -> dict:
+        """Detect communities using Louvain with resolution auto-tuning.
+
+        Uses binary search on the resolution parameter to produce ~12
+        communities (range 8-15).  Falls back to label propagation only
+        if Louvain is entirely unavailable.
 
         Returns dict mapping node -> community_label (int).
         """
         if G_undirected.number_of_nodes() == 0:
             return {}
 
-        # Try Louvain first (networkx >= 3.3 has it built in)
+        # Try Louvain with resolution tuning
         try:
-            communities = nx.community.louvain_communities(
-                G_undirected, seed=42
+            best_map: dict = {}
+            best_dist = float("inf")
+            lo, hi = 0.5, 5.0
+
+            for _ in range(10):
+                res = (lo + hi) / 2
+                communities = nx.community.louvain_communities(
+                    G_undirected, resolution=res, seed=42
+                )
+                num_c = len(communities)
+                dist = abs(num_c - target)
+                if dist < best_dist:
+                    best_dist = dist
+                    best_map = {}
+                    for idx, comm in enumerate(communities):
+                        for node in comm:
+                            best_map[node] = idx
+
+                if target_min <= num_c <= target_max:
+                    break
+                if num_c < target:
+                    lo = res  # more communities -> higher resolution
+                else:
+                    hi = res
+
+            logger.info(
+                "Louvain community detection: %d communities (target ~%d)",
+                len(set(best_map.values())),
+                target,
             )
-            community_map = {}
-            for idx, comm in enumerate(communities):
-                for node in comm:
-                    community_map[node] = idx
-            return community_map
+            return best_map
         except (AttributeError, Exception) as e:
             logger.info(
                 "Louvain not available (%s), falling back to label propagation.",

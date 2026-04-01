@@ -140,6 +140,7 @@ export function findBridges(edges, communities, constraints, nodeMap) {
         nodeId,
         label: node.label || nodeId,
         type: node.type || 'unknown',
+        region: node.region || node.city || null,
         constraint: constraints[nodeId] ?? 1,
         communities: [...comms].sort((a, b) => a - b),
         bridgeScore: Math.round((1 - (constraints[nodeId] ?? 1)) * comms.size * 100) / 100,

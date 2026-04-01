@@ -1,4 +1,5 @@
 import pool from '../pool.js';
+import { expandRegion } from '../../utils/regionMapping.js';
 
 /**
  * Get all investors — Nevada-based funds + out-of-state externals with invested_in edges.
@@ -6,29 +7,41 @@ import pool from '../pool.js';
  * @param {string} [opts.region] - Filter by region of invested companies (las_vegas, reno, henderson, etc.)
  */
 export async function getAllInvestors({ region } = {}) {
-  const filterRegion = region && region !== 'all' ? region : null;
+  const expandedRegions = expandRegion(region);
+  const filterRegion = expandedRegions ? true : false;
+  const regionSqlCondition = expandedRegions
+    ? (expandedRegions.length === 1 ? `LOWER(c.region) = $1` : `LOWER(c.region) = ANY($1)`)
+    : null;
+  const regionParam = expandedRegions
+    ? (expandedRegions.length === 1 ? expandedRegions[0].toLowerCase() : expandedRegions.map(r => r.toLowerCase()))
+    : null;
 
   // Section 1: Nevada-based funds (from funds table)
   // When region is active, only include funds that have invested in companies in that region
   let fundsSql;
   const fundsParams = [];
   if (filterRegion) {
+    const fundRegionCond = expandedRegions.length === 1
+      ? `LOWER(f.region) = $1`
+      : `LOWER(f.region) = ANY($1)`;
     fundsSql = `
       SELECT DISTINCT f.id, f.name, f.fund_type AS type, f.allocated_m, f.deployed_m,
              f.company_count, f.thesis, f.check_size_min_m, f.check_size_max_m,
              f.vintage_year
       FROM funds f
-      INNER JOIN companies c ON f.id = ANY(c.eligible)
-      WHERE LOWER(c.region) = $1
+      LEFT JOIN companies c ON f.id = ANY(c.eligible)
+      WHERE f.is_local IS NOT FALSE
+        AND (${fundRegionCond} OR f.region = 'statewide' OR (c.id IS NOT NULL AND ${regionSqlCondition}))
       ORDER BY f.deployed_m DESC NULLS LAST
     `;
-    fundsParams.push(filterRegion.toLowerCase());
+    fundsParams.push(regionParam);
   } else {
     fundsSql = `
       SELECT f.id, f.name, f.fund_type AS type, f.allocated_m, f.deployed_m,
              f.company_count, f.thesis, f.check_size_min_m, f.check_size_max_m,
              f.vintage_year
       FROM funds f
+      WHERE f.is_local IS NOT FALSE
       ORDER BY f.deployed_m DESC NULLS LAST
     `;
   }
@@ -46,11 +59,11 @@ export async function getAllInvestors({ region } = {}) {
       FROM externals e
       INNER JOIN graph_edges ge ON ge.source_id = e.id AND ge.rel = 'invested_in'
       INNER JOIN companies c ON 'c_' || c.id = ge.target_id
-      WHERE e.id LIKE 'i_%' AND LOWER(c.region) = $1
+      WHERE e.id LIKE 'i_%' AND ${regionSqlCondition}
       GROUP BY e.id, e.name, e.entity_type, e.note
       ORDER BY COUNT(DISTINCT ge.target_id) DESC, e.name
     `;
-    extParams.push(filterRegion.toLowerCase());
+    extParams.push(regionParam);
   } else {
     extSql = `
       SELECT e.id, e.name, e.entity_type AS type, e.note,
@@ -94,12 +107,12 @@ export async function getAllInvestors({ region } = {}) {
     const portfolioSql = filterRegion
       ? `SELECT c.id, c.name, c.stage, c.funding_m, c.eligible
          FROM companies c
-         WHERE LOWER(c.region) = $1
+         WHERE ${regionSqlCondition}
          ORDER BY c.funding_m DESC NULLS LAST`
       : `SELECT c.id, c.name, c.stage, c.funding_m, c.eligible
          FROM companies c
          ORDER BY c.funding_m DESC NULLS LAST`;
-    const portfolioParams = filterRegion ? [filterRegion.toLowerCase()] : [];
+    const portfolioParams = filterRegion ? [regionParam] : [];
     const { rows: allCompanies } = await pool.query(portfolioSql, portfolioParams);
     // Map companies to their eligible funds
     for (const c of allCompanies) {
@@ -203,21 +216,32 @@ export async function getInvestorById(id) {
  * @param {string} [opts.region] - Filter by region of invested companies
  */
 export async function getInvestorStats({ region } = {}) {
-  const filterRegion = region && region !== 'all' ? region : null;
+  const expandedRegionsStats = expandRegion(region);
+  const filterRegionStats = expandedRegionsStats ? true : false;
+  const regionSqlStats = expandedRegionsStats
+    ? (expandedRegionsStats.length === 1 ? `LOWER(c.region) = $1` : `LOWER(c.region) = ANY($1)`)
+    : null;
+  const regionParamStats = expandedRegionsStats
+    ? (expandedRegionsStats.length === 1 ? expandedRegionsStats[0].toLowerCase() : expandedRegionsStats.map(r => r.toLowerCase()))
+    : null;
 
   let fundStatsSql;
   const fundStatsParams = [];
-  if (filterRegion) {
+  if (filterRegionStats) {
+    const fundRegionStats = expandedRegionsStats.length === 1
+      ? `LOWER(f.region) = $1`
+      : `LOWER(f.region) = ANY($1)`;
     fundStatsSql = `
       SELECT
         COUNT(DISTINCT f.id) AS total_nv_funds,
         COALESCE(SUM(DISTINCT f.deployed_m), 0) AS total_deployed,
         COALESCE(SUM(DISTINCT f.allocated_m), 0) AS total_allocated
       FROM funds f
-      INNER JOIN companies c ON f.id = ANY(c.eligible)
-      WHERE LOWER(c.region) = $1
+      LEFT JOIN companies c ON f.id = ANY(c.eligible)
+      WHERE f.is_local IS NOT FALSE
+        AND (${fundRegionStats} OR f.region = 'statewide' OR (c.id IS NOT NULL AND ${regionSqlStats}))
     `;
-    fundStatsParams.push(filterRegion.toLowerCase());
+    fundStatsParams.push(regionParamStats);
   } else {
     fundStatsSql = `
       SELECT
@@ -225,21 +249,22 @@ export async function getInvestorStats({ region } = {}) {
         COALESCE(SUM(deployed_m), 0) AS total_deployed,
         COALESCE(SUM(allocated_m), 0) AS total_allocated
       FROM funds
+      WHERE is_local IS NOT FALSE
     `;
   }
   const { rows: [fundStats] } = await pool.query(fundStatsSql, fundStatsParams);
 
   let extStatsSql;
   const extStatsParams = [];
-  if (filterRegion) {
+  if (filterRegionStats) {
     extStatsSql = `
       SELECT COUNT(DISTINCT e.id) AS total_external_investors
       FROM externals e
       INNER JOIN graph_edges ge ON ge.source_id = e.id AND ge.rel = 'invested_in'
       INNER JOIN companies c ON 'c_' || c.id = ge.target_id
-      WHERE e.id LIKE 'i_%' AND LOWER(c.region) = $1
+      WHERE e.id LIKE 'i_%' AND ${regionSqlStats}
     `;
-    extStatsParams.push(filterRegion.toLowerCase());
+    extStatsParams.push(regionParamStats);
   } else {
     extStatsSql = `
       SELECT COUNT(DISTINCT e.id) AS total_external_investors
@@ -253,17 +278,17 @@ export async function getInvestorStats({ region } = {}) {
   // Breakdown by investor type
   let typeBreakdownSql;
   const typeBreakdownParams = [];
-  if (filterRegion) {
+  if (filterRegionStats) {
     typeBreakdownSql = `
       SELECT e.entity_type AS type, COUNT(DISTINCT e.id) AS count
       FROM externals e
       INNER JOIN graph_edges ge ON ge.source_id = e.id AND ge.rel = 'invested_in'
       INNER JOIN companies c ON 'c_' || c.id = ge.target_id
-      WHERE e.id LIKE 'i_%' AND LOWER(c.region) = $1
+      WHERE e.id LIKE 'i_%' AND ${regionSqlStats}
       GROUP BY e.entity_type
       ORDER BY count DESC
     `;
-    typeBreakdownParams.push(filterRegion.toLowerCase());
+    typeBreakdownParams.push(regionParamStats);
   } else {
     typeBreakdownSql = `
       SELECT e.entity_type AS type, COUNT(DISTINCT e.id) AS count
