@@ -427,7 +427,18 @@ export async function getRelevantNews({ minRelevance = 5, limit = 50 } = {}) {
 
 // Refresh cache: fetch from HN, classify, batch upsert into DB
 export async function refreshNewsCache(pool) {
-  const stories = await getRelevantNews({ minRelevance: 1, limit: 100 });
+  const rawStories = await getRelevantNews({ minRelevance: 1, limit: 200 });
+
+  // Deduplicate by ID within the batch — PostgreSQL ON CONFLICT cannot
+  // handle the same row appearing twice in one INSERT. Keep highest relevance.
+  const deduped = new Map();
+  for (const s of rawStories) {
+    const existing = deduped.get(s.id);
+    if (!existing || s.relevance > existing.relevance) {
+      deduped.set(s.id, s);
+    }
+  }
+  const stories = [...deduped.values()].slice(0, 150);
 
   if (stories.length > 0) {
     // Batch upsert: single query instead of N individual inserts
