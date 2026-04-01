@@ -880,8 +880,9 @@ export function GraphCanvas({
             const dimBySearch = searchTerm && !matchesSearch(n);
             const dimBySelection = selectedNode && !isSelected && !isConnected;
             // Dim nodes not in the selected cluster (when a cluster is selected from overlay)
+            // eslint-disable-next-line eqeqeq — community IDs may be string or number
             const dimByCluster = selectedCluster != null
-              && metrics?.communities?.[n.id] !== selectedCluster
+              && String(metrics?.communities?.[n.id]) !== String(selectedCluster)
               && !isSelected && !isConnected;
             const dim = dimBySearch || dimBySelection || dimByCluster;
 
