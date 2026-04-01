@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import { useCompanies } from '../../api/hooks';
 import { useFilters } from '../../hooks/useFilters';
 import { MainGrid } from '../layout/AppShell';
@@ -101,8 +101,11 @@ export function CompaniesView() {
 
   const { data: companies, isLoading } = useCompanies(apiFilters);
 
-  // Local UI state
-  const [search, setSearch] = useState('');
+  // Local UI state — sync with global header search
+  const [search, setSearch] = useState(filters.search || '');
+  useEffect(() => {
+    if (filters.search != null) setSearch(filters.search);
+  }, [filters.search]);
   const [stageFilter, setStageFilter] = useState('all');
   const [regionFilter, setRegionFilter] = useState('all');
   const [sectorFilters, setSectorFilters] = useState([]);
