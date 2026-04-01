@@ -40,10 +40,12 @@ export async function getRiskData() {
         SELECT source_id AS node_id FROM graph_edges
         WHERE (edge_category IS NULL OR edge_category = 'historical')
           AND rel NOT IN ('qualifies_for', 'fund_opportunity', 'potential_lp')
+          AND (quarantined IS NULL OR quarantined = false)
         UNION ALL
         SELECT target_id AS node_id FROM graph_edges
         WHERE (edge_category IS NULL OR edge_category = 'historical')
           AND rel NOT IN ('qualifies_for', 'fund_opportunity', 'potential_lp')
+          AND (quarantined IS NULL OR quarantined = false)
       ) sub
       GROUP BY node_id
     )

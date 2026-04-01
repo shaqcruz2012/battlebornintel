@@ -189,6 +189,7 @@ export async function getInvestorById(id) {
      FROM graph_edges ge
      LEFT JOIN companies c ON 'c_' || c.id = ge.target_id
      WHERE ge.source_id = $1 AND ge.rel = 'invested_in'
+       AND (ge.quarantined IS NULL OR ge.quarantined = false)
      ORDER BY ge.event_year DESC NULLS LAST`,
     [id]
   );

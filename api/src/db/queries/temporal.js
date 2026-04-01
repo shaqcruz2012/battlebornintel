@@ -35,7 +35,8 @@ export async function getGraphAtDate(snapshotDate) {
               edge_category, edge_style, edge_color, edge_opacity
        FROM graph_edges
        WHERE valid_from <= $1
-         AND (valid_to IS NULL OR valid_to >= $1)`,
+         AND (valid_to IS NULL OR valid_to >= $1)
+         AND (quarantined IS NULL OR quarantined = false)`,
       [snapshotDate]
     ).then(r => r.rows),
   ]);

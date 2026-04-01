@@ -70,7 +70,8 @@ export async function getKpis({ stage, region, sector } = {}) {
       const { rows: investmentEdges } = await pool.query(
         `SELECT DISTINCT source_id FROM graph_edges
          WHERE rel = 'invested_in'
-         AND target_id = ANY($1)`,
+         AND target_id = ANY($1)
+         AND (quarantined IS NULL OR quarantined = false)`,
         [companies.map(c => `c_${c.id}`)]
       );
       // Extract fund IDs from source_id (e.g., "f_bbv" -> "bbv", "f_fundnv" -> "fundnv")
@@ -117,8 +118,10 @@ export async function getKpis({ stage, region, sector } = {}) {
          WHERE (ge1.source_id LIKE 'a_%' OR ge1.source_id LIKE 'e_%'
                 OR ge1.target_id LIKE 'a_%' OR ge1.target_id LIKE 'e_%')
          AND ge1.rel IN ('accelerated_by','invested_in','grants_to','supports','funded','funds','won_pitch')
+         AND (ge1.quarantined IS NULL OR ge1.quarantined = false)
          AND ge2.source_id LIKE 'f_%'
          AND ge2.rel = 'invested_in'
+         AND (ge2.quarantined IS NULL OR ge2.quarantined = false)
          ${companyIds.length > 0 ? 'AND ge2.target_id = ANY($1)' : ''}`,
         companyIds.length > 0 ? [companyIds] : []
       ),
@@ -127,6 +130,7 @@ export async function getKpis({ stage, region, sector } = {}) {
         `SELECT COUNT(DISTINCT target_id) AS total_funded
          FROM graph_edges
          WHERE source_id LIKE 'f_%' AND rel = 'invested_in'
+         AND (quarantined IS NULL OR quarantined = false)
          ${companyIds.length > 0 ? 'AND target_id = ANY($1)' : ''}`,
         companyIds.length > 0 ? [companyIds] : []
       ),

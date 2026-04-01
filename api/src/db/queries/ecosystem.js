@@ -24,7 +24,8 @@ export async function getEcosystemMap() {
       gf.fund_type,
       -- Graph connectivity
       (SELECT count(*) FROM graph_edges ge
-       WHERE ge.source_id = er.canonical_id OR ge.target_id = er.canonical_id) AS edge_count
+       WHERE (ge.source_id = er.canonical_id OR ge.target_id = er.canonical_id)
+         AND (ge.quarantined IS NULL OR ge.quarantined = false)) AS edge_count
     FROM entity_registry er
     LEFT JOIN accelerators a ON er.source_table = 'accelerators' AND er.source_table_id = a.id
     LEFT JOIN ecosystem_orgs eo ON er.source_table = 'ecosystem_orgs' AND er.source_table_id = eo.id
@@ -87,6 +88,7 @@ export async function getEcosystemGapsUnified(region = null) {
     WHERE ge.rel = 'invested_in'
       AND c.stage IN ('series_b', 'series_c_plus')
       AND ge.edge_category = 'historical'
+      AND (ge.quarantined IS NULL OR ge.quarantined = false)
       ${hasRegion ? 'AND c.region = $1' : ''}`,
     hasRegion ? [region] : []
   );

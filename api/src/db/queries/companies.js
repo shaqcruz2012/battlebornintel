@@ -93,7 +93,7 @@ export async function getCompanyById(id) {
       [id]
     ),
     pool.query(
-      `SELECT * FROM graph_edges WHERE source_id = $1 OR target_id = $1`,
+      `SELECT * FROM graph_edges WHERE (source_id = $1 OR target_id = $1) AND (quarantined IS NULL OR quarantined = false)`,
       [nodeId]
     ),
     pool.query(

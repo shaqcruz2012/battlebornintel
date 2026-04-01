@@ -29,8 +29,8 @@ export async function exportTemporalData() {
   // 1. Build node mapping (string ID -> contiguous integer index)
   const { rows: nodeRows } = await pool.query(`
     SELECT DISTINCT id FROM (
-      SELECT source_id AS id FROM graph_edges
-      UNION SELECT target_id AS id FROM graph_edges
+      SELECT source_id AS id FROM graph_edges WHERE (quarantined IS NULL OR quarantined = false)
+      UNION SELECT target_id AS id FROM graph_edges WHERE (quarantined IS NULL OR quarantined = false)
     ) t ORDER BY id
   `);
   const nodeMap = {};
@@ -139,6 +139,7 @@ export async function exportTemporalData() {
   const { rows: edges } = await pool.query(`
     SELECT source_id, target_id, rel, event_date, event_year, matching_score
     FROM graph_edges WHERE event_date IS NOT NULL
+      AND (quarantined IS NULL OR quarantined = false)
     ORDER BY event_date ASC
   `);
 

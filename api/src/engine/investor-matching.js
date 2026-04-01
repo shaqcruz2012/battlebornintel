@@ -355,7 +355,8 @@ export async function findInvestorMatches(companyId, { limit = 20 } = {}) {
   // 3. Get all invested_in edges with temporal data
   const edgesResult = await pool.query(
     `SELECT source_id, target_id, note, event_date, event_year, created_at
-     FROM graph_edges WHERE rel = 'invested_in'`
+     FROM graph_edges WHERE rel = 'invested_in'
+       AND (quarantined IS NULL OR quarantined = false)`
   );
 
   // Build investor -> portfolio companies map with edge metadata

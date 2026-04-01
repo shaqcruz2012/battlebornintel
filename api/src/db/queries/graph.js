@@ -88,7 +88,7 @@ export async function getGraphData({ nodeTypes = [], yearMax = 2026, region } = 
       ? pool.query(ecoSql, regionFilter && regionParam ? [regionParam] : []).then(r => r.rows)
       : [],
     pool.query(
-      `SELECT source_id, target_id, rel, event_year, note, source_url, matching_score, edge_category, edge_style, edge_color, edge_opacity FROM graph_edges WHERE event_year <= $1`,
+      `SELECT source_id, target_id, rel, event_year, note, source_url, matching_score, edge_category, edge_style, edge_color, edge_opacity FROM graph_edges WHERE event_year <= $1 AND (quarantined IS NULL OR quarantined = false)`,
       [yearMax]
     ).then(r => r.rows),
     nodeTypes.includes('exchange')

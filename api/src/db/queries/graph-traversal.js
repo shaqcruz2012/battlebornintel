@@ -18,10 +18,10 @@ export async function getNeighborhood(nodeId, depth = 2) {
     `WITH RECURSIVE neighborhood AS (
       -- Base: direct neighbors (bidirectional)
       SELECT source_id AS node_id, target_id AS neighbor_id, rel, 1 AS depth
-      FROM graph_edges WHERE source_id = $1
+      FROM graph_edges WHERE source_id = $1 AND (quarantined IS NULL OR quarantined = false)
       UNION ALL
       SELECT target_id, source_id, rel, 1
-      FROM graph_edges WHERE target_id = $1
+      FROM graph_edges WHERE target_id = $1 AND (quarantined IS NULL OR quarantined = false)
 
       UNION ALL
 
@@ -30,7 +30,8 @@ export async function getNeighborhood(nodeId, depth = 2) {
         CASE WHEN ge.source_id = n.neighbor_id THEN ge.target_id ELSE ge.source_id END,
         ge.rel, n.depth + 1
       FROM neighborhood n
-      JOIN graph_edges ge ON ge.source_id = n.neighbor_id OR ge.target_id = n.neighbor_id
+      JOIN graph_edges ge ON (ge.source_id = n.neighbor_id OR ge.target_id = n.neighbor_id)
+        AND (ge.quarantined IS NULL OR ge.quarantined = false)
       WHERE n.depth < $2
         AND CASE WHEN ge.source_id = n.neighbor_id THEN ge.target_id ELSE ge.source_id END != $1
     )
@@ -50,7 +51,8 @@ export async function getNeighborhood(nodeId, depth = 2) {
   const edgeResult = await pool.query(
     `SELECT source_id, target_id, rel, event_year, note
      FROM graph_edges
-     WHERE source_id = ANY($1::text[]) AND target_id = ANY($1::text[])`,
+     WHERE source_id = ANY($1::text[]) AND target_id = ANY($1::text[])
+       AND (quarantined IS NULL OR quarantined = false)`,
     [nodeIdSet]
   );
 
@@ -92,11 +94,11 @@ export async function getShortestPaths(sourceId, targetId, maxDepth = 4) {
       -- Base: edges from source (bidirectional)
       SELECT source_id AS origin, target_id AS head, rel,
              ARRAY[source_id, target_id]::text[] AS path, ARRAY[rel]::text[] AS rels, 1 AS depth
-      FROM graph_edges WHERE source_id = $1
+      FROM graph_edges WHERE source_id = $1 AND (quarantined IS NULL OR quarantined = false)
       UNION ALL
       SELECT source_id AS origin, source_id AS head, rel,
              ARRAY[target_id, source_id]::text[] AS path, ARRAY[rel]::text[] AS rels, 1 AS depth
-      FROM graph_edges WHERE target_id = $1
+      FROM graph_edges WHERE target_id = $1 AND (quarantined IS NULL OR quarantined = false)
 
       UNION ALL
 
@@ -108,7 +110,8 @@ export async function getShortestPaths(sourceId, targetId, maxDepth = 4) {
         p.rels || ge.rel,
         p.depth + 1
       FROM paths p
-      JOIN graph_edges ge ON ge.source_id = p.head OR ge.target_id = p.head
+      JOIN graph_edges ge ON (ge.source_id = p.head OR ge.target_id = p.head)
+        AND (ge.quarantined IS NULL OR ge.quarantined = false)
       WHERE p.depth < $3
         AND NOT (CASE WHEN ge.source_id = p.head THEN ge.target_id ELSE ge.source_id END = ANY(p.path))
     )
@@ -166,7 +169,8 @@ export async function getSimilarNodes(nodeId, limit = 10) {
     `SELECT DISTINCT
        CASE WHEN source_id = $1 THEN target_id ELSE source_id END AS neighbor_id
      FROM graph_edges
-     WHERE source_id = $1 OR target_id = $1`,
+     WHERE (source_id = $1 OR target_id = $1)
+       AND (quarantined IS NULL OR quarantined = false)`,
     [nodeId]
   );
   const targetNeighbors = new Set(neighborsResult.rows.map(r => r.neighbor_id));
@@ -181,7 +185,8 @@ export async function getSimilarNodes(nodeId, limit = 10) {
   const candidateResult = await pool.query(
     `SELECT source_id AS node_a, target_id AS node_b
      FROM graph_edges
-     WHERE source_id = ANY($1::text[]) OR target_id = ANY($1::text[])`,
+     WHERE (source_id = ANY($1::text[]) OR target_id = ANY($1::text[]))
+       AND (quarantined IS NULL OR quarantined = false)`,
     [neighborArr]
   );
 
@@ -217,7 +222,8 @@ export async function getSimilarNodes(nodeId, limit = 10) {
   const candidateNeighborsResult = await pool.query(
     `SELECT source_id, target_id
      FROM graph_edges
-     WHERE source_id = ANY($1::text[]) OR target_id = ANY($1::text[])`,
+     WHERE (source_id = ANY($1::text[]) OR target_id = ANY($1::text[]))
+       AND (quarantined IS NULL OR quarantined = false)`,
     [candidateIds]
   );
 
@@ -307,7 +313,7 @@ export async function getCommunities() {
 
   // Get all edges to count inter-community bridges
   const edgeResult = await pool.query(
-    `SELECT source_id, target_id FROM graph_edges`
+    `SELECT source_id, target_id FROM graph_edges WHERE (quarantined IS NULL OR quarantined = false)`
   );
 
   // Count inter-community edges per community pair

@@ -24,7 +24,7 @@ import { useEffect, useState, useRef, useMemo } from 'react';
  */
 export function useGraphLayout(nodes, edges, options = {}) {
   const {
-    iterations = 450,
+    iterations = 300,
     enabled = true,
     width = 1200,
     height = 700,

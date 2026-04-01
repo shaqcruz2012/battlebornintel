@@ -81,7 +81,7 @@ export async function getOpportunities(filters = {}) {
       JOIN companies c ON c.id = CAST(REPLACE(CASE WHEN ge.rel='fund_opportunity' THEN ge.target_id ELSE ge.source_id END, 'c_', '') AS INTEGER)
       ${programJoin}
       LEFT JOIN funds f ON ge.rel='fund_opportunity' AND f.id = REPLACE(ge.source_id, 'f_', '')
-      WHERE ${where}`, params),
+      WHERE (ge.quarantined IS NULL OR ge.quarantined = false) AND ${where}`, params),
     pool.query(`SELECT ge.id AS edge_id, ge.source_id, ge.target_id, ge.rel,
       c.name AS company_name, c.stage AS company_stage, c.region AS company_region,
       COALESCE(p.name, f.name, ge.target_id) AS target_name,
@@ -92,7 +92,7 @@ export async function getOpportunities(filters = {}) {
       JOIN companies c ON c.id = CAST(REPLACE(CASE WHEN ge.rel='fund_opportunity' THEN ge.target_id ELSE ge.source_id END, 'c_', '') AS INTEGER)
       ${programJoin}
       LEFT JOIN funds f ON ge.rel='fund_opportunity' AND f.id = REPLACE(ge.source_id, 'f_', '')
-      WHERE ${where}
+      WHERE (ge.quarantined IS NULL OR ge.quarantined = false) AND ${where}
       ORDER BY ${order}
       LIMIT $${idx} OFFSET $${idx + 1}`, [...params, limit, offset]),
   ]);
@@ -118,7 +118,8 @@ export async function getCompanyOpportunities(companyId) {
       AND ge.target_id LIKE 'p_%'
       AND p.id = CAST(SUBSTRING(ge.target_id FROM 3) AS INTEGER)
     LEFT JOIN funds f ON ge.rel='fund_opportunity' AND f.id = REPLACE(ge.source_id, 'f_', '')
-    WHERE ge.edge_category = 'opportunity'
+    WHERE (ge.quarantined IS NULL OR ge.quarantined = false)
+      AND ge.edge_category = 'opportunity'
       AND (
         (ge.rel = 'qualifies_for' AND ge.source_id = 'c_' || $1)
         OR (ge.rel = 'fund_opportunity' AND ge.target_id = 'c_' || $1)
@@ -149,6 +150,7 @@ export async function getOpportunityStats() {
            ELSE 'marginal' END AS quality,
       rel, COUNT(*), ROUND(AVG(matching_score), 3) AS avg_score
       FROM graph_edges WHERE edge_category = 'opportunity'
+      AND (quarantined IS NULL OR quarantined = false)
       GROUP BY 1, 2 ORDER BY MIN(matching_score) DESC`),
     pool.query(`SELECT c.name, c.stage, c.region,
       COUNT(*) AS opp_count, ROUND(AVG(ge.matching_score), 3) AS avg_score
@@ -156,12 +158,14 @@ export async function getOpportunityStats() {
       JOIN companies c ON c.id = CAST(REPLACE(
         CASE WHEN ge.rel='fund_opportunity' THEN ge.target_id ELSE ge.source_id END, 'c_', '') AS INTEGER)
       -- no programs join needed here — only company aggregation
-      WHERE ge.edge_category = 'opportunity'
+      WHERE (ge.quarantined IS NULL OR ge.quarantined = false)
+      AND ge.edge_category = 'opportunity'
       GROUP BY c.name, c.stage, c.region
       HAVING COUNT(*) >= 3
       ORDER BY avg_score DESC LIMIT 15`),
     pool.query(`SELECT rel, COUNT(*) AS count, ROUND(AVG(matching_score), 3) AS avg
-      FROM graph_edges WHERE edge_category = 'opportunity' GROUP BY rel`),
+      FROM graph_edges WHERE edge_category = 'opportunity'
+      AND (quarantined IS NULL OR quarantined = false) GROUP BY rel`),
   ]);
 
   return {

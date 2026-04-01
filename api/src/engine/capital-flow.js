@@ -35,6 +35,7 @@ export async function computeCapitalFlows() {
       SELECT ge.source_id, ge.target_id, ge.note, ge.metadata, ge.event_year
       FROM graph_edges ge
       WHERE ge.rel = 'invested_in'
+        AND (ge.quarantined IS NULL OR ge.quarantined = false)
     `),
     pool.query(`SELECT id, name, stage, sectors, region, funding_m FROM companies`),
   ]);

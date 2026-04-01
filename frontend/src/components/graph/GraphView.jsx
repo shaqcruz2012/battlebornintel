@@ -145,18 +145,18 @@ export function GraphView() {
   const loadingGraph = loadingLightGraph && !lightGraphData;
   const graphError = lightGraphError;
 
-  // ── Staged loading effects (depend on loadingGraph) ────────────────────
-  // Phase 0 -> 1: data has arrived
+  // ── Staged loading effects ────────────────────────────────────────────
+  // Phase 0 -> 1: trigger as soon as API returns light graph data (don't wait for worker)
   useEffect(() => {
-    if (loadPhase === 0 && !loadingGraph) setLoadPhase(1);
-  }, [loadingGraph, loadPhase]);
+    if (loadPhase === 0 && lightGraphData) setLoadPhase(1);
+  }, [lightGraphData, loadPhase]);
 
-  // Phase 1 -> 5: staggered reveal of UI layers
+  // Phase 1 -> 5: staggered reveal of UI layers (tighter timings for faster perceived load)
   useEffect(() => {
-    if (loadPhase === 1) { const t = setTimeout(() => setLoadPhase(2), 400); return () => clearTimeout(t); }
-    if (loadPhase === 2) { const t = setTimeout(() => setLoadPhase(3), 400); return () => clearTimeout(t); }
-    if (loadPhase === 3) { const t = setTimeout(() => setLoadPhase(4), 600); return () => clearTimeout(t); }
-    if (loadPhase === 4) { const t = setTimeout(() => setLoadPhase(5), 700); return () => clearTimeout(t); }
+    if (loadPhase === 1) { const t = setTimeout(() => setLoadPhase(2), 200); return () => clearTimeout(t); }
+    if (loadPhase === 2) { const t = setTimeout(() => setLoadPhase(3), 200); return () => clearTimeout(t); }
+    if (loadPhase === 3) { const t = setTimeout(() => setLoadPhase(4), 300); return () => clearTimeout(t); }
+    if (loadPhase === 4) { const t = setTimeout(() => setLoadPhase(5), 300); return () => clearTimeout(t); }
   }, [loadPhase]);
 
   // Fetch total edge count (yearMax=2026) for the edge count indicator

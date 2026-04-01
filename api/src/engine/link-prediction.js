@@ -83,7 +83,8 @@ async function loadGraphData() {
                 COALESCE(weight, 0.5) AS weight, COALESCE(confidence, 0.5) AS confidence
          FROM graph_edges
          WHERE (edge_category IS NULL OR edge_category = 'historical')
-           AND rel NOT IN ('qualifies_for', 'fund_opportunity', 'potential_lp')`
+           AND rel NOT IN ('qualifies_for', 'fund_opportunity', 'potential_lp')
+           AND (quarantined IS NULL OR quarantined = false)`
       ),
       pool.query(
         `SELECT id, name, stage, sectors, city, region

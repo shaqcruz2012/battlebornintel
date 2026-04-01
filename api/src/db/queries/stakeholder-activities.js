@@ -91,6 +91,7 @@ export async function getStakeholderActivities(filters = {}) {
       JOIN companies c ON 'c_' || c.id::text = g.target_id OR 'c_' || c.id::text = g.source_id
       LEFT JOIN externals e ON g.source_type = 'external' AND e.id = g.source_id
       WHERE g.event_year IS NOT NULL
+        AND (g.quarantined IS NULL OR g.quarantined = false)
     ),
     enriched_activities AS (
       SELECT

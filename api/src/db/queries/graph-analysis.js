@@ -41,6 +41,7 @@ export async function findShortestPath(sourceId, targetId, maxDepth = 6) {
         1 AS depth
       FROM graph_edges
       WHERE source_id = $1
+        AND (quarantined IS NULL OR quarantined = false)
 
       UNION ALL
 
@@ -51,6 +52,7 @@ export async function findShortestPath(sourceId, targetId, maxDepth = 6) {
         p.depth + 1
       FROM paths p
       JOIN graph_edges e ON e.source_id = p.current_node
+        AND (e.quarantined IS NULL OR e.quarantined = false)
       WHERE p.depth < $3
         AND NOT (e.target_id = ANY(p.path))  -- avoid cycles
         AND p.current_node != $2  -- stop if we found target
@@ -71,11 +73,11 @@ export async function findShortestPath(sourceId, targetId, maxDepth = 6) {
 export async function getNetworkStats() {
   const [nodeCount, edgeCount, avgDegree, topNodes, categoryDist] = await Promise.all([
     pool.query(`SELECT COUNT(DISTINCT node_id) as cnt FROM (
-      SELECT source_id AS node_id FROM graph_edges UNION SELECT target_id FROM graph_edges
+      SELECT source_id AS node_id FROM graph_edges WHERE (quarantined IS NULL OR quarantined = false) UNION SELECT target_id FROM graph_edges WHERE (quarantined IS NULL OR quarantined = false)
     ) n`),
-    pool.query(`SELECT COUNT(*) as cnt FROM graph_edges`),
+    pool.query(`SELECT COUNT(*) as cnt FROM graph_edges WHERE (quarantined IS NULL OR quarantined = false)`),
     pool.query(`SELECT AVG(deg)::numeric(6,2) as avg_deg FROM (
-      SELECT source_id, COUNT(*) as deg FROM graph_edges GROUP BY source_id
+      SELECT source_id, COUNT(*) as deg FROM graph_edges WHERE (quarantined IS NULL OR quarantined = false) GROUP BY source_id
     ) d`),
     pool.query(`
       SELECT node_id, pagerank, betweenness, community_id
@@ -86,6 +88,7 @@ export async function getNetworkStats() {
     pool.query(`
       SELECT edge_category, COUNT(*) as cnt
       FROM graph_edges
+      WHERE (quarantined IS NULL OR quarantined = false)
       GROUP BY edge_category
       ORDER BY cnt DESC
     `),

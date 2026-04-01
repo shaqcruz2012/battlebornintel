@@ -279,7 +279,7 @@ class ForceSimulation {
 
     // Simulation parameters tuned for concentric ring layout
     this.alpha = 1;
-    this.alphaDecay = 0.014;   // slightly slower to let rings form properly
+    this.alphaDecay = 0.020;   // faster cooling — layout converges by ~200-250 ticks
     this.alphaMin = 0.005;
     this.velocityDecay = 0.38; // more damping for stable ring structure
   }
@@ -483,7 +483,7 @@ class ForceSimulation {
    * Run the simulation for up to `iterations` ticks.
    * If `onInterim` is provided it is called every `interimEvery` ticks.
    */
-  run(iterations = 450, onInterim = null, interimEvery = 80) {
+  run(iterations = 300, onInterim = null, interimEvery = 80) {
     for (let i = 0; i < iterations; ++i) {
       this.tick();
       if (this.alpha < this.alphaMin) break;
@@ -547,7 +547,7 @@ self.addEventListener('message', (e) => {
     edges,
     width = 1200,
     height = 700,
-    iterations = 450,
+    iterations = 300,
     requestId,
   } = e.data;
 
@@ -561,7 +561,7 @@ self.addEventListener('message', (e) => {
     const sim = new ForceSimulation(initializedNodes, edges, width, height);
 
     // ── Pass 1: rough layout (no interims — positions still chaotic) ─────
-    const PASS1_TICKS = 150;
+    const PASS1_TICKS = 100;
     const INTERIM_EVERY = 80;
 
     sim.run(PASS1_TICKS, null);
