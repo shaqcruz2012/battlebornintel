@@ -515,7 +515,21 @@ export async function predictMissingLinks({ limit = 50, minScore = 0.3 } = {}) {
   // Sort descending by score
   predictions.sort((a, b) => b.score - a.score);
 
-  const topPredictions = predictions.slice(0, limit);
+  // Bridge diversity: limit predictions per bridge node to prevent a single
+  // high-degree node (e.g., Sierra Angels with 10 portfolio companies = 45 pairs)
+  // from monopolizing the results. Max 5 predictions per bridge node.
+  const MAX_PER_BRIDGE = 5;
+  const bridgeCounts = {};
+  const diversified = [];
+  for (const p of predictions) {
+    const bridgeId = p.bridgeNode?.id || 'unknown';
+    bridgeCounts[bridgeId] = (bridgeCounts[bridgeId] || 0) + 1;
+    if (bridgeCounts[bridgeId] <= MAX_PER_BRIDGE) {
+      diversified.push(p);
+    }
+  }
+
+  const topPredictions = diversified.slice(0, limit);
   const avgScore = topPredictions.length > 0
     ? Math.round((topPredictions.reduce((s, p) => s + p.score, 0) / topPredictions.length) * 1000) / 1000
     : 0;

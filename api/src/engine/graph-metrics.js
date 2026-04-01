@@ -3,16 +3,211 @@
  * Pure computation on (nodes, edges) arrays.
  */
 
+/**
+ * Build a synthetic similarity graph from multiple signals so that Louvain
+ * produces 10-15 meaningful clusters instead of 154 singletons.
+ *
+ * Signals (by weight):
+ *   1. Historical edges           — 3.0 (strongest, real relationships)
+ *   2. Shared investor co-invest  — 2.0
+ *   3. Shared accelerator         — 1.5
+ *   4. Shared sector membership   — 1.0
+ *   5. Same region + same type    — 0.5
+ */
+function buildSimilarityEdges(nodes, historicalEdges) {
+  const simEdges = [];
+  const nodeMap = {};
+  nodes.forEach(n => { nodeMap[n.id] = n; });
+
+  // Signal 1: Historical edges (weight 3.0 — strongest signal)
+  for (const e of historicalEdges) {
+    const src = typeof e.source === 'object' ? e.source.id : e.source;
+    const tgt = typeof e.target === 'object' ? e.target.id : e.target;
+    simEdges.push({ source: src, target: tgt, weight: 3.0 });
+  }
+
+  // Signal 2: Shared investor — if company A and B are both invested_in by fund F
+  const fundPortfolios = {};
+  for (const e of historicalEdges) {
+    if (e.rel !== 'invested_in' && e.rel !== 'funded' && e.rel !== 'funded_by') continue;
+    const src = typeof e.source === 'object' ? e.source.id : e.source;
+    const tgt = typeof e.target === 'object' ? e.target.id : e.target;
+    const fundId = src.startsWith('f_') ? src : tgt.startsWith('f_') ? tgt : null;
+    const compId = src.startsWith('c_') ? src : tgt.startsWith('c_') ? tgt : null;
+    if (fundId && compId) {
+      if (!fundPortfolios[fundId]) fundPortfolios[fundId] = [];
+      fundPortfolios[fundId].push(compId);
+    }
+  }
+  for (const companies of Object.values(fundPortfolios)) {
+    for (let i = 0; i < companies.length; i++) {
+      for (let j = i + 1; j < companies.length; j++) {
+        simEdges.push({ source: companies[i], target: companies[j], weight: 2.0 });
+      }
+    }
+  }
+
+  // Signal 3: Shared accelerator (weight 1.5)
+  const accelPortfolios = {};
+  for (const e of historicalEdges) {
+    if (e.rel !== 'accelerated_by') continue;
+    const src = typeof e.source === 'object' ? e.source.id : e.source;
+    const tgt = typeof e.target === 'object' ? e.target.id : e.target;
+    const accelId = tgt.startsWith('a_') ? tgt : src.startsWith('a_') ? src : null;
+    const compId = src.startsWith('c_') ? src : tgt.startsWith('c_') ? tgt : null;
+    if (accelId && compId) {
+      if (!accelPortfolios[accelId]) accelPortfolios[accelId] = [];
+      accelPortfolios[accelId].push(compId);
+    }
+  }
+  for (const companies of Object.values(accelPortfolios)) {
+    for (let i = 0; i < companies.length; i++) {
+      for (let j = i + 1; j < companies.length; j++) {
+        simEdges.push({ source: companies[i], target: companies[j], weight: 1.5 });
+      }
+    }
+  }
+
+  // Signal 4: Shared sector membership (weight 1.0, cap 30 members per sector)
+  const sectorMembers = {};
+  for (const n of nodes) {
+    const sectors = n.sectors || n.sector || [];
+    const sectorArr = Array.isArray(sectors) ? sectors : [sectors];
+    for (const s of sectorArr) {
+      if (!s) continue;
+      if (!sectorMembers[s]) sectorMembers[s] = [];
+      sectorMembers[s].push(n.id);
+    }
+  }
+  for (const members of Object.values(sectorMembers)) {
+    const capped = members.slice(0, 30);
+    for (let i = 0; i < capped.length; i++) {
+      for (let j = i + 1; j < capped.length; j++) {
+        simEdges.push({ source: capped[i], target: capped[j], weight: 1.0 });
+      }
+    }
+  }
+
+  // Signal 5: Same region + same node type (weight 0.5, cap 20 per group)
+  const regionMembers = {};
+  for (const n of nodes) {
+    const region = n.region || '';
+    if (!region || region === 'other' || region === 'statewide') continue;
+    const key = `${region}_${n.type}`;
+    if (!regionMembers[key]) regionMembers[key] = [];
+    regionMembers[key].push(n.id);
+  }
+  for (const members of Object.values(regionMembers)) {
+    const capped = members.slice(0, 20);
+    for (let i = 0; i < capped.length; i++) {
+      for (let j = i + 1; j < capped.length; j++) {
+        simEdges.push({ source: capped[i], target: capped[j], weight: 0.5 });
+      }
+    }
+  }
+
+  // Deduplicate and sum weights for the same pair
+  const pairWeights = {};
+  for (const e of simEdges) {
+    const key = e.source < e.target ? `${e.source}|${e.target}` : `${e.target}|${e.source}`;
+    pairWeights[key] = (pairWeights[key] || 0) + e.weight;
+  }
+
+  return Object.entries(pairWeights).map(([key, weight]) => {
+    const [source, target] = key.split('|');
+    return { source, target, weight };
+  });
+}
+
+/**
+ * Generate human-readable community names from dominant characteristics.
+ * Names reflect the most common sector, hub fund/accelerator, and region.
+ */
+function generateCommunityNames(nodes, edges, communities) {
+  const nodeMap = {};
+  nodes.forEach(n => { nodeMap[n.id] = n; });
+
+  // Group nodes by community
+  const commMembers = {};
+  for (const [id, cid] of Object.entries(communities)) {
+    if (!commMembers[cid]) commMembers[cid] = [];
+    commMembers[cid].push(id);
+  }
+
+  // Build edge degree per node within community context
+  const nodeDegree = {};
+  for (const e of edges) {
+    const src = typeof e.source === 'object' ? e.source.id : e.source;
+    const tgt = typeof e.target === 'object' ? e.target.id : e.target;
+    nodeDegree[src] = (nodeDegree[src] || 0) + 1;
+    nodeDegree[tgt] = (nodeDegree[tgt] || 0) + 1;
+  }
+
+  const communityNames = {};
+  for (const [cidStr, members] of Object.entries(commMembers)) {
+    const cid = parseInt(cidStr);
+    const sectorCounts = {};
+    const regionCounts = {};
+    let hubNode = null;
+    let hubDegree = 0;
+
+    for (const id of members) {
+      const n = nodeMap[id];
+      if (!n) continue;
+
+      // Count sectors
+      const sectors = n.sectors || n.sector || [];
+      const sectorArr = Array.isArray(sectors) ? sectors : [sectors];
+      for (const s of sectorArr) {
+        if (s) sectorCounts[s] = (sectorCounts[s] || 0) + 1;
+      }
+
+      // Count regions
+      const region = n.region || '';
+      if (region && region !== 'other' && region !== 'statewide') {
+        regionCounts[region] = (regionCounts[region] || 0) + 1;
+      }
+
+      // Track hub node (fund or accelerator with highest degree)
+      if (n.type === 'fund' || n.type === 'accelerator') {
+        const deg = nodeDegree[id] || 0;
+        if (deg > hubDegree) { hubDegree = deg; hubNode = n; }
+      }
+    }
+
+    // Pick top sector
+    const topSector = Object.entries(sectorCounts)
+      .sort((a, b) => b[1] - a[1])[0];
+
+    // Pick top region (only if >40% of members share it)
+    const topRegion = Object.entries(regionCounts)
+      .sort((a, b) => b[1] - a[1])[0];
+    const regionConcentrated = topRegion && topRegion[1] > members.length * 0.4;
+
+    // Build name
+    const parts = [];
+    if (topSector) parts.push(topSector[0]);
+    if (regionConcentrated) parts.push(topRegion[0]);
+    if (hubNode) parts.push(`(${hubNode.label || hubNode.name || hubNode.id})`);
+
+    communityNames[cid] = parts.length > 0
+      ? parts.join(' \u2014 ')
+      : `Cluster ${cid}`;
+  }
+
+  return communityNames;
+}
+
 export function computeGraphMetrics(nodes, edges) {
   if (!nodes.length)
-    return { pagerank: {}, betweenness: {}, communities: {}, watchlist: [], numCommunities: 0 };
+    return { pagerank: {}, betweenness: {}, communities: {}, communityNames: {}, watchlist: [], numCommunities: 0 };
 
   const ids = nodes.map((n) => n.id);
   const idx = {};
   ids.forEach((id, i) => { idx[id] = i; });
   const N = ids.length;
 
-  // Build adjacency list (undirected)
+  // Build adjacency list from original edges (for PageRank, betweenness, watchlist)
   const adj = Array.from({ length: N }, () => []);
   for (const e of edges) {
     const si = idx[typeof e.source === 'object' ? e.source.id : e.source];
@@ -74,36 +269,35 @@ export function computeGraphMetrics(nodes, edges) {
   const betweenness = {};
   ids.forEach((id, i) => { betweenness[id] = Math.round((bc[i] / bcMax) * 100); });
 
-  // Community Detection (Louvain modularity maximization with resolution parameter)
-  // Higher resolution → more communities. Auto-tuned to produce ~12 clusters (8-15 range).
-  // Build weighted adjacency for modularity computation
-  const wAdj = Array.from({ length: N }, () => ({})); // wAdj[i][j] = weight
+  // ── Community Detection (Hybrid multi-signal Louvain) ──────────────────
+  // Build similarity edges from multiple signals (edges, co-investment,
+  // co-acceleration, shared sector, same region) then run Louvain on them.
+  const simEdges = buildSimilarityEdges(nodes, edges);
+
+  // Build weighted adjacency from similarity edges
+  const wAdj = Array.from({ length: N }, () => ({}));
   let totalWeight = 0;
   const degree_w = new Float64Array(N);
-  for (const e of edges) {
-    const si = idx[typeof e.source === 'object' ? e.source.id : e.source];
-    const ti = idx[typeof e.target === 'object' ? e.target.id : e.target];
+  for (const e of simEdges) {
+    const si = idx[e.source];
+    const ti = idx[e.target];
     if (si !== undefined && ti !== undefined && si !== ti) {
-      const w = e.matching_score || e.weight || 1;
-      wAdj[si][ti] = (wAdj[si][ti] || 0) + w;
-      wAdj[ti][si] = (wAdj[ti][si] || 0) + w;
-      totalWeight += w;
+      wAdj[si][ti] = (wAdj[si][ti] || 0) + e.weight;
+      wAdj[ti][si] = (wAdj[ti][si] || 0) + e.weight;
+      totalWeight += e.weight;
     }
   }
   for (let i = 0; i < N; i++) {
     for (const j of Object.keys(wAdj[i])) degree_w[i] += wAdj[i][j];
   }
-  const m2 = totalWeight || 1; // sum of all edge weights (each edge counted once in totalWeight)
+  const m2 = totalWeight || 1;
 
   function louvainPass(nodeComm, resolution) {
-    // One pass of Louvain: for each node, move to the community that maximizes modularity gain
-    // Maintain commDegreeSum incrementally for O(degree) per node instead of O(N)
     let improved = true;
     let iterations = 0;
     while (improved && iterations < 50) {
       improved = false;
       iterations++;
-      // Precompute community degree sums
       const commDegreeSum = {};
       for (let k = 0; k < N; k++) {
         const c = nodeComm[k];
@@ -114,14 +308,12 @@ export function computeGraphMetrics(nodes, edges) {
         if (Object.keys(wAdj[i]).length === 0) continue;
         const currentComm = nodeComm[i];
         const ki = degree_w[i];
-        // Compute weight from node i to each neighboring community
         const commWeights = {};
         for (const jStr of Object.keys(wAdj[i])) {
           const j = parseInt(jStr);
           const c = nodeComm[j];
           commWeights[c] = (commWeights[c] || 0) + wAdj[i][jStr];
         }
-        // Temporarily remove node i from its community
         commDegreeSum[currentComm] -= ki;
 
         let bestComm = currentComm;
@@ -139,11 +331,9 @@ export function computeGraphMetrics(nodes, edges) {
         }
         if (bestComm !== currentComm) {
           nodeComm[i] = bestComm;
-          // Update commDegreeSum: add ki to new community
           commDegreeSum[bestComm] = (commDegreeSum[bestComm] || 0) + ki;
           improved = true;
         } else {
-          // Restore node to current community
           commDegreeSum[currentComm] += ki;
         }
       }
@@ -162,9 +352,9 @@ export function computeGraphMetrics(nodes, edges) {
   let bestComm = Array.from({ length: N }, (_, i) => i);
   let bestDist = Infinity;
 
-  // Binary search on resolution parameter
-  let lo = 0.5, hi = 5.0;
-  for (let attempt = 0; attempt < 10; attempt++) {
+  // Wide resolution range to handle the denser similarity graph
+  let lo = 0.1, hi = 20.0;
+  for (let attempt = 0; attempt < 15; attempt++) {
     const res = (lo + hi) / 2;
     const comm = Array.from({ length: N }, (_, i) => i);
     louvainPass(comm, res);
@@ -176,9 +366,70 @@ export function computeGraphMetrics(nodes, edges) {
     }
     if (numC >= TARGET_MIN && numC <= TARGET_MAX) break;
     if (numC < TARGET) {
-      lo = res; // need more communities → higher resolution
+      lo = res; // need more communities -> higher resolution
     } else {
-      hi = res; // need fewer communities → lower resolution
+      hi = res; // need fewer communities -> lower resolution
+    }
+  }
+
+  // Absorb singletons: assign isolated nodes to the nearest community
+  // (the community of their highest-weight similarity neighbor)
+  const commSizes = {};
+  for (let i = 0; i < N; i++) {
+    commSizes[bestComm[i]] = (commSizes[bestComm[i]] || 0) + 1;
+  }
+  for (let i = 0; i < N; i++) {
+    if (commSizes[bestComm[i]] > 1) continue; // not a singleton
+    // Find neighbor with highest similarity weight
+    let bestNeighborComm = bestComm[i];
+    let bestW = 0;
+    for (const jStr of Object.keys(wAdj[i])) {
+      const j = parseInt(jStr);
+      const w = wAdj[i][jStr];
+      if (w > bestW && commSizes[bestComm[j]] > 1) {
+        bestW = w;
+        bestNeighborComm = bestComm[j];
+      }
+    }
+    if (bestNeighborComm !== bestComm[i]) {
+      commSizes[bestComm[i]]--;
+      bestComm[i] = bestNeighborComm;
+      commSizes[bestNeighborComm]++;
+    }
+  }
+
+  // Second pass: absorb remaining singletons into ANY neighbor's community
+  for (let i = 0; i < N; i++) {
+    if (commSizes[bestComm[i]] > 1) continue;
+    let bestNeighborComm = bestComm[i];
+    let bestW = 0;
+    for (const jStr of Object.keys(wAdj[i])) {
+      const j = parseInt(jStr);
+      const w = wAdj[i][jStr];
+      if (w > bestW) {
+        bestW = w;
+        bestNeighborComm = bestComm[j];
+      }
+    }
+    if (bestNeighborComm !== bestComm[i]) {
+      commSizes[bestComm[i]]--;
+      bestComm[i] = bestNeighborComm;
+      commSizes[bestNeighborComm]++;
+    }
+  }
+
+  // Third pass: merge all small communities (< 3 members) into the largest community
+  // This handles completely disconnected nodes (no similarity edges at all)
+  let largestComm = bestComm[0];
+  let largestSize = 0;
+  for (const [c, size] of Object.entries(commSizes)) {
+    if (size > largestSize) { largestSize = size; largestComm = parseInt(c); }
+  }
+  for (let i = 0; i < N; i++) {
+    if (commSizes[bestComm[i]] < 3) {
+      commSizes[bestComm[i]]--;
+      bestComm[i] = largestComm;
+      commSizes[largestComm]++;
     }
   }
 
@@ -190,6 +441,9 @@ export function computeGraphMetrics(nodes, edges) {
     if (labelMap[bestComm[i]] === undefined) labelMap[bestComm[i]] = nextCid++;
     communities[id] = labelMap[bestComm[i]];
   });
+
+  // Generate human-readable community names
+  const communityNames = generateCommunityNames(nodes, edges, communities);
 
   // Structural Watchlist
   const watchlist = [];
@@ -346,7 +600,7 @@ export function computeGraphMetrics(nodes, edges) {
   });
 
   return {
-    pagerank, betweenness, communities, watchlist, numCommunities: nextCid,
+    pagerank, betweenness, communities, communityNames, watchlist, numCommunities: nextCid,
     coInvestmentDensity, founderMobility, structuralHole,
   };
 }
