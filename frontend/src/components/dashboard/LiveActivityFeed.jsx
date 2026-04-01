@@ -1,4 +1,4 @@
-import { memo, useEffect } from 'react';
+import { memo, useEffect, useState, useCallback } from 'react';
 import { useStakeholderActivities } from '../../api/hooks';
 import { useFilters } from '../../hooks/useFilters';
 import { useQueryClient } from '@tanstack/react-query';
@@ -9,6 +9,8 @@ export const LiveActivityFeed = memo(function LiveActivityFeed() {
   const queryClient = useQueryClient();
   const { filters } = useFilters();
   const { data: activities = [], isLoading, isError } = useStakeholderActivities({ limit: 20, location: filters.region });
+  const [expandedId, setExpandedId] = useState(null);
+  const handleToggle = useCallback((id) => setExpandedId(prev => prev === id ? null : id), []);
 
   // Auto-refresh every 60 seconds
   useEffect(() => {
@@ -54,8 +56,8 @@ export const LiveActivityFeed = memo(function LiveActivityFeed() {
             verified: a.verified,
             confidence: a.confidence,
           }}
-          isExpanded={false}
-          onToggle={() => {}}
+          isExpanded={expandedId === (a.id || i)}
+          onToggle={handleToggle}
           compact
         />
       ))}

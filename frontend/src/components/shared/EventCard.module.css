@@ -396,6 +396,12 @@
 }
 
 .compact .cardFooter {
+  padding: 2px 0 0;
+  border-top: none;
+  margin-top: 2px;
+}
+
+.compact .cardFooterLeft {
   display: none;
 }
 
