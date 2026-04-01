@@ -1,8 +1,9 @@
-import { memo, useMemo } from 'react';
+import { memo, useMemo, useState } from 'react';
 import { fmt, stageLabel } from '../../engine/formatters';
 import { TRIGGER_CFG, GRADE_COLORS, STAGE_COLORS } from '../../data/constants';
 import { Sparkline, generateMomentumTrail } from '../shared/Sparkline';
 import { SignalStrengthBars } from '../shared/SignalStrengthBars';
+import { useCompanyDimensions } from '../../api/hooks';
 import styles from './CompaniesView.module.css';
 
 const DIM_LABELS = {
@@ -45,8 +46,38 @@ function dimFillColor(val) {
   return 'var(--status-risk)';
 }
 
+function formatEvidenceValue(v) {
+  if (v == null) return null;
+  if (typeof v === 'boolean') return v ? 'Yes' : 'No';
+  if (typeof v === 'number') return v.toLocaleString();
+  if (Array.isArray(v)) return v.length > 0 ? v.length : '0';
+  return String(v);
+}
+
+const DimEvidenceCard = memo(function DimEvidenceCard({ dimKey, dimData }) {
+  if (!dimData) return null;
+  const filtered = Object.entries(dimData.evidence).filter(([, v]) => v != null);
+  return (
+    <div className={styles.dimEvidence}>
+      <div className={styles.dimContext}>{dimData.context}</div>
+      {filtered.length > 0 && (
+        <div className={styles.dimMetrics}>
+          {filtered.map(([k, v]) => (
+            <span key={k} className={styles.dimPill}>
+              {k.replace(/_/g, ' ')}: {formatEvidenceValue(v)}
+            </span>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+});
+
 const ExpandedDetail = memo(function ExpandedDetail({ company }) {
   const c = company;
+  const [expandedDim, setExpandedDim] = useState(null);
+
+  const { data: dimData } = useCompanyDimensions(c.id, expandedDim !== null);
 
   const triggerConfigs = useMemo(() => {
     if (!c.triggers || c.triggers.length === 0) return [];
@@ -59,6 +90,11 @@ const ExpandedDetail = memo(function ExpandedDetail({ company }) {
     if (!c.dims) return [];
     return Object.entries(c.dims);
   }, [c.dims]);
+
+  const handleDimClick = (key, e) => {
+    e.stopPropagation();
+    setExpandedDim(expandedDim === key ? null : key);
+  };
 
   return (
     <tr className={styles.expandedRow}>
@@ -107,10 +143,13 @@ const ExpandedDetail = memo(function ExpandedDetail({ company }) {
               <span className={styles.detailLabel}>Dimension Scores</span>
               <div className={styles.dimGrid}>
                 {dimEntries.map(([key, val]) => (
-                  <div key={key} className={styles.dimItem}>
-                    <span className={styles.dimLabel}>
-                      {DIM_LABELS[key] || key}
-                    </span>
+                  <div key={key} className={styles.dimItemClickable} onClick={(e) => handleDimClick(key, e)}>
+                    <div className={styles.dimItemHeader}>
+                      <span className={styles.dimLabel}>
+                        {DIM_LABELS[key] || key}
+                      </span>
+                      <span className={styles.dimValue}>{val.toFixed(0)}</span>
+                    </div>
                     <div className={styles.dimBar}>
                       <div
                         className={styles.dimFill}
@@ -120,7 +159,9 @@ const ExpandedDetail = memo(function ExpandedDetail({ company }) {
                         }}
                       />
                     </div>
-                    <span className={styles.dimValue}>{val.toFixed(0)}</span>
+                    {expandedDim === key && (
+                      <DimEvidenceCard dimKey={key} dimData={dimData?.[key]} />
+                    )}
                   </div>
                 ))}
               </div>

@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { getAllCompanies, getCompanyById } from '../db/queries/companies.js';
+import { getCompanyDimensions } from '../db/queries/company-dimensions.js';
 import { computeForwardScore } from '../engine/scoring.js';
 import { NotFoundError, ValidationError } from '../errors.js';
 
@@ -44,6 +45,18 @@ router.get('/:id', async (req, res, next) => {
       data.score_type = 'heuristic';
     }
 
+    res.json({ data });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.get('/:id/dimensions', async (req, res, next) => {
+  try {
+    const id = parseInt(req.params.id, 10);
+    if (isNaN(id) || id <= 0) throw new ValidationError('id must be a positive integer');
+    const data = await getCompanyDimensions(id);
+    if (!data) throw new NotFoundError('Company not found');
     res.json({ data });
   } catch (err) {
     next(err);

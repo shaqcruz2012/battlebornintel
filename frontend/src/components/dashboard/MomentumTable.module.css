@@ -1,4 +1,4 @@
-/* ── MomentumTable: Bloomberg-style data grid ──────────── */
+/* ── MomentumTable: Prediction Leaderboard ──────────── */
 
 .wrapper {
   grid-column: 1 / span 8;
@@ -10,6 +10,25 @@
   flex-direction: column;
   height: 100%;
 }
+
+/* ── Methodology header ──────────────────────────────── */
+
+.methodologyHeader {
+  padding: 6px 10px;
+  border-bottom: 1px solid #1c2733;
+  background: rgba(69, 215, 198, 0.03);
+}
+
+.methodologyText {
+  font-family: 'IBM Plex Mono', var(--font-mono), monospace;
+  font-size: 8px;
+  line-height: 1.4;
+  color: rgba(255, 255, 255, 0.3);
+  letter-spacing: 0.2px;
+  display: block;
+}
+
+/* ── Header ──────────────────────────────────────────── */
 
 .header {
   display: flex;
@@ -31,6 +50,16 @@
   display: flex;
   align-items: center;
   gap: 6px;
+}
+
+.countBadge {
+  font-size: 7px;
+  font-weight: 500;
+  color: var(--accent-teal);
+  background: rgba(69, 215, 198, 0.08);
+  padding: 1px 5px;
+  border-radius: 2px;
+  letter-spacing: 0.5px;
 }
 
 .fetchingDot {
@@ -88,7 +117,7 @@
 
 .colHeaders {
   display: grid;
-  grid-template-columns: 2.5fr 1fr 1fr 1fr 56px 1fr 40px;
+  grid-template-columns: 2.5fr 1fr 1.2fr 0.8fr 56px 0.6fr;
   gap: 8px;
   padding: 3px 10px;
   border-bottom: 1px solid #1c2733;
@@ -116,13 +145,6 @@
 .colHeaders span:first-child {
   text-align: left;
   justify-content: flex-start;
-}
-
-.sortIndicator {
-  display: inline-block;
-  font-size: 7px;
-  color: var(--accent-teal);
-  line-height: 1;
 }
 
 .headerWithTip {
@@ -168,20 +190,6 @@
   font-style: italic;
 }
 
-/* ── Result count footer ───────────────────────────────── */
-
-.resultCount {
-  padding: var(--space-xs) var(--space-lg);
-  font-family: var(--font-mono);
-  font-size: var(--text-micro);
-  color: var(--text-muted);
-  text-align: right;
-  border-top: 1px solid var(--border-subtle);
-  background: var(--bg-subtle);
-  letter-spacing: 0.02em;
-  font-variant-numeric: tabular-nums;
-}
-
 /* ── Responsive ────────────────────────────────────────── */
 
 @media (max-width: 1200px) {
@@ -192,13 +200,16 @@
 
 @media (max-width: 768px) {
   .colHeaders {
-    grid-template-columns: 2fr 1fr 48px 40px;
+    grid-template-columns: 2fr 1.2fr 0.8fr 56px;
   }
   .hideMobile {
     display: none;
   }
   .header {
     padding: var(--space-md) var(--space-lg);
+  }
+  .methodologyHeader {
+    display: none;
   }
 }
 
@@ -207,8 +218,7 @@
     animation: none !important;
   }
 
-  .sortBtn,
-  .filterPill {
+  .sortBtn {
     transition: none !important;
   }
 }

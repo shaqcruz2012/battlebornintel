@@ -30,6 +30,9 @@ export const api = {
   getCompany: (id) =>
     fetchJSON(`${BASE}/companies/${id}`).then((r) => r.data),
 
+  getCompanyDimensions: (id) =>
+    fetchJSON(`${BASE}/companies/${id}/dimensions`).then((r) => r.data),
+
   // Funds
   getFunds: (filters = {}) =>
     fetchJSON(`${BASE}/funds`, filters).then((r) => r.data),
