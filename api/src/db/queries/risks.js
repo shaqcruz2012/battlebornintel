@@ -38,8 +38,12 @@ export async function getRiskData() {
       SELECT node_id, COUNT(*) AS edge_count
       FROM (
         SELECT source_id AS node_id FROM graph_edges
+        WHERE (edge_category IS NULL OR edge_category = 'historical')
+          AND rel NOT IN ('qualifies_for', 'fund_opportunity', 'potential_lp')
         UNION ALL
         SELECT target_id AS node_id FROM graph_edges
+        WHERE (edge_category IS NULL OR edge_category = 'historical')
+          AND rel NOT IN ('qualifies_for', 'fund_opportunity', 'potential_lp')
       ) sub
       GROUP BY node_id
     )

@@ -179,7 +179,7 @@ function SeverityBadges({ counts }) {
 function PortfolioRiskScore({ score, grade }) {
   return (
     <div className={styles.scoreSection}>
-      <span className={styles.scoreLabel}>Portfolio Risk</span>
+      <span className={styles.scoreLabel}>Ecosystem Risk</span>
       <span className={styles.scoreValue} style={{ color: scoreColor(score) }}>
         {score}
       </span>
@@ -449,7 +449,7 @@ export const RiskIntelligencePanel = memo(function RiskIntelligencePanel({ compa
       <div className={styles.wrapper}>
         <div className={styles.header}>
           <div className={styles.headerLeft}>
-            <span className={styles.title}>Risk Intelligence</span>
+            <span className={styles.title}>Ecosystem Risk</span>
           </div>
         </div>
         <div className={styles.body}>
@@ -466,7 +466,7 @@ export const RiskIntelligencePanel = memo(function RiskIntelligencePanel({ compa
       {/* ── Header ── */}
       <div className={styles.header}>
         <div className={styles.headerLeft}>
-          <span className={styles.title}>Risk Intelligence</span>
+          <span className={styles.title}>Ecosystem Risk</span>
           <SeverityBadges counts={data.signal_counts} />
         </div>
         {data.computed_at && (
@@ -478,7 +478,7 @@ export const RiskIntelligencePanel = memo(function RiskIntelligencePanel({ compa
 
       {/* ── Body ── */}
       <div className={styles.body}>
-        {/* ── Portfolio Risk Score ── */}
+        {/* ── Ecosystem Risk Score ── */}
         <PortfolioRiskScore
           score={data.portfolio_risk_score}
           grade={data.risk_grade}

@@ -387,7 +387,7 @@ export function ExecutiveDashboard({ onViewChange }) {
         </div>
       </div>
 
-      {/* ── Risk Intelligence ── */}
+      {/* ── Ecosystem Risk ── */}
       <RiskIntelligencePanel companies={companies} />
 
       {/* ── Overlays (render outside the grid) ── */}
